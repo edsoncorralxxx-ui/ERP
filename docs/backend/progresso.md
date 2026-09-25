@@ -1,6 +1,6 @@
 # Progresso do backend
 
-Registro da execução real do roteiro B01–B16. Situações: Planejado, Em execução, Entregue para revisão, Concluído, Bloqueado (com causa).
+Registro da execução real do roteiro B01–B16. Desde 25/09/2026 o trabalho segue Scrum (`docs/scrum/`); cada sprint tem seu arquivo em `docs/scrum/sprints/`. Situações: Planejado, Em execução, Entregue para revisão, Concluído, Bloqueado (com causa).
 
 | Fase | Situação | Data | Evidência | Próximo passo |
 |---|---|---|---|---|
