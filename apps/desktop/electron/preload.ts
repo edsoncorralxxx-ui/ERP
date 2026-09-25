@@ -4,5 +4,4 @@ import { contextBridge, ipcRenderer } from 'electron';
 contextBridge.exposeInMainWorld('renda', {
   request: (req: unknown) => ipcRenderer.invoke('api:request', req),
   info: () => ipcRenderer.invoke('app:info'),
-  window: (action: unknown) => ipcRenderer.invoke('app:window', action),
 });

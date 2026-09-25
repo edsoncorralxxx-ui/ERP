@@ -64,14 +64,6 @@ ipcMain.handle('api:request', async (_event, raw: unknown) => {
   return { status: response.status, headers, body: await response.text() };
 });
 
-ipcMain.handle('app:window', (event, action: unknown) => {
-  const win = BrowserWindow.fromWebContents(event.sender);
-  if (!win) return;
-  if (action === 'minimize') win.minimize();
-  else if (action === 'maximize') (win.isMaximized() ? win.unmaximize() : win.maximize());
-  else if (action === 'close') win.close();
-});
-
 ipcMain.handle('app:info', () => ({ version: app.getVersion(), serverUrl: serverUrl(), platform: process.platform }));
 
 function createWindow(): void {

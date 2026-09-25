@@ -16,6 +16,14 @@ O PO pediu para usar o design system integrado na sessão "Integração do Desig
 - O comportamento (janelas, gaveta, acordeão, menus) é implementado em React; `bundle.js` fica reservado para os gráficos quando houver dashboards.
 - `CLAUDE.md` na raiz registra a regra para qualquer sessão futura: ler o guia antes de criar tela e não criar cores, fontes ou sombras fora dos tokens.
 
+## Ajustes pedidos pelo PO (25/09/2026)
+
+Divergências conscientes em relação ao guia do design system, todas feitas só com tokens:
+
+- **Gaveta de módulos em altura total**: vai da barra de ferramentas ao rodapé, como coluna própria; a linha de boas-vindas e as janelas ficam ao lado dela (o guia a abre dentro da área de trabalho, sobreposta).
+- **Hover suave no menu lateral**: o degradê de hover/aberto fica numa camada com transição de opacidade (0,2 s), sem troca seca de fundo; o hover do trilho usa `tab` em vez de `grid-row-alt`, que parecia um piscar branco.
+- **Controles de janela no padrão do macOS**: sem os botões minimizar/maximizar/fechar na barra de menus (o macOS já oferece os seus); as janelas internas usam fechar, minimizar e maximizar à esquerda do título, com `status-error`, `status-warning` e `status-success`.
+
 ## Consequências
 
 - Alterar a aparência é alterar `design-system/tokens.json` e rodar `node design-system/scripts/build-tokens.mjs`.

@@ -13,14 +13,13 @@ type Props = {
   onTile: () => void;
   onFocus: (id: string) => void;
   onToggleDrawer: () => void;
-  onAppWindow: (action: 'minimize' | 'maximize' | 'close') => void;
 };
 
 type Item = { label: string; kbd?: string; disabled?: boolean; selected?: boolean; action?: () => void } | 'sep';
 
 const PROXIMAS = [{ label: 'Disponível nas próximas sprints', disabled: true }] as Item[];
 
-/** Barra de menus do design system (ordem fixa, letra de acesso sublinhada) com os botões da janela do aplicativo. */
+/** Barra de menus do design system (ordem fixa, letra de acesso sublinhada). Os botões da janela ficam com o macOS. */
 export function MenuBar(p: Props) {
   const [open, setOpen] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
@@ -121,11 +120,6 @@ export function MenuBar(p: Props) {
           </span>
         ))}
       </div>
-      <span className="rp-winctl">
-        <button type="button" aria-label="Minimizar" onClick={() => p.onAppWindow('minimize')}>&#8211;</button>
-        <button type="button" aria-label="Maximizar" onClick={() => p.onAppWindow('maximize')}>&#9633;</button>
-        <button type="button" aria-label="Fechar" onClick={() => p.onAppWindow('close')}>&#215;</button>
-      </span>
     </div>
   );
 }

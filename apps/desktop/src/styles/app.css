@@ -18,6 +18,31 @@ body { background: var(--ground); }
 .rp-menu-item[aria-disabled=true] { cursor: default; }
 .rp-menu-item[aria-disabled=true]:hover { background: none; }
 
+/* Gaveta em coluna própria (pedido do PO): vai da barra de ferramentas ao rodapé, e a boas-vindas e as
+   janelas ficam ao lado dela, sem sobreposição. O bundle a posiciona absoluta dentro de .rp-appwork. */
+.rp-appbody > .rp-drawer { position: relative; z-index: 1; align-self: stretch; }
+.rp-appbody > .rp-drawer .rp-drawer-inner { height: 100%; }
+
+/* Hover suave (pedido do PO): degradê não anima, então ele fica numa camada com transição de opacidade.
+   A linha continua chapada em nav por baixo, sem nenhum instante claro entre um estado e outro. */
+.rp-nav-item { position: relative; isolation: isolate; }
+.rp-nav-item, .rp-nav-item:hover, .rp-nav-item[aria-expanded=true], .rp-nav-group[data-open=true] > .rp-nav-item { background: var(--nav); }
+.rp-nav-item::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0;
+  background: linear-gradient(var(--nav-selected-top), var(--nav-selected) 55%); transition: opacity .2s ease; }
+.rp-nav-item:hover::before, .rp-nav-item[aria-expanded=true]::before, .rp-nav-group[data-open=true] > .rp-nav-item::before { opacity: 1; }
+.rp-nav-sub { transition: background-color .2s ease; }
+
+.rp-rail-tab { position: relative; isolation: isolate; transition: background-color .2s ease, color .2s ease; }
+.rp-rail-tab:not([aria-selected=true]):hover { background: var(--tab); }
+.rp-rail-tab[aria-selected=true] { background: var(--rail-selected); }
+.rp-rail-tab::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, var(--nav-selected-top), var(--rail-selected)); transition: opacity .2s ease; }
+.rp-rail-tab[aria-selected=true]::before { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rp-nav-item::before, .rp-rail-tab, .rp-rail-tab::before, .rp-nav-sub, .rp-drawer { transition: none; }
+}
+
 /* Gaveta: itens ainda não implementados. */
 .rp-nav-sub--indisponivel { opacity: .6; cursor: default; }
 .rp-nav-sub--indisponivel:hover { text-decoration: none; background: none; }
@@ -27,7 +52,22 @@ body { background: var(--ground); }
 .rp-janela-mdi { position: absolute; display: flex; flex-direction: column; min-width: 0; box-shadow: var(--shadow-window); }
 .rp-janela-mdi--max { box-shadow: none; }
 .rp-janela-mdi .rp-titlebar { flex: none; cursor: default; }
-.rp-janela-mdi .rp-titlebar > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-janela-mdi .rp-titlebar { justify-content: flex-start; gap: var(--space-3); }
+.rp-janela-mdi__titulo { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Controles das janelas internas no padrão do macOS (pedido do PO), com as cores de status dos tokens.
+   O símbolo aparece só quando o mouse está sobre o grupo, como no Mac. */
+.rp-semaforo { display: flex; gap: 7px; flex: none; }
+.rp-semaforo > span { width: 12px; height: 12px; border-radius: 50%; display: grid; place-content: center; cursor: default;
+  font-size: 9px; line-height: 1; font-weight: 700; color: transparent; box-shadow: inset 0 0 0 1px var(--nav-deep); transition: color .15s ease; }
+.rp-semaforo__fechar { background: var(--status-error); }
+.rp-semaforo__minimizar { background: var(--status-warning); }
+.rp-semaforo__maximizar { background: var(--status-success); }
+.rp-semaforo__fechar::before { content: "×"; }
+.rp-semaforo__minimizar::before { content: "–"; }
+.rp-semaforo__maximizar::before { content: "+"; }
+.rp-semaforo:hover > span, .rp-semaforo > span:focus-visible { color: var(--nav-deep); }
+.rp-window--inactive .rp-semaforo:not(:hover) > span { background: var(--titlebar-inactive); box-shadow: inset 0 0 0 1px var(--window-border); }
 .rp-janela-mdi__corpo { flex: 1; min-height: 0; overflow: auto; user-select: text; }
 .rp-janela-mdi .rp-window-foot { flex: none; }
 .rp-janela-mdi__alca { position: absolute; right: 0; bottom: 0; width: 12px; height: 12px; cursor: nwse-resize; }

@@ -13,7 +13,6 @@ declare global {
     renda?: {
       request: Transport;
       info: () => Promise<{ version: string; serverUrl: string; platform: string }>;
-      window?: (action: 'minimize' | 'maximize' | 'close') => Promise<void>;
     };
   }
 }

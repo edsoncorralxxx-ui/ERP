@@ -56,15 +56,21 @@ export function App() {
   const open = useCallback(
     (kind: WindowKind, recordKey = 'singleton') => {
       dispatch({ type: 'open', kind, recordKey, title: KINDS[kind].title, size: KINDS[kind].size, bounds: bounds() });
-      setDrawer((d) => ({ ...d, open: false }));
     },
     [bounds],
   );
 
+  // Reajusta as janelas quando a área de trabalho muda de tamanho (gaveta abrindo/fechando, janela nativa).
   useEffect(() => {
     const onResize = () => dispatch({ type: 'fit', bounds: bounds() });
     window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    const el = workspace.current;
+    const observer = el && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(onResize) : null;
+    if (el && observer) observer.observe(el);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      observer?.disconnect();
+    };
   }, [bounds]);
 
   const active = state.windows.find((w) => w.id === state.activeId) ?? null;
@@ -87,7 +93,7 @@ export function App() {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         saveActive();
-      } else if (e.key === 'Escape' && drawer.open) {
+      } else if (e.key === 'Escape' && drawer.open && !(document.activeElement as HTMLElement | null)?.closest('.rp-janela-mdi')) {
         setDrawer((d) => ({ ...d, open: false }));
       }
     };
@@ -129,12 +135,18 @@ export function App() {
           onTile={() => dispatch({ type: 'tile', bounds: bounds() })}
           onFocus={(id) => dispatch({ type: 'focus', id })}
           onToggleDrawer={() => setDrawer((d) => ({ ...d, open: !d.open }))}
-          onAppWindow={(action) => void window.renda?.window?.(action)}
         />
         <Toolbar onHelp={() => open('server-status')} />
       </div>
       <div className="rp-appbody rp-aplicativo__corpo">
         <Rail view={drawer.view} open={drawer.open} onSelect={selectRail} />
+        <Drawer
+          open={drawer.open}
+          view={drawer.view}
+          onClose={() => setDrawer((d) => ({ ...d, open: false }))}
+          onOpenCompany={() => open('company-profile')}
+          onOpenStatus={() => open('server-status')}
+        />
         <div className="rp-appmain">
           <div className="rp-apphead">
             <span>Bem-vindo. Você está no cockpit inicial da {company ?? 'Fourtech'}.</span>
@@ -149,13 +161,6 @@ export function App() {
             </div>
           </div>
           <div className="rp-appwork">
-            <Drawer
-              open={drawer.open}
-              view={drawer.view}
-              onClose={() => setDrawer((d) => ({ ...d, open: false }))}
-              onOpenCompany={() => open('company-profile')}
-              onOpenStatus={() => open('server-status')}
-            />
             <main className="rp-aplicativo__area" ref={workspace}>
               <div className="rp-watermark" aria-hidden="true">
                 <span>
