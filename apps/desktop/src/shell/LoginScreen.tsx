@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { api, ApiError } from '../api/client';
+import type { LoginResponse, SessionUser } from '../api/types';
 
 const KEY = 'renda.usuario';
 
@@ -43,41 +45,73 @@ function Ilustracao() {
   );
 }
 
-type Props = { onEnter: (user: string) => void };
+type Props = {
+  onEnter: (user: SessionUser) => void;
+  /** Tela bloqueada ou sessão expirada: o usuário fica fixo e as janelas continuam abertas por trás. */
+  lockedUser?: string;
+  notice?: string;
+};
 
 /**
  * Tela de abertura (Janela de login do design system): barra de título com a faixa dourada, ilustração à esquerda,
- * a marca e os campos à direita, e OK / Sair / Trocar empresa embaixo.
- * A autenticação no servidor entra com o módulo de usuários; por enquanto o nome informado identifica a sessão local.
+ * a marca e os campos à direita, e OK / Sair / Trocar empresa embaixo. Autentica no servidor (ADR-005); a senha
+ * não é guardada e o token da sessão fica no processo principal do app.
  */
-export function LoginScreen({ onEnter }: Props) {
-  const [usuario, setUsuario] = useState(lembrado);
+export function LoginScreen({ onEnter, lockedUser, notice }: Props) {
+  const [usuario, setUsuario] = useState(() => lockedUser ?? lembrado());
+  const [senha, setSenha] = useState('');
   const [lembrar, setLembrar] = useState(() => lembrado() !== '');
-  const [erro, setErro] = useState(false);
-  const campo = useRef<HTMLInputElement>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+  const campoUsuario = useRef<HTMLInputElement>(null);
+  const campoSenha = useRef<HTMLInputElement>(null);
 
-  useEffect(() => campo.current?.focus(), []);
+  useEffect(() => (usuario ? campoSenha.current : campoUsuario.current)?.focus(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const entrar = (e?: FormEvent) => {
+  const entrar = async (e?: FormEvent) => {
     e?.preventDefault();
+    if (enviando) return;
     const nome = usuario.trim();
-    if (!nome) {
-      setErro(true);
-      campo.current?.focus();
+    if (!nome || !senha) {
+      setErro(!nome ? 'Informe o usuário para entrar (LOGIN-001)' : 'Informe a senha para entrar (LOGIN-002)');
+      (!nome ? campoUsuario : campoSenha).current?.focus();
       return;
     }
+    setEnviando(true);
+    setErro(null);
     try {
-      if (lembrar) localStorage.setItem(KEY, nome);
-      else localStorage.removeItem(KEY);
-    } catch {
-      // armazenamento indisponível: segue sem lembrar
+      const r = await api.post<LoginResponse>('/api/v1/session', { username: nome, password: senha });
+      setSenha('');
+      try {
+        if (lembrar) localStorage.setItem(KEY, r.data.user.username);
+        else localStorage.removeItem(KEY);
+      } catch {
+        // armazenamento indisponível: segue sem lembrar
+      }
+      onEnter(r.data.user);
+    } catch (err) {
+      const x = err as ApiError;
+      setErro(x.isNetwork ? 'Sem conexão com o servidor. Confira se ele está ligado e tente de novo (NET-001)' : `${x.message} (${x.code})`);
+      setSenha('');
+      campoSenha.current?.focus();
+    } finally {
+      setEnviando(false);
     }
-    onEnter(nome);
   };
 
+  const sair = () => window.close();
+
   return (
-    <div className="rp rp-login">
-      <div className="rp-window rp-window--login rp-login__janela" role="dialog" aria-labelledby="login-titulo">
+    <div
+      className={`rp rp-login${lockedUser ? ' rp-login--bloqueio' : ''}`}
+      onKeyDown={(e) => {
+        if (e.altKey && e.key.toLowerCase() === 's') {
+          e.preventDefault();
+          sair();
+        }
+      }}
+    >
+      <div className="rp-window rp-window--login rp-login__janela" role="dialog" aria-modal={lockedUser ? true : undefined} aria-labelledby="login-titulo">
         <div className="rp-titlebar">
           <h1 id="login-titulo" className="rp-login__titulo">Renda+ ERP</h1>
         </div>
@@ -90,40 +124,56 @@ export function LoginScreen({ onEnter }: Props) {
               Renda<b>+</b>
               <i>ERP</i>
             </span>
+            {notice && (
+              <p className="rp-login__nota" role="status">
+                <i className="rp-ico rp-ico-status-info" aria-hidden="true" /> {notice}
+              </p>
+            )}
             <div className="rp-form rp-form--req rp-login__campos">
               <label className="rp-label" htmlFor="login-usuario">Usuário</label>
               <span className="rp-req" aria-hidden="true">*</span>
               <input
                 id="login-usuario"
-                ref={campo}
-                className="rp-field"
+                ref={campoUsuario}
+                className={`rp-field${lockedUser ? ' rp-field--readonly' : ''}`}
                 autoComplete="username"
                 required
-                aria-invalid={erro}
-                aria-describedby={erro ? 'login-erro' : 'login-nota'}
+                readOnly={!!lockedUser}
+                aria-describedby={erro ? 'login-erro' : undefined}
                 value={usuario}
-                onChange={(e) => (setUsuario(e.target.value), setErro(false))}
+                onChange={(e) => (setUsuario(e.target.value), setErro(null))}
               />
               <label className="rp-label" htmlFor="login-senha">Senha</label>
               <span className="rp-req" aria-hidden="true">*</span>
-              <input id="login-senha" className="rp-field rp-field--readonly" type="password" autoComplete="current-password" disabled title="A senha passa a ser exigida com o módulo de usuários" />
-              <span />
-              <span />
-              <label className="rp-login__lembrar" htmlFor="login-lembrar">
-                <input id="login-lembrar" type="checkbox" checked={lembrar} onChange={(e) => setLembrar(e.target.checked)} />
-                Lembrar meu usuário
-              </label>
+              <input
+                id="login-senha"
+                ref={campoSenha}
+                className="rp-field"
+                type="password"
+                autoComplete="current-password"
+                required
+                aria-describedby={erro ? 'login-erro' : undefined}
+                value={senha}
+                onChange={(e) => (setSenha(e.target.value), setErro(null))}
+              />
+              {!lockedUser && (
+                <>
+                  <span />
+                  <span />
+                  <label className="rp-login__lembrar" htmlFor="login-lembrar">
+                    <input id="login-lembrar" type="checkbox" checked={lembrar} onChange={(e) => setLembrar(e.target.checked)} />
+                    Lembrar meu usuário
+                  </label>
+                </>
+              )}
             </div>
-            <p id="login-nota" className="rp-login__nota">
-              <i className="rp-ico rp-ico-status-info" aria-hidden="true" /> Sessão local: a autenticação no servidor entra com o módulo de usuários.
-            </p>
             {/* Enter no formulário aciona o OK. */}
             <button type="submit" hidden tabIndex={-1} />
           </form>
         </div>
         {erro && (
           <div id="login-erro" className="rp-status-msg" role="alert">
-            Informe o usuário para entrar (LOGIN-001)
+            {erro}
           </div>
         )}
         <div className="rp-window-foot">
@@ -131,14 +181,14 @@ export function LoginScreen({ onEnter }: Props) {
             <span className="rp-req">*</span> Campo obrigatório
           </span>
           <div className="rp-btn-row">
-            <button type="button" className="rp-btn rp-btn--default" onClick={() => entrar()}>
+            <button type="button" className="rp-btn rp-btn--default" disabled={enviando} onClick={() => void entrar()}>
               OK
             </button>
-            <button type="button" className="rp-btn" onClick={() => window.close()}>
-              <u>S</u>air
+            <button type="button" className="rp-btn" onClick={sair}>
+              <span><u>S</u>air</span>
             </button>
             <button type="button" className="rp-btn" disabled title="Disponível quando houver mais de uma empresa cadastrada">
-              <u>T</u>rocar empresa
+              Trocar empresa
             </button>
           </div>
         </div>

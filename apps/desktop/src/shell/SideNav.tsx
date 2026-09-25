@@ -2,6 +2,7 @@ import { useState, type KeyboardEvent } from 'react';
 import menu from '../../../../docs/backend/b01/menu.json';
 import type { WindowKind } from '../windows/windowManager';
 import { subIcon } from './modules';
+import { useSession } from './SessionContext';
 
 export type RailView = 'modulos' | 'relacionar';
 
@@ -69,6 +70,15 @@ export const itemKey = (it: MenuItem) => it.acao ?? `${it.tela ?? ''}:${it.secao
 const WINDOWS: Record<string, WindowKind> = {
   'status-servidor': 'server-status',
   'configuracoes:EMPRESA': 'company-profile',
+  'configuracoes:ACESSO': 'users',
+  'clientes:': 'customers',
+};
+
+/** Permissão de leitura que cada janela exige; sem ela o item aparece, mas não abre. */
+const NEEDS: Partial<Record<WindowKind, string>> = {
+  users: 'user.admin',
+  customers: 'partner.read',
+  'company-profile': 'company.read',
 };
 
 /** Janela aberta pelo item; só itens marcados como implementados têm destino. */
@@ -83,7 +93,8 @@ type DrawerProps = { open: boolean; view: RailView; onClose: () => void; onOpen:
  * um grupo aberto por vez, cada item com o ícone pelo contexto do nome; itens previstos esmaecidos, com a fase.
  */
 export function Drawer({ open, view, onClose, onOpen }: DrawerProps) {
-  const [expanded, setExpanded] = useState<string | null>('Configurações');
+  const [expanded, setExpanded] = useState<string | null>('Cadastros');
+  const { can } = useSession();
   const toggle = (nome: string) => setExpanded((cur) => (cur === nome ? null : nome));
 
   return (
@@ -104,8 +115,15 @@ export function Drawer({ open, view, onClose, onOpen }: DrawerProps) {
                   </button>
                   <div className="rp-nav-subs">
                     {m.itens.map((it) => {
-                      const kind = windowFor(it);
-                      const title = kind || it.nota ? it.rotulo : `${it.rotulo} — previsto: ${it.fase}`;
+                      const target = windowFor(it);
+                      const need = target && NEEDS[target];
+                      const blocked = !!need && !can(need);
+                      const kind = blocked ? undefined : target;
+                      const title = blocked
+                        ? `${it.rotulo} — seu perfil não permite`
+                        : kind || it.nota
+                          ? it.rotulo
+                          : `${it.rotulo} — previsto: ${it.fase}`;
                       return (
                         <div
                           key={`${it.rotulo}-${itemKey(it)}-${it.visao ?? ''}-${it.recurso ?? ''}`}
@@ -119,7 +137,7 @@ export function Drawer({ open, view, onClose, onOpen }: DrawerProps) {
                         >
                           <i className={`rp-ico rp-ico-w-${subIcon(it.rotulo, m.icone)}`} aria-hidden="true" />
                           <span className="rp-nav-sub__rotulo">{it.rotulo}</span>
-                          {!kind && !it.nota && <span className="rp-nav-sub__fase">{it.fase}</span>}
+                          {!kind && !it.nota && !blocked && <span className="rp-nav-sub__fase">{it.fase}</span>}
                         </div>
                       );
                     })}

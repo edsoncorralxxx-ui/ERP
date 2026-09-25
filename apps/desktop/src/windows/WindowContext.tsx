@@ -5,6 +5,8 @@ import type { WindowKind } from './windowManager';
 /** Operações que uma janela oferece ao shell (barra de ferramentas, Cmd+S, fechar com alterações). */
 export type WindowCommands = {
   save?: () => Promise<boolean>;
+  /** Ferramenta "Novo" da barra superior, quando a janela ativa sabe criar um registro. */
+  novo?: () => void;
 };
 
 export type WindowApi = {
@@ -16,7 +18,7 @@ export type WindowApi = {
   notify: (message: StatusMessage) => void;
   requestClose: () => void;
   /** Abre (ou traz à frente) outra janela: é o destino das setas de link. */
-  open: (kind: WindowKind) => void;
+  open: (kind: WindowKind, recordKey?: string) => void;
 };
 
 export const WindowContext = createContext<WindowApi | null>(null);

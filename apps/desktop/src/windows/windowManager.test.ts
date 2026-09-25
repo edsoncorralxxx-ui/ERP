@@ -14,6 +14,13 @@ describe('gerenciador de janelas', () => {
     expect(s.windows.find((w) => w.id === 'w1')!.z).toBeGreaterThan(s.windows.find((w) => w.id === 'w2')!.z);
   });
 
+  it('janela maior que o espaço livre abre inteira dentro da área', () => {
+    const s = run({ ...(open() as Extract<WindowAction, { type: 'open' }>), size: { w: 1180, h: 690 } });
+    const w = s.windows[0];
+    expect(w.x + w.w).toBeLessThanOrEqual(bounds.width);
+    expect(w.y + w.h).toBeLessThanOrEqual(bounds.height);
+  });
+
   it('registros diferentes abrem janelas diferentes', () => {
     expect(run(open('a'), open('b')).windows).toHaveLength(2);
   });

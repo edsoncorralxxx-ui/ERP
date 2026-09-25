@@ -24,7 +24,7 @@
       "nome": "Cadastros",
       "icone": "cadastros",
       "itens": [
-        {"rotulo": "Clientes e unidades", "tela": "clientes", "fase": "Sprint 2 · B03"},
+        {"rotulo": "Clientes e unidades", "tela": "clientes", "implementado": true, "fase": "Sprint 2 · B03"},
         {"rotulo": "Fornecedores", "tela": "fornecedores", "fase": "Sprint 3 · B03"},
         {"rotulo": "Materiais e serviços", "tela": "materiais", "fase": "Sprint 3 · B03"}
       ]
@@ -185,7 +185,7 @@
       "icone": "administracao",
       "itens": [
         {"rotulo": "Status do servidor", "acao": "status-servidor", "implementado": true, "fase": "Sprint 1"},
-        {"rotulo": "Usuários e permissões", "tela": "configuracoes", "secao": "ACESSO", "fase": "Sprint 2 · B03"},
+        {"rotulo": "Usuários e permissões", "tela": "configuracoes", "secao": "ACESSO", "implementado": true, "fase": "Sprint 2 · B03"},
         {"rotulo": "Auditoria", "tela": "configuracoes", "secao": "AUDITORIA", "fase": "Sprint 2 · B03"}
       ]
     },
