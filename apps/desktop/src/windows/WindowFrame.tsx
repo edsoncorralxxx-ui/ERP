@@ -13,9 +13,13 @@ type Props = {
   onClose: () => void;
 };
 
-function WinButton({ label, kind, onClick }: { label: string; kind: 'fechar' | 'minimizar' | 'maximizar'; onClick: () => void }) {
+function WinButton({ label, text, onClick }: { label: string; text: string; onClick: () => void }) {
   const key = (e: KeyboardEvent) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onClick());
-  return <span role="button" tabIndex={0} aria-label={label} title={label} className={`rp-semaforo__${kind}`} onClick={onClick} onKeyDown={key} />;
+  return (
+    <span role="button" tabIndex={0} aria-label={label} title={label} onClick={onClick} onKeyDown={key}>
+      {text}
+    </span>
+  );
 }
 
 /** Janela do design system (barra de título azul, corpo claro), móvel e redimensionável dentro da área de trabalho. */
@@ -58,13 +62,13 @@ export function WindowFrame({ win, active, children, onFocus, onMove, onResize, 
         onPointerUp={() => (drag.current = null)}
         onDoubleClick={onToggleMaximize}
       >
-        {/* Controles no padrão do macOS: fechar, minimizar e maximizar, à esquerda do título. */}
-        <span className="rp-semaforo">
-          <WinButton label="Fechar janela" kind="fechar" onClick={onClose} />
-          <WinButton label="Minimizar" kind="minimizar" onClick={onMinimize} />
-          <WinButton label={maximized ? 'Restaurar' : 'Maximizar'} kind="maximizar" onClick={onToggleMaximize} />
-        </span>
         <span className="rp-janela-mdi__titulo">{win.title}</span>
+        {/* Botões do design system (Janela): minimizar, maximizar e fechar, à direita. */}
+        <span className="rp-winbtns">
+          <WinButton label="Minimizar" text="–" onClick={onMinimize} />
+          <WinButton label={maximized ? 'Restaurar' : 'Maximizar'} text={maximized ? '❐' : '□'} onClick={onToggleMaximize} />
+          <WinButton label="Fechar janela" text="×" onClick={onClose} />
+        </span>
       </div>
       {children}
       {!maximized && (

@@ -22,7 +22,7 @@ Divergências conscientes em relação ao guia do design system, todas feitas s�
 
 - **Gaveta de módulos em altura total**: vai da barra de ferramentas ao rodapé, como coluna própria; a linha de boas-vindas e as janelas ficam ao lado dela (o guia a abre dentro da área de trabalho, sobreposta).
 - **Hover suave no menu lateral**: o degradê de hover/aberto fica numa camada com transição de opacidade (0,2 s), sem troca seca de fundo; o hover do trilho usa `tab` em vez de `grid-row-alt`, que parecia um piscar branco.
-- **Controles de janela no padrão do macOS**: sem os botões minimizar/maximizar/fechar na barra de menus (o macOS já oferece os seus); as janelas internas usam fechar, minimizar e maximizar à esquerda do título, com `status-error`, `status-warning` e `status-success`.
+- **Janela do aplicativo com os controles do macOS**: sem os botões minimizar/maximizar/fechar na barra de menus (o macOS já oferece os seus). As janelas internas mantêm os botões do design system (`rp-winbtns`, à direita do título).
 - **Hover amarelo** em todos os componentes, exceto o menu lateral: botões, barra de ferramentas, menus da barra superior e abas em `field-active`; linhas de grade em `field-note`; transição de 0,18 s. Aplicado no CSS de ligação do app, sem alterar o `bundle.css` exportado.
 - **Menu suspenso por cima da barra de ferramentas**: a barra de menus ganhou um nível de empilhamento acima (no bundle as duas tinham o mesmo).
 
