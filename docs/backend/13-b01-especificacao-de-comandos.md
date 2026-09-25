@@ -44,6 +44,7 @@ sequenceDiagram
 | IDEMPOTENCY_KEY_REUSED | 409 | não | mesma chave, corpo diferente |
 | INVALID_STATE_TRANSITION | 409 | não | estado não permite a operação |
 | VERSION_MISMATCH | 412 | não | If-Match desatualizado |
+| PRECONDITION_REQUIRED | 428 | não | edição sem If-Match (acrescentado na Sprint 1) |
 | ORDER_INVALID | 422 | não | INV-SO-1..3 |
 | PARTNER_INACTIVE_OR_UNIT_MISMATCH | 422 | não | INV-SO-6 |
 | CANCELLATION_BLOCKED_BY_EFFECTS | 422 | não | INV-SO-7 (lista os efeitos) |

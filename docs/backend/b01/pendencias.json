@@ -177,7 +177,7 @@
       "id": "PD-020",
       "tema": "Topologia e capacidade",
       "pergunta": "Servidor local ou remoto, SO, usuários simultâneos, volumes e rede",
-      "premissaB01": "Nenhuma; ambiente de desenvolvimento sintético",
+      "premissaB01": "Servidor local na máquina do usuário (Mac), decidido pelo PO em 25/09/2026; usuários simultâneos e produção ainda a definir",
       "bloqueia": "B13",
       "responsavel": "Negócio + infraestrutura",
       "adr": "ADR-007"

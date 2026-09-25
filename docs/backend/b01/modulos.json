@@ -24,7 +24,7 @@
     {
       "id": "plataforma",
       "nome": "Plataforma técnica",
-      "responsabilidade": "Recibos de comando/idempotência, outbox e consumidores idempotentes, registro de fatos operacionais, tarefas duráveis, arquivos privados, configurações",
+      "responsabilidade": "Recibos de comando/idempotência, outbox e consumidores idempotentes, registro de fatos operacionais, tarefas duráveis, arquivos privados, configurações; dados cadastrais da empresa (configuração)",
       "dependsOn": ["kernel", "acesso", "auditoria"]
     },
     {

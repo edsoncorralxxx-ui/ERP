@@ -1,0 +1,29 @@
+/*
+ * Tokens PROVISÓRIOS do Renda+ ERP, extraídos do briefing de design (docs/briefing-claude-design-renda-mais.md §11).
+ * Serão substituídos pelos tokens do pacote oficial (design-system/renda-mais-erp/css/tokens.css) quando for enviado.
+ */
+.rp {
+  --rp-nav: #4867b1;
+  --rp-nav-selected: #4c7bc6;
+  --rp-nav-hover: #5577bd;
+  --rp-surface: #eef3f7;
+  --rp-workspace: #e3e9f1;
+  --rp-field-active: #fcf0ae;
+  --rp-field-readonly: #e0e7f2;
+  --rp-field-bg: #ffffff;
+  --rp-button: #fceeb0;
+  --rp-button-border: #c9b56a;
+  --rp-tab-active: #9db8db;
+  --rp-text: #1f2026;
+  --rp-text-muted: #5a6272;
+  --rp-gold: #efb43e;
+  --rp-border: #aab6c8;
+  --rp-border-strong: #7f8ea6;
+  --rp-title-inactive: #8a9bb8;
+  --rp-ok: #2e7d32;
+  --rp-warn: #9a6700;
+  --rp-bad: #b3261e;
+  --rp-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  --rp-font-size: 12px;
+  --rp-radius: 3px;
+}

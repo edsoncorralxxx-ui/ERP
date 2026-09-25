@@ -1,3 +1,8 @@
 __pycache__/
 *.pyc
 .DS_Store
+node_modules/
+apps/desktop/dist/
+apps/desktop/dist-electron/
+backend/java/target/
+*.log
