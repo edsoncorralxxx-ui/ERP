@@ -1,0 +1,422 @@
+openapi: 3.1.0
+info:
+  title: Renda+ ERP — API do servidor
+  version: v1
+  description: |
+    Contrato da API usada pelo app do Mac (Sprints 1 e 2).
+    Regras gerais:
+    - Toda rota exige sessão (`Authorization: Bearer <token>`), exceto `GET /api/v1/status` e `POST /api/v1/session` (ADR-005).
+      Sem sessão válida: 401 `UNAUTHENTICATED`. Perfil sem a permissão: 403 `FORBIDDEN` (a negativa fica na auditoria).
+    - Edição exige `If-Match` com a versão lida (ETag); versão desatualizada: 412 `VERSION_MISMATCH`; sem cabeçalho: 428.
+    - Cadastro exige `Idempotency-Key` (8 a 100 caracteres); repetir com a mesma chave devolve o mesmo registro;
+      mesma chave com outro conteúdo: 422 `IDEMPOTENCY_KEY_REUSED`.
+    - Erros sempre no formato `ApiError`, em português, com `correlationId` (cabeçalho `X-Correlation-Id` é aceito e devolvido).
+servers:
+  - url: http://localhost:8080
+security:
+  - sessao: []
+tags:
+  - name: Plataforma
+  - name: Sessão
+  - name: Usuários
+  - name: Clientes
+
+paths:
+  /api/v1/status:
+    get:
+      tags: [Plataforma]
+      summary: Estado do servidor e do banco (sem sessão)
+      security: []
+      responses:
+        '200':
+          description: Estado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [UP, DEGRADED] }
+                  apiVersion: { type: string, example: v1 }
+                  serverVersion: { type: string }
+                  database: { type: string, enum: [UP, DOWN] }
+                  serverTime: { type: string, format: date-time }
+
+  /api/v1/company-profile:
+    get:
+      tags: [Plataforma]
+      summary: Dados da empresa (company.read)
+      responses:
+        '200': { description: Dados, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/CompanyProfile' } } } }
+        '401': { $ref: '#/components/responses/Erro' }
+        '403': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Plataforma]
+      summary: Atualiza os dados da empresa (company.update)
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CompanyProfileRequest' } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/CompanyProfile' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+        '428': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/session:
+    post:
+      tags: [Sessão]
+      summary: Entrar (sem sessão)
+      description: |
+        Senha errada e usuário inexistente recebem a mesma resposta (401 `INVALID_CREDENTIALS`). Cinco senhas erradas seguidas
+        bloqueiam o usuário por 15 minutos (401 `ACCOUNT_LOCKED`). O token volta só aqui; o app o guarda no processo principal.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string, format: password }
+      responses:
+        '200':
+          description: Sessão aberta (expira após 8 h sem uso ou 12 h no total)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string, description: 'Token opaco de 256 bits; o servidor guarda só o hash SHA-256' }
+                  expiresAt: { type: string, format: date-time }
+                  idleTimeoutSeconds: { type: integer, example: 28800 }
+                  user: { $ref: '#/components/schemas/SessionUser' }
+        '401': { $ref: '#/components/responses/Erro' }
+    get:
+      tags: [Sessão]
+      summary: Quem sou e o que meu perfil permite
+      responses:
+        '200': { description: Usuário da sessão, content: { application/json: { schema: { $ref: '#/components/schemas/SessionUser' } } } }
+        '401': { $ref: '#/components/responses/Erro' }
+    delete:
+      tags: [Sessão]
+      summary: Sair ou bloquear a tela (a sessão deixa de valer na hora)
+      parameters:
+        - { name: reason, in: query, required: false, schema: { type: string, enum: [SAIR, BLOQUEIO], default: SAIR } }
+      responses:
+        '204': { description: Sessão encerrada }
+
+  /api/v1/session/password:
+    post:
+      tags: [Sessão]
+      summary: Trocar a própria senha (encerra todas as sessões do usuário)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string, format: password }
+                newPassword: { type: string, format: password, minLength: 10, maxLength: 128 }
+      responses:
+        '204': { description: Senha alterada }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/users:
+    get:
+      tags: [Usuários]
+      summary: Lista de usuários (user.admin)
+      responses:
+        '200': { description: Usuários, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/UserAccount' } } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+    post:
+      tags: [Usuários]
+      summary: Cria usuário (user.admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, displayName, profile, password]
+              properties:
+                username: { type: string, pattern: '^[a-z0-9._-]{3,60}$', description: 'Convertido para minúsculas' }
+                displayName: { type: string, maxLength: 120 }
+                profile: { $ref: '#/components/schemas/Profile' }
+                password: { type: string, format: password, minLength: 10, maxLength: 128 }
+      responses:
+        '201': { description: Criado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/UserAccount' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/users/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Usuários]
+      summary: Um usuário (user.admin)
+      responses:
+        '200': { description: Usuário, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/UserAccount' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Usuários]
+      summary: Altera nome, perfil e situação (user.admin)
+      description: Mudar o perfil ou desativar encerra as sessões do usuário. Sempre resta pelo menos um administrador ativo, e ninguém retira o próprio acesso de administrador.
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName: { type: string }
+                profile: { $ref: '#/components/schemas/Profile' }
+                active: { type: boolean }
+      responses:
+        '200': { description: Nova versão, content: { application/json: { schema: { $ref: '#/components/schemas/UserAccount' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/users/{id}/password:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Usuários]
+      summary: Redefine a senha (user.admin); libera o bloqueio e encerra as sessões do usuário
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [password], properties: { password: { type: string, format: password, minLength: 10 } } } } }
+      responses:
+        '200': { description: Senha redefinida, content: { application/json: { schema: { $ref: '#/components/schemas/UserAccount' } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/customers:
+    get:
+      tags: [Clientes]
+      summary: Lista de clientes (partner.read)
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Código, razão social, nome fantasia ou parte do CNPJ' }
+        - { name: status, in: query, required: false, schema: { type: string, enum: [ATIVO, INATIVO, TODOS], default: ATIVO } }
+      responses:
+        '200': { description: Clientes, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/CustomerSummary' } } } } }
+    post:
+      tags: [Clientes]
+      summary: Cadastra cliente — RegisterPartner (partner.create), idempotente
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CustomerRequest' } } }
+      responses:
+        '201': { description: Cadastrado (ou o mesmo cliente, se a chave já foi usada), headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Customer' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/customers/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Clientes]
+      summary: Ficha do cliente (partner.read)
+      responses:
+        '200': { description: Cliente, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Customer' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Clientes]
+      summary: Edita — UpdatePartner (partner.update)
+      description: Unidades e contatos enviados com `id` conhecido mantêm a identidade; os ausentes são removidos.
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CustomerRequest' } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Customer' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+        '428': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/customers/{id}/deactivate:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Clientes]
+      summary: Inativa — DeactivatePartner (partner.deactivate), idempotente; preserva o histórico
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string, maxLength: 500 } } } } }
+      responses:
+        '200': { description: Cliente inativo, content: { application/json: { schema: { $ref: '#/components/schemas/Customer' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/customers/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Clientes]
+      summary: Histórico do cliente lido da auditoria (partner.read), do mais recente ao mais antigo
+      responses:
+        '200':
+          description: Registros
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    occurredAt: { type: string, format: date-time }
+                    actor: { type: string }
+                    action: { type: string, enum: [PARTNER_REGISTERED, PARTNER_UPDATED, PARTNER_DEACTIVATED] }
+                    version: { type: integer }
+                    reason: { type: [string, 'null'] }
+                    changes:
+                      type: object
+                      additionalProperties:
+                        type: object
+                        properties:
+                          before: { type: [string, 'null'] }
+                          after: { type: [string, 'null'] }
+
+components:
+  securitySchemes:
+    sessao:
+      type: http
+      scheme: bearer
+      description: Token opaco devolvido por POST /api/v1/session
+  headers:
+    ETag:
+      description: Versão do registro entre aspas, para usar no If-Match
+      schema: { type: string, example: '"3"' }
+  parameters:
+    Id:
+      { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    IfMatch:
+      { name: If-Match, in: header, required: true, schema: { type: string, example: '"3"' }, description: 'Versão lida (ETag)' }
+    IdempotencyKey:
+      { name: Idempotency-Key, in: header, required: true, schema: { type: string, pattern: '^[A-Za-z0-9_-]{8,100}$' } }
+  responses:
+    Erro:
+      description: Erro padronizado
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+  schemas:
+    ApiError:
+      type: object
+      properties:
+        code: { type: string, example: VERSION_MISMATCH }
+        message: { type: string }
+        details: { type: array, items: { type: object, properties: { field: { type: [string, 'null'] }, message: { type: string } } } }
+        correlationId: { type: string }
+        retryable: { type: boolean }
+    Profile:
+      type: string
+      enum: [ADMINISTRADOR, CONSULTA]
+    SessionUser:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        displayName: { type: string }
+        profile: { $ref: '#/components/schemas/Profile' }
+        profileLabel: { type: string, example: Administrador }
+        permissions: { type: array, items: { type: string }, example: [company.read, partner.read] }
+    UserAccount:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        displayName: { type: string }
+        profile: { $ref: '#/components/schemas/Profile' }
+        active: { type: boolean }
+        locked: { type: boolean }
+        version: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    Address:
+      type: object
+      properties:
+        street: { type: [string, 'null'] }
+        number: { type: [string, 'null'] }
+        complement: { type: [string, 'null'] }
+        district: { type: [string, 'null'] }
+        city: { type: [string, 'null'] }
+        state: { type: [string, 'null'], description: UF }
+        postalCode: { type: [string, 'null'], description: '8 dígitos' }
+    CompanyProfileRequest:
+      type: object
+      properties:
+        legalName: { type: string }
+        tradeName: { type: [string, 'null'] }
+        cnpj: { type: [string, 'null'] }
+        address: { $ref: '#/components/schemas/Address' }
+        phone: { type: [string, 'null'] }
+        email: { type: [string, 'null'] }
+    CompanyProfile:
+      allOf:
+        - $ref: '#/components/schemas/CompanyProfileRequest'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            cnpjFormatted: { type: [string, 'null'] }
+            configured: { type: boolean }
+            version: { type: string }
+            updatedAt: { type: [string, 'null'], format: date-time }
+            updatedBy: { type: [string, 'null'] }
+    Unit:
+      type: object
+      required: [name]
+      properties:
+        id: { type: [string, 'null'], format: uuid }
+        name: { type: string, maxLength: 120 }
+        street: { type: [string, 'null'] }
+        number: { type: [string, 'null'] }
+        district: { type: [string, 'null'] }
+        city: { type: [string, 'null'] }
+        state: { type: [string, 'null'] }
+        postalCode: { type: [string, 'null'] }
+    Contact:
+      type: object
+      required: [name]
+      properties:
+        id: { type: [string, 'null'], format: uuid }
+        name: { type: string, maxLength: 120 }
+        role: { type: [string, 'null'] }
+        phone: { type: [string, 'null'] }
+        email: { type: [string, 'null'] }
+    CustomerRequest:
+      type: object
+      required: [legalName]
+      properties:
+        legalName: { type: string, maxLength: 200 }
+        tradeName: { type: [string, 'null'], maxLength: 200 }
+        cnpj: { type: [string, 'null'], description: 'Com ou sem máscara; válido e único quando informado' }
+        group: { type: [string, 'null'], maxLength: 100 }
+        units: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/Unit' } }
+        contacts: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/Contact' } }
+    Customer:
+      allOf:
+        - $ref: '#/components/schemas/CustomerRequest'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string, example: C00001 }
+            cnpjFormatted: { type: [string, 'null'] }
+            status: { type: string, enum: [ATIVO, INATIVO] }
+            version: { type: string }
+            createdAt: { type: string, format: date-time }
+            createdBy: { type: string }
+            updatedAt: { type: [string, 'null'], format: date-time }
+            updatedBy: { type: [string, 'null'] }
+    CustomerSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        legalName: { type: string }
+        tradeName: { type: [string, 'null'] }
+        cnpjFormatted: { type: [string, 'null'] }
+        city: { type: [string, 'null'], description: 'Cidade da primeira unidade' }
+        state: { type: [string, 'null'] }
+        units: { type: integer }
+        status: { type: string, enum: [ATIVO, INATIVO] }
+        version: { type: string }

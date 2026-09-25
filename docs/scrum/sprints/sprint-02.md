@@ -1,6 +1,6 @@
 # Sprint 2 — Login, permissões e auditoria + Clientes e unidades
 
-Situação: **Em execução.** Planning aprovado pelo PO em 25/09/2026.
+Situação: **Entregue para Review** (25/09/2026). Planning aprovado pelo PO em 25/09/2026.
 
 ## Objetivo
 
@@ -41,3 +41,32 @@ Fornecedores, materiais e equipamentos (Sprint 3); nomes alternativos vindos de 
 3. Com o administrador: cadastrar um cliente com duas unidades e um contato; editar; abrir a aba Histórico.
 4. Editar o mesmo cliente em duas janelas: a segunda gravação mostra o conflito, nada é sobrescrito.
 5. Errar a senha 5 vezes: o usuário fica bloqueado por um tempo.
+
+## Review — evidências
+
+| Item | Resultado | Evidência |
+|---|---|---|
+| S2-01 ADR-005 | Pronto | `docs/adr/ADR-005-autenticacao-sessoes.md` (aceito); PD-008 respondida e PD-009 com premissa em `docs/backend/b01/pendencias.json` |
+| S2-02 Usuários, sessões e permissões | Pronto | `SessionApiTest` (10 testes): 401 sem sessão; mesma mensagem para senha errada e usuário inexistente; bloqueio na 5ª tentativa e liberação pela redefinição; expiração por 8 h sem uso e por 12 h; sair revoga na hora; Consulta lê e recebe 403 ao alterar, com `ACCESS_DENIED` na auditoria; senha nunca volta na API nem na auditoria; banco guarda só o hash do token |
+| S2-03 Login real no app | Pronto | `App.test.tsx`; roteiro no Chromium contra o servidor real: erro de senha na linha de status, rodapé com nome e perfil, bloquear/sessão expirada mostram o login por cima com as janelas abertas por trás. Token só no processo principal do Electron (`electron/main.ts`) |
+| S2-04 Usuários e perfis | Pronto | Janela *Usuários e permissões* (criar, perfil, desativar, redefinir senha); regras "não retira o próprio acesso" e "sempre resta um administrador ativo" testadas no servidor |
+| S2-05 Comando repetido não se duplica | Pronto | `CustomerApiTest`: mesma chave devolve o mesmo cliente; 6 reenvios simultâneos criam um só; mesma chave com outro conteúdo → 422; app reenvia com a mesma chave depois de queda (`CustomerWindow.test.tsx`) |
+| S2-06 Eventos junto com a operação | Pronto | `PartnerRegistered/Updated/Deactivated` na outbox na mesma transação (comando recusado não deixa evento); entregador com `skip locked`; consumidor de fatos operacionais processa cada evento uma única vez, mesmo entregue de novo |
+| S2-07 Clientes e unidades | Pronto | `CustomerApiTest` (10 testes): código `C00001`, CNPJ válido e único com o código do cliente existente na mensagem, CNPJ ausente não inventado, unidades/contatos validados de uma vez, If-Match (412/428), ids das unidades preservados, inativação com motivo e idempotente, busca por código/nome/CNPJ |
+| S2-08 Telas de clientes | Pronto | Lista (busca, funil, seta, Novo) e ficha (cabeçalho + Geral, Unidades, Contatos, Histórico; amarelo-claro em adição; conflito; Inativar); roteiro no navegador com capturas |
+| S2-09 Histórico | Pronto | Aba Histórico lê a auditoria: data, usuário, operação, versão, campo, antes → depois e motivo |
+| S2-10 Contratos | Pronto | `docs/backend/api/openapi.yaml`; `OpenApiContractTest` falha se o servidor e o contrato divergirem; `menu.json` marca Clientes e Usuários como implementados (verificador B01: 32/32 telas, 38/38 recursos) |
+
+Testes executados: servidor 56 (PostgreSQL 16 real), app 37, typecheck e build do app e do Electron, verificador B01 + testes. Roteiro no Chromium contra o servidor real (login errado e certo, cadastro com duas unidades, edição, histórico, criação de usuário Consulta, entrada com ele, bloqueio).
+
+**Não verificado aqui:** o app dentro do Electron no macOS (ambiente Linux sem tela); a ponte do processo principal com o token foi revisada e tem a mesma lógica do transporte do navegador, testado acima. O CI no GitHub (Testcontainers) roda no próximo push.
+
+**Fora do combinado, feito na Review:** itens novos no menu *Arquivo* (Trocar senha, Encerrar sessão) e *Clientes e unidades* no menu *Módulos*, necessários para o login; a ferramenta *Novo* da barra superior passa a funcionar nas janelas que criam registros.
+
+**Pendências registradas:** a tela *Auditoria* (Administração) continua prevista; a revisão de possível duplicidade por semelhança de nome ficou fora do escopo; TLS obrigatório quando o servidor for acessado por outros computadores (ADR-007).
+
+## Retrospectiva
+
+- Funcionou: testes contra banco real pegaram a disputa entre o entregador automático da outbox e a limpeza dos testes; o roteiro no navegador achou o nome lido como "N ovo" pelo leitor de tela (letra de atalho dentro de botão flex) e uma classe do app que colidia com o design system.
+- Melhorar: duas sessões mexeram no menu lateral ao mesmo tempo em branches diferentes.
+- Ação: a partir da Sprint 3, uma branch de trabalho só (`claude/kind-thompson-qidwjm`) e pull request curto por sprint.
