@@ -1,0 +1,1039 @@
+<title>Classes e padrões Renda+</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --fundo: #f4f6fa;
+    --superficie: #ffffff;
+    --superficie-2: #eef3f7;
+    --tinta: #1f2026;
+    --tinta-suave: #5a6272;
+    --regra: #d3dbe7;
+    --azul: #4867b1;
+    --azul-fundo: #e6ecf7;
+    --ouro: #b07d12;
+    --ouro-fundo: #fcf0ae;
+    --ok: #23713f;
+    --ok-fundo: #e3f1e7;
+    --fonte: "IBM Plex Sans", "Segoe UI", Tahoma, system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --fundo: #12151c; --superficie: #1a1f29; --superficie-2: #212835; --tinta: #e6e9ef; --tinta-suave: #9aa4b5;
+      --regra: #2e3747; --azul: #8fa9e6; --azul-fundo: #1f2a44; --ouro: #f0c35a; --ouro-fundo: #3a3218; --ok: #6fcf8f; --ok-fundo: #173222;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --fundo: #12151c; --superficie: #1a1f29; --superficie-2: #212835; --tinta: #e6e9ef; --tinta-suave: #9aa4b5;
+    --regra: #2e3747; --azul: #8fa9e6; --azul-fundo: #1f2a44; --ouro: #f0c35a; --ouro-fundo: #3a3218; --ok: #6fcf8f; --ok-fundo: #173222;
+    color-scheme: dark;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--fundo); color: var(--tinta); font-family: var(--fonte); font-size: 15px; line-height: 1.55; }
+  .pagina { max-width: 1320px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 72px; display: grid; gap: 28px; }
+  header { display: grid; gap: 12px; }
+  .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--azul); font-weight: 600; }
+  h1 { margin: 0; font-size: clamp(28px, 4vw, 40px); line-height: 1.1; letter-spacing: -.01em; text-wrap: balance; }
+  h1 b { color: var(--ouro); font-weight: 700; }
+  header p { margin: 0; max-width: 72ch; color: var(--tinta-suave); }
+  .numeros { display: flex; flex-wrap: wrap; gap: 10px 28px; font-variant-numeric: tabular-nums; }
+  .numeros div { display: grid; }
+  .numeros strong { font-size: 24px; line-height: 1.2; }
+  .numeros span { font-size: 13px; color: var(--tinta-suave); }
+  code { font-family: var(--mono); font-size: .9em; background: var(--superficie-2); padding: 1px 4px; border-radius: 3px; overflow-wrap: anywhere; }
+
+  .layout { display: grid; gap: 28px; grid-template-columns: minmax(0, 1fr); }
+  nav.indice { background: var(--superficie); border: 1px solid var(--regra); border-radius: 6px; padding: 14px 16px; font-size: 13.5px; }
+  nav.indice summary { cursor: pointer; font-weight: 600; }
+  nav.indice ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  nav.indice > details > ul { margin-top: 10px; gap: 12px; }
+  nav.indice ul ul { margin-top: 4px; padding-left: 10px; border-left: 1px solid var(--regra); }
+  nav.indice a { display: block; color: var(--tinta); text-decoration: none; padding: 3px 8px; border-radius: 3px; transition: background-color .18s ease; }
+  nav.indice a:hover, nav.indice a:focus-visible { background: var(--ouro-fundo); outline: none; }
+  nav.indice a.nav-parte { font-weight: 600; color: var(--azul); }
+
+  main { display: grid; gap: 22px; min-width: 0; }
+  h2.parte { margin: 18px 0 0; padding-top: 14px; border-top: 2px solid var(--azul); font-size: 24px; line-height: 1.25; text-wrap: balance; scroll-margin-top: 16px; }
+  h2.parte:first-child { margin-top: 0; }
+  section.bloco { display: grid; gap: 12px; scroll-margin-top: 16px; }
+  h3 { margin: 0; font-size: 18px; line-height: 1.3; text-wrap: balance; }
+  section.bloco p, main > p { margin: 0; max-width: 78ch; color: var(--tinta-suave); }
+  section.bloco p strong { color: var(--tinta); }
+  .diagrama { background: var(--superficie); border: 1px solid var(--regra); border-radius: 6px; padding: 16px; overflow-x: auto; }
+  .diagrama pre.mermaid { margin: 0; min-width: 680px; display: flex; justify-content: center; }
+
+  .tabela { overflow-x: auto; background: var(--superficie); border: 1px solid var(--regra); border-radius: 6px; }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 13.5px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 12px; border-bottom: 1px solid var(--regra); }
+  th { background: var(--superficie-2); font-weight: 600; font-size: 12.5px; letter-spacing: .02em; }
+  tr:last-child td { border-bottom: 0; }
+  tbody tr { transition: background-color .18s ease; }
+  tbody tr:hover { background: var(--ouro-fundo); }
+
+  .selo { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .selo::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .selo--uso { background: var(--ok-fundo); color: var(--ok); }
+  .selo--plan { background: var(--azul-fundo); color: var(--azul); }
+
+  @media (min-width: 1000px) {
+    .layout { grid-template-columns: 250px minmax(0, 1fr); align-items: start; }
+    nav.indice { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); max-height: calc(100vh - 32px); overflow-y: auto; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } nav.indice a, tbody tr { transition: none; } }
+</style>
+
+<div class="pagina">
+  <header>
+    <div class="eyebrow">Renda+ ERP · servidor Java / Spring Boot</div>
+    <h1>Classes e padrões <b>Renda+</b></h1>
+    <p>Situação em 25/09/2026. A parte <strong>implementada</strong> mostra as classes que existem hoje em <code>backend/java</code> (Sprint 1). A parte <strong>planejada</strong> mostra os agregados especificados no B01 (<code>12-b01-modelo-de-dominio.md</code>, <code>13-b01-especificacao-de-comandos.md</code> e <code>06-oop-e-design-patterns.md</code>), que ganham código na sprint indicada. Os nomes de classes seguem o código, em inglês; os textos, em português.</p><p>Notação: <code>+</code> público, <code>-</code> privado, <code>$</code> estático, <code>*</code> abstrato. <code>&lt;|--</code> herança, <code>&lt;|..</code> implementa interface, <code>*--</code> composição (a parte não existe sem o todo), <code>--&gt;</code> referência, <code>..&gt;</code> usa ou cria.</p>
+    <div class="numeros">
+      <div><strong>14</strong><span>diagramas</span></div><div><strong>53</strong><span>técnicas em uso</span></div><div><strong>19</strong><span>técnicas planejadas</span></div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="indice" aria-label="Índice">
+      <details open>
+        <summary>Índice</summary>
+        <ul><li><a href="#s-parte-1" class="nav-parte">Parte 1 — Implementado (Sprint 1)</a><ul><li><a href="#s-1-arquitetura-em-camadas-portas-e-adaptadores">1. Arquitetura em camadas: portas e adaptadores</a></li><li><a href="#s-2-kernel-value-objects-e-politicas">2. Kernel: Value Objects e políticas</a></li><li><a href="#s-3-erros-de-dominio-e-contrato-de-erro-da-api">3. Erros de domínio e contrato de erro da API</a></li><li><a href="#s-4-plataforma-web-correlacao-status-e-relogio">4. Plataforma web: correlação, status e relógio</a></li><li><a href="#s-5-dados-da-empresa-a-fatia-vertical-completa">5. Dados da empresa: a fatia vertical completa</a></li><li><a href="#s-6-sequencia-salvar-os-dados-da-empresa">6. Sequência: salvar os dados da empresa</a></li></ul></li><li><a href="#s-parte-2" class="nav-parte">Parte 2 — Planejado (especificado no B01)</a><ul><li><a href="#s-7-plataforma-de-comandos-recibo-outbox-e-fatos-sprint-2-b02">7. Plataforma de comandos: recibo, outbox e fatos (Sprint 2 · B02)</a></li><li><a href="#s-8-comercial-agregado-salesorder-sprint-4-b05">8. Comercial: agregado SalesOrder (Sprint 4 · B05)</a></li><li><a href="#s-9-estados-do-pedido">9. Estados do pedido</a></li><li><a href="#s-10-caso-de-uso-confirmar-pedido-sprint-4-b05">10. Caso de uso: confirmar pedido (Sprint 4 · B05)</a></li><li><a href="#s-11-financeiro-financialtitle-e-settlement-sprints-5-e-8-b05-b06">11. Financeiro: FinancialTitle e Settlement (Sprints 5 e 8+ · B05/B06)</a></li><li><a href="#s-12-motor-de-dados-e-analise-b02-b10-b14-e-b15">12. Motor de dados e análise (B02, B10, B14 e B15)</a></li><li><a href="#s-13-estados-de-uma-execucao-analitica">13. Estados de uma execução analítica</a></li><li><a href="#s-14-qualidade-de-produto-e-qualidade-de-dados-b04-e-b09">14. Qualidade de produto e qualidade de dados (B04 e B09)</a></li><li><a href="#s-15-demais-agregados-previstos">15. Demais agregados previstos</a></li></ul></li><li><a href="#s-parte-3" class="nav-parte">Parte 3 — Técnicas e padrões de engenharia de software</a><ul><li><a href="#s-3-1-arquitetura">3.1 Arquitetura</a></li><li><a href="#s-3-2-dominio-ddd">3.2 Domínio (DDD)</a></li><li><a href="#s-3-3-padroes-de-projeto">3.3 Padrões de projeto</a></li><li><a href="#s-3-4-dados-concorrencia-e-integridade">3.4 Dados, concorrência e integridade</a></li><li><a href="#s-3-5-api-e-observabilidade">3.5 API e observabilidade</a></li><li><a href="#s-3-6-qualidade-e-testes">3.6 Qualidade e testes</a></li><li><a href="#s-3-7-no-app-do-mac">3.7 No app do Mac</a></li><li><a href="#s-3-8-processo">3.8 Processo</a></li><li><a href="#s-3-9-evitados-de-proposito">3.9 Evitados de propósito</a></li></ul></li></ul>
+      </details>
+    </nav>
+    <main>
+      <h2 class="parte" id="s-parte-1">Parte 1 — Implementado (Sprint 1)</h2>
+<section class="bloco" id="s-1-arquitetura-em-camadas-portas-e-adaptadores"><h3>1. Arquitetura em camadas: portas e adaptadores</h3>
+<p>Cada módulo tem três camadas. O domínio fica no centro e não conhece Spring, HTTP nem banco; isso é verificado no build pelo <code>ArchitectureTest</code>. As setas mostram a direção das dependências.</p>
+<div class="diagrama"><pre class="mermaid">
+flowchart LR
+    APP["App do Mac&lt;br/&gt;Electron + React"]
+    subgraph INFRA["infrastructure: adaptadores"]
+        CTRL["CompanyProfileController&lt;br/&gt;REST /api/v1"]
+        JDBC["JdbcCompanyProfileRepository"]
+        AUDJ["JdbcAuditTrail"]
+    end
+    subgraph APPL["application: casos de uso e portas"]
+        SVC["CompanyProfileService"]
+        PORT["CompanyProfileRepository&lt;br/&gt;(porta)"]
+        AUDP["AuditTrail&lt;br/&gt;(porta pública da auditoria)"]
+    end
+    subgraph DOM["domain: regras"]
+        AGG["CompanyProfile"]
+    end
+    subgraph KER["kernel: Value Objects"]
+        VO["Money · Quantity · Cnpj"]
+    end
+    DB[("PostgreSQL 16&lt;br/&gt;Flyway")]
+    APP -- "HTTP + ETag/If-Match" --&gt; CTRL
+    CTRL --&gt; SVC
+    SVC --&gt; PORT
+    SVC --&gt; AUDP
+    SVC --&gt; AGG
+    AGG --&gt; VO
+    JDBC -. implementa .-&gt; PORT
+    AUDJ -. implementa .-&gt; AUDP
+    JDBC --&gt; DB
+    AUDJ --&gt; DB
+</pre></div>
+</section>
+<section class="bloco" id="s-2-kernel-value-objects-e-politicas"><h3>2. Kernel: Value Objects e políticas</h3>
+<p>Java puro, imutável e sem framework. Dinheiro é sempre um inteiro em centavos com moeda explícita. Arredondamento e rateio usam uma política informada, e a soma das partes é sempre exatamente o total (INV-MON-2).</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class Money {
+        &lt;&lt;value object&gt;&gt;
+        -long cents
+        -Currency currency
+        +ofCents(long, Currency)$ Money
+        +zero(Currency)$ Money
+        +parseCents(String, Currency)$ Money
+        +ofDecimal(BigDecimal, Currency)$ Money
+        +plus(Money) Money
+        +minus(Money) Money
+        +negate() Money
+        +times(BigDecimal, RoundingPolicy) Money
+        +split(int, AllocationPolicy) List~Money~
+        +allocate(List~BigDecimal~, AllocationPolicy) List~Money~
+        +centsAsString() String
+        +compareTo(Money) int
+    }
+    class Currency {
+        &lt;&lt;enumeration&gt;&gt;
+        BRL
+    }
+    class RoundingPolicy {
+        &lt;&lt;enumeration&gt;&gt;
+        HALF_EVEN
+        HALF_UP
+        DOWN
+        +PREMISSA_VIGENTE$ HALF_EVEN
+        +mode() RoundingMode
+    }
+    class AllocationPolicy {
+        &lt;&lt;enumeration&gt;&gt;
+        RESIDUAL_FROM_FIRST
+        RESIDUAL_FROM_LAST
+        LARGEST_REMAINDER
+        +PREMISSA_VIGENTE$ RESIDUAL_FROM_FIRST
+    }
+    class Quantity {
+        &lt;&lt;record&gt;&gt;
+        +BigDecimal value
+        +UnitOfMeasure unit
+        +MAX_SCALE$ int = 6
+        +of(String, UnitOfMeasure)$ Quantity
+        +plus(Quantity) Quantity
+        +minus(Quantity) Quantity
+        +convert(UnitConversion, RoundingPolicy) Quantity
+        +isPositive() boolean
+    }
+    class UnitOfMeasure {
+        &lt;&lt;record&gt;&gt;
+        +String code
+        +of(String)$ UnitOfMeasure
+    }
+    class UnitConversion {
+        &lt;&lt;record&gt;&gt;
+        +UnitOfMeasure from
+        +UnitOfMeasure to
+        +BigDecimal factor
+    }
+    class Cnpj {
+        &lt;&lt;record&gt;&gt;
+        +String value
+        +of(String)$ Cnpj
+        +normalize(String)$ String
+        +formatted() String
+    }
+    Money --&gt; Currency
+    Money ..&gt; RoundingPolicy : times
+    Money ..&gt; AllocationPolicy : split e allocate
+    Quantity --&gt; UnitOfMeasure
+    Quantity ..&gt; UnitConversion : convert
+    Quantity ..&gt; RoundingPolicy
+    UnitConversion --&gt; UnitOfMeasure
+</pre></div>
+</section>
+<section class="bloco" id="s-3-erros-de-dominio-e-contrato-de-erro-da-api"><h3>3. Erros de domínio e contrato de erro da API</h3>
+<p>As exceções de negócio carregam um código estável. Um único tratador (<code>ApiExceptionHandler</code>) converte cada uma no corpo padrão <code>ApiError</code> e no código HTTP correspondente: 412 versão desatualizada, 422 regra violada, 404 não encontrado, 428 falta <code>If-Match</code> e 400 formato inválido.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class RuntimeException
+    class DomainException {
+        &lt;&lt;abstract&gt;&gt;
+        -String code
+        -List~FieldIssue~ details
+        +code() String
+        +details() List~FieldIssue~
+    }
+    class FieldIssue {
+        &lt;&lt;record&gt;&gt;
+        +String field
+        +String message
+    }
+    class RuleViolationException {
+        HTTP 422
+    }
+    class VersionConflictException {
+        HTTP 412 VERSION_MISMATCH
+        -long currentVersion
+    }
+    class NotFoundException {
+        HTTP 404 NOT_FOUND
+    }
+    class PreconditionRequiredException {
+        HTTP 428 PRECONDITION_REQUIRED
+    }
+    class ApiExceptionHandler {
+        &lt;&lt;RestControllerAdvice&gt;&gt;
+        +versionConflict(e) ResponseEntity~ApiError~
+        +ruleViolation(e) ResponseEntity~ApiError~
+        +notFound(e) ResponseEntity~ApiError~
+        +preconditionRequired(e) ResponseEntity~ApiError~
+        +badRequest(e) ResponseEntity~ApiError~
+        +unexpected(e) ResponseEntity~ApiError~
+    }
+    class ApiError {
+        &lt;&lt;record&gt;&gt;
+        +String code
+        +String message
+        +List~Detail~ details
+        +String correlationId
+        +boolean retryable
+    }
+    class Detail {
+        &lt;&lt;record&gt;&gt;
+        +String field
+        +String message
+    }
+    RuntimeException &lt;|-- DomainException
+    RuntimeException &lt;|-- PreconditionRequiredException
+    DomainException &lt;|-- RuleViolationException
+    DomainException &lt;|-- VersionConflictException
+    DomainException &lt;|-- NotFoundException
+    DomainException *-- FieldIssue
+    ApiExceptionHandler ..&gt; DomainException : traduz
+    ApiExceptionHandler ..&gt; ApiError : cria
+    ApiError *-- Detail
+</pre></div>
+</section>
+<section class="bloco" id="s-4-plataforma-web-correlacao-status-e-relogio"><h3>4. Plataforma web: correlação, status e relógio</h3>
+<p><code>CorrelationId</code> é um filtro que roda antes de tudo: lê ou gera o <code>X-Correlation-Id</code>, grava no log (MDC) e devolve na resposta. O mesmo código aparece no erro, na auditoria e no log, para rastrear uma operação de ponta a ponta.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class OncePerRequestFilter {
+        &lt;&lt;Spring&gt;&gt;
+        #doFilterInternal(req, res, chain)*
+    }
+    class CorrelationId {
+        &lt;&lt;Component&gt;&gt;
+        +HEADER$ String = "X-Correlation-Id"
+        +current()$ String
+        #doFilterInternal(req, res, chain)
+    }
+    class StatusController {
+        &lt;&lt;RestController&gt;&gt;
+        -JdbcClient jdbc
+        -String serverVersion
+        +status() Status
+    }
+    class Status {
+        &lt;&lt;record&gt;&gt;
+        +String status
+        +String apiVersion
+        +String serverVersion
+        +String database
+        +Instant serverTime
+    }
+    class ClockConfig {
+        &lt;&lt;Configuration&gt;&gt;
+        +clock() Clock
+    }
+    class RendaErpApplication {
+        &lt;&lt;SpringBootApplication&gt;&gt;
+        +main(String[])$
+    }
+    OncePerRequestFilter &lt;|-- CorrelationId
+    StatusController ..&gt; Status : GET /api/v1/status
+</pre></div>
+</section>
+<section class="bloco" id="s-5-dados-da-empresa-a-fatia-vertical-completa"><h3>5. Dados da empresa: a fatia vertical completa</h3>
+<p>A primeira funcionalidade de ponta a ponta. O controller só traduz HTTP e DTOs. O serviço coordena transação, versão e auditoria. O agregado valida todos os campos de uma vez e devolve uma <strong>nova versão</strong> imutável. O repositório é uma porta, e a implementação JDBC é o adaptador.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class CompanyProfileController {
+        &lt;&lt;RestController&gt;&gt;
+        +get() ResponseEntity
+        +put(ifMatch, CompanyProfileRequest) ResponseEntity
+        ~parseVersion(String)$ long
+    }
+    class CompanyProfileRequest {
+        &lt;&lt;record · DTO&gt;&gt;
+    }
+    class CompanyProfileResponse {
+        &lt;&lt;record · DTO&gt;&gt;
+    }
+    class CompanyProfileService {
+        &lt;&lt;Service&gt;&gt;
+        +get() CompanyProfile
+        +update(long expectedVersion, CompanyProfileData) CompanyProfile
+    }
+    class CompanyProfileRepository {
+        &lt;&lt;interface · porta&gt;&gt;
+        +get() CompanyProfile
+        +getForUpdate() CompanyProfile
+        +save(CompanyProfile, long expectedVersion) boolean
+    }
+    class JdbcCompanyProfileRepository {
+        &lt;&lt;Repository · adaptador&gt;&gt;
+        -JdbcClient jdbc
+        -MAPPER$ RowMapper
+    }
+    class CompanyProfile {
+        &lt;&lt;aggregate root&gt;&gt;
+        -UUID id
+        -String legalName
+        -String tradeName
+        -Cnpj cnpj
+        -Address address
+        -String phone
+        -String email
+        -boolean configured
+        -long version
+        -Instant updatedAt
+        -String updatedBy
+        +update(CompanyProfileData, Instant, String) CompanyProfile
+        +diff(CompanyProfile) Map
+    }
+    class CompanyProfileData {
+        &lt;&lt;record&gt;&gt;
+        dados digitados, antes da validação
+    }
+    class Address {
+        &lt;&lt;record · value object&gt;&gt;
+        +street, number, complement
+        +district, city, state, postalCode
+        +empty()$ Address
+    }
+    class Cnpj {
+        &lt;&lt;record · value object&gt;&gt;
+    }
+    class AuditTrail {
+        &lt;&lt;interface · porta pública&gt;&gt;
+        +record(AuditEntry)
+    }
+    class JdbcAuditTrail {
+        &lt;&lt;Component · adaptador&gt;&gt;
+        +record(AuditEntry)
+    }
+    class AuditEntry {
+        &lt;&lt;record&gt;&gt;
+        +String actor
+        +String action
+        +String entityType
+        +String entityId
+        +long entityVersion
+        +String reason
+        +Map changes
+        +String correlationId
+    }
+    class Change {
+        &lt;&lt;record&gt;&gt;
+        +String before
+        +String after
+    }
+    class CurrentActor {
+        +name()$ String
+    }
+    CompanyProfileController --&gt; CompanyProfileService
+    CompanyProfileController ..&gt; CompanyProfileRequest
+    CompanyProfileController ..&gt; CompanyProfileResponse
+    CompanyProfileService --&gt; CompanyProfileRepository
+    CompanyProfileService --&gt; AuditTrail
+    CompanyProfileService ..&gt; CurrentActor
+    CompanyProfileService ..&gt; CompanyProfile
+    CompanyProfileRepository &lt;|.. JdbcCompanyProfileRepository
+    AuditTrail &lt;|.. JdbcAuditTrail
+    CompanyProfile *-- Address
+    CompanyProfile *-- Cnpj
+    CompanyProfile ..&gt; CompanyProfileData : valida
+    AuditEntry *-- Change
+    AuditTrail ..&gt; AuditEntry
+</pre></div>
+</section>
+<section class="bloco" id="s-6-sequencia-salvar-os-dados-da-empresa"><h3>6. Sequência: salvar os dados da empresa</h3>
+<p>A mesma transação trava o registro, confere a versão, grava e audita. Se duas janelas salvarem ao mesmo tempo, só uma vence; a outra recebe 412 e o app mostra o aviso de conflito. O teste <code>CompanyProfileApiTest</code> faz 8 gravações simultâneas e confere 1 sucesso e 7 conflitos.</p>
+<div class="diagrama"><pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant A as App do Mac
+    participant F as CorrelationId
+    participant C as Controller
+    participant S as Service
+    participant R as Repository JDBC
+    participant D as CompanyProfile
+    participant T as AuditTrail
+    A-&gt;&gt;F: PUT /api/v1/company-profile + If-Match "3"
+    F-&gt;&gt;C: X-Correlation-Id no log
+    alt sem If-Match
+        C--&gt;&gt;A: 428 PRECONDITION_REQUIRED
+    end
+    C-&gt;&gt;S: update(3, dados)
+    Note over S,T: uma única transação
+    S-&gt;&gt;R: getForUpdate() (select ... for update)
+    alt versão atual ≠ 3
+        S--&gt;&gt;A: 412 VERSION_MISMATCH
+    end
+    S-&gt;&gt;D: update(dados, agora, ator)
+    alt campos inválidos
+        D--&gt;&gt;A: 422 com a lista de campos
+    end
+    D--&gt;&gt;S: nova versão 4
+    S-&gt;&gt;R: save(v4, esperada 3) (update ... where version = 3)
+    S-&gt;&gt;T: record(diferenças campo a campo)
+    S--&gt;&gt;C: perfil v4
+    C--&gt;&gt;A: 200 + ETag "4"
+</pre></div>
+</section>
+<h2 class="parte" id="s-parte-2">Parte 2 — Planejado (especificado no B01)</h2>
+<section class="bloco" id="s-7-plataforma-de-comandos-recibo-outbox-e-fatos-sprint-2-b02"><h3>7. Plataforma de comandos: recibo, outbox e fatos (Sprint 2 · B02)</h3>
+<p>Todo comando que muda dinheiro, estoque ou compromisso grava, <strong>na mesma transação</strong>, os agregados, o recibo do comando, a auditoria, os fatos operacionais e os eventos do outbox. Repetir a mesma intenção (queda de conexão, clique duplo) devolve o resultado original.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class CommandReceiptStore {
+        &lt;&lt;interface · porta&gt;&gt;
+        +find(companyId, operation, key) Optional~CommandReceipt~
+        +begin(CommandReceipt)
+        +complete(commandId, response, affectedIds)
+        +reject(commandId, error)
+    }
+    class CommandReceipt {
+        &lt;&lt;entity&gt;&gt;
+        +UUID commandId
+        +UUID companyId
+        +String operation
+        +IdempotencyKey key
+        +String requestHash
+        +String actor
+        +ReceiptState state
+        +String response
+        +List~EntityRef~ affectedIds
+    }
+    class ReceiptState {
+        &lt;&lt;enumeration&gt;&gt;
+        IN_PROGRESS
+        COMPLETED
+        REJECTED
+    }
+    class EventOutbox {
+        &lt;&lt;interface · porta&gt;&gt;
+        +append(DomainEvent)
+    }
+    class DomainEvent {
+        &lt;&lt;record&gt;&gt;
+        +UUID eventId
+        +String type
+        +int schemaVersion
+        +EntityRef aggregate
+        +long aggregateVersion
+        +Instant occurredAt
+        +String actor
+        +String correlationId
+        +payload
+    }
+    class OutboxRelay {
+        publica em lote, pelo menos uma vez
+    }
+    class ConsumerReceiptStore {
+        &lt;&lt;interface · porta&gt;&gt;
+        +alreadyProcessed(consumer, eventId) boolean
+        +markProcessed(consumer, eventId)
+    }
+    class IdempotentConsumer {
+        &lt;&lt;abstract&gt;&gt;
+        +handle(DomainEvent)
+        #apply(DomainEvent)*
+    }
+    class OperationalFactStore {
+        &lt;&lt;interface · porta&gt;&gt;
+        +append(OperationalFact)
+    }
+    CommandReceiptStore ..&gt; CommandReceipt
+    CommandReceipt --&gt; ReceiptState
+    EventOutbox ..&gt; DomainEvent
+    OutboxRelay ..&gt; EventOutbox : lê pendentes
+    OutboxRelay ..&gt; IdempotentConsumer : entrega
+    IdempotentConsumer --&gt; ConsumerReceiptStore : deduplica
+</pre></div>
+</section>
+<section class="bloco" id="s-8-comercial-agregado-salesorder-sprint-4-b05"><h3>8. Comercial: agregado SalesOrder (Sprint 4 · B05)</h3>
+<p>O pedido protege suas regras: pelo menos uma linha, parcelas que somam exatamente o total e edição só em rascunho. A confirmação acontece uma única vez; a segunda tentativa devolve a confirmação existente.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class SalesOrder {
+        &lt;&lt;aggregate root&gt;&gt;
+        -SalesOrderId id
+        -String code
+        -AggregateVersion version
+        -PartnerRef customer
+        -UnitRef unit
+        -ProposalRef proposal
+        -BusinessDate contractDate
+        -OrderStatus status
+        +addLine(SalesOrderLine)
+        +changeLine(lineId, SalesOrderLine)
+        +removeLine(lineId)
+        +setSchedule(PaymentSchedule)
+        +confirm(ConfirmationPolicy, Instant, UserId) OrderConfirmed
+        +amend(ApprovedAmendment) SalesOrderAmended
+        +cancel(CancellationPolicy, EffectsSnapshot, Reason) SalesOrderCancelled
+        +total() Money
+    }
+    class SalesOrderLine {
+        &lt;&lt;entity&gt;&gt;
+        +ItemRef item
+        +LineKind kind
+        +Quantity quantity
+        +Money unitPrice
+        +Money discount
+        +lineTotal() Money
+    }
+    class LineKind {
+        &lt;&lt;enumeration&gt;&gt;
+        EQUIPMENT
+        SERVICE
+        MATERIAL
+    }
+    class PaymentSchedule {
+        &lt;&lt;value object&gt;&gt;
+        +List~PlannedInstallment~ installments
+        +sum() Money
+    }
+    class PlannedInstallment {
+        &lt;&lt;value object&gt;&gt;
+        +int seq
+        +BusinessDate dueDate
+        +Money amount
+        +String milestone
+    }
+    class OrderStatus {
+        &lt;&lt;enumeration&gt;&gt;
+        DRAFT
+        CONFIRMED
+        IN_EXECUTION
+        COMPLETED
+        CANCELLED
+    }
+    class OrderConfirmation {
+        &lt;&lt;value object&gt;&gt;
+        +Instant at
+        +UserId by
+        +String snapshotHash
+        +List~ProjectId~ projectIds
+        +List~EquipmentId~ equipmentIds
+        +List~TitleId~ titleIds
+    }
+    class Amendment {
+        &lt;&lt;entity&gt;&gt;
+        +Money delta
+        +Reason reason
+        +Instant approvedAt
+    }
+    class OrderCancellation {
+        &lt;&lt;value object&gt;&gt;
+        +Reason reason
+        +Instant at
+        +UserId by
+    }
+    class ConfirmationPolicy {
+        &lt;&lt;interface · policy&gt;&gt;
+        +check(SalesOrder) List~Violation~
+    }
+    class CancellationPolicy {
+        &lt;&lt;interface · policy&gt;&gt;
+        +check(SalesOrder, EffectsSnapshot) List~Violation~
+    }
+    SalesOrder "1" *-- "1..*" SalesOrderLine
+    SalesOrder "1" *-- "1" PaymentSchedule
+    PaymentSchedule "1" *-- "1..*" PlannedInstallment
+    SalesOrder "1" *-- "0..1" OrderConfirmation
+    SalesOrder "1" *-- "0..*" Amendment
+    SalesOrder "1" *-- "0..1" OrderCancellation
+    SalesOrder --&gt; OrderStatus
+    SalesOrderLine --&gt; LineKind
+    SalesOrder ..&gt; ConfirmationPolicy
+    SalesOrder ..&gt; CancellationPolicy
+    note for SalesOrder "INV-SO-3: soma das parcelas = total, exato em centavos"
+</pre></div>
+</section>
+<section class="bloco" id="s-9-estados-do-pedido"><h3>9. Estados do pedido</h3>
+<div class="diagrama"><pre class="mermaid">
+stateDiagram-v2
+    [*] --&gt; DRAFT
+    DRAFT --&gt; CONFIRMED : ConfirmSalesOrder (INV-SO-1 a 6)
+    DRAFT --&gt; CANCELLED : CancelSalesOrder + motivo
+    CONFIRMED --&gt; IN_EXECUTION : projeto sai de PLANEJADO
+    CONFIRMED --&gt; CANCELLED : CancellationPolicy (PD-003)
+    IN_EXECUTION --&gt; CANCELLED : CancellationPolicy (PD-003)
+    IN_EXECUTION --&gt; COMPLETED : equipamentos aceitos e títulos sem saldo
+    COMPLETED --&gt; [*]
+    CANCELLED --&gt; [*]
+</pre></div>
+</section>
+<section class="bloco" id="s-10-caso-de-uso-confirmar-pedido-sprint-4-b05"><h3>10. Caso de uso: confirmar pedido (Sprint 4 · B05)</h3>
+<p>O handler coordena; a regra fica no agregado. Projetos, equipamentos e parcelas são criados por portas de outros módulos, <strong>dentro da mesma transação</strong>, porque a confirmação não pode ficar pela metade.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class SalesOrderController {
+        &lt;&lt;RestController&gt;&gt;
+        +confirm(id, IdempotencyKey, ifMatch)
+    }
+    class ConfirmSalesOrderHandler {
+        &lt;&lt;application service&gt;&gt;
+        +handle(ConfirmSalesOrder, Actor) ConfirmationResult
+    }
+    class ConfirmSalesOrder {
+        &lt;&lt;record · comando&gt;&gt;
+        +SalesOrderId orderId
+        +long expectedVersion
+        +IdempotencyKey key
+    }
+    class SalesOrderRepository {
+        &lt;&lt;interface · porta&gt;&gt;
+        +getForUpdate(SalesOrderId) SalesOrder
+        +save(SalesOrder, long expectedVersion)
+    }
+    class PartnerQueryApi {
+        &lt;&lt;interface · cadastros&gt;&gt;
+        +isActiveUnitOf(customer, unit) boolean
+    }
+    class ProjectProvisioning {
+        &lt;&lt;interface · projetos&gt;&gt;
+        +createFor(OrderConfirmed) ProjectIds
+    }
+    class TitleProvisioning {
+        &lt;&lt;interface · financeiro&gt;&gt;
+        +createReceivables(OrderConfirmed) TitleIds
+    }
+    class Authorizer {
+        &lt;&lt;interface · acesso&gt;&gt;
+        +require(Actor, "sales_order.confirm", orderId)
+    }
+    class CommandReceiptStore {
+        &lt;&lt;interface · plataforma&gt;&gt;
+    }
+    class EventOutbox {
+        &lt;&lt;interface · plataforma&gt;&gt;
+    }
+    class AuditTrail {
+        &lt;&lt;interface · auditoria&gt;&gt;
+    }
+    class OperationalFactStore {
+        &lt;&lt;interface · plataforma&gt;&gt;
+    }
+    SalesOrderController --&gt; ConfirmSalesOrderHandler
+    SalesOrderController ..&gt; ConfirmSalesOrder
+    ConfirmSalesOrderHandler --&gt; Authorizer
+    ConfirmSalesOrderHandler --&gt; CommandReceiptStore
+    ConfirmSalesOrderHandler --&gt; SalesOrderRepository
+    ConfirmSalesOrderHandler --&gt; PartnerQueryApi
+    ConfirmSalesOrderHandler --&gt; ProjectProvisioning
+    ConfirmSalesOrderHandler --&gt; TitleProvisioning
+    ConfirmSalesOrderHandler --&gt; AuditTrail
+    ConfirmSalesOrderHandler --&gt; OperationalFactStore
+    ConfirmSalesOrderHandler --&gt; EventOutbox
+</pre></div>
+</section>
+<section class="bloco" id="s-11-financeiro-financialtitle-e-settlement-sprints-5-e-8-b05-b06"><h3>11. Financeiro: FinancialTitle e Settlement (Sprints 5 e 8+ · B05/B06)</h3>
+<p>O título (parcela a receber ou conta a pagar) nunca tem saldo negativo. A liquidação (baixa) distribui um pagamento entre títulos; a soma das alocações, créditos e componentes é sempre igual ao total. O estorno é total, cria um movimento de caixa inverso e preserva o original.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class FinancialTitle {
+        &lt;&lt;aggregate root&gt;&gt;
+        -TitleId id
+        -String code
+        -AggregateVersion version
+        -Direction direction
+        -PartnerRef counterparty
+        -EntityRef origin
+        -EntityRef project
+        -CompetencePeriod competence
+        -BusinessDate issueDate
+        -BusinessDate dueDate
+        -Money originalAmount
+        -Lifecycle lifecycle
+        +balance() Money
+        +status() TitleStatus
+        +isOverdue(BusinessDate) boolean
+        +applyAllocation(SettlementId, Money)
+        +reverseAllocation(SettlementId)
+        +adjust(AdjustmentKind, Money, Reason)
+        +cancel(Reason)
+    }
+    class Direction {
+        &lt;&lt;enumeration&gt;&gt;
+        RECEIVABLE
+        PAYABLE
+    }
+    class TitleStatus {
+        &lt;&lt;enumeration · derivado&gt;&gt;
+        OPEN
+        PARTIAL
+        SETTLED
+        RENEGOTIATED
+        CANCELLED
+    }
+    class TitleAdjustment {
+        &lt;&lt;entity&gt;&gt;
+        +AdjustmentKind kind
+        +Money signedAmount
+        +Reason reason
+        +Instant at
+        +UserId by
+        +reversedBy
+    }
+    class AdjustmentKind {
+        &lt;&lt;enumeration&gt;&gt;
+        INTEREST
+        PENALTY
+        DISCOUNT
+        ABATEMENT
+        CORRECTION
+    }
+    class AllocationRecord {
+        &lt;&lt;value object&gt;&gt;
+        +SettlementId settlement
+        +Money amount
+        +boolean reversed
+    }
+    class Settlement {
+        &lt;&lt;aggregate root&gt;&gt;
+        -SettlementId id
+        -Direction direction
+        -AccountId account
+        -BusinessDate effectiveDate
+        -Money total
+        -Money credit
+        -CashMovementId cashMovement
+        -SettlementStatus status
+        +reverse(Reason) SettlementReversed
+    }
+    class SettlementAllocation {
+        &lt;&lt;value object&gt;&gt;
+        +TitleId title
+        +Money amount
+    }
+    class ExplicitComponent {
+        &lt;&lt;value object&gt;&gt;
+        +String category
+        +Money amount
+    }
+    class SettlementReversal {
+        &lt;&lt;value object&gt;&gt;
+        +Reason reason
+        +Instant at
+        +UserId by
+        +CashMovementId reversingMovement
+    }
+    class SettlementStatus {
+        &lt;&lt;enumeration&gt;&gt;
+        POSTED
+        REVERSED
+    }
+    class PostSettlementHandler {
+        &lt;&lt;application service&gt;&gt;
+        +handle(PostSettlement, Actor)
+    }
+    FinancialTitle --&gt; Direction
+    FinancialTitle ..&gt; TitleStatus
+    FinancialTitle "1" *-- "0..*" TitleAdjustment
+    FinancialTitle "1" *-- "0..*" AllocationRecord
+    TitleAdjustment --&gt; AdjustmentKind
+    Settlement "1" *-- "1..*" SettlementAllocation
+    Settlement "1" *-- "0..*" ExplicitComponent
+    Settlement "1" *-- "0..1" SettlementReversal
+    Settlement --&gt; SettlementStatus
+    SettlementAllocation ..&gt; FinancialTitle : titleId
+    PostSettlementHandler ..&gt; Settlement : cria
+    PostSettlementHandler ..&gt; FinancialTitle : trava em ordem de id
+    note for FinancialTitle "INV-FT-1: saldo nunca negativo"
+    note for Settlement "INV-ST-1: alocações + crédito + componentes = total"
+</pre></div>
+</section>
+<section class="bloco" id="s-12-motor-de-dados-e-analise-b02-b10-b14-e-b15"><h3>12. Motor de dados e análise (B02, B10, B14 e B15)</h3>
+<p>Fatos são imutáveis e alimentam os indicadores. Cada indicador tem uma definição única e versionada; valor ausente nunca vira zero. Os métodos analíticos são estratégias trocáveis, habilitadas só quando há dados suficientes.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class OperationalFact {
+        &lt;&lt;imutável&gt;&gt;
+        +FactId id
+        +String factType
+        +String conceptId
+        +EntityRef subject
+        +BusinessDate occurredOn
+        +Source source
+        +Map dimensions
+        +Map measures
+        +FactId reverses
+    }
+    class IndicatorDefinition {
+        &lt;&lt;imutável por versão&gt;&gt;
+        +String id
+        +int version
+        +String unit
+        +String granularity
+        +FormulaSpec formula
+        +List~IndicatorRef~ dependencies
+        +MissingPolicy missingPolicy
+        +IndicatorStatus status
+    }
+    class FormulaSpec {
+        &lt;&lt;composite&gt;&gt;
+        agregação(fato, medida, filtros)
+        operadores + − × ÷
+    }
+    class IndicatorValue {
+        +value
+        +ValueState state
+        +cutoff
+        +compositionQueryId
+    }
+    class ValueState {
+        &lt;&lt;enumeration&gt;&gt;
+        CALCULATED
+        UNKNOWN
+        NOT_CALCULABLE
+        STALE
+    }
+    class DatasetSnapshot {
+        &lt;&lt;imutável&gt;&gt;
+        +cutoff
+        +hash
+    }
+    class AnalysisRun {
+        +method id e versão
+        +parameters
+        +seed
+        +RunState state
+        +EligibilityReport eligibility
+        +AnalysisResult result
+        +boolean stale
+    }
+    class AnalysisStrategy {
+        &lt;&lt;interface · strategy&gt;&gt;
+        +validateEligibility(DatasetSnapshot) EligibilityReport
+        +execute(DatasetSnapshot, parameters) AnalysisResult
+    }
+    class StrategyRegistry {
+        +resolve(methodId, version) AnalysisStrategy
+    }
+    class DescriptiveAnalysis
+    class NaiveForecast
+    class ExponentialSmoothingForecast
+    class CashMonteCarlo
+    class CapacityOptimization
+    class FindingPolicy {
+        &lt;&lt;interface · policy&gt;&gt;
+        +propose(AnalysisResult) List~Finding~
+    }
+    class Finding
+    class Decision {
+        aceitar, rejeitar ou adiar com justificativa
+    }
+    IndicatorDefinition *-- FormulaSpec
+    IndicatorDefinition ..&gt; OperationalFact : agrega
+    IndicatorValue --&gt; IndicatorDefinition
+    IndicatorValue --&gt; ValueState
+    AnalysisRun --&gt; DatasetSnapshot
+    AnalysisRun ..&gt; StrategyRegistry
+    StrategyRegistry --&gt; AnalysisStrategy
+    AnalysisStrategy &lt;|.. DescriptiveAnalysis
+    AnalysisStrategy &lt;|.. NaiveForecast
+    AnalysisStrategy &lt;|.. ExponentialSmoothingForecast
+    AnalysisStrategy &lt;|.. CashMonteCarlo
+    AnalysisStrategy &lt;|.. CapacityOptimization
+    FindingPolicy ..&gt; Finding
+    Finding "1" --&gt; "0..*" Decision
+</pre></div>
+</section>
+<section class="bloco" id="s-13-estados-de-uma-execucao-analitica"><h3>13. Estados de uma execução analítica</h3>
+<div class="diagrama"><pre class="mermaid">
+stateDiagram-v2
+    [*] --&gt; REQUESTED
+    REQUESTED --&gt; ELIGIBILITY_CHECK
+    ELIGIBILITY_CHECK --&gt; INSUFFICIENT_DATA : faltam dados (estado válido, com causas)
+    ELIGIBILITY_CHECK --&gt; QUEUED
+    QUEUED --&gt; RUNNING : worker Python assume com lease
+    RUNNING --&gt; SUCCEEDED : resultado validado no Java
+    RUNNING --&gt; FAILED
+    QUEUED --&gt; CANCELLED
+    RUNNING --&gt; CANCELLED
+    INSUFFICIENT_DATA --&gt; [*]
+    SUCCEEDED --&gt; [*]
+    FAILED --&gt; [*]
+    CANCELLED --&gt; [*]
+</pre></div>
+</section>
+<section class="bloco" id="s-14-qualidade-de-produto-e-qualidade-de-dados-b04-e-b09"><h3>14. Qualidade de produto e qualidade de dados (B04 e B09)</h3>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class Inspection {
+        &lt;&lt;aggregate root&gt;&gt;
+        +EntityRef subject
+        +ChecklistRevision checklist
+        +UserId inspector
+        +InspectionStatus status
+        +InspectionId supersedes
+        +approve()
+        +reject() Nonconformity
+    }
+    class InspectionItem {
+        +criterion
+        +technicalLimit
+        +measurement
+        +result
+        +List~EvidenceId~ evidence
+    }
+    class InspectionStatus {
+        &lt;&lt;enumeration&gt;&gt;
+        PENDING
+        IN_REVIEW
+        APPROVED
+        REJECTED
+    }
+    class Nonconformity
+    class DataQualityIssue {
+        &lt;&lt;entity&gt;&gt;
+        +EntityRef subject
+        +String ruleId
+        +Severity severity
+        +IssueKind kind
+        +observed
+        +expected
+        +Evidence evidence
+        +IssueStatus status
+    }
+    class Severity {
+        &lt;&lt;enumeration&gt;&gt;
+        BLOCKING
+        WARNING
+    }
+    class IssueKind {
+        &lt;&lt;enumeration&gt;&gt;
+        MISSING
+        DUPLICATE_CANDIDATE
+        OUT_OF_RANGE
+        INCONSISTENT_DATE
+        SUM_MISMATCH
+        UNKNOWN_MAPPING
+    }
+    class Evidence {
+        &lt;&lt;value object&gt;&gt;
+        arquivo, página, linha
+    }
+    Inspection "1" *-- "1..*" InspectionItem
+    Inspection --&gt; InspectionStatus
+    Inspection ..&gt; Nonconformity : reprovação abre
+    DataQualityIssue --&gt; Severity
+    DataQualityIssue --&gt; IssueKind
+    DataQualityIssue *-- Evidence
+</pre></div>
+</section>
+<section class="bloco" id="s-15-demais-agregados-previstos"><h3>15. Demais agregados previstos</h3>
+<div class="tabela"><table><thead><tr><th>Agregado</th><th>Regra central</th><th>Fase</th></tr></thead><tbody><tr><td>Partner</td><td>CNPJ único quando presente; cliente e fornecedor são papéis do mesmo parceiro</td><td>Sprint 2–3 · B03</td></tr><tr><td>Proposal / Revision</td><td>revisão emitida não muda</td><td>Sprint 4 · B05</td></tr><tr><td>Project</td><td>ligado a pedido, cliente e unidade</td><td>Sprint 4 · B05</td></tr><tr><td>Equipment</td><td>identidade própria; aceite e garantia vêm de evento real</td><td>B05/B09</td></tr><tr><td>BomRevision / ProjectBom</td><td>revisão aprovada não muda; o projeto conserva a sua</td><td>B07</td></tr><tr><td>Schedule / Baseline</td><td>sem ciclos; recalcular não altera a linha de base</td><td>B07</td></tr><tr><td>StockPosition / Reservation</td><td>reservado ≤ físico, mesmo com acessos simultâneos</td><td>B08</td></tr><tr><td>PurchaseOrder</td><td>soma das condições = total</td><td>B08</td></tr><tr><td>ProductionOrder</td><td>liberação exige revisão e inspeção</td><td>B09</td></tr><tr><td>CostEntry</td><td>um custo por origem</td><td>B08/B09</td></tr><tr><td>DistributionRun</td><td>confirmação congela a memória de cálculo; títulos gerados uma vez</td><td>B10</td></tr><tr><td>TaxPeriod</td><td>histórico, simulação e valor do contador separados</td><td>Sprint 7 · B10</td></tr><tr><td>PreventiveOccurrence</td><td>uma ocorrência por plano, revisão, equipamento e data</td><td>B11</td></tr><tr><td>StagingRecord</td><td>o original é preservado; aplicar de novo não duplica</td><td>B04/B12</td></tr></tbody></table></div>
+</section>
+<h2 class="parte" id="s-parte-3">Parte 3 — Técnicas e padrões de engenharia de software</h2>
+<p>Situação: <strong>Em uso</strong> já está no código da Sprint 1. <strong>Planejado</strong> está especificado e entra na sprint indicada.</p>
+<section class="bloco" id="s-3-1-arquitetura"><h3>3.1 Arquitetura</h3>
+<div class="tabela"><table><thead><tr><th>Técnica</th><th>O que resolve</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>Cliente-servidor</td><td>App do Mac sem regra de negócio; o servidor decide</td><td>ADR-001; app Electron + API <code>/api/v1</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Monólito modular</td><td>24 módulos com fronteiras claras, num único servidor</td><td>pacotes em <code>br.com.fourtech.rendamais</code>; <code>modulos.json</code>; ADR-016</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Portas e adaptadores (hexagonal)</td><td>Domínio independente de banco e HTTP</td><td><code>CompanyProfileRepository</code> ↔ <code>JdbcCompanyProfileRepository</code>; <code>AuditTrail</code> ↔ <code>JdbcAuditTrail</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Camadas domain / application / infrastructure</td><td>Cada classe tem um só papel</td><td><code>plataforma/empresa/*</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Inversão e injeção de dependência</td><td>O serviço recebe as portas pelo construtor e pode ser testado sem banco</td><td><code>CompanyProfileService(repository, audit, clock)</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Testes de arquitetura</td><td>O build falha se um módulo usar outro não declarado, ou se o domínio importar Spring</td><td><code>ArchitectureTest</code> (ArchUnit lendo <code>modulos.json</code>)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>CQRS leve</td><td>Escrita por comandos; consultas gerenciais separadas, no mesmo banco</td><td>módulo <code>consultas</code></td><td><span class="selo selo--plan">Planejado · Sprint 4+</span></td></tr><tr><td>Worker Python separado</td><td>Processamento pesado sem acesso às tabelas de negócio</td><td>ADR-008</td><td><span class="selo selo--plan">Planejado · Sprint 2</span></td></tr></tbody></table></div>
+</section>
+<section class="bloco" id="s-3-2-dominio-ddd"><h3>3.2 Domínio (DDD)</h3>
+<div class="tabela"><table><thead><tr><th>Técnica</th><th>O que resolve</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>Linguagem ubíqua</td><td>Mesmas palavras no negócio, no código e nas telas</td><td><code>b01/conceitos.json</code> (57 conceitos)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Contextos delimitados</td><td>Cada conceito tem um único módulo dono</td><td><code>modulos.json</code>, <code>conceitos.json</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Value Object</td><td>Dinheiro, quantidade e CNPJ se validam sozinhos e não mudam</td><td><code>Money</code>, <code>Quantity</code>, <code>Cnpj</code>, <code>UnitOfMeasure</code>, <code>UnitConversion</code>, <code>Address</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Agregado e raiz</td><td>Um objeto protege suas próprias regras</td><td><code>CompanyProfile</code>; depois <code>SalesOrder</code>, <code>FinancialTitle</code>, <code>Settlement</code></td><td><span class="selo selo--uso">Em uso / Planejado</span></td></tr><tr><td>Repositório</td><td>Salvar e buscar agregados sem expor SQL</td><td><code>CompanyProfileRepository</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Serviço de aplicação</td><td>Coordena transação, versão e auditoria de um caso de uso</td><td><code>CompanyProfileService</code>; depois <code>ConfirmSalesOrderHandler</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Invariantes numeradas</td><td>Regras testáveis e rastreáveis (INV-*)</td><td><code>12-b01-modelo-de-dominio.md</code></td><td><span class="selo selo--uso">Em uso (especificação)</span></td></tr><tr><td>Eventos de domínio</td><td>Um módulo avisa os outros do que aconteceu</td><td>95 eventos em <code>b01/eventos.json</code></td><td><span class="selo selo--plan">Planejado · Sprint 2</span></td></tr><tr><td>Registros compensatórios</td><td>Nada confirmado é apagado; corrige-se com estorno ou ajuste</td><td><code>Settlement.reverse</code>, <code>OperationalFact.reverses</code></td><td><span class="selo selo--plan">Planejado · Sprint 5</span></td></tr></tbody></table></div>
+</section>
+<section class="bloco" id="s-3-3-padroes-de-projeto"><h3>3.3 Padrões de projeto</h3>
+<div class="tabela"><table><thead><tr><th>Padrão</th><th>Uso no Renda+</th><th>Situação</th></tr></thead><tbody><tr><td>Static Factory Method</td><td><code>Money.ofCents</code>, <code>Money.parseCents</code>, <code>Cnpj.of</code>, <code>Quantity.of</code>, <code>Address.empty</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Strategy (por enum)</td><td><code>RoundingPolicy</code> e <code>AllocationPolicy</code> escolhem como arredondar e ratear</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Imutabilidade / objeto que devolve nova versão</td><td><code>CompanyProfile.update</code> devolve uma nova versão; <code>Money.plus</code> devolve um novo valor</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Notification</td><td>A validação reúne todos os campos com problema antes de recusar</td><td><code>CompanyProfile.update</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Data Mapper</td><td>Converte linha do banco em objeto de domínio</td><td><code>JdbcCompanyProfileRepository.MAPPER</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>DTO</td><td>Formato da API separado do domínio</td><td>records <code>CompanyProfileRequest</code> e <code>CompanyProfileResponse</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Template Method</td><td>O filtro implementa só o passo variável</td><td><code>CorrelationId extends OncePerRequestFilter</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Chain of Responsibility (filtros)</td><td>Correlação aplicada antes de qualquer controller</td><td>cadeia de filtros do servidor</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Tratamento centralizado de erros</td><td>Uma exceção vira sempre o mesmo formato de erro</td><td><code>ApiExceptionHandler</code> + <code>ApiError</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Policy / Specification</td><td>Regras compostas e testáveis para confirmar, cancelar e habilitar modelos</td><td><code>ConfirmationPolicy</code>, <code>CancellationPolicy</code>, <code>EligibilityPolicy</code></td><td><span class="selo selo--plan">Planejado · Sprint 4</span></td></tr><tr><td>State (enum + transições)</td><td>Pedido, tarefa e execução analítica só mudam por transições válidas</td><td><code>OrderStatus</code>, <code>RunState</code></td><td><span class="selo selo--plan">Planejado · Sprint 4</span></td></tr><tr><td>Strategy + Registry</td><td>Métodos analíticos trocáveis e versionados</td><td><code>AnalysisStrategy</code>, <code>StrategyRegistry</code></td><td><span class="selo selo--plan">Planejado · B10/B15</span></td></tr><tr><td>Composite</td><td>Fórmula de indicador como árvore de operações</td><td><code>FormulaSpec</code></td><td><span class="selo selo--plan">Planejado · B10</span></td></tr><tr><td>Pipeline</td><td>arquivo → extração → normalização → qualidade → conferência</td><td>importação</td><td><span class="selo selo--plan">Planejado · B04</span></td></tr><tr><td>Adapter</td><td>Leitores de PDF e OFX, armazenamento, solver, IA</td><td>módulo <code>integracao</code></td><td><span class="selo selo--plan">Planejado · B04+</span></td></tr><tr><td>Facade</td><td>Visão do projeto reunindo vários módulos, só leitura</td><td><code>ProjectOverviewQuery</code></td><td><span class="selo selo--plan">Planejado · Sprint 4</span></td></tr><tr><td>Decorator</td><td>Métricas, logs e timeout em volta de consultas</td><td>plataforma</td><td><span class="selo selo--plan">Planejado · B13</span></td></tr></tbody></table></div>
+</section>
+<section class="bloco" id="s-3-4-dados-concorrencia-e-integridade"><h3>3.4 Dados, concorrência e integridade</h3>
+<div class="tabela"><table><thead><tr><th>Técnica</th><th>O que resolve</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>Dinheiro em centavos inteiros</td><td>Sem erro de ponto flutuante; soma exata</td><td><code>Money</code> (<code>long</code>), colunas <code>*_cents</code>; API envia texto</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Aritmética com estouro detectado</td><td>Nunca "vira" um valor absurdo em silêncio</td><td><code>Math.addExact</code>, <code>longValueExact</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Rateio com resíduo controlado</td><td>Parcelas somam exatamente o total</td><td><code>Money.allocate</code> (maiores restos e resíduo pela primeira)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Concorrência otimista</td><td>Duas pessoas editando: a segunda é avisada, sem perder dados</td><td><code>version</code>, ETag/If-Match, <code>update ... where version = ?</code> → 412</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Bloqueio pessimista</td><td>Operações críticas em sequência dentro da transação</td><td><code>select ... for update</code> em <code>getForUpdate</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Transação única com auditoria</td><td>A auditoria nunca fica de fora</td><td><code>@Transactional</code> + <code>AuditTrail</code> com <code>Propagation.MANDATORY</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Restrições no banco</td><td>Segunda linha de defesa, mesmo contra bugs</td><td><code>check</code> de CNPJ e CEP; índice que garante uma única empresa</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Migrações versionadas</td><td>Banco evolui junto com o código, igual em toda máquina</td><td>Flyway <code>V1__...sql</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Comando idempotente</td><td>Clique duplo ou queda de conexão não duplicam</td><td><code>Idempotency-Key</code> + recibo de comando</td><td><span class="selo selo--plan">Planejado · Sprint 2</span></td></tr><tr><td>Outbox transacional + consumidor idempotente</td><td>Eventos entregues pelo menos uma vez, sem efeito duplicado</td><td><code>outbox_event</code>, <code>consumer_receipt</code></td><td><span class="selo selo--plan">Planejado · Sprint 2</span></td></tr><tr><td>Travas em ordem estável</td><td>Evita impasse (deadlock) em baixas de vários títulos</td><td>INV-ST-3</td><td><span class="selo selo--plan">Planejado · Sprint 5</span></td></tr><tr><td>Lease com geração</td><td>Resultado de tentativa antiga do worker é recusado</td><td>tarefas Python</td><td><span class="selo selo--plan">Planejado · Sprint 2 / B04</span></td></tr><tr><td>Snapshot imutável</td><td>Análise reproduzível: mesmos dados, mesma semente</td><td><code>DatasetSnapshot</code></td><td><span class="selo selo--plan">Planejado · B04/B15</span></td></tr></tbody></table></div>
+</section>
+<section class="bloco" id="s-3-5-api-e-observabilidade"><h3>3.5 API e observabilidade</h3>
+<div class="tabela"><table><thead><tr><th>Técnica</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>API REST versionada (<code>/api/v1</code>)</td><td>todos os controllers</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Contrato de erro estável (<code>code</code>, <code>message</code>, <code>details</code>, <code>correlationId</code>, <code>retryable</code>)</td><td><code>ApiError</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Códigos HTTP com significado (400, 404, 412, 422, 428)</td><td><code>ApiExceptionHandler</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Identificador de correlação de ponta a ponta</td><td><code>CorrelationId</code> + MDC nos logs + auditoria</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Endpoint de status (servidor e banco)</td><td><code>StatusController</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Relógio injetável (testes com data controlada)</td><td><code>ClockConfig</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Configuração por variáveis de ambiente</td><td><code>RENDA_DB_URL</code>, <code>RENDA_SERVER_PORT</code>…</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Contrato OpenAPI</td><td>B02</td><td><span class="selo selo--plan">Planejado · Sprint 2</span></td></tr></tbody></table></div>
+</section>
+<section class="bloco" id="s-3-6-qualidade-e-testes"><h3>3.6 Qualidade e testes</h3>
+<div class="tabela"><table><thead><tr><th>Técnica</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>Testes unitários de Value Objects</td><td><code>MoneyTest</code>, <code>QuantityTest</code>, <code>CnpjTest</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Testes baseados em propriedades</td><td><code>MoneyTest</code>: 20.000 casos gerados com semente fixa conferem que o rateio soma o total</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Testes de integração com PostgreSQL real</td><td><code>IntegrationTest</code> (Testcontainers ou <code>RENDA_TEST_JDBC_URL</code>)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Teste de concorrência real</td><td><code>CompanyProfileApiTest</code>: 8 gravações simultâneas → 1 sucesso e 7 conflitos</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Testes de arquitetura</td><td><code>ArchitectureTest</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Especificação executável</td><td>catálogos JSON do B01 + <code>tools/b01/verificar_b01.py</code> (e testes do próprio verificador)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Integração contínua</td><td>GitHub Actions: especificação, servidor e app</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Testes de contrato por adaptador</td><td>parsers, armazenamento, worker</td><td><span class="selo selo--plan">Planejado · B04</span></td></tr></tbody></table></div>
+</section>
+<section class="bloco" id="s-3-7-no-app-do-mac"><h3>3.7 No app do Mac</h3>
+<div class="tabela"><table><thead><tr><th>Técnica</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>Reducer (estado previsível das janelas)</td><td><code>windows/windowManager.ts</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Adapter de transporte (troca em testes)</td><td><code>api/client.ts</code> (<code>setTransport</code>)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Ponte IPC isolada e validada</td><td><code>electron/preload.ts</code> (<code>window.renda</code>)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Menu gerado a partir de catálogo</td><td><code>SideNav.tsx</code> lê <code>b01/menu.json</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Design tokens (fonte única do visual)</td><td><code>design-system/tokens.css</code>, classes <code>rp-*</code>; ADR-017</td><td><span class="selo selo--uso">Em uso</span></td></tr></tbody></table></div>
+</section>
+<section class="bloco" id="s-3-8-processo"><h3>3.8 Processo</h3>
+<div class="tabela"><table><thead><tr><th>Técnica</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>Scrum com fatias verticais (tela + servidor + banco)</td><td><code>docs/scrum/</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Definição de Pronto e de Preparado</td><td><code>docs/scrum/processo-scrum.md</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Registros de decisão de arquitetura (ADR)</td><td><code>docs/adr/</code> (17 ADRs)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Pendências explícitas em vez de suposições escondidas</td><td><code>b01/pendencias.json</code>, planilha de decisões</td><td><span class="selo selo--uso">Em uso</span></td></tr></tbody></table></div>
+</section>
+<section class="bloco" id="s-3-9-evitados-de-proposito"><h3>3.9 Evitados de propósito</h3>
+<div class="tabela"><table><thead><tr><th>Não usamos</th><th>Motivo</th></tr></thead><tbody><tr><td>Microsserviços</td><td>Complexidade de operação sem ganho para o tamanho da Fourtech</td></tr><tr><td>Event sourcing de todo o sistema</td><td>Tabelas normais + auditoria + fatos já dão o histórico necessário</td></tr><tr><td>Herança profunda</td><td>Composição é mais simples; cliente e fornecedor são papéis de um parceiro</td></tr><tr><td>Service Locator e Singleton com estado</td><td>Escondem dependências e dificultam testes</td></tr><tr><td>ORM na Sprint 1</td><td>SQL explícito com <code>JdbcClient</code> deixa claras as travas e a condição de versão</td></tr><tr><td>Setters públicos no domínio</td><td>Um pedido não pode virar "confirmado" sem passar pelas regras</td></tr></tbody></table></div>
+</section>
+    </main>
+  </div>
+</div>

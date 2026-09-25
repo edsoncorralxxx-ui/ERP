@@ -37,3 +37,5 @@ As versões atuais deste plano estão em `docs/backend/`. Os documentos gerais e
 O andamento real está em `progresso.md` e `backlog-execucao.md`. As entregas do B01 começam em `10-b01-fundacao.md` (documentos 10–15, catálogos em `b01/` e verificador em `tools/b01/`).
 
 Modelo de dados completo (implementado + proposto): `16-modelo-de-dados.md` (diagramas Mermaid, lidos pelo GitHub) e `modelo-de-dados.html`, gerados por `python3 tools/modelo-dados/modelo.py`.
+
+Diagramas de classes e técnicas/padrões usados: `17-diagramas-de-classes-e-padroes.md`. Diagramas de atividades e de sequência: `18-diagramas-de-atividades-e-sequencias.md`. As páginas `diagramas-de-classes.html` e `diagramas-de-atividades-e-sequencias.html` são geradas a partir deles por `python3 tools/diagramas/gerar_pagina.py`.
