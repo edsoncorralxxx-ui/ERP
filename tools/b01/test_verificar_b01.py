@@ -8,7 +8,7 @@ import verificar_b01 as v
 
 
 def base():
-    catalogos = {n: v.carregar(f"{n}.json") for n in ("modulos", "conceitos", "eventos", "indicadores", "pendencias", "formularios")}
+    catalogos = {n: v.carregar(f"{n}.json") for n in ("modulos", "conceitos", "eventos", "indicadores", "pendencias", "formularios", "menu")}
     telas = v.ler_csv(v.MAPA_TELAS, "Tela ID")
     recursos = v.ler_csv(v.MATRIZ_AN, "ID")
     adrs = sorted({p["adr"] for p in catalogos["pendencias"]["pendencias"]})
@@ -81,6 +81,21 @@ class TestVerificador(unittest.TestCase):
     def test_detecta_permissao_nao_declarada(self):
         formulario(self.c, "pedidos")["permissoes"].remove("sales_order.confirm")
         self.assertTrue(any("sales_order.confirm não declarada" in e for e in self.erros()))
+
+    def test_detecta_tela_fora_do_menu(self):
+        for m in self.c["menu"]["modulos"]:
+            m["itens"] = [i for i in m["itens"] if i.get("tela") != "pedidos"]
+        self.assertTrue(any("tela sem lugar no menu lateral: pedidos" in e for e in self.erros()))
+
+    def test_detecta_recurso_analitico_fora_do_menu(self):
+        for m in self.c["menu"]["modulos"]:
+            m["itens"] = [i for i in m["itens"] if i.get("recurso") != "AN-033"]
+        self.assertTrue(any("recurso analítico sem lugar no menu lateral: AN-033" in e for e in self.erros()))
+
+    def test_detecta_modulo_fora_da_ordem_do_design_system(self):
+        mods = self.c["menu"]["modulos"]
+        mods[0], mods[1] = mods[1], mods[0]
+        self.assertTrue(any("Barra lateral do design system" in e for e in self.erros()))
 
     def test_encontrar_ciclo_simples(self):
         self.assertIsNone(v.encontrar_ciclo({"a": ["b"], "b": []}))

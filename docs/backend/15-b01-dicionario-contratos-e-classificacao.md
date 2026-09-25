@@ -85,6 +85,10 @@ Tabela gerada a partir de `b01/formularios.json`.
 
 Totais: 32 formulários, 99 comandos, 20 indicadores referenciados. Todo cadastro ou documento tem ao menos um comando com permissão; todo comando emite eventos do catálogo.
 
+## 2.2 Menu lateral
+
+`b01/menu.json` distribui as funcionalidades nos 30 módulos da Barra lateral do design system, na ordem dele: as 32 telas, as visões do painel e os recursos do catálogo analítico que ganham tela própria. Cada item traz a sprint ou fase prevista, e só é clicável no app quando `implementado` é verdadeiro. O verificador falha se alguma tela ou recurso AN ficar fora do menu, ou se os módulos saírem da ordem do design system. Recursos Humanos e Patrimônio aparecem no design system, mas ficam fora do escopo da versão inicial.
+
 ## 3. Classificação
 
 ```text

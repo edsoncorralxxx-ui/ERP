@@ -30,6 +30,11 @@ ORIGENS = {"usuario", "sistema", "derivado", "importacao", "referencia"}
 TIPOS_FORM = {"cadastro", "documento", "consulta", "painel"}
 PERMISSAO = re.compile(r"^[a-z][a-z_]*\.[a-z][a-z_]*$")
 COMANDO = re.compile(r"^[A-Z][A-Za-z]+$")
+# Ordem dos 30 módulos da Barra lateral do design system (design-system/components/BarraLateral/README.md).
+MODULOS_MENU = ["Cockpit", "Dashboard", "Cadastros", "CRM", "Vendas", "Engenharia", "Compras", "Estoque", "MRP", "Produção",
+                "Projetos", "Instalações", "Equipamentos", "Renda+", "Qualidade", "Manutenção", "Pós-venda", "Financeiro",
+                "Faturamento", "Fiscal", "Custos", "Contabilidade / Controladoria", "Tarefas", "BI & Relatórios", "Documentos",
+                "Integrações", "Recursos Humanos", "Patrimônio", "Administração", "Configurações"]
 
 
 def carregar(nome, pasta=B01):
@@ -107,6 +112,8 @@ class Verificador:
         self.verificar_indicadores()
         self.verificar_pendencias()
         self.verificar_formularios()
+        if "menu" in self.c:
+            self.verificar_menu()
         return self.erros
 
     def depende(self, a, b):
@@ -274,6 +281,43 @@ class Verificador:
                 self.erro(f"formulário {fid}, comando {cmd['nome']}: {mod} não pode emitir {ev} de {e['produtor']}")
 
 
+def _verificar_menu(self):
+    menu = self.c["menu"]["modulos"]
+    nomes = [m["nome"] for m in menu]
+    if nomes != MODULOS_MENU:
+        self.erro("menu: módulos diferentes da Barra lateral do design system (nomes ou ordem)")
+    forms = {f["id"]: f for f in self.c["formularios"]["formularios"]}
+    telas_no_menu, recursos_no_menu = set(), set()
+    for m in menu:
+        if not m["itens"]:
+            self.erro(f"menu: módulo {m['nome']} sem itens")
+        for it in m["itens"]:
+            destino = [k for k in ("tela", "recurso", "acao", "nota") if it.get(k)]
+            if len(destino) != 1:
+                self.erro(f"menu: item {it.get('rotulo')} precisa de exatamente um destino (tela, recurso, acao ou nota)")
+                continue
+            if not it.get("rotulo") or not it.get("fase"):
+                self.erro(f"menu: item em {m['nome']} sem rótulo ou fase")
+            if it.get("tela"):
+                if it["tela"] not in forms:
+                    self.erro(f"menu: tela inexistente {it['tela']}")
+                else:
+                    telas_no_menu.add(it["tela"])
+                    recursos_no_menu.update(forms[it["tela"]]["analises"])
+            if it.get("recurso"):
+                if it["recurso"] not in self.recursos_an:
+                    self.erro(f"menu: recurso inexistente {it['recurso']}")
+                recursos_no_menu.add(it["recurso"])
+    for t in sorted(set(self.telas) - telas_no_menu):
+        self.erro(f"menu: tela sem lugar no menu lateral: {t}")
+    for a in sorted(self.recursos_an - recursos_no_menu):
+        self.erro(f"menu: recurso analítico sem lugar no menu lateral: {a}")
+    self.cobertura_menu = (len(telas_no_menu & set(self.telas)), len(recursos_no_menu & self.recursos_an))
+
+
+Verificador.verificar_menu = _verificar_menu
+
+
 def diagrama(modulos):
     linhas = ["flowchart TD"]
     for m in modulos:
@@ -287,19 +331,24 @@ def diagrama(modulos):
 
 
 def main():
-    catalogos = {n: carregar(f"{n}.json") for n in ("modulos", "conceitos", "eventos", "indicadores", "pendencias", "formularios")}
+    catalogos = {n: carregar(f"{n}.json") for n in ("modulos", "conceitos", "eventos", "indicadores", "pendencias", "formularios", "menu")}
     if "--diagrama" in sys.argv:
         print(diagrama(catalogos["modulos"]["modulos"]))
         return 0
     telas = ler_csv(MAPA_TELAS, "Tela ID")
     recursos = ler_csv(MATRIZ_AN, "ID")
     adrs = [p.name.split("-")[0] + "-" + p.name.split("-")[1] for p in ADR.glob("ADR-*.md")]
-    erros = Verificador(catalogos, telas, recursos, adrs).executar()
+    verificador = Verificador(catalogos, telas, recursos, adrs)
+    erros = verificador.executar()
     f = catalogos["formularios"]["formularios"]
     comandos = sum(len(x["comandos"]) for x in f)
     print(f"módulos: {len(catalogos['modulos']['modulos'])} | conceitos: {len(catalogos['conceitos']['conceitos'])} | "
           f"eventos: {len(catalogos['eventos']['eventos'])} | indicadores: {len(catalogos['indicadores']['indicadores'])} | "
           f"pendências: {len(catalogos['pendencias']['pendencias'])} | formulários: {len(f)}/{len(telas)} | comandos: {comandos}")
+    if hasattr(verificador, "cobertura_menu"):
+        t, a = verificador.cobertura_menu
+        itens = sum(len(m["itens"]) for m in catalogos["menu"]["modulos"])
+        print(f"menu lateral: {len(catalogos['menu']['modulos'])} módulos, {itens} itens | telas cobertas: {t}/{len(telas)} | recursos AN cobertos: {a}/{len(recursos)}")
     if erros:
         print(f"FALHOU: {len(erros)} problema(s)")
         for e in erros:

@@ -11,6 +11,7 @@
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
     "isolatedModules": true,
+    "resolveJsonModule": true,
     "types": ["vitest/globals"]
   },
   "include": ["src", "vite.config.mts"]
