@@ -79,7 +79,7 @@ const ENDERECO: [keyof Form, string, boolean][] = [
   ['postalCode', 'CEP', false],
 ];
 
-/** Janela "Dados da empresa" (Configurações): primeira fatia de ponta a ponta da Sprint 1. */
+/** Janela "Dados da empresa" (Administração): primeira fatia de ponta a ponta da Sprint 1. */
 export function CompanyProfileWindow() {
   const win = useWindow();
   // A API da janela muda de identidade quando o shell re-renderiza; os efeitos de dados não devem reexecutar por isso.

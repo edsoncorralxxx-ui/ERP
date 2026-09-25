@@ -1,6 +1,6 @@
 import { useState, type KeyboardEvent } from 'react';
 import type { WindowKind } from '../windows/windowManager';
-import { MODULES, ROUTES, subIcon } from './modules';
+import { MODULES } from './modules';
 
 export type RailView = 'modulos' | 'relacionar';
 
@@ -48,7 +48,7 @@ export function Rail({ view, open, cockpitOpen, onSelect, onCockpit }: RailProps
 
 type DrawerProps = { open: boolean; view: RailView; onClose: () => void; onOpen: (kind: WindowKind) => void };
 
-/** Gaveta do menu lateral com o Painel de módulos: um grupo aberto por vez, submódulos com ícone pelo contexto. */
+/** Gaveta do menu lateral com os módulos do ERP: um grupo aberto por vez, cada tela com o seu ícone. */
 export function Drawer({ open, view, onClose, onOpen }: DrawerProps) {
   const [expanded, setExpanded] = useState<string | null>('cockpit');
   const toggle = (id: string) => setExpanded((cur) => (cur === id ? null : id));
@@ -71,20 +71,20 @@ export function Drawer({ open, view, onClose, onOpen }: DrawerProps) {
                   </button>
                   <div className="rp-nav-subs">
                     {m.subs.map((s) => {
-                      const kind = ROUTES[`${m.id}|${s}`];
+                      const kind = s.kind;
                       return (
                         <div
-                          key={s}
+                          key={s.name}
                           className={`rp-nav-sub${kind ? '' : ' rp-nav-sub--indisponivel'}`}
                           role="button"
                           tabIndex={open && isOpen ? 0 : -1}
                           aria-disabled={!kind || undefined}
-                          title={kind ? undefined : 'Disponível nas próximas sprints'}
+                          title={kind ? undefined : `Disponível na fase ${s.phase} do roteiro`}
                           onClick={() => kind && onOpen(kind)}
                           onKeyDown={(e) => kind && (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen(kind))}
                         >
-                          <i className={`rp-ico rp-ico-w-${subIcon(s, m.id)}`} aria-hidden="true" />
-                          <span>{s}</span>
+                          <i className={`rp-ico rp-ico-w-${s.icon}`} aria-hidden="true" />
+                          <span>{s.name}</span>
                         </div>
                       );
                     })}
@@ -96,7 +96,7 @@ export function Drawer({ open, view, onClose, onOpen }: DrawerProps) {
         </div>
         <div className="rp-drawer-view" data-view="relacionar" data-active={view === 'relacionar'}>
           <div className="rp-nav rp-nav--pastas">
-            {['Cadastros', 'Vendas', 'Compras', 'Estoque', 'Financeiro'].map((p) => (
+            {['Cadastros', 'Comercial', 'Projetos e engenharia', 'Operação industrial', 'Financeiro', 'Pós-venda'].map((p) => (
               <div key={p} className="rp-nav-group" data-open={false}>
                 <div className="rp-nav-item rp-nav-sub--indisponivel" aria-disabled="true" title="Arrastar e relacionar entra depois dos primeiros cadastros">
                   <i className="rp-ico rp-ico-w-pasta" aria-hidden="true" />

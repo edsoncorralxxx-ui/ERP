@@ -181,7 +181,7 @@ export function CockpitWindow({ connection }: { connection: Connection }) {
             tabela={['Campo', 'Situação', perfil ? CAMPOS.map(([n, f]) => [n, (f(perfil) ?? '').trim() ? 'Preenchido' : 'Em branco'] as Linha) : []]}
             nota={
               <>
-                <span className="rp-link" role="link" tabIndex={0} aria-label="Abrir dados da empresa" onClick={() => win.open('company-profile')} onKeyDown={(e) => e.key === 'Enter' && win.open('company-profile')} /> Complete em Configurações → Empresa.
+                <span className="rp-link" role="link" tabIndex={0} aria-label="Abrir dados da empresa" onClick={() => win.open('company-profile')} onKeyDown={(e) => e.key === 'Enter' && win.open('company-profile')} /> Complete em Administração → Dados da empresa.
               </>
             }
           />
