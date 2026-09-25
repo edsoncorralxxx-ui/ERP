@@ -1,0 +1,19 @@
+<!-- @dsCard group="Dados" height=330 -->
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>TabelaEdicao</title>
+<style>body{margin:0;padding:16px;background:var(--surface-form)}</style></head>
+<body class="rp">
+<div class="rp-tabela" style="width:880px">
+  <div class="rp-tabela-acoes"><span class="rp-tabela-tit">Itens do pedido de venda 1.284</span>
+    <button class="rp-btn">Adicionar linha</button><button class="rp-btn">Duplicar</button>
+    <button class="rp-btn">Remover</button><button class="rp-btn rp-btn--menu" style="min-width:110px">Copiar de</button></div>
+  <table class="rp-grid rp-grid--edicao" style="width:100%">
+    <thead><tr><th style="width:26px">#</th><th style="width:96px">Nº do item</th><th style="width:206px">Descrição</th>
+      <th style="width:40px">UM</th><th class="num" style="width:82px">Quantidade</th><th class="num" style="width:88px">Preço unit.</th>
+      <th class="num" style="width:68px">Desc. %</th><th class="num" style="width:104px">Total da linha</th>
+      <th class="num" style="width:100px">Lucro bruto</th><th style="width:18px"></th></tr></thead>
+    <tbody><tr><td class="rownum">1</td><td><span class="rp-link"></span> A00021</td><td>Chapa de aço 2mm — 1200x600mm</td><td>UN</td><td><input class="rp-field rp-field--num" value="120,000"></td><td><input class="rp-field rp-field--num" value="184,50"></td><td><input class="rp-field rp-field--num" value="2,50"></td><td class="calc">21.586,50</td><td class="calc">6.734,20</td><td class="rp-linha-x" title="Remover linha">&times;</td></tr><tr><td class="rownum">2</td><td><span class="rp-link"></span> A00034</td><td>Perfil L 40x40 — barra 6m</td><td>BR</td><td><input class="rp-field rp-field--num" value="80,000"></td><td><input class="rp-field rp-field--num" value="96,20"></td><td><input class="rp-field rp-field--num" value="0,00"></td><td class="calc">7.696,00</td><td class="calc">2.108,90</td><td class="rp-linha-x" title="Remover linha">&times;</td></tr><tr><td class="rownum">3</td><td><span class="rp-link"></span> S00012</td><td>Corte e dobra (serviço)</td><td>HR</td><td><input class="rp-field rp-field--num" value="16,000"></td><td><input class="rp-field rp-field--num" value="210,00"></td><td><input class="rp-field rp-field--num" value="5,00"></td><td class="calc">3.192,00</td><td class="calc">1.999,00</td><td class="rp-linha-x" title="Remover linha">&times;</td></tr><tr class="nova"><td class="rownum">4</td><td colspan="9">Clique para adicionar um item…</td></tr></tbody>
+    <tfoot><tr><td colspan="7">Total antes do desconto</td><td class="num">32.474,50</td><td class="num">10.842,10</td><td></td></tr></tfoot>
+  </table>
+</div>
+</body></html>

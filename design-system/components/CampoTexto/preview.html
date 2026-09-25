@@ -1,0 +1,28 @@
+<!-- @dsCard group="Entradas" height=260 -->
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Campo de texto</title>
+<style>body{margin:0;padding:16px;background:var(--surface-form)}</style></head>
+<body class="rp">
+<div style="display:flex;gap:40px;align-items:flex-start">
+<div>
+  <div style="color:var(--ink-muted);margin-bottom:6px">Modo de exibição — registro carregado</div>
+  <div class="rp-form rp-form--req" style="grid-template-columns:140px 14px 200px">
+    <span class="rp-label">Código</span><span></span><input class="rp-field rp-field--readonly" readonly value="C40000">
+    <span class="rp-label">Nome</span><span class="rp-req">*</span><input class="rp-field" value="Terra Firme Comércio Ltda.">
+    <span class="rp-label">Código de barras</span><span></span><input class="rp-field" value="789 8412 00317">
+    <span class="rp-label">Preço unitário</span><span></span><input class="rp-field rp-field--num" value="R$ 500,00">
+    <span class="rp-label">Observações</span><span></span><textarea class="rp-field rp-field--note">Entrega parcial autorizada.</textarea>
+  </div>
+</div>
+<div>
+  <div style="color:var(--ink-muted);margin-bottom:6px">Modo de adição — janela vazia</div>
+  <div class="rp-form rp-form--req rp-form--adicao" style="grid-template-columns:140px 14px 200px">
+    <span class="rp-label">Código</span><span class="rp-req">*</span><input class="rp-field rp-field--active" value="">
+    <span class="rp-label">Nome</span><span class="rp-req">*</span><input class="rp-field" value="">
+    <span class="rp-label">Código de barras</span><span></span><input class="rp-field" value="">
+    <span class="rp-label">Preço unitário</span><span></span><input class="rp-field rp-field--num" value="">
+    <span class="rp-label">Saldo da conta</span><span></span><input class="rp-field rp-field--num rp-field--readonly" readonly value="0,00">
+  </div>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,36 @@
+<!-- @dsCard group="Painéis" height=990 -->
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Dashboard 3D</title>
+<style>body{margin:0;padding:16px;background:var(--surface-form)}</style></head>
+<body class="rp">
+<div style="margin:-16px">
+<div class="rp-menubar"><span><u>A</u>rquivo</span><span><u>E</u>ditar</span><span><u>E</u>xibir</span><span><u>D</u>ados</span><span><u>I</u>r para</span><span><u>M</u>ódulos</span><span>Ferra<u>m</u>entas</span><span>Ja<u>n</u>ela</span><span>Aj<u>u</u>da</span></div>
+<div class="rp-toolbar"><button class="rp-tool"><i class="rp-ico rp-ico-visualizar"></i></button><button class="rp-tool"><i class="rp-ico rp-ico-imprimir"></i></button><button class="rp-tool"><i class="rp-ico rp-ico-email"></i></button><span class="rp-tool-sep"></span><button class="rp-tool"><i class="rp-ico rp-ico-exportar-planilha"></i></button><button class="rp-tool"><i class="rp-ico rp-ico-exportar-word"></i></button><button class="rp-tool"><i class="rp-ico rp-ico-exportar-pdf"></i></button><span class="rp-tool-sep"></span><button class="rp-tool"><i class="rp-ico rp-ico-buscar"></i></button><button class="rp-tool"><i class="rp-ico rp-ico-novo"></i></button><button class="rp-tool"><i class="rp-ico rp-ico-primeiro"></i></button><button class="rp-tool"><i class="rp-ico rp-ico-anterior"></i></button><button class="rp-tool"><i class="rp-ico rp-ico-proximo"></i></button><button class="rp-tool"><i class="rp-ico rp-ico-ultimo"></i></button><button class="rp-tool"><i class="rp-ico rp-ico-filtro"></i></button><button class="rp-tool"><i class="rp-ico rp-ico-ordenar"></i></button><button class="rp-tool"><i class="rp-ico rp-ico-alerta"></i></button><button class="rp-tool"><i class="rp-ico rp-ico-calendario"></i></button><button class="rp-tool"><i class="rp-ico rp-ico-ajuda"></i></button><span class="rp-tool-sep"></span><button class="rp-tool"><i class="rp-ico rp-ico-ia-assistente"></i></button></div>
+<div class="rp-window" style="margin:16px;box-shadow:none">
+ <div class="rp-titlebar"><span>Cockpit de vendas — setembro 2026</span><span class="rp-winbtns"><span>&#8211;</span><span>&#9633;</span><span>&#215;</span></span></div>
+ <div class="rp-dash">
+  <div class="rp-dash-kpis"><div class="rp-kpi"><div class="rp-kpi-head"><i class="rp-ico rp-ico-vendas"></i>Faturamento do mês</div><div class="rp-kpi-valor">R$ 1.284.530</div><div class="rp-kpi-delta rp-kpi-delta--up">▲ 12,4% vs. mês anterior</div><svg width="176" height="26" viewBox="0 0 176 26" aria-hidden="true"><polyline points="0,20 22,18 44,21 66,14 88,15 110,10 132,11 154,6 176,4" fill="none" style="stroke:var(--nav-selected)" stroke-width="2"/></svg></div><div class="rp-kpi"><div class="rp-kpi-head"><i class="rp-ico rp-ico-compras"></i>Contas a pagar</div><div class="rp-kpi-valor">R$ 412.908</div><div class="rp-kpi-delta rp-kpi-delta--down">▼ 3,1% vs. mês anterior</div><svg width="176" height="26" viewBox="0 0 176 26" aria-hidden="true"><polyline points="0,8 22,10 44,7 66,12 88,11 110,15 132,14 154,17 176,19" fill="none" style="stroke:var(--gold)" stroke-width="2"/></svg></div><div class="rp-kpi"><div class="rp-kpi-head"><i class="rp-ico rp-ico-estoque"></i>Giro de estoque</div><div class="rp-kpi-valor">4,8×</div><div class="rp-kpi-delta rp-kpi-delta--up">▲ 0,3 vs. mês anterior</div><svg width="176" height="26" viewBox="0 0 176 26" aria-hidden="true"><polyline points="0,18 22,16 44,17 66,12 88,13 110,9 132,10 154,7 176,5" fill="none" style="stroke:var(--nav-selected)" stroke-width="2"/></svg></div><div class="rp-kpi"><div class="rp-kpi-head"><i class="rp-ico rp-ico-parceiros"></i>Clientes ativos</div><div class="rp-kpi-valor">1.932</div><div class="rp-kpi-delta rp-kpi-delta--up">▲ 58 vs. mês anterior</div><svg width="176" height="26" viewBox="0 0 176 26" aria-hidden="true"><polyline points="0,19 22,17 44,15 66,16 88,12 110,11 132,9 154,8 176,5" fill="none" style="stroke:var(--nav-selected)" stroke-width="2"/></svg></div></div>
+  <div class="rp-dash-row">
+   <div class="rp-chart"><div class="rp-chart-head"><i class="rp-ico rp-ico-relatorios"></i>Vendas por trimestre</div><div class="rp-chart-body" id="b"></div></div>
+   <div class="rp-chart"><div class="rp-chart-head"><i class="rp-ico rp-ico-oportunidades"></i>Vendas por região</div><div class="rp-chart-body" id="p"></div></div>
+  </div>
+  <div class="rp-dash-row">
+   <div class="rp-chart"><div class="rp-chart-head"><i class="rp-ico rp-ico-bi"></i>Fluxo de caixa — 12 meses</div><div class="rp-chart-body" id="a"></div></div>
+   <div class="rp-ai"><div class="rp-ai-head"><i class="rp-ico rp-ico-ia-insight"></i>Análise com IA<span class="rp-badge rp-badge--ia">IA</span></div>
+    <div class="rp-ai-item"><i class="rp-ico rp-ico-ia-previsao"></i><div><b>Meta do mês</b><p>Projeção de R$ 1,41 mi — 9% acima da meta.</p></div><span class="rp-ai-conf">87%</span></div>
+    <div class="rp-ai-item"><i class="rp-ico rp-ico-ia-anomalia"></i><div><b>Descontos fora do padrão</b><p>6 pedidos de V-014 com desconto 3× a média.</p></div><span class="rp-ai-conf">94%</span></div>
+    <div class="rp-ai-item"><i class="rp-ico rp-ico-ia-risco"></i><div><b>Risco de crédito</b><p>Terra Firme: 3 de 5 faturas em atraso.</p></div><span class="rp-ai-conf">78%</span></div>
+    <div class="rp-ai-foot">Atualizado às 15:20. Confira antes de aplicar.</div></div>
+  </div>
+ </div>
+</div>
+<div style="padding:0 16px 6px"><div class="rp-status-msg rp-status-msg--sucesso">Dados do cockpit atualizados — 1.284 documentos</div></div>
+<div class="rp-sysbar"><span class="rp-sysbar-slot"><i class="rp-ico rp-ico-usuario"></i>Edson</span><span class="rp-sysbar-slot"><i class="rp-ico rp-ico-bancos"></i>Renda+ Matriz</span><span class="rp-sysbar-slot"><span class="rp-sysbar-led"></span>Conectado</span><span class="rp-sysbar-slot rp-sysbar-slot--grow"></span><span class="rp-sysbar-slot">20/09/2026</span><span class="rp-sysbar-slot">15:20</span><span class="rp-sysbar-slot"><i class="rp-ico rp-ico-ia-insight"></i>IA: 3 análises</span></div>
+</div>
+<script>
+var R=RendaERP;
+R.Barras3D(document.getElementById("b"),{largura:500,altura:250,categorias:["1º tri","2º tri","3º tri","4º tri"],series:[{nome:"Lucro bruto",valores:[180,120,210,160]},{nome:"Valor aplicado",valores:[320,250,380,300]},{nome:"Vendas",valores:[420,330,460,390]}]});
+R.Pizza3D(document.getElementById("p"),{largura:340,altura:250,profundidade:18,fatias:[{nome:"Sudeste",valor:46},{nome:"Sul",valor:22},{nome:"Nordeste",valor:15},{nome:"C.-Oeste",valor:11},{nome:"Norte",valor:6}]});
+R.Area3D(document.getElementById("a"),{largura:500,altura:250,categorias:["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"],series:[{nome:"Saídas",valores:[80,95,90,110,100,120,115,130,125,140,135,150]},{nome:"Entradas",valores:[120,130,125,150,160,155,170,180,175,190,200,210]}]});
+</script>
+</body></html>

@@ -1,0 +1,53 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Renda+ ERP</title>
+<style>
+  html, body { margin:0; height:100%; }
+  body { background:var(--ground); color:var(--ink); font-family:var(--font-ui); overflow:hidden; }
+  .cover { position:relative; height:288px; overflow:hidden; }
+  .art { position:absolute; top:0; left:480px; width:480px; height:288px; overflow:hidden; }
+  .art svg { display:block; width:480px; height:288px; }
+  .nav { fill:var(--nav); }
+  .deep { fill:var(--nav-deep); }
+  .btn { fill:var(--button); }
+  .gold { fill:var(--gold); }
+  .form { fill:var(--tab-active); }
+  .win { rx:var(--radius-md); }
+  .words { position:absolute; left:var(--space-6); bottom:var(--space-6); max-width:440px; }
+  .name { margin:0; font-size:104px; line-height:.95; font-weight:600; letter-spacing:-.02em; color:var(--ink); }
+  .tag { margin:var(--space-3) 0 0 4px; font-size:14px; line-height:20px; color:var(--ink-muted); }
+</style>
+</head>
+<body>
+<div class="cover">
+<div class="art" aria-hidden="true">
+<svg viewBox="0 0 480 288" width="480" height="288">
+<!--
+  blocos      nav 160x250 saindo pelo topo (o painel de módulos, o maior) - button 128x176 - nav-deep 176x146 saindo pelo topo e pela direita - gold 176x72 - tab-active 128x48 como alívio; cerca de 40% de 960x288
+  arranjo     janelas sobrepostas: placas de alturas diferentes lado a lado, bases escalonadas como janelas em cascata, calhas space-5
+  padrão      a seta de link, o único sinal de detalhar do sistema: seis setas douradas na placa nav-deep num passo de linha de grade
+  escalas     lados em múltiplos de space-5; calhas space-5; passo das setas 48 x 40; cantos radius-md (janelas)
+-->
+<rect class="nav win" x="0" y="-12" width="160" height="250" rx="6"/>
+<rect class="btn win" x="176" y="64" width="128" height="176" rx="6"/>
+<rect class="form win" x="176" y="-12" width="128" height="60" rx="6"/>
+<rect class="deep win" x="320" y="-12" width="176" height="158" rx="6"/>
+<rect class="gold win" x="320" y="162" width="176" height="78" rx="6"/>
+<polygon class="gold" points="344,30 361.6,30 361.6,24 376,34 361.6,44 361.6,38 344,38"/>
+<polygon class="gold" points="392,30 409.6,30 409.6,24 424,34 409.6,44 409.6,38 392,38"/>
+<polygon class="gold" points="440,30 457.6,30 457.6,24 472,34 457.6,44 457.6,38 440,38"/>
+<polygon class="gold" points="344,70 361.6,70 361.6,64 376,74 361.6,84 361.6,78 344,78"/>
+<polygon class="gold" points="392,70 409.6,70 409.6,64 424,74 409.6,84 409.6,78 392,78"/>
+<polygon class="gold" points="344,110 361.6,110 361.6,104 376,114 361.6,124 361.6,118 344,118"/>
+</svg>
+</div>
+<div class="words">
+  <h1 class="name">Renda+<br>ERP</h1>
+  <p class="tag">Telas densas e calmas para quem cuida das contas.</p>
+</div>
+</div>
+</body>
+</html>

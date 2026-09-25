@@ -1,0 +1,10 @@
+<!-- @dsCard group="Gráficos 3D" height=340 -->
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Empilhadas3D</title>
+<style>body{margin:0;padding:16px;background:var(--surface-form)}</style></head>
+<body class="rp">
+<div class="rp-chart" style="width:620px"><div class="rp-chart-head"><i class="rp-ico rp-ico-faturamento"></i>Faturamento por canal e mês<div class="rp-select"><select class="rp-field"><option>Barras empilhadas</option></select></div></div><div class="rp-chart-body" id="g"></div></div>
+<script>
+RendaERP.Empilhadas3D(document.getElementById("g"),{largura:596,altura:262,unidade:"mil R$",categorias:["Jan","Fev","Mar","Abr","Mai","Jun"],series:[{nome:"Loja",valores:[120,140,135,160,150,175]},{nome:"Representante",valores:[210,190,230,220,250,240]},{nome:"E-commerce",valores:[90,110,105,130,145,160]}]});
+</script>
+</body></html>

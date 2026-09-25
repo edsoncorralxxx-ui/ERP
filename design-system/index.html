@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Renda+ ERP — Design system</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components/bundle.css">
+<style>
+  body { margin: 0; background: var(--ground); }
+  header { padding: var(--space-5); border-bottom: 1px solid var(--grid-rule); background: var(--chrome); }
+  header h1 { margin: 0 0 var(--space-2); font: var(--text-window-title); }
+  main { padding: var(--space-5); display: grid; gap: var(--space-6); }
+  h2 { margin: 0 0 var(--space-3); font: var(--text-section); color: var(--ink-heading); text-decoration: underline; }
+  .card { margin-bottom: var(--space-5); }
+  .card-title { display: flex; gap: var(--space-3); align-items: baseline; margin-bottom: var(--space-2); }
+  .card-title a { font: var(--text-caption); color: var(--ink-muted); }
+  iframe { display: block; width: 100%; border: 1px solid var(--window-border); border-radius: var(--radius-md); background: var(--surface-form); }
+  .erro { color: var(--ink-danger); }
+</style>
+</head>
+<body class="rp">
+<header>
+  <h1><span class="rp-logo">Renda<b>+</b><i>ERP</i></span> — Design system</h1>
+  <div>Tokens em <code>tokens.css</code>, componentes em <code>components/bundle.css</code> e <code>components/bundle.js</code>. Regras no <code>README.md</code>.</div>
+</header>
+<main id="galeria"></main>
+<script>
+  // Cada preview.html é um documento solto: aqui recebe os tokens, o CSS e o JS do sistema e vira um cartão.
+  var componentes = ['Cover', 'Abas', 'AnaliseIA', 'Area3D', 'BarraFerramentas', 'BarraFiltros', 'BarraLateral',
+    'BarraMenus', 'BarraProgresso', 'BarraStatus', 'BarraStatusSistema', 'BarraSuperior', 'Barras3D', 'Botao',
+    'Busca', 'CaixaMensagem', 'CampoData', 'CampoLookup', 'CampoSaldo', 'CampoTexto', 'Dashboard3D', 'Dica',
+    'Empilhadas3D', 'Grade', 'GrupoCampos', 'IconesFerramentas', 'IconesIA', 'IconesModulos', 'IconesPastas',
+    'IconesStatus', 'Indicador', 'Janela', 'Linha', 'ListaSelecao', 'Logotipo', 'MenuContexto', 'MenuLateral',
+    'Opcoes', 'Paginacao', 'PainelModulos', 'Pizza3D', 'Rodape', 'Rosca3D', 'Selecao', 'SeloStatus', 'SetaLink',
+    'SugestaoIA', 'TabelaEdicao', 'TabelaResumo', 'TrilhoLateral'];
+
+  var base = new URL('.', location.href).href;
+  var injetar = '<base href="' + base + 'components/">' +
+    '<link rel="stylesheet" href="' + base + 'tokens.css">' +
+    '<link rel="stylesheet" href="' + base + 'components/bundle.css">' +
+    '<script src="' + base + 'components/bundle.js"><\/script>';
+
+  var galeria = document.getElementById('galeria');
+  var secoes = {};
+
+  function secao(nome) {
+    if (!secoes[nome]) {
+      var s = document.createElement('section');
+      s.innerHTML = '<h2></h2>';
+      s.firstChild.textContent = nome;
+      galeria.appendChild(s);
+      secoes[nome] = s;
+    }
+    return secoes[nome];
+  }
+
+  Promise.all(componentes.map(function (nome) {
+    return fetch('components/' + nome + '/preview.html')
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(function (html) { return { nome: nome, html: html }; }, function () { return { nome: nome }; });
+  })).then(function (itens) {
+    itens.forEach(function (item) {
+      var card = document.createElement('div');
+      card.className = 'card';
+      if (!item.html) {
+        card.innerHTML = '<span class="erro"></span>';
+        card.firstChild.textContent = 'Não foi possível carregar ' + item.nome + '. Abra esta página por um servidor HTTP.';
+        galeria.appendChild(card);
+        return;
+      }
+      var m = item.html.match(/@dsCard([^>]*)-->/) || ['', ''];
+      var grupo = (m[1].match(/group="([^"]+)"/) || [, 'Capa'])[1];
+      var altura = (m[1].match(/height=(\d+)/) || [, 300])[1];
+      card.innerHTML = '<div class="card-title"><b></b><a>README</a></div>';
+      card.querySelector('b').textContent = item.nome;
+      card.querySelector('a').href = 'components/' + item.nome + '/README.md';
+      var f = document.createElement('iframe');
+      f.style.height = (+altura + 2) + 'px';
+      f.srcdoc = item.html.replace(/<head>/i, '<head>' + injetar);
+      card.appendChild(f);
+      secao(grupo).appendChild(card);
+    });
+  });
+</script>
+</body>
+</html>

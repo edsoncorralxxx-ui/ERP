@@ -1,0 +1,31 @@
+<!-- @dsCard group="Entradas" height=330 -->
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>GrupoCampos</title>
+<style>body{margin:0;padding:16px;background:var(--surface-form)}</style></head>
+<body class="rp">
+<div style="display:grid;gap:12px;width:620px">
+  <fieldset class="rp-grupo"><legend>Dados do documento</legend>
+    <div class="rp-grupo-corpo" style="display:flex;gap:24px">
+      <div class="rp-form" style="grid-template-columns:120px 150px">
+        <span class="rp-label">Nº do documento</span><input class="rp-field rp-field--readonly" readonly value="1.284">
+        <span class="rp-label">Série</span><input class="rp-field" value="Primária">
+      </div>
+      <div class="rp-form" style="grid-template-columns:120px 150px">
+        <span class="rp-label">Data</span><input class="rp-field" value="20/09/2026">
+        <span class="rp-label">Status</span><input class="rp-field rp-field--readonly" readonly value="Aberto">
+      </div>
+    </div>
+  </fieldset>
+  <div class="rp-grupo rp-grupo--recolhivel" data-aberto="sim">
+    <div class="rp-grupo-tit">Condições comerciais</div>
+    <div class="rp-grupo-corpo rp-form" style="grid-template-columns:150px 180px">
+      <span class="rp-label">Condição de pagamento</span><input class="rp-field" value="2P10Líq30">
+      <span class="rp-label">Desconto total %</span><input class="rp-field rp-field--num" value="2,50">
+    </div>
+  </div>
+  <div class="rp-grupo rp-grupo--recolhivel" data-aberto="nao">
+    <div class="rp-grupo-tit">Transporte e entrega</div>
+    <div class="rp-grupo-corpo rp-form"><span class="rp-label">Transportadora</span><input class="rp-field"></div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,10 @@
+<!-- @dsCard group="Gráficos 3D" height=340 -->
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Barras 3D</title>
+<style>body{margin:0;padding:16px;background:var(--surface-form)}</style></head>
+<body class="rp">
+<div class="rp-chart" style="width:620px"><div class="rp-chart-head"><i class="rp-ico rp-ico-relatorios"></i>Análise de vendas por trimestre<div class="rp-select"><select class="rp-field"><option>Gráfico de barras</option></select></div></div><div class="rp-chart-body" id="g"></div></div>
+<script>
+RendaERP.Barras3D(document.getElementById("g"),{largura:596,altura:270,unidade:"mil R$",categorias:["1º tri","2º tri","3º tri","4º tri"],series:[{nome:"Lucro bruto",valores:[180,120,210,160]},{nome:"Valor aplicado",valores:[320,250,380,300]},{nome:"Valor de vendas",valores:[420,330,460,390]}]});
+</script>
+</body></html>
