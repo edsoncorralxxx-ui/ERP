@@ -1,0 +1,202 @@
+{
+  "versao": "B01-2",
+  "regra": "Menu lateral (Painel de módulos) do app, com os 30 módulos do design system na ordem dele. Cada item aponta para uma das 32 telas do plano (tela), para um recurso do catálogo analítico que ganha tela própria (recurso) ou para uma função utilitária já implementada (acao). 'fase' diz quando entra; 'implementado' só é true para o que já funciona. O verificador do B01 exige que todas as 32 telas e os 38 recursos AN tenham lugar no menu (direto ou pelas análises da tela).",
+  "modulos": [
+    {
+      "nome": "Cockpit",
+      "icone": "cockpit",
+      "itens": [
+        {"rotulo": "Visão geral", "tela": "dashboard", "fase": "Sprint 4+ · B05/B10"},
+        {"rotulo": "Central de problemas e oportunidades", "recurso": "AN-035", "fase": "B10/B14"}
+      ]
+    },
+    {
+      "nome": "Dashboard",
+      "icone": "dashboard",
+      "itens": [
+        {"rotulo": "Painel de vendas", "tela": "dashboard", "visao": "VENDAS", "fase": "Sprint 4+ · B05"},
+        {"rotulo": "Painel financeiro", "tela": "dashboard", "visao": "FINANCEIRO", "fase": "Sprint 6+ · B06"},
+        {"rotulo": "Painel industrial", "tela": "dashboard", "visao": "INDUSTRIAL", "fase": "B09"},
+        {"rotulo": "Painel de impostos", "tela": "dashboard", "visao": "IMPOSTOS", "fase": "Sprint 7 · B10"}
+      ]
+    },
+    {
+      "nome": "Cadastros",
+      "icone": "cadastros",
+      "itens": [
+        {"rotulo": "Clientes e unidades", "tela": "clientes", "fase": "Sprint 2 · B03"},
+        {"rotulo": "Fornecedores", "tela": "fornecedores", "fase": "Sprint 3 · B03"},
+        {"rotulo": "Materiais e serviços", "tela": "materiais", "fase": "Sprint 3 · B03"}
+      ]
+    },
+    {
+      "nome": "CRM",
+      "icone": "crm",
+      "itens": [
+        {"rotulo": "Prospecção", "tela": "prospeccao", "fase": "Sprint 4 · B05"},
+        {"rotulo": "Campanhas e canais", "recurso": "AN-006", "fase": "B14"},
+        {"rotulo": "Planejamento de marketing", "recurso": "AN-007", "fase": "B14/B15"},
+        {"rotulo": "Satisfação e relacionamento", "recurso": "AN-009", "fase": "B11/B14"}
+      ]
+    },
+    {
+      "nome": "Vendas",
+      "icone": "vendas",
+      "itens": [
+        {"rotulo": "Oportunidades e propostas", "tela": "propostas", "fase": "Sprint 4 · B05"},
+        {"rotulo": "Pedidos e contratos", "tela": "pedidos", "fase": "Sprint 4 · B05"},
+        {"rotulo": "Previsão de demanda", "recurso": "AN-005", "fase": "B14/B15"}
+      ]
+    },
+    {
+      "nome": "Engenharia",
+      "icone": "engenharia",
+      "itens": [
+        {"rotulo": "BOM — composição de custos", "tela": "bom", "fase": "B07"},
+        {"rotulo": "Desenvolvimento de produtos", "recurso": "AN-032", "fase": "B14/B15"}
+      ]
+    },
+    {"nome": "Compras", "icone": "compras", "itens": [{"rotulo": "Pedidos de compra", "tela": "compras", "fase": "B08"}]},
+    {
+      "nome": "Estoque",
+      "icone": "estoque",
+      "itens": [
+        {"rotulo": "Estoque e inventário", "tela": "estoque", "fase": "B08"},
+        {"rotulo": "Recebimentos e terceiros", "tela": "recebimentos", "fase": "B08"}
+      ]
+    },
+    {
+      "nome": "MRP",
+      "icone": "mrp",
+      "itens": [
+        {"rotulo": "Necessidades e cotações", "tela": "necessidades", "fase": "B08"},
+        {"rotulo": "Reposição e estoque de segurança", "recurso": "AN-027", "fase": "B14/B15"}
+      ]
+    },
+    {
+      "nome": "Produção",
+      "icone": "producao",
+      "itens": [
+        {"rotulo": "Ordens de produção", "tela": "producao", "fase": "B09"},
+        {"rotulo": "Planejamento de recursos", "recurso": "AN-023", "fase": "B14/B15"}
+      ]
+    },
+    {
+      "nome": "Projetos",
+      "icone": "projetos",
+      "itens": [
+        {"rotulo": "Carteira de projetos", "tela": "carteira", "fase": "Sprint 4 · B05"},
+        {"rotulo": "Detalhe do projeto", "tela": "projeto", "fase": "Sprint 4 · B05"},
+        {"rotulo": "EAP e cronograma", "tela": "cronograma", "fase": "B07"}
+      ]
+    },
+    {
+      "nome": "Instalações",
+      "icone": "instalacoes",
+      "itens": [
+        {"rotulo": "Instalação e entrega", "tela": "instalacao", "fase": "B09"},
+        {"rotulo": "Expedição e transporte", "recurso": "AN-030", "fase": "B14/B15"}
+      ]
+    },
+    {
+      "nome": "Equipamentos",
+      "icone": "equipamentos",
+      "itens": [{"rotulo": "Equipamentos", "tela": "equipamentos", "fase": "Sprint 3 · B03"}]
+    },
+    {
+      "nome": "Renda+",
+      "icone": "renda",
+      "itens": [
+        {"rotulo": "Plano de valor do cliente", "recurso": "AN-008", "fase": "B11/B14"},
+        {"rotulo": "Medição e calibração", "recurso": "AN-025", "fase": "B14/B15"}
+      ]
+    },
+    {"nome": "Qualidade", "icone": "qualidade", "itens": [{"rotulo": "Inspeções e qualidade", "tela": "qualidade", "fase": "B09"}]},
+    {"nome": "Manutenção", "icone": "manutencao", "itens": [{"rotulo": "Manutenção preventiva", "tela": "preventiva", "fase": "B11"}]},
+    {"nome": "Pós-venda", "icone": "posvenda", "itens": [{"rotulo": "Assistência técnica", "tela": "assistencia", "fase": "B11"}]},
+    {
+      "nome": "Financeiro",
+      "icone": "financas",
+      "itens": [
+        {"rotulo": "Contas a receber", "tela": "receber", "fase": "Sprint 5 · B05/B06"},
+        {"rotulo": "Contas a pagar", "tela": "pagar", "fase": "Sprint 8+ · B06"},
+        {"rotulo": "Contas e conciliação", "tela": "conciliacao", "fase": "Sprint 8+ · B06"},
+        {"rotulo": "Fluxo de caixa", "tela": "caixa", "fase": "Sprint 8+ · B06"}
+      ]
+    },
+    {
+      "nome": "Faturamento",
+      "icone": "faturamento",
+      "itens": [{"rotulo": "Documentos e faturamento", "tela": "documentos", "fase": "Sprint 6 · B06"}]
+    },
+    {"nome": "Fiscal", "icone": "fiscal", "itens": [{"rotulo": "Impostos gerenciais", "tela": "impostos", "fase": "Sprint 7 · B10"}]},
+    {"nome": "Custos", "icone": "custos", "itens": [{"rotulo": "Custos e resultado", "tela": "custos", "fase": "B08–B10"}]},
+    {
+      "nome": "Contabilidade / Controladoria",
+      "icone": "contabilidade",
+      "itens": [
+        {"rotulo": "Repasses", "tela": "repasses", "fase": "B10"},
+        {"rotulo": "Contabilidade gerencial", "recurso": "AN-018", "fase": "B14"},
+        {"rotulo": "Orçamento empresarial", "recurso": "AN-015", "fase": "B14"},
+        {"rotulo": "Investimentos e desenvolvimento", "recurso": "AN-016", "fase": "B14/B15"}
+      ]
+    },
+    {
+      "nome": "Tarefas",
+      "icone": "tarefas",
+      "itens": [
+        {"rotulo": "Planos de ação", "recurso": "AN-036", "fase": "B10"},
+        {"rotulo": "Experimentos gerenciais", "recurso": "AN-037", "fase": "B14/B15"}
+      ]
+    },
+    {
+      "nome": "BI & Relatórios",
+      "icone": "bi",
+      "itens": [
+        {"rotulo": "Relatórios", "tela": "relatorios", "fase": "B06/B10"},
+        {"rotulo": "Avaliação da gestão", "recurso": "AN-038", "fase": "B14"}
+      ]
+    },
+    {
+      "nome": "Documentos",
+      "icone": "documentos",
+      "itens": [
+        {"rotulo": "Contratos, garantias e obrigações", "recurso": "AN-033", "fase": "B14"},
+        {"rotulo": "Ocorrências e riscos jurídicos", "recurso": "AN-034", "fase": "B14"}
+      ]
+    },
+    {
+      "nome": "Integrações",
+      "icone": "integracoes",
+      "itens": [{"rotulo": "Importação e conferência", "tela": "importacao", "fase": "B04/B12"}]
+    },
+    {
+      "nome": "Recursos Humanos",
+      "icone": "rh",
+      "itens": [{"rotulo": "Fora do escopo da versão inicial (folha de pagamento)", "nota": true, "fase": "Fora do escopo"}]
+    },
+    {
+      "nome": "Patrimônio",
+      "icone": "patrimonio",
+      "itens": [{"rotulo": "Fora do escopo da versão inicial", "nota": true, "fase": "Fora do escopo"}]
+    },
+    {
+      "nome": "Administração",
+      "icone": "administracao",
+      "itens": [
+        {"rotulo": "Status do servidor", "acao": "status-servidor", "implementado": true, "fase": "Sprint 1"},
+        {"rotulo": "Usuários e permissões", "tela": "configuracoes", "secao": "ACESSO", "fase": "Sprint 2 · B03"},
+        {"rotulo": "Auditoria", "tela": "configuracoes", "secao": "AUDITORIA", "fase": "Sprint 2 · B03"}
+      ]
+    },
+    {
+      "nome": "Configurações",
+      "icone": "configuracoes-mod",
+      "itens": [
+        {"rotulo": "Dados da empresa", "tela": "configuracoes", "secao": "EMPRESA", "implementado": true, "fase": "Sprint 1"},
+        {"rotulo": "Parâmetros e calendários", "tela": "configuracoes", "secao": "PARAMETROS", "fase": "Sprint 2+ · B03"},
+        {"rotulo": "Backups", "tela": "configuracoes", "secao": "BACKUPS", "fase": "B13"}
+      ]
+    }
+  ]
+}

@@ -78,6 +78,9 @@ body { background: var(--ground); }
 /* Gaveta: itens ainda não implementados. */
 .rp-gaveta .rp-nav-sub--indisponivel { opacity: .6; cursor: default; }
 .rp-gaveta .rp-nav-sub--indisponivel:hover { text-decoration: none; background: var(--nav-selected); } /* mantém o azul: fundo transparente mostrava a gaveta clara (piscar branco) */
+.rp-nav-sub { min-width: 0; }
+.rp-nav-sub__rotulo { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-nav-sub__fase { flex: none; margin-right: var(--space-2); font-size: 11px; font-weight: 400; opacity: .85; }
 .rp-drawer-aviso { margin: 0; padding: var(--space-4) var(--space-5); color: var(--ink-muted); }
 
 /* Janela interna (MDI) sobre a área de trabalho. */

@@ -42,17 +42,16 @@ describe('moldura do aplicativo', () => {
     expect(screen.getByRole('menubar', { name: 'Menu principal' })).toBeInTheDocument();
   });
 
-  it('a gaveta lista os 9 módulos do ERP e abre a janela da tela já implementada', async () => {
+  it('a gaveta lista os 30 módulos do menu e abre a janela do item já implementado', async () => {
     const user = await entrar();
     const gaveta = screen.getByRole('complementary', { name: 'Módulos' });
-    expect(within(gaveta).getAllByRole('button', { expanded: false }).length + within(gaveta).getAllByRole('button', { expanded: true }).length).toBe(9);
-    await user.click(within(gaveta).getByRole('button', { name: 'Administração' }));
-    await user.click(within(gaveta).getByRole('button', { name: 'Dados da empresa' }));
+    expect(within(gaveta).getAllByRole('button', { expanded: false }).length + within(gaveta).getAllByRole('button', { expanded: true }).length).toBe(30);
+    await user.click(within(gaveta).getByRole('button', { name: /Dados da empresa/ }));
     expect(await screen.findByRole('dialog', { name: 'Dados da empresa' })).toBeInTheDocument();
     // Tela futura fica indisponível, com a fase do roteiro em que entra.
-    const futura = within(gaveta).getByText('Configurações e manutenção').closest('[aria-disabled]');
+    const futura = within(gaveta).getByText('Clientes e unidades').closest('[aria-disabled]');
     expect(futura).toHaveAttribute('aria-disabled', 'true');
-    expect(futura).toHaveAttribute('title', 'Disponível na fase B13 do roteiro');
+    expect(futura).toHaveAttribute('title', 'Clientes e unidades — previsto: Sprint 2 · B03');
   });
 
   it('Meu cockpit no trilho abre o cockpit maximizado; minimizar leva à faixa de janelas minimizadas', async () => {

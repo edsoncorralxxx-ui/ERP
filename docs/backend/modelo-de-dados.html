@@ -1,0 +1,1521 @@
+<title>Modelo de dados Renda+</title>
+<style>
+  :root {
+    --fundo: #f4f6fa;
+    --superficie: #ffffff;
+    --superficie-2: #eef3f7;
+    --tinta: #1f2026;
+    --tinta-suave: #5a6272;
+    --regra: #d3dbe7;
+    --azul: #4867b1;
+    --azul-fundo: #e6ecf7;
+    --ouro: #b07d12;
+    --ouro-fundo: #fcf0ae;
+    --ok: #23713f;
+    --ok-fundo: #e3f1e7;
+    --fonte: "IBM Plex Sans", "Segoe UI", Tahoma, system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --fundo: #12151c; --superficie: #1a1f29; --superficie-2: #212835; --tinta: #e6e9ef; --tinta-suave: #9aa4b5;
+      --regra: #2e3747; --azul: #8fa9e6; --azul-fundo: #1f2a44; --ouro: #f0c35a; --ouro-fundo: #3a3218; --ok: #6fcf8f; --ok-fundo: #173222;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --fundo: #12151c; --superficie: #1a1f29; --superficie-2: #212835; --tinta: #e6e9ef; --tinta-suave: #9aa4b5;
+    --regra: #2e3747; --azul: #8fa9e6; --azul-fundo: #1f2a44; --ouro: #f0c35a; --ouro-fundo: #3a3218; --ok: #6fcf8f; --ok-fundo: #173222;
+    color-scheme: dark;
+  }
+  body { background: var(--fundo); color: var(--tinta); font-family: var(--fonte); font-size: 15px; line-height: 1.55; }
+  .pagina { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; display: grid; gap: 28px; }
+  header { display: grid; gap: 12px; }
+  .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--azul); font-weight: 600; }
+  h1 { margin: 0; font-size: clamp(28px, 4vw, 40px); line-height: 1.1; text-wrap: balance; letter-spacing: -.01em; }
+  h1 b { color: var(--ouro); font-weight: 700; }
+  .intro { margin: 0; max-width: 68ch; color: var(--tinta-suave); }
+  .numeros { display: flex; flex-wrap: wrap; gap: 10px 28px; font-variant-numeric: tabular-nums; }
+  .numeros div { display: grid; }
+  .numeros strong { font-size: 24px; line-height: 1.2; }
+  .numeros span { font-size: 13px; color: var(--tinta-suave); }
+  .legenda { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 13px; color: var(--tinta-suave); align-items: center; }
+  .selo { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 600; border: 1px solid var(--regra); background: var(--superficie); color: var(--tinta-suave); white-space: nowrap; }
+  .selo::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--tinta-suave); }
+  .selo--impl { background: var(--ok-fundo); color: var(--ok); border-color: transparent; }
+  .selo--impl::before { background: var(--ok); }
+  .selo--fase { background: var(--azul-fundo); color: var(--azul); border-color: transparent; }
+  .selo--fase::before { background: var(--azul); }
+  code, .mono { font-family: var(--mono); font-size: .92em; }
+
+  nav.indice { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--fundo); padding-block: 10px; border-bottom: 1px solid var(--regra); }
+  nav.indice ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  nav.indice a { display: inline-block; padding: 4px 10px; border-radius: 3px; border: 1px solid var(--regra); background: var(--superficie); color: var(--tinta); text-decoration: none; font-size: 13px; transition: background-color .18s ease; }
+  nav.indice a:hover, nav.indice a:focus-visible { background: var(--ouro-fundo); outline: none; }
+  nav.indice a.tem-impl { border-color: var(--ok); }
+
+  section.dominio { display: grid; gap: 14px; scroll-margin-top: 110px; }
+  .dominio-cab { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline; }
+  h2 { margin: 0; font-size: 22px; line-height: 1.25; text-wrap: balance; }
+  .dominio-cab p { margin: 0; flex-basis: 100%; color: var(--tinta-suave); max-width: 72ch; }
+  .diagrama { background: var(--superficie); border: 1px solid var(--regra); border-radius: 6px; padding: 16px; overflow-x: auto; }
+  .diagrama pre.mermaid { margin: 0; min-width: 640px; }
+  .tabelas { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+  .tabela { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 7px 10px; background: var(--superficie-2); border-radius: 3px; font-size: 13px; }
+  .tabela .mono { overflow-wrap: anywhere; }
+  .externas { font-size: 13px; color: var(--tinta-suave); margin: 0; }
+
+  .ext { display: grid; gap: 10px; }
+  .ext ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .ext li { background: var(--superficie); border: 1px solid var(--regra); border-radius: 6px; padding: 10px 12px; }
+  .ext li strong { display: block; font-size: 14px; margin-bottom: 4px; }
+  .ext li span { font-family: var(--mono); font-size: 12.5px; color: var(--tinta-suave); }
+  .nota { background: var(--superficie); border-left: 3px solid var(--ouro); padding: 12px 16px; border-radius: 0 6px 6px 0; max-width: 80ch; }
+  .nota p { margin: 0 0 6px; }
+  .nota p:last-child { margin: 0; }
+  @media (prefers-reduced-motion: reduce) { nav.indice a { transition: none; } html { scroll-behavior: auto; } }
+  html { scroll-behavior: smooth; }
+</style>
+
+<div class="pagina">
+  <header>
+    <div class="eyebrow">Renda+ ERP · banco de dados PostgreSQL</div>
+    <h1>Modelo de dados <b>Renda+</b></h1>
+    <p class="intro">Todas as tabelas do ERP, por domínio, com chaves e relações. Duas já existem no banco (Sprint 1); as demais são o modelo proposto no plano do backend e ganham DDL definitivo na sprint que implementa cada fluxo.</p>
+    <div class="numeros">
+      <div><strong>157</strong><span>tabelas detalhadas</span></div>
+      <div><strong>2</strong><span>implementadas</span></div>
+      <div><strong>199</strong><span>chaves estrangeiras</span></div>
+      <div><strong>18</strong><span>domínios</span></div>
+      <div><strong>22</strong><span>complementos analíticos</span></div>
+    </div>
+    <div class="legenda">
+      <span class="selo selo--impl">Implementada</span>
+      <span class="selo">Proposta</span>
+      <span><code>PK</code> chave primária · <code>FK</code> chave estrangeira · <code>UK</code> única</span>
+      <span>Dinheiro em centavos inteiros (<code>*_cents</code>)</span>
+    </div>
+  </header>
+
+  <nav class="indice" aria-label="Domínios">
+    <ul><li><a href="#plataforma" class="tem-impl">Plataforma, auditoria e tarefas</a></li><li><a href="#acesso">Acesso e identidade</a></li><li><a href="#cadastros">Parceiros e itens</a></li><li><a href="#comercial">Comercial</a></li><li><a href="#projetos">Projetos e equipamentos</a></li><li><a href="#engenharia">Engenharia e cronograma</a></li><li><a href="#suprimentos">Suprimentos</a></li><li><a href="#estoque">Estoque, recebimentos e terceiros</a></li><li><a href="#producao">Produção e qualidade</a></li><li><a href="#instalacao">Instalação e entrega</a></li><li><a href="#documentos">Documentos e anexos</a></li><li><a href="#financeiro">Financeiro</a></li><li><a href="#custos">Custos e resultado</a></li><li><a href="#repasses">Repasses</a></li><li><a href="#fiscal">Fiscal gerencial</a></li><li><a href="#posvenda">Pós-venda</a></li><li><a href="#integracao">Importação e exportação</a></li><li><a href="#analitico">Motor de dados, análise e decisão</a></li></ul>
+  </nav>
+
+  <div class="nota">
+    <p><strong>Colunas comuns omitidas nas tabelas propostas:</strong> <code>version</code>, <code>created_at</code>, <code>created_by</code>, <code>updated_at</code>, <code>updated_by</code> e <code>company_id</code>.</p>
+    <p>Registros confirmados não são apagados: a correção é feita por estorno ou ajuste que referencia o original. Tabelas de outro domínio aparecem nos diagramas apenas com a indicação <code>ref outro_dominio</code>.</p>
+  </div>
+
+  <section class="dominio" id="plataforma"><div class="dominio-cab"><h2>Plataforma, auditoria e tarefas</h2><span class="selo selo--fase">Sprint 1 / B02</span><p>Dados da empresa e auditoria já existem. Recibos de comando, outbox, fatos e tarefas duráveis vêm na Sprint 2.</p></div><div class="diagrama"><pre class="mermaid">
+erDiagram
+    company_profile {
+        uuid id PK
+        varchar200 legal_name
+        varchar200 trade_name
+        char14 cnpj
+        varchar200 street
+        varchar20 number
+        varchar100 complement
+        varchar100 district
+        varchar100 city
+        char2 state
+        char8 postal_code
+        varchar30 phone
+        varchar200 email
+        boolean configured
+        bigint version
+        timestamptz created_at
+        varchar100 created_by
+        timestamptz updated_at
+        varchar100 updated_by
+    }
+    audit_event {
+        uuid id PK
+        timestamptz occurred_at
+        varchar100 actor
+        varchar100 action
+        varchar100 entity_type
+        varchar100 entity_id
+        bigint entity_version
+        text reason
+        jsonb changes
+        varchar100 correlation_id
+    }
+    command_receipt {
+        uuid id PK
+        text operation UK
+        text idempotency_key UK
+        text request_hash
+        text state
+        jsonb response
+        uuid actor_id FK
+        text correlation_id
+    }
+    outbox_event {
+        uuid id PK
+        text type
+        int schema_version
+        text aggregate_type
+        uuid aggregate_id
+        bigint aggregate_version
+        jsonb payload
+        uuid command_id FK
+        timestamptz published_at
+    }
+    consumer_receipt {
+        text consumer PK
+        uuid event_id FK
+        timestamptz processed_at
+    }
+    operational_fact {
+        uuid id PK
+        text fact_type
+        text concept_id
+        text subject_type
+        uuid subject_id
+        date occurred_on
+        timestamptz recorded_at
+        jsonb dimensions
+        jsonb measures
+        uuid reverses_fact_id FK
+        uuid command_id FK
+    }
+    processing_job {
+        uuid id PK
+        text type
+        text state
+        int input_schema_version
+        text processor_version
+        jsonb parameters
+        int attempts
+        timestamptz lease_until
+        uuid lease_token
+        int generation
+        int progress
+        text error
+    }
+    processing_attempt {
+        uuid id PK
+        uuid job_id FK
+        int generation
+        timestamptz started_at
+        timestamptz finished_at
+        text outcome
+    }
+    stored_file {
+        uuid id PK
+        char64 sha256 UK
+        text media_type
+        bigint size_bytes
+        text storage_key
+    }
+    setting {
+        text key PK
+        jsonb value
+        date valid_from
+    }
+    user_account {
+        ref outro_dominio
+    }
+    command_receipt ||--o{ operational_fact : &quot;command_id&quot;
+    command_receipt ||--o{ outbox_event : &quot;command_id&quot;
+    operational_fact ||--o{ operational_fact : &quot;reverses_fact_id&quot;
+    outbox_event ||--o{ consumer_receipt : &quot;event_id&quot;
+    processing_job ||--o{ processing_attempt : &quot;job_id&quot;
+    user_account ||--o{ command_receipt : &quot;actor_id&quot;
+</pre></div><div class="tabelas"><div class="tabela"><span class="mono">company_profile</span><span class="selo selo--impl">Implementada</span></div><div class="tabela"><span class="mono">audit_event</span><span class="selo selo--impl">Implementada</span></div><div class="tabela"><span class="mono">command_receipt</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">outbox_event</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">consumer_receipt</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">operational_fact</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">processing_job</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">processing_attempt</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">stored_file</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">setting</span><span class="selo">Proposta</span></div></div><p class="externas">Liga-se a: <code>user_account</code></p></section>
+<section class="dominio" id="acesso"><div class="dominio-cab"><h2>Acesso e identidade</h2><span class="selo selo--fase">Sprint 2 / B03</span><p>Usuários, perfis e permissões verificados no servidor a cada operação.</p></div><div class="diagrama"><pre class="mermaid">
+erDiagram
+    company {
+        uuid id PK
+        text name
+    }
+    user_account {
+        uuid id PK
+        uuid company_id FK
+        text login UK
+        text name
+        boolean active
+    }
+    role {
+        uuid id PK
+        text name UK
+    }
+    permission {
+        text code PK
+        text description
+    }
+    user_role {
+        uuid user_id FK
+        uuid role_id FK
+    }
+    role_permission {
+        uuid role_id FK
+        text permission_code FK
+    }
+    session {
+        uuid id PK
+        uuid user_id FK
+        timestamptz expires_at
+        timestamptz revoked_at
+    }
+    company ||--o{ user_account : &quot;company_id&quot;
+    permission ||--o{ role_permission : &quot;permission_code&quot;
+    role ||--o{ role_permission : &quot;role_id&quot;
+    role ||--o{ user_role : &quot;role_id&quot;
+    user_account ||--o{ session : &quot;user_id&quot;
+    user_account ||--o{ user_role : &quot;user_id&quot;
+</pre></div><div class="tabelas"><div class="tabela"><span class="mono">company</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">user_account</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">role</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">permission</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">user_role</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">role_permission</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">session</span><span class="selo">Proposta</span></div></div></section>
+<section class="dominio" id="cadastros"><div class="dominio-cab"><h2>Parceiros e itens</h2><span class="selo selo--fase">Sprints 2–3 / B03</span><p>Cliente e fornecedor são papéis do mesmo parceiro; unidades industriais pertencem ao cliente.</p></div><div class="diagrama"><pre class="mermaid">
+erDiagram
+    partner {
+        uuid id PK
+        text code UK
+        text legal_name
+        text trade_name
+        char14 cnpj UK
+        boolean active
+    }
+    partner_role {
+        uuid partner_id FK
+        text role
+    }
+    partner_unit {
+        uuid id PK
+        uuid partner_id FK
+        text name
+        text city
+        char2 state
+    }
+    address {
+        uuid id PK
+        uuid unit_id FK
+        text street
+        char8 postal_code
+    }
+    contact {
+        uuid id PK
+        uuid partner_id FK
+        uuid unit_id FK
+        text name
+        text email
+    }
+    external_alias {
+        uuid id PK
+        uuid partner_id FK
+        text alias
+        text source
+    }
+    item {
+        uuid id PK
+        text code UK
+        text description
+        text nature
+        text uom_code FK
+        uuid category_id FK
+        boolean stock_controlled
+        numeric reference_cost
+    }
+    item_category {
+        uuid id PK
+        text name
+    }
+    unit_of_measure {
+        text code PK
+        text name
+    }
+    unit_conversion {
+        uuid item_id FK
+        text from_uom FK
+        text to_uom
+        numeric factor
+    }
+    supplier_item {
+        uuid supplier_id FK
+        uuid item_id FK
+        int lead_time_days
+    }
+    item ||--o{ supplier_item : &quot;item_id&quot;
+    item ||--o{ unit_conversion : &quot;item_id&quot;
+    item_category ||--o{ item : &quot;category_id&quot;
+    partner ||--o{ contact : &quot;partner_id&quot;
+    partner ||--o{ external_alias : &quot;partner_id&quot;
+    partner ||--o{ partner_role : &quot;partner_id&quot;
+    partner ||--o{ partner_unit : &quot;partner_id&quot;
+    partner ||--o{ supplier_item : &quot;supplier_id&quot;
+    partner_unit ||--o{ address : &quot;unit_id&quot;
+    partner_unit ||--o{ contact : &quot;unit_id&quot;
+    unit_of_measure ||--o{ item : &quot;uom_code&quot;
+    unit_of_measure ||--o{ unit_conversion : &quot;from_uom&quot;
+</pre></div><div class="tabelas"><div class="tabela"><span class="mono">partner</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">partner_role</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">partner_unit</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">address</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">contact</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">external_alias</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">item</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">item_category</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">unit_of_measure</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">unit_conversion</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">supplier_item</span><span class="selo">Proposta</span></div></div></section>
+<section class="dominio" id="comercial"><div class="dominio-cab"><h2>Comercial</h2><span class="selo selo--fase">Sprint 4 / B05</span><p>Confirmar o pedido cria, numa transação, os projetos, os equipamentos e as parcelas a receber.</p></div><div class="diagrama"><pre class="mermaid">
+erDiagram
+    lead {
+        uuid id PK
+        uuid partner_id FK
+        text company_name
+        int rating
+        text stage
+    }
+    interaction {
+        uuid id PK
+        uuid lead_id FK
+        timestamptz occurred_at
+        date next_action
+    }
+    opportunity {
+        uuid id PK
+        uuid lead_id FK
+        uuid customer_id FK
+        text stage
+        bigint estimated_cents
+    }
+    proposal {
+        uuid id PK
+        uuid opportunity_id FK
+        text number UK
+    }
+    proposal_revision {
+        uuid id PK
+        uuid proposal_id FK
+        int revision
+        date valid_until
+        bigint total_cents
+    }
+    proposal_line {
+        uuid id PK
+        uuid revision_id FK
+        uuid item_id FK
+        numeric quantity
+        numeric unit_price
+    }
+    sales_order {
+        uuid id PK
+        text code UK
+        uuid customer_id FK
+        uuid unit_id FK
+        uuid proposal_revision_id FK
+        text status
+        date contract_date
+        bigint total_cents
+    }
+    sales_order_line {
+        uuid id PK
+        uuid order_id FK
+        uuid item_id FK
+        text kind
+        numeric quantity
+        numeric unit_price
+        bigint discount_cents
+        bigint line_total_cents
+    }
+    sales_order_amendment {
+        uuid id PK
+        uuid order_id FK
+        bigint delta_cents
+        timestamptz approved_at
+    }
+    installment_plan {
+        uuid order_id FK
+        int seq
+        date due_date
+        bigint amount_cents
+    }
+    item {
+        ref outro_dominio
+    }
+    partner {
+        ref outro_dominio
+    }
+    partner_unit {
+        ref outro_dominio
+    }
+    item ||--o{ proposal_line : &quot;item_id&quot;
+    item ||--o{ sales_order_line : &quot;item_id&quot;
+    lead ||--o{ interaction : &quot;lead_id&quot;
+    lead ||--o{ opportunity : &quot;lead_id&quot;
+    opportunity ||--o{ proposal : &quot;opportunity_id&quot;
+    partner ||--o{ lead : &quot;partner_id&quot;
+    partner ||--o{ opportunity : &quot;customer_id&quot;
+    partner ||--o{ sales_order : &quot;customer_id&quot;
+    partner_unit ||--o{ sales_order : &quot;unit_id&quot;
+    proposal ||--o{ proposal_revision : &quot;proposal_id&quot;
+    proposal_revision ||--o{ proposal_line : &quot;revision_id&quot;
+    proposal_revision ||--o{ sales_order : &quot;proposal_revision_id&quot;
+    sales_order ||--o{ installment_plan : &quot;order_id&quot;
+    sales_order ||--o{ sales_order_amendment : &quot;order_id&quot;
+    sales_order ||--o{ sales_order_line : &quot;order_id&quot;
+</pre></div><div class="tabelas"><div class="tabela"><span class="mono">lead</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">interaction</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">opportunity</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">proposal</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">proposal_revision</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">proposal_line</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">sales_order</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">sales_order_line</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">sales_order_amendment</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">installment_plan</span><span class="selo">Proposta</span></div></div><p class="externas">Liga-se a: <code>item</code>, <code>partner</code>, <code>partner_unit</code></p></section>
+<section class="dominio" id="projetos"><div class="dominio-cab"><h2>Projetos e equipamentos</h2><span class="selo selo--fase">Sprint 4 / B05</span><p>O projeto é o vínculo central; cada equipamento tem identidade e histórico próprios.</p></div><div class="diagrama"><pre class="mermaid">
+erDiagram
+    project {
+        uuid id PK
+        text code UK
+        uuid order_id FK
+        uuid customer_id FK
+        uuid unit_id FK
+        text stage
+        date contract_delivery
+    }
+    project_member {
+        uuid project_id FK
+        uuid user_id FK
+        text role
+    }
+    project_milestone {
+        uuid id PK
+        uuid project_id FK
+        text name
+        date planned_on
+        date done_on
+    }
+    equipment_model {
+        uuid id PK
+        text name
+    }
+    equipment {
+        uuid id PK
+        text code UK
+        uuid model_id FK
+        uuid project_id FK
+        uuid unit_id FK
+        text serial_number
+        date accepted_on
+        date warranty_start
+    }
+    equipment_component {
+        uuid equipment_id FK
+        uuid item_id FK
+        numeric quantity
+    }
+    equipment_document {
+        uuid equipment_id FK
+        uuid attachment_id FK
+    }
+    attachment {
+        ref outro_dominio
+    }
+    item {
+        ref outro_dominio
+    }
+    partner {
+        ref outro_dominio
+    }
+    partner_unit {
+        ref outro_dominio
+    }
+    sales_order {
+        ref outro_dominio
+    }
+    user_account {
+        ref outro_dominio
+    }
+    attachment ||--o{ equipment_document : &quot;attachment_id&quot;
+    equipment ||--o{ equipment_component : &quot;equipment_id&quot;
+    equipment ||--o{ equipment_document : &quot;equipment_id&quot;
+    equipment_model ||--o{ equipment : &quot;model_id&quot;
+    item ||--o{ equipment_component : &quot;item_id&quot;
+    partner ||--o{ project : &quot;customer_id&quot;
+    partner_unit ||--o{ equipment : &quot;unit_id&quot;
+    partner_unit ||--o{ project : &quot;unit_id&quot;
+    project ||--o{ equipment : &quot;project_id&quot;
+    project ||--o{ project_member : &quot;project_id&quot;
+    project ||--o{ project_milestone : &quot;project_id&quot;
+    sales_order ||--o{ project : &quot;order_id&quot;
+    user_account ||--o{ project_member : &quot;user_id&quot;
+</pre></div><div class="tabelas"><div class="tabela"><span class="mono">project</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">project_member</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">project_milestone</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">equipment_model</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">equipment</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">equipment_component</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">equipment_document</span><span class="selo">Proposta</span></div></div><p class="externas">Liga-se a: <code>attachment</code>, <code>item</code>, <code>partner</code>, <code>partner_unit</code>, <code>sales_order</code>, <code>user_account</code></p></section>
+<section class="dominio" id="engenharia"><div class="dominio-cab"><h2>Engenharia e cronograma</h2><span class="selo selo--fase">B07</span><p>BOM e EAP versionadas; o projeto conserva a revisão aplicada; recálculo não altera a linha de base.</p></div><div class="diagrama"><pre class="mermaid">
+erDiagram
+    bom_template {
+        uuid id PK
+        uuid model_id FK
+        text name
+    }
+    bom_revision {
+        uuid id PK
+        uuid template_id FK
+        int revision
+        text status
+    }
+    bom_line {
+        uuid id PK
+        uuid revision_id FK
+        uuid item_id FK
+        numeric quantity
+        numeric reference_cost
+    }
+    project_bom_revision {
+        uuid project_id FK
+        uuid equipment_id FK
+        uuid revision_id FK
+    }
+    wbs_template {
+        uuid id PK
+        text name
+    }
+    project_activity {
+        uuid id PK
+        uuid project_id FK
+        text wbs_code
+        int duration_days
+        numeric weight
+        numeric progress
+    }
+    activity_dependency {
+        uuid predecessor_id FK
+        uuid successor_id
+        text type
+        int lag_days
+    }
+    work_calendar {
+        uuid id PK
+        text name
+        jsonb working_days
+    }
+    schedule_baseline {
+        uuid id PK
+        uuid project_id FK
+        timestamptz approved_at
+    }
+    baseline_activity {
+        uuid baseline_id FK
+        uuid activity_id FK
+        date start_on
+        date finish_on
+    }
+    progress_entry {
+        uuid id PK
+        uuid activity_id FK
+        numeric progress
+        date recorded_on
+    }
+    equipment {
+        ref outro_dominio
+    }
+    equipment_model {
+        ref outro_dominio
+    }
+    item {
+        ref outro_dominio
+    }
+    project {
+        ref outro_dominio
+    }
+    bom_revision ||--o{ bom_line : &quot;revision_id&quot;
+    bom_revision ||--o{ project_bom_revision : &quot;revision_id&quot;
+    bom_template ||--o{ bom_revision : &quot;template_id&quot;
+    equipment ||--o{ project_bom_revision : &quot;equipment_id&quot;
+    equipment_model ||--o{ bom_template : &quot;model_id&quot;
+    item ||--o{ bom_line : &quot;item_id&quot;
+    project ||--o{ project_activity : &quot;project_id&quot;
+    project ||--o{ project_bom_revision : &quot;project_id&quot;
+    project ||--o{ schedule_baseline : &quot;project_id&quot;
+    project_activity ||--o{ activity_dependency : &quot;predecessor_id&quot;
+    project_activity ||--o{ baseline_activity : &quot;activity_id&quot;
+    project_activity ||--o{ progress_entry : &quot;activity_id&quot;
+    schedule_baseline ||--o{ baseline_activity : &quot;baseline_id&quot;
+</pre></div><div class="tabelas"><div class="tabela"><span class="mono">bom_template</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">bom_revision</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">bom_line</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">project_bom_revision</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">wbs_template</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">project_activity</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">activity_dependency</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">work_calendar</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">schedule_baseline</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">baseline_activity</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">progress_entry</span><span class="selo">Proposta</span></div></div><p class="externas">Liga-se a: <code>equipment</code>, <code>equipment_model</code>, <code>item</code>, <code>project</code></p></section>
+<section class="dominio" id="suprimentos"><div class="dominio-cab"><h2>Suprimentos</h2><span class="selo selo--fase">B08</span><p>Necessidade líquida por item e data (MRP), cotações e pedidos de compra com aprovação.</p></div><div class="diagrama"><pre class="mermaid">
+erDiagram
+    material_requirement {
+        uuid id PK
+        uuid project_id FK
+        uuid item_id FK
+        date needed_on
+        numeric net_quantity
+    }
+    purchase_request {
+        uuid id PK
+        uuid requirement_id FK
+        text status
+    }
+    quotation {
+        uuid id PK
+        uuid request_id FK
+        uuid supplier_id FK
+        date valid_until
+    }
+    quotation_line {
+        uuid id PK
+        uuid quotation_id FK
+        uuid item_id FK
+        numeric unit_price
+        int lead_time_days
+    }
+    purchase_order {
+        uuid id PK
+        text code UK
+        uuid supplier_id FK
+        text status
+        bigint total_cents
+    }
+    purchase_order_line {
+        uuid id PK
+        uuid order_id FK
+        uuid item_id FK
+        uuid project_id FK
+        numeric quantity
+        numeric unit_price
+        date delivery_on
+    }
+    purchase_approval {
+        uuid id PK
+        uuid order_id FK
+        uuid approver_id FK
+        timestamptz approved_at
+    }
+    item {
+        ref outro_dominio
+    }
+    partner {
+        ref outro_dominio
+    }
+    project {
+        ref outro_dominio
+    }
+    user_account {
+        ref outro_dominio
+    }
+    item ||--o{ material_requirement : &quot;item_id&quot;
+    item ||--o{ purchase_order_line : &quot;item_id&quot;
+    item ||--o{ quotation_line : &quot;item_id&quot;
+    material_requirement ||--o{ purchase_request : &quot;requirement_id&quot;
+    partner ||--o{ purchase_order : &quot;supplier_id&quot;
+    partner ||--o{ quotation : &quot;supplier_id&quot;
+    project ||--o{ material_requirement : &quot;project_id&quot;
+    project ||--o{ purchase_order_line : &quot;project_id&quot;
+    purchase_order ||--o{ purchase_approval : &quot;order_id&quot;
+    purchase_order ||--o{ purchase_order_line : &quot;order_id&quot;
+    purchase_request ||--o{ quotation : &quot;request_id&quot;
+    quotation ||--o{ quotation_line : &quot;quotation_id&quot;
+    user_account ||--o{ purchase_approval : &quot;approver_id&quot;
+</pre></div><div class="tabelas"><div class="tabela"><span class="mono">material_requirement</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">purchase_request</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">quotation</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">quotation_line</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">purchase_order</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">purchase_order_line</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">purchase_approval</span><span class="selo">Proposta</span></div></div><p class="externas">Liga-se a: <code>item</code>, <code>partner</code>, <code>project</code>, <code>user_account</code></p></section>
+<section class="dominio" id="estoque"><div class="dominio-cab"><h2>Estoque, recebimentos e terceiros</h2><span class="selo selo--fase">B08</span><p>Saldo físico, reservado e disponível por item, local e propriedade; material em terceiros continua próprio.</p></div><div class="diagrama"><pre class="mermaid">
+erDiagram
+    stock_location {
+        uuid id PK
+        text name
+        uuid holder_partner_id FK
+    }
+    stock_position {
+        uuid item_id FK
+        uuid location_id FK
+        text ownership
+        numeric physical
+        numeric reserved
+        numeric average_cost
+    }
+    stock_reservation {
+        uuid id PK
+        uuid item_id FK
+        uuid location_id FK
+        uuid project_id FK
+        numeric quantity
+    }
+    stock_movement {
+        uuid id PK
+        uuid item_id FK
+        uuid location_id FK
+        text kind
+        numeric quantity
+        bigint amount_cents
+        uuid project_id FK
+        uuid reverses_id FK
+    }
+    inventory_count {
+        uuid id PK
+        uuid location_id FK
+        date counted_on
+    }
+    goods_receipt {
+        uuid id PK
+        uuid purchase_order_id FK
+        date received_on
+    }
+    goods_receipt_line {
+        uuid id PK
+        uuid receipt_id FK
+        uuid order_line_id FK
+        numeric quantity
+        uuid location_id FK
+    }
+    third_party_dispatch {
+        uuid id PK
+        uuid partner_id FK
+        date dispatched_on
+    }
+    third_party_return {
+        uuid id PK
+        uuid dispatch_id FK
+        date returned_on
+        jsonb losses
+    }
+    service_acceptance {
+        uuid id PK
+        uuid order_line_id FK
+        uuid project_id FK
+        bigint amount_cents
+    }
+    item {
+        ref outro_dominio
+    }
+    partner {
+        ref outro_dominio
+    }
+    project {
+        ref outro_dominio
+    }
+    purchase_order {
+        ref outro_dominio
+    }
+    purchase_order_line {
+        ref outro_dominio
+    }
+    goods_receipt ||--o{ goods_receipt_line : &quot;receipt_id&quot;
+    item ||--o{ stock_movement : &quot;item_id&quot;
+    item ||--o{ stock_position : &quot;item_id&quot;
+    item ||--o{ stock_reservation : &quot;item_id&quot;
+    partner ||--o{ stock_location : &quot;holder_partner_id&quot;
+    partner ||--o{ third_party_dispatch : &quot;partner_id&quot;
+    project ||--o{ service_acceptance : &quot;project_id&quot;
+    project ||--o{ stock_movement : &quot;project_id&quot;
+    project ||--o{ stock_reservation : &quot;project_id&quot;
+    purchase_order ||--o{ goods_receipt : &quot;purchase_order_id&quot;
+    purchase_order_line ||--o{ goods_receipt_line : &quot;order_line_id&quot;
+    purchase_order_line ||--o{ service_acceptance : &quot;order_line_id&quot;
+    stock_location ||--o{ goods_receipt_line : &quot;location_id&quot;
+    stock_location ||--o{ inventory_count : &quot;location_id&quot;
+    stock_location ||--o{ stock_movement : &quot;location_id&quot;
+    stock_location ||--o{ stock_position : &quot;location_id&quot;
+    stock_location ||--o{ stock_reservation : &quot;location_id&quot;
+    stock_movement ||--o{ stock_movement : &quot;reverses_id&quot;
+    third_party_dispatch ||--o{ third_party_return : &quot;dispatch_id&quot;
+</pre></div><div class="tabelas"><div class="tabela"><span class="mono">stock_location</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">stock_position</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">stock_reservation</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">stock_movement</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">inventory_count</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">goods_receipt</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">goods_receipt_line</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">third_party_dispatch</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">third_party_return</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">service_acceptance</span><span class="selo">Proposta</span></div></div><p class="externas">Liga-se a: <code>item</code>, <code>partner</code>, <code>project</code>, <code>purchase_order</code>, <code>purchase_order_line</code></p></section>
+<section class="dominio" id="producao"><div class="dominio-cab"><h2>Produção e qualidade</h2><span class="selo selo--fase">B09</span><p>Ordens com roteiro, apontamentos de horas e consumo; inspeções por checklist versionado.</p></div><div class="diagrama"><pre class="mermaid">
+erDiagram
+    production_order {
+        uuid id PK
+        uuid project_id FK
+        uuid equipment_id FK
+        uuid bom_revision_id FK
+        text status
+    }
+    routing_operation {
+        uuid id PK
+        uuid order_id FK
+        int seq
+        text name
+    }
+    production_entry {
+        uuid id PK
+        uuid operation_id FK
+        numeric quantity_done
+        numeric losses
+    }
+    labor_entry {
+        uuid id PK
+        uuid operation_id FK
+        numeric hours
+        numeric rate
+    }
+    inspection {
+        uuid id PK
+        text subject_type
+        uuid subject_id
+        int checklist_revision
+        text result
+    }
+    inspection_item {
+        uuid id PK
+        uuid inspection_id FK
+        text criterion
+        text measurement
+        text result
+    }
+    nonconformity {
+        uuid id PK
+        uuid inspection_id FK
+        text severity
+        text status
+    }
+    rework_order {
+        uuid id PK
+        uuid nonconformity_id FK
+        uuid production_order_id FK
+    }
+    bom_revision {
+        ref outro_dominio
+    }
+    equipment {
+        ref outro_dominio
+    }
+    project {
+        ref outro_dominio
+    }
+    bom_revision ||--o{ production_order : &quot;bom_revision_id&quot;
+    equipment ||--o{ production_order : &quot;equipment_id&quot;
+    inspection ||--o{ inspection_item : &quot;inspection_id&quot;
+    inspection ||--o{ nonconformity : &quot;inspection_id&quot;
+    nonconformity ||--o{ rework_order : &quot;nonconformity_id&quot;
+    production_order ||--o{ rework_order : &quot;production_order_id&quot;
+    production_order ||--o{ routing_operation : &quot;order_id&quot;
+    project ||--o{ production_order : &quot;project_id&quot;
+    routing_operation ||--o{ labor_entry : &quot;operation_id&quot;
+    routing_operation ||--o{ production_entry : &quot;operation_id&quot;
+</pre></div><div class="tabelas"><div class="tabela"><span class="mono">production_order</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">routing_operation</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">production_entry</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">labor_entry</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">inspection</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">inspection_item</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">nonconformity</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">rework_order</span><span class="selo">Proposta</span></div></div><p class="externas">Liga-se a: <code>bom_revision</code>, <code>equipment</code>, <code>project</code></p></section>
+<section class="dominio" id="instalacao"><div class="dominio-cab"><h2>Instalação e entrega</h2><span class="selo selo--fase">B09</span><p>Execução em campo, despesas, testes, pendências e aceite real do equipamento.</p></div><div class="diagrama"><pre class="mermaid">
+erDiagram
+    installation {
+        uuid id PK
+        uuid equipment_id FK
+        date planned_start
+        text status
+    }
+    installation_entry {
+        uuid id PK
+        uuid installation_id FK
+        date worked_on
+        numeric hours
+    }
+    installation_expense {
+        uuid id PK
+        uuid installation_id FK
+        text category
+        bigint amount_cents
+    }
+    acceptance_record {
+        uuid id PK
+        uuid installation_id FK
+        date accepted_on
+    }
+    acceptance_issue {
+        uuid id PK
+        uuid acceptance_id FK
+        text description
+        date due_on
+    }
+    equipment {
+        ref outro_dominio
+    }
+    acceptance_record ||--o{ acceptance_issue : &quot;acceptance_id&quot;
+    equipment ||--o{ installation : &quot;equipment_id&quot;
+    installation ||--o{ acceptance_record : &quot;installation_id&quot;
+    installation ||--o{ installation_entry : &quot;installation_id&quot;
+    installation ||--o{ installation_expense : &quot;installation_id&quot;
+</pre></div><div class="tabelas"><div class="tabela"><span class="mono">installation</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">installation_entry</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">installation_expense</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">acceptance_record</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">acceptance_issue</span><span class="selo">Proposta</span></div></div><p class="externas">Liga-se a: <code>equipment</code></p></section>
+<section class="dominio" id="documentos"><div class="dominio-cab"><h2>Documentos e anexos</h2><span class="selo selo--fase">Sprint 6 / B06</span><p>Notas registradas se vinculam às parcelas existentes, sem criar nova obrigação.</p></div><div class="diagrama"><pre class="mermaid">
+erDiagram
+    business_document {
+        uuid id PK
+        text number
+        text direction
+        uuid partner_id FK
+        date issue_date
+        char7 competence
+        bigint total_cents
+    }
+    document_line {
+        uuid id PK
+        uuid document_id FK
+        text kind
+        bigint amount_cents
+    }
+    document_title_link {
+        uuid document_id FK
+        uuid title_id FK
+        bigint amount_cents
+    }
+    attachment {
+        uuid id PK
+        uuid file_id FK
+        text name
+    }
+    attachment_link {
+        uuid attachment_id FK
+        text owner_type
+        uuid owner_id
+    }
+    financial_title {
+        ref outro_dominio
+    }
+    partner {
+        ref outro_dominio
+    }
+    stored_file {
+        ref outro_dominio
+    }
+    attachment ||--o{ attachment_link : &quot;attachment_id&quot;
+    business_document ||--o{ document_line : &quot;document_id&quot;
+    business_document ||--o{ document_title_link : &quot;document_id&quot;
+    financial_title ||--o{ document_title_link : &quot;title_id&quot;
+    partner ||--o{ business_document : &quot;partner_id&quot;
+    stored_file ||--o{ attachment : &quot;file_id&quot;
+</pre></div><div class="tabelas"><div class="tabela"><span class="mono">business_document</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">document_line</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">document_title_link</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">attachment</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">attachment_link</span><span class="selo">Proposta</span></div></div><p class="externas">Liga-se a: <code>financial_title</code>, <code>partner</code>, <code>stored_file</code></p></section>
+<section class="dominio" id="financeiro"><div class="dominio-cab"><h2>Financeiro</h2><span class="selo selo--fase">Sprints 5–6 / B05–B06</span><p>Títulos com saldo derivado de alocações; liquidação N:N; conciliação N:N com diferenças explícitas.</p></div><div class="diagrama"><pre class="mermaid">
+erDiagram
+    financial_title {
+        uuid id PK
+        text code UK
+        text direction
+        uuid counterparty_id FK
+        text origin_type UK
+        uuid origin_id UK
+        uuid project_id FK
+        text category
+        char7 competence
+        date due_date
+        bigint original_cents
+        text lifecycle
+    }
+    title_adjustment {
+        uuid id PK
+        uuid title_id FK
+        text kind
+        bigint signed_cents
+        text reason
+    }
+    settlement {
+        uuid id PK
+        text direction
+        uuid account_id FK
+        date effective_date
+        bigint total_cents
+        bigint credit_cents
+        text status
+    }
+    settlement_allocation {
+        uuid settlement_id FK
+        uuid title_id FK
+        bigint amount_cents
+    }
+    settlement_reversal {
+        uuid id PK
+        uuid settlement_id FK
+        text reason
+        uuid cash_movement_id FK
+    }
+    customer_supplier_credit {
+        uuid id PK
+        uuid partner_id FK
+        uuid settlement_id FK
+        bigint balance_cents
+    }
+    bank_account {
+        uuid id PK
+        text name
+        text bank
+        bigint opening_cents
+        date opening_on
+    }
+    cash_movement {
+        uuid id PK
+        uuid account_id FK
+        date effective_date
+        bigint amount_cents
+        uuid settlement_id FK
+        uuid transfer_id FK
+    }
+    internal_transfer {
+        uuid id PK
+        uuid from_account_id FK
+        uuid to_account_id
+        bigint amount_cents
+    }
+    statement_batch {
+        uuid id PK
+        uuid account_id FK
+        uuid file_id FK
+    }
+    statement_entry {
+        uuid id PK
+        uuid batch_id FK
+        date posted_on
+        bigint amount_cents
+        text dedup_key UK
+    }
+    reconciliation_group {
+        uuid id PK
+        uuid account_id FK
+        bigint difference_cents
+        timestamptz undone_at
+    }
+    reconciliation_link {
+        uuid group_id FK
+        uuid statement_entry_id FK
+        uuid cash_movement_id FK
+    }
+    partner {
+        ref outro_dominio
+    }
+    project {
+        ref outro_dominio
+    }
+    stored_file {
+        ref outro_dominio
+    }
+    bank_account ||--o{ cash_movement : &quot;account_id&quot;
+    bank_account ||--o{ internal_transfer : &quot;from_account_id&quot;
+    bank_account ||--o{ reconciliation_group : &quot;account_id&quot;
+    bank_account ||--o{ settlement : &quot;account_id&quot;
+    bank_account ||--o{ statement_batch : &quot;account_id&quot;
+    cash_movement ||--o{ reconciliation_link : &quot;cash_movement_id&quot;
+    cash_movement ||--o{ settlement_reversal : &quot;cash_movement_id&quot;
+    financial_title ||--o{ settlement_allocation : &quot;title_id&quot;
+    financial_title ||--o{ title_adjustment : &quot;title_id&quot;
+    internal_transfer ||--o{ cash_movement : &quot;transfer_id&quot;
+    partner ||--o{ customer_supplier_credit : &quot;partner_id&quot;
+    partner ||--o{ financial_title : &quot;counterparty_id&quot;
+    project ||--o{ financial_title : &quot;project_id&quot;
+    reconciliation_group ||--o{ reconciliation_link : &quot;group_id&quot;
+    settlement ||--o{ cash_movement : &quot;settlement_id&quot;
+    settlement ||--o{ customer_supplier_credit : &quot;settlement_id&quot;
+    settlement ||--o{ settlement_allocation : &quot;settlement_id&quot;
+    settlement ||--o{ settlement_reversal : &quot;settlement_id&quot;
+    statement_batch ||--o{ statement_entry : &quot;batch_id&quot;
+    statement_entry ||--o{ reconciliation_link : &quot;statement_entry_id&quot;
+    stored_file ||--o{ statement_batch : &quot;file_id&quot;
+</pre></div><div class="tabelas"><div class="tabela"><span class="mono">financial_title</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">title_adjustment</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">settlement</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">settlement_allocation</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">settlement_reversal</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">customer_supplier_credit</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">bank_account</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">cash_movement</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">internal_transfer</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">statement_batch</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">statement_entry</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">reconciliation_group</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">reconciliation_link</span><span class="selo">Proposta</span></div></div><p class="externas">Liga-se a: <code>partner</code>, <code>project</code>, <code>stored_file</code></p></section>
+<section class="dominio" id="custos"><div class="dominio-cab"><h2>Custos e resultado</h2><span class="selo selo--fase">B08–B10</span><p>Orçado, comprometido e incorrido separados; cada custo entra uma vez pela sua origem.</p></div><div class="diagrama"><pre class="mermaid">
+erDiagram
+    project_budget {
+        uuid id PK
+        uuid project_id FK
+        int revision
+        timestamptz approved_at
+    }
+    budget_line {
+        uuid budget_id FK
+        text category
+        bigint amount_cents
+    }
+    cost_commitment {
+        uuid id PK
+        uuid project_id FK
+        uuid purchase_order_line_id FK
+        bigint amount_cents
+    }
+    cost_entry {
+        uuid id PK
+        uuid project_id FK
+        uuid equipment_id FK
+        text category
+        bigint amount_cents
+        text source_type UK
+        uuid source_id UK
+    }
+    allocation_rule {
+        uuid id PK
+        text name
+        text basis
+    }
+    allocation_entry {
+        uuid rule_id FK
+        uuid cost_entry_id FK
+        uuid project_id FK
+        bigint amount_cents
+    }
+    equipment {
+        ref outro_dominio
+    }
+    project {
+        ref outro_dominio
+    }
+    purchase_order_line {
+        ref outro_dominio
+    }
+    allocation_rule ||--o{ allocation_entry : &quot;rule_id&quot;
+    cost_entry ||--o{ allocation_entry : &quot;cost_entry_id&quot;
+    equipment ||--o{ cost_entry : &quot;equipment_id&quot;
+    project ||--o{ allocation_entry : &quot;project_id&quot;
+    project ||--o{ cost_commitment : &quot;project_id&quot;
+    project ||--o{ cost_entry : &quot;project_id&quot;
+    project ||--o{ project_budget : &quot;project_id&quot;
+    project_budget ||--o{ budget_line : &quot;budget_id&quot;
+    purchase_order_line ||--o{ cost_commitment : &quot;purchase_order_line_id&quot;
+</pre></div><div class="tabelas"><div class="tabela"><span class="mono">project_budget</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">budget_line</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">cost_commitment</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">cost_entry</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">allocation_rule</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">allocation_entry</span><span class="selo">Proposta</span></div></div><p class="externas">Liga-se a: <code>equipment</code>, <code>project</code>, <code>purchase_order_line</code></p></section>
+<section class="dominio" id="repasses"><div class="dominio-cab"><h2>Repasses</h2><span class="selo selo--fase">B10</span><p>Regras versionadas; a confirmação congela a memória de cálculo e gera títulos uma única vez.</p></div><div class="diagrama"><pre class="mermaid">
+erDiagram
+    distribution_rule {
+        uuid id PK
+        text name
+        text scope
+    }
+    distribution_rule_revision {
+        uuid id PK
+        uuid rule_id FK
+        int revision
+        text basis
+        date valid_from
+    }
+    distribution_run {
+        uuid id PK
+        uuid revision_id FK
+        char7 competence
+        text status
+        bigint base_cents
+    }
+    distribution_line {
+        uuid run_id FK
+        uuid beneficiary_id FK
+        numeric rate
+        bigint amount_cents
+        uuid title_id FK
+    }
+    distribution_adjustment {
+        uuid id PK
+        uuid run_id FK
+        bigint delta_cents
+        text reason
+    }
+    financial_title {
+        ref outro_dominio
+    }
+    partner {
+        ref outro_dominio
+    }
+    distribution_rule ||--o{ distribution_rule_revision : &quot;rule_id&quot;
+    distribution_rule_revision ||--o{ distribution_run : &quot;revision_id&quot;
+    distribution_run ||--o{ distribution_adjustment : &quot;run_id&quot;
+    distribution_run ||--o{ distribution_line : &quot;run_id&quot;
+    financial_title ||--o{ distribution_line : &quot;title_id&quot;
+    partner ||--o{ distribution_line : &quot;beneficiary_id&quot;
+</pre></div><div class="tabelas"><div class="tabela"><span class="mono">distribution_rule</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">distribution_rule_revision</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">distribution_run</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">distribution_line</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">distribution_adjustment</span><span class="selo">Proposta</span></div></div><p class="externas">Liga-se a: <code>financial_title</code>, <code>partner</code></p></section>
+<section class="dominio" id="fiscal"><div class="dominio-cab"><h2>Fiscal gerencial</h2><span class="selo selo--fase">Sprint 7 / B10</span><p>Histórico importado, simulação gerencial e valor confirmado pelo contador ficam separados.</p></div><div class="diagrama"><pre class="mermaid">
+erDiagram
+    tax_period {
+        uuid id PK
+        char7 competence UK
+        text status
+    }
+    fiscal_revenue {
+        uuid period_id FK
+        uuid document_line_id FK
+        text kind
+        bigint amount_cents
+    }
+    tax_parameter_revision {
+        uuid id PK
+        text regime
+        date valid_from
+        jsonb parameters
+        text confirmed_by
+    }
+    imported_tax_history {
+        uuid period_id FK
+        uuid source_file_id FK
+        bigint amount_cents
+    }
+    tax_simulation {
+        uuid id PK
+        uuid period_id FK
+        uuid parameter_revision_id FK
+        jsonb result
+    }
+    accountant_confirmation {
+        uuid period_id FK
+        bigint amount_cents
+        uuid title_id FK
+    }
+    tax_closure {
+        uuid period_id FK
+        timestamptz closed_at
+        text reopened_reason
+    }
+    document_line {
+        ref outro_dominio
+    }
+    financial_title {
+        ref outro_dominio
+    }
+    stored_file {
+        ref outro_dominio
+    }
+    document_line ||--o{ fiscal_revenue : &quot;document_line_id&quot;
+    financial_title ||--o{ accountant_confirmation : &quot;title_id&quot;
+    stored_file ||--o{ imported_tax_history : &quot;source_file_id&quot;
+    tax_parameter_revision ||--o{ tax_simulation : &quot;parameter_revision_id&quot;
+    tax_period ||--o{ accountant_confirmation : &quot;period_id&quot;
+    tax_period ||--o{ fiscal_revenue : &quot;period_id&quot;
+    tax_period ||--o{ imported_tax_history : &quot;period_id&quot;
+    tax_period ||--o{ tax_closure : &quot;period_id&quot;
+    tax_period ||--o{ tax_simulation : &quot;period_id&quot;
+</pre></div><div class="tabelas"><div class="tabela"><span class="mono">tax_period</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">fiscal_revenue</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">tax_parameter_revision</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">imported_tax_history</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">tax_simulation</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">accountant_confirmation</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">tax_closure</span><span class="selo">Proposta</span></div></div><p class="externas">Liga-se a: <code>document_line</code>, <code>financial_title</code>, <code>stored_file</code></p></section>
+<section class="dominio" id="posvenda"><div class="dominio-cab"><h2>Pós-venda</h2><span class="selo selo--fase">B11</span><p>Chamados e ordens de serviço ligados ao equipamento; cada ocorrência preventiva gera no máximo uma OS.</p></div><div class="diagrama"><pre class="mermaid">
+erDiagram
+    service_ticket {
+        uuid id PK
+        uuid equipment_id FK
+        text priority
+        text warranty_status
+        text status
+    }
+    service_order {
+        uuid id PK
+        uuid ticket_id FK
+        uuid occurrence_id FK
+        text status
+    }
+    service_entry {
+        uuid id PK
+        uuid service_order_id FK
+        numeric hours
+        bigint expenses_cents
+    }
+    warranty_term {
+        uuid id PK
+        uuid equipment_id FK
+        int months
+        text coverage
+    }
+    preventive_plan {
+        uuid id PK
+        uuid equipment_id FK
+        int revision
+        int periodicity_days
+    }
+    preventive_occurrence {
+        uuid id PK
+        uuid plan_id FK
+        date scheduled_on UK
+    }
+    equipment {
+        ref outro_dominio
+    }
+    equipment ||--o{ preventive_plan : &quot;equipment_id&quot;
+    equipment ||--o{ service_ticket : &quot;equipment_id&quot;
+    equipment ||--o{ warranty_term : &quot;equipment_id&quot;
+    preventive_occurrence ||--o{ service_order : &quot;occurrence_id&quot;
+    preventive_plan ||--o{ preventive_occurrence : &quot;plan_id&quot;
+    service_order ||--o{ service_entry : &quot;service_order_id&quot;
+    service_ticket ||--o{ service_order : &quot;ticket_id&quot;
+</pre></div><div class="tabelas"><div class="tabela"><span class="mono">service_ticket</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">service_order</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">service_entry</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">warranty_term</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">preventive_plan</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">preventive_occurrence</span><span class="selo">Proposta</span></div></div><p class="externas">Liga-se a: <code>equipment</code></p></section>
+<section class="dominio" id="integracao"><div class="dominio-cab"><h2>Importação e exportação</h2><span class="selo selo--fase">B04 / B12</span><p>Arquivos vão para uma área de conferência; nada é aplicado sem decisão humana.</p></div><div class="diagrama"><pre class="mermaid">
+erDiagram
+    import_file {
+        uuid id PK
+        uuid file_id FK
+        text source_type
+        uuid job_id FK
+    }
+    staging_record {
+        uuid id PK
+        uuid import_file_id FK
+        int page
+        int line
+        text original_text
+        jsonb proposed
+    }
+    staging_issue {
+        uuid id PK
+        uuid record_id FK
+        text kind
+        text severity
+    }
+    review_decision {
+        uuid id PK
+        uuid record_id FK
+        text decision
+        jsonb corrected
+    }
+    import_application {
+        uuid id PK
+        uuid record_id FK
+        text created_ref
+        uuid command_id FK
+    }
+    export_job {
+        uuid id PK
+        text query_id
+        text format
+        uuid file_id FK
+    }
+    command_receipt {
+        ref outro_dominio
+    }
+    processing_job {
+        ref outro_dominio
+    }
+    stored_file {
+        ref outro_dominio
+    }
+    command_receipt ||--o{ import_application : &quot;command_id&quot;
+    import_file ||--o{ staging_record : &quot;import_file_id&quot;
+    processing_job ||--o{ import_file : &quot;job_id&quot;
+    staging_record ||--o{ import_application : &quot;record_id&quot;
+    staging_record ||--o{ review_decision : &quot;record_id&quot;
+    staging_record ||--o{ staging_issue : &quot;record_id&quot;
+    stored_file ||--o{ export_job : &quot;file_id&quot;
+    stored_file ||--o{ import_file : &quot;file_id&quot;
+</pre></div><div class="tabelas"><div class="tabela"><span class="mono">import_file</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">staging_record</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">staging_issue</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">review_decision</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">import_application</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">export_job</span><span class="selo">Proposta</span></div></div><p class="externas">Liga-se a: <code>command_receipt</code>, <code>processing_job</code>, <code>stored_file</code></p></section>
+<section class="dominio" id="analitico"><div class="dominio-cab"><h2>Motor de dados, análise e decisão</h2><span class="selo selo--fase">B01–B16</span><p>Catálogo semântico, indicadores com definição única, execuções analíticas, achados e decisões.</p></div><div class="diagrama"><pre class="mermaid">
+erDiagram
+    business_concept {
+        text id PK
+        text term
+        text owner_module
+    }
+    form_definition {
+        text id PK
+        int version PK
+        text concept_id FK
+        jsonb definition
+    }
+    classification_rule_revision {
+        uuid id PK
+        text scope
+        int revision
+        date valid_from
+        jsonb condition
+    }
+    classification_assignment {
+        uuid id PK
+        uuid rule_revision_id FK
+        uuid subject_id
+        text class_name
+        text kind
+    }
+    indicator_definition {
+        text id PK
+        int version PK
+        jsonb formula
+        text unit
+        text missing_policy
+    }
+    indicator_dependency {
+        text indicator_id FK
+        text depends_on_id
+    }
+    indicator_snapshot {
+        text indicator_id FK
+        text period
+        numeric value
+        text state
+    }
+    dataset_snapshot {
+        uuid id PK
+        jsonb query
+        timestamptz cutoff
+        char64 sha256
+    }
+    analysis_definition {
+        text id PK
+        text method
+        text version
+    }
+    analysis_run {
+        uuid id PK
+        text definition_id FK
+        uuid snapshot_id FK
+        bigint seed
+        text state
+        jsonb result
+    }
+    analysis_artifact {
+        uuid id PK
+        uuid run_id FK
+        uuid file_id FK
+    }
+    model_version {
+        uuid id PK
+        text definition_id FK
+        text state
+        date trained_until
+    }
+    model_validation {
+        uuid id PK
+        uuid model_id FK
+        jsonb metrics
+    }
+    model_monitoring {
+        uuid id PK
+        uuid model_id FK
+        timestamptz observed_at
+        numeric drift
+    }
+    finding {
+        uuid id PK
+        uuid run_id FK
+        uuid subject_id
+        text impact
+        text urgency
+        text status
+    }
+    finding_evidence {
+        uuid finding_id FK
+        jsonb evidence
+    }
+    decision {
+        uuid id PK
+        uuid finding_id FK
+        text choice
+        uuid decided_by FK
+    }
+    action_plan {
+        uuid id PK
+        uuid decision_id FK
+        uuid owner_id FK
+        date due_on
+    }
+    action_task {
+        uuid id PK
+        uuid plan_id FK
+        text description
+        text status
+    }
+    decision_evaluation {
+        uuid id PK
+        uuid decision_id FK
+        jsonb expected
+        jsonb observed
+    }
+    experiment {
+        uuid id PK
+        text hypothesis
+        text status
+    }
+    experiment_assignment {
+        uuid experiment_id FK
+        uuid subject_id
+        text group_name
+    }
+    experiment_measurement {
+        uuid experiment_id FK
+        text metric
+        numeric value
+    }
+    stored_file {
+        ref outro_dominio
+    }
+    user_account {
+        ref outro_dominio
+    }
+    action_plan ||--o{ action_task : &quot;plan_id&quot;
+    analysis_definition ||--o{ analysis_run : &quot;definition_id&quot;
+    analysis_definition ||--o{ model_version : &quot;definition_id&quot;
+    analysis_run ||--o{ analysis_artifact : &quot;run_id&quot;
+    analysis_run ||--o{ finding : &quot;run_id&quot;
+    business_concept ||--o{ form_definition : &quot;concept_id&quot;
+    classification_rule_revision ||--o{ classification_assignment : &quot;rule_revision_id&quot;
+    dataset_snapshot ||--o{ analysis_run : &quot;snapshot_id&quot;
+    decision ||--o{ action_plan : &quot;decision_id&quot;
+    decision ||--o{ decision_evaluation : &quot;decision_id&quot;
+    experiment ||--o{ experiment_assignment : &quot;experiment_id&quot;
+    experiment ||--o{ experiment_measurement : &quot;experiment_id&quot;
+    finding ||--o{ decision : &quot;finding_id&quot;
+    finding ||--o{ finding_evidence : &quot;finding_id&quot;
+    indicator_definition ||--o{ indicator_dependency : &quot;indicator_id&quot;
+    indicator_definition ||--o{ indicator_snapshot : &quot;indicator_id&quot;
+    model_version ||--o{ model_monitoring : &quot;model_id&quot;
+    model_version ||--o{ model_validation : &quot;model_id&quot;
+    stored_file ||--o{ analysis_artifact : &quot;file_id&quot;
+    user_account ||--o{ action_plan : &quot;owner_id&quot;
+    user_account ||--o{ decision : &quot;decided_by&quot;
+</pre></div><div class="tabelas"><div class="tabela"><span class="mono">business_concept</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">form_definition</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">classification_rule_revision</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">classification_assignment</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">indicator_definition</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">indicator_dependency</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">indicator_snapshot</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">dataset_snapshot</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">analysis_definition</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">analysis_run</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">analysis_artifact</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">model_version</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">model_validation</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">model_monitoring</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">finding</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">finding_evidence</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">decision</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">action_plan</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">action_task</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">decision_evaluation</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">experiment</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">experiment_assignment</span><span class="selo">Proposta</span></div><div class="tabela"><span class="mono">experiment_measurement</span><span class="selo">Proposta</span></div></div><p class="externas">Liga-se a: <code>stored_file</code>, <code>user_account</code></p></section>
+
+  <section class="ext" id="complementos">
+    <div class="dominio-cab"><h2>Complementos do catálogo analítico</h2><span class="selo selo--fase">B14</span>
+      <p>Tabelas conceituais das novas áreas de análise. As colunas serão detalhadas quando cada recurso entrar no backlog de uma sprint.</p></div>
+    <ul><li><strong>Marketing e canais</strong><span>marketing_campaign, channel_touchpoint, attribution_rule, marketing_budget</span></li><li><strong>Valor e satisfação do cliente</strong><span>customer_value_plan, customer_baseline, benefit_measurement, satisfaction_survey</span></li><li><strong>Orçamento e investimentos</strong><span>corporate_budget_revision, investment_case, cash_scenario</span></li><li><strong>Capacidade, calibração e logística</strong><span>resource_capacity, scheduling_scenario, calibration_session, measurement_observation, shipment, route_matrix, routing_scenario, product_experiment</span></li><li><strong>Contratos e riscos</strong><span>contractual_obligation, legal_occurrence, risk_assessment</span></li></ul>
+  </section>
+</div>
