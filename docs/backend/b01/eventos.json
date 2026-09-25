@@ -1,0 +1,629 @@
+{
+  "versao": "B01-1",
+  "regra": "Evento de domínio publicado via outbox na mesma transação do fato. Envelope comum: eventId, type, schemaVersion, aggregateType, aggregateId, aggregateVersion, companyId, occurredAt, recordedAt, actorId, commandId, correlationId. Consumidores são idempotentes por eventId. consumidores lista módulos que dependem do tipo do evento (o consumidor deve depender do produtor). Todo evento também gera um FATO_OPERACIONAL genérico, consumido pelo módulo analitico via plataforma, sem dependência dos tipos.",
+  "eventos": [
+    {"type": "PartnerRegistered", "produtor": "cadastros", "conceito": "CLIENTE", "payload": ["partnerId", "roles"], "consumidores": []},
+    {
+      "type": "PartnerUpdated",
+      "produtor": "cadastros",
+      "conceito": "CLIENTE",
+      "payload": ["partnerId", "changedFields"],
+      "consumidores": []
+    },
+    {"type": "PartnerDeactivated", "produtor": "cadastros", "conceito": "CLIENTE", "payload": ["partnerId", "reason"], "consumidores": []},
+    {"type": "ItemRegistered", "produtor": "cadastros", "conceito": "ITEM", "payload": ["itemId", "uom", "category"], "consumidores": []},
+    {
+      "type": "LeadInteractionRecorded",
+      "produtor": "comercial",
+      "conceito": "LEAD",
+      "payload": ["leadId", "interactionType", "nextActionDate"],
+      "consumidores": []
+    },
+    {
+      "type": "OpportunityStageChanged",
+      "produtor": "comercial",
+      "conceito": "OPORTUNIDADE",
+      "payload": ["opportunityId", "fromStage", "toStage", "lossReason"],
+      "consumidores": []
+    },
+    {
+      "type": "ProposalRevisionIssued",
+      "produtor": "comercial",
+      "conceito": "PROPOSTA",
+      "payload": ["proposalId", "revision", "totalCents", "estimatedCostCents", "validUntil"],
+      "consumidores": []
+    },
+    {
+      "type": "ProposalOutcomeRecorded",
+      "produtor": "comercial",
+      "conceito": "PROPOSTA",
+      "payload": ["proposalId", "revision", "outcome", "reason"],
+      "consumidores": []
+    },
+    {
+      "type": "SalesOrderConfirmed",
+      "produtor": "comercial",
+      "conceito": "PEDIDO",
+      "payload": ["orderId", "customerId", "unitId", "totalCents", "lines", "projectIds", "equipmentIds", "titleIds"],
+      "consumidores": ["custos"]
+    },
+    {
+      "type": "SalesOrderAmended",
+      "produtor": "comercial",
+      "conceito": "ADITIVO",
+      "payload": ["orderId", "amendmentId", "deltaCents", "changedLines"],
+      "consumidores": ["custos"]
+    },
+    {
+      "type": "SalesOrderCancelled",
+      "produtor": "comercial",
+      "conceito": "PEDIDO",
+      "payload": ["orderId", "reason", "cancelledTitleIds", "cancelledProjectIds"],
+      "consumidores": ["custos"]
+    },
+    {
+      "type": "ProjectCreated",
+      "produtor": "projetos",
+      "conceito": "PROJETO",
+      "payload": ["projectId", "orderId", "customerId", "unitId"],
+      "consumidores": []
+    },
+    {
+      "type": "ProjectStageChanged",
+      "produtor": "projetos",
+      "conceito": "PROJETO",
+      "payload": ["projectId", "stage", "active"],
+      "consumidores": []
+    },
+    {
+      "type": "EquipmentCreated",
+      "produtor": "projetos",
+      "conceito": "EQUIPAMENTO",
+      "payload": ["equipmentId", "projectId", "modelId", "unitId"],
+      "consumidores": []
+    },
+    {
+      "type": "BomRevisionApproved",
+      "produtor": "engenharia",
+      "conceito": "BOM",
+      "payload": ["bomId", "revision", "totalReferenceCents"],
+      "consumidores": []
+    },
+    {
+      "type": "ProjectBomApplied",
+      "produtor": "engenharia",
+      "conceito": "BOM",
+      "payload": ["projectId", "equipmentId", "bomId", "revision"],
+      "consumidores": ["custos"]
+    },
+    {
+      "type": "ScheduleRecalculated",
+      "produtor": "engenharia",
+      "conceito": "ATIVIDADE",
+      "payload": ["projectId", "scheduleVersion", "criticalPath"],
+      "consumidores": []
+    },
+    {
+      "type": "BaselineApproved",
+      "produtor": "engenharia",
+      "conceito": "LINHA_BASE",
+      "payload": ["projectId", "baselineId"],
+      "consumidores": []
+    },
+    {
+      "type": "ActivityProgressRecorded",
+      "produtor": "engenharia",
+      "conceito": "ATIVIDADE",
+      "payload": ["activityId", "progressFraction", "actualStart", "actualFinish"],
+      "consumidores": []
+    },
+    {
+      "type": "RequirementsCalculated",
+      "produtor": "suprimentos",
+      "conceito": "NECESSIDADE",
+      "payload": ["runId", "projectIds", "shortages"],
+      "consumidores": []
+    },
+    {
+      "type": "QuotationRecorded",
+      "produtor": "suprimentos",
+      "conceito": "COMPRA",
+      "payload": ["quotationId", "supplierId", "lines"],
+      "consumidores": []
+    },
+    {
+      "type": "PurchaseApproved",
+      "produtor": "suprimentos",
+      "conceito": "COMPRA",
+      "payload": ["purchaseOrderId", "supplierId", "projectAllocations", "totalCents", "payableTitleIds"],
+      "consumidores": ["custos"]
+    },
+    {
+      "type": "PurchaseOrderRemainderCancelled",
+      "produtor": "suprimentos",
+      "conceito": "COMPRA",
+      "payload": ["purchaseOrderId", "cancelledLines", "reason"],
+      "consumidores": ["custos"]
+    },
+    {
+      "type": "GoodsReceived",
+      "produtor": "recebimentos",
+      "conceito": "RECEBIMENTO_MATERIAL",
+      "payload": ["receiptId", "purchaseOrderId", "lines", "locationId"],
+      "consumidores": ["custos"]
+    },
+    {
+      "type": "ServiceAccepted",
+      "produtor": "recebimentos",
+      "conceito": "ACEITE_SERVICO",
+      "payload": ["acceptanceId", "purchaseOrderLineId", "projectId", "amountCents"],
+      "consumidores": ["custos"]
+    },
+    {
+      "type": "StockReserved",
+      "produtor": "estoque",
+      "conceito": "RESERVA",
+      "payload": ["reservationId", "itemId", "locationId", "quantity", "projectId"],
+      "consumidores": []
+    },
+    {
+      "type": "StockReservationReleased",
+      "produtor": "estoque",
+      "conceito": "RESERVA",
+      "payload": ["reservationId", "quantity", "reason"],
+      "consumidores": []
+    },
+    {
+      "type": "MaterialConsumed",
+      "produtor": "estoque",
+      "conceito": "CONSUMO",
+      "payload": ["movementId", "itemId", "quantity", "unitCost", "amountCents", "projectId", "productionOrderId", "serviceOrderId"],
+      "consumidores": ["custos"]
+    },
+    {
+      "type": "MaterialReturned",
+      "produtor": "estoque",
+      "conceito": "CONSUMO",
+      "payload": ["movementId", "originalMovementId", "quantity", "amountCents"],
+      "consumidores": ["custos"]
+    },
+    {
+      "type": "StockTransferred",
+      "produtor": "estoque",
+      "conceito": "ESTOQUE_FISICO",
+      "payload": ["movementId", "itemId", "fromLocationId", "toLocationId", "quantity"],
+      "consumidores": []
+    },
+    {
+      "type": "ThirdPartyDispatched",
+      "produtor": "estoque",
+      "conceito": "TERCEIRO_GUARDA",
+      "payload": ["dispatchId", "partnerId", "lines"],
+      "consumidores": []
+    },
+    {
+      "type": "ThirdPartyReturned",
+      "produtor": "estoque",
+      "conceito": "TERCEIRO_GUARDA",
+      "payload": ["returnId", "dispatchId", "lines", "losses"],
+      "consumidores": []
+    },
+    {
+      "type": "StockAdjusted",
+      "produtor": "estoque",
+      "conceito": "ESTOQUE_FISICO",
+      "payload": ["movementId", "itemId", "locationId", "deltaQuantity", "reason"],
+      "consumidores": ["custos"]
+    },
+    {
+      "type": "ProductionOrderReleased",
+      "produtor": "producao",
+      "conceito": "ORDEM_PRODUCAO",
+      "payload": ["productionOrderId", "projectId", "equipmentId", "bomRevision"],
+      "consumidores": []
+    },
+    {
+      "type": "ProductionReported",
+      "produtor": "producao",
+      "conceito": "APONTAMENTO_HORAS",
+      "payload": ["entryId", "productionOrderId", "operationId", "hours", "laborAmountCents", "quantityDone", "losses"],
+      "consumidores": ["custos"]
+    },
+    {
+      "type": "ProductionOrderCompleted",
+      "produtor": "producao",
+      "conceito": "ORDEM_PRODUCAO",
+      "payload": ["productionOrderId"],
+      "consumidores": []
+    },
+    {
+      "type": "InspectionRecorded",
+      "produtor": "qualidade",
+      "conceito": "INSPECAO",
+      "payload": ["inspectionId", "subjectRef", "checklistRevision", "result"],
+      "consumidores": []
+    },
+    {
+      "type": "InspectionApproved",
+      "produtor": "qualidade",
+      "conceito": "INSPECAO",
+      "payload": ["inspectionId", "subjectRef"],
+      "consumidores": []
+    },
+    {
+      "type": "NonconformityOpened",
+      "produtor": "qualidade",
+      "conceito": "NAO_CONFORMIDADE",
+      "payload": ["ncId", "inspectionId", "severity"],
+      "consumidores": []
+    },
+    {
+      "type": "InstallationExecutionRecorded",
+      "produtor": "instalacao",
+      "conceito": "ACEITE_CLIENTE",
+      "payload": ["installationId", "entryId", "hours"],
+      "consumidores": []
+    },
+    {
+      "type": "ExpenseRecognized",
+      "produtor": "instalacao",
+      "conceito": "CUSTO_INCORRIDO",
+      "payload": ["expenseId", "projectId", "category", "amountCents"],
+      "consumidores": ["custos"]
+    },
+    {
+      "type": "InstallationAccepted",
+      "produtor": "instalacao",
+      "conceito": "ACEITE_CLIENTE",
+      "payload": ["installationId", "equipmentId", "acceptedAt", "openIssues"],
+      "consumidores": []
+    },
+    {
+      "type": "DocumentRegistered",
+      "produtor": "documentos",
+      "conceito": "FATURAMENTO",
+      "payload": ["documentId", "direction", "partnerId", "issueDate", "competence", "totalCents", "lines"],
+      "consumidores": ["repasses", "fiscal"]
+    },
+    {
+      "type": "DocumentLinkedToTitles",
+      "produtor": "documentos",
+      "conceito": "FATURAMENTO",
+      "payload": ["documentId", "links"],
+      "consumidores": []
+    },
+    {
+      "type": "DocumentClassified",
+      "produtor": "documentos",
+      "conceito": "FATURAMENTO",
+      "payload": ["documentId", "classificationRuleRevision", "classes"],
+      "consumidores": ["fiscal"]
+    },
+    {
+      "type": "FinancialTitleCreated",
+      "produtor": "financeiro",
+      "conceito": "TITULO",
+      "payload": ["titleId", "direction", "originRef", "amountCents", "dueDate", "competence", "projectId"],
+      "consumidores": []
+    },
+    {
+      "type": "FinancialTitleAdjusted",
+      "produtor": "financeiro",
+      "conceito": "TITULO",
+      "payload": ["titleId", "adjustmentId", "kind", "amountCents", "reason"],
+      "consumidores": []
+    },
+    {
+      "type": "FinancialTitleCancelled",
+      "produtor": "financeiro",
+      "conceito": "TITULO",
+      "payload": ["titleId", "reason"],
+      "consumidores": []
+    },
+    {
+      "type": "FinancialTitlesRenegotiated",
+      "produtor": "financeiro",
+      "conceito": "TITULO",
+      "payload": ["renegotiationId", "replacedTitleIds", "newTitleIds"],
+      "consumidores": []
+    },
+    {
+      "type": "SettlementPosted",
+      "produtor": "financeiro",
+      "conceito": "RECEBIMENTO",
+      "payload": ["settlementId", "direction", "accountId", "effectiveDate", "totalCents", "allocations", "creditCents"],
+      "consumidores": ["repasses"]
+    },
+    {
+      "type": "SettlementReversed",
+      "produtor": "financeiro",
+      "conceito": "ESTORNO",
+      "payload": ["reversalId", "settlementId", "reason"],
+      "consumidores": ["repasses"]
+    },
+    {
+      "type": "TransferPosted",
+      "produtor": "financeiro",
+      "conceito": "TRANSFERENCIA",
+      "payload": ["transferId", "fromAccountId", "toAccountId", "amountCents", "effectiveDate"],
+      "consumidores": []
+    },
+    {
+      "type": "StatementImported",
+      "produtor": "financeiro",
+      "conceito": "CONCILIACAO",
+      "payload": ["batchId", "accountId", "entries", "duplicatesSkipped"],
+      "consumidores": []
+    },
+    {
+      "type": "ReconciliationRecorded",
+      "produtor": "financeiro",
+      "conceito": "CONCILIACAO",
+      "payload": ["groupId", "statementEntryIds", "movementIds", "differenceComponents"],
+      "consumidores": []
+    },
+    {
+      "type": "ReconciliationUndone",
+      "produtor": "financeiro",
+      "conceito": "CONCILIACAO",
+      "payload": ["groupId", "reason"],
+      "consumidores": []
+    },
+    {
+      "type": "ProjectBudgetApproved",
+      "produtor": "custos",
+      "conceito": "ORCAMENTO_PROJETO",
+      "payload": ["projectId", "budgetRevision", "lines"],
+      "consumidores": []
+    },
+    {
+      "type": "CostEntryRecorded",
+      "produtor": "custos",
+      "conceito": "CUSTO_INCORRIDO",
+      "payload": ["costEntryId", "projectId", "equipmentId", "category", "amountCents", "sourceType", "sourceId"],
+      "consumidores": ["repasses"]
+    },
+    {
+      "type": "DistributionSimulated",
+      "produtor": "repasses",
+      "conceito": "REPASSE",
+      "payload": ["runId", "ruleRevision", "baseCents"],
+      "consumidores": []
+    },
+    {
+      "type": "DistributionConfirmed",
+      "produtor": "repasses",
+      "conceito": "REPASSE",
+      "payload": ["runId", "ruleRevision", "lines", "titleIds", "reserveCents"],
+      "consumidores": []
+    },
+    {
+      "type": "DistributionAdjusted",
+      "produtor": "repasses",
+      "conceito": "REPASSE",
+      "payload": ["adjustmentId", "runId", "deltaLines"],
+      "consumidores": []
+    },
+    {
+      "type": "TaxSimulationRecorded",
+      "produtor": "fiscal",
+      "conceito": "COMPETENCIA_FISCAL",
+      "payload": ["taxPeriodId", "parameterRevision", "result", "status"],
+      "consumidores": []
+    },
+    {
+      "type": "TaxPeriodConfirmed",
+      "produtor": "fiscal",
+      "conceito": "COMPETENCIA_FISCAL",
+      "payload": ["taxPeriodId", "confirmedAmountCents", "titleId"],
+      "consumidores": []
+    },
+    {"type": "TaxPeriodClosed", "produtor": "fiscal", "conceito": "COMPETENCIA_FISCAL", "payload": ["taxPeriodId"], "consumidores": []},
+    {
+      "type": "TaxPeriodReopened",
+      "produtor": "fiscal",
+      "conceito": "COMPETENCIA_FISCAL",
+      "payload": ["taxPeriodId", "reason"],
+      "consumidores": []
+    },
+    {
+      "type": "ServiceTicketOpened",
+      "produtor": "posvenda",
+      "conceito": "CHAMADO",
+      "payload": ["ticketId", "equipmentId", "priority", "warrantyStatus"],
+      "consumidores": []
+    },
+    {
+      "type": "ServiceOrderExecuted",
+      "produtor": "posvenda",
+      "conceito": "ORDEM_SERVICO",
+      "payload": ["serviceOrderId", "hours", "laborAmountCents", "expensesCents"],
+      "consumidores": ["custos"]
+    },
+    {
+      "type": "ServiceTicketClosed",
+      "produtor": "posvenda",
+      "conceito": "CHAMADO",
+      "payload": ["ticketId", "solution", "failureCode"],
+      "consumidores": []
+    },
+    {
+      "type": "PreventiveOrderCreated",
+      "produtor": "posvenda",
+      "conceito": "PREVENTIVA",
+      "payload": ["occurrenceId", "planId", "equipmentId", "serviceOrderId"],
+      "consumidores": []
+    },
+    {
+      "type": "ImportFileReceived",
+      "produtor": "integracao",
+      "conceito": "IMPORTACAO",
+      "payload": ["fileId", "sha256", "sourceType"],
+      "consumidores": []
+    },
+    {
+      "type": "ImportReviewDecided",
+      "produtor": "integracao",
+      "conceito": "IMPORTACAO",
+      "payload": ["stagingRecordId", "decision", "correctedValue"],
+      "consumidores": []
+    },
+    {
+      "type": "ImportApplied",
+      "produtor": "integracao",
+      "conceito": "IMPORTACAO",
+      "payload": ["applicationId", "batchId", "createdRefs", "failedRecords"],
+      "consumidores": []
+    },
+    {
+      "type": "SettingChanged",
+      "produtor": "plataforma",
+      "conceito": "FATO_OPERACIONAL",
+      "payload": ["settingKey", "oldValue", "newValue"],
+      "consumidores": []
+    },
+    {
+      "type": "FindingRaised",
+      "produtor": "analitico",
+      "conceito": "ACHADO",
+      "payload": ["findingId", "definitionId", "subjectRef", "impact", "urgency", "confidence"],
+      "consumidores": []
+    },
+    {
+      "type": "DecisionRecorded",
+      "produtor": "analitico",
+      "conceito": "DECISAO",
+      "payload": ["decisionId", "findingId", "choice", "actionPlanId"],
+      "consumidores": []
+    },
+    {"type": "ItemUpdated", "produtor": "cadastros", "conceito": "ITEM", "payload": ["itemId", "changedFields"], "consumidores": []},
+    {"type": "ItemDeactivated", "produtor": "cadastros", "conceito": "ITEM", "payload": ["itemId", "reason"], "consumidores": []},
+    {
+      "type": "LeadRegistered",
+      "produtor": "comercial",
+      "conceito": "LEAD",
+      "payload": ["leadId", "partnerId", "rating"],
+      "consumidores": []
+    },
+    {
+      "type": "OpportunityOpened",
+      "produtor": "comercial",
+      "conceito": "OPORTUNIDADE",
+      "payload": ["opportunityId", "leadId", "customerId", "estimatedCents"],
+      "consumidores": []
+    },
+    {
+      "type": "SalesOrderDrafted",
+      "produtor": "comercial",
+      "conceito": "PEDIDO",
+      "payload": ["orderId", "proposalId", "revision"],
+      "consumidores": []
+    },
+    {
+      "type": "EquipmentUpdated",
+      "produtor": "projetos",
+      "conceito": "EQUIPAMENTO",
+      "payload": ["equipmentId", "changedFields"],
+      "consumidores": []
+    },
+    {
+      "type": "PurchaseRequestCreated",
+      "produtor": "suprimentos",
+      "conceito": "NECESSIDADE",
+      "payload": ["requestId", "requirementRunId", "lines"],
+      "consumidores": []
+    },
+    {
+      "type": "GoodsReturnedToSupplier",
+      "produtor": "recebimentos",
+      "conceito": "RECEBIMENTO_MATERIAL",
+      "payload": ["returnId", "receiptId", "lines", "reason"],
+      "consumidores": ["custos"]
+    },
+    {
+      "type": "InventoryCountPosted",
+      "produtor": "estoque",
+      "conceito": "ESTOQUE_FISICO",
+      "payload": ["countId", "locationId", "adjustmentMovementIds"],
+      "consumidores": ["custos"]
+    },
+    {
+      "type": "ReworkOrderOpened",
+      "produtor": "qualidade",
+      "conceito": "NAO_CONFORMIDADE",
+      "payload": ["reworkId", "ncId", "productionOrderId"],
+      "consumidores": []
+    },
+    {
+      "type": "InstallationScheduled",
+      "produtor": "instalacao",
+      "conceito": "ACEITE_CLIENTE",
+      "payload": ["installationId", "equipmentId", "plannedStart", "team"],
+      "consumidores": []
+    },
+    {
+      "type": "ServiceOrderCreated",
+      "produtor": "posvenda",
+      "conceito": "ORDEM_SERVICO",
+      "payload": ["serviceOrderId", "ticketId", "occurrenceId"],
+      "consumidores": []
+    },
+    {
+      "type": "PreventivePlanRevised",
+      "produtor": "posvenda",
+      "conceito": "PREVENTIVA",
+      "payload": ["planId", "revision", "periodicity"],
+      "consumidores": []
+    },
+    {
+      "type": "DistributionRuleRevised",
+      "produtor": "repasses",
+      "conceito": "REPASSE",
+      "payload": ["ruleId", "revision", "validFrom"],
+      "consumidores": []
+    },
+    {
+      "type": "TaxParameterRevised",
+      "produtor": "fiscal",
+      "conceito": "COMPETENCIA_FISCAL",
+      "payload": ["parameterId", "revision", "validFrom", "confirmedBy"],
+      "consumidores": []
+    },
+    {
+      "type": "AttachmentAdded",
+      "produtor": "plataforma",
+      "conceito": "FATO_OPERACIONAL",
+      "payload": ["attachmentId", "ownerRef", "sha256"],
+      "consumidores": []
+    },
+    {
+      "type": "ExportRequested",
+      "produtor": "plataforma",
+      "conceito": "FATO_OPERACIONAL",
+      "payload": ["exportJobId", "queryId", "filters", "format"],
+      "consumidores": []
+    },
+    {
+      "type": "BackupRequested",
+      "produtor": "plataforma",
+      "conceito": "FATO_OPERACIONAL",
+      "payload": ["backupJobId", "scope"],
+      "consumidores": []
+    },
+    {"type": "AccessGranted", "produtor": "acesso", "conceito": "FATO_OPERACIONAL", "payload": ["userId", "roleId"], "consumidores": []},
+    {
+      "type": "AccessRevoked",
+      "produtor": "acesso",
+      "conceito": "FATO_OPERACIONAL",
+      "payload": ["userId", "roleId", "reason"],
+      "consumidores": []
+    },
+    {
+      "type": "ProjectResponsibleAssigned",
+      "produtor": "projetos",
+      "conceito": "PROJETO",
+      "payload": ["projectId", "memberId", "role"],
+      "consumidores": []
+    }
+  ]
+}

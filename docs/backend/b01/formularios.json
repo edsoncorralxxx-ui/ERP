@@ -1,0 +1,1372 @@
+{
+  "versao": "B01-1",
+  "regra": "Contrato FormDefinition v1 de cada área inicial. Tipos: texto, codigo, ref (exige conceito), dinheiro (BRL, centavos), quantidade (exige unidade), precoUnitario (BRL/UoM, escala 6), fracao, data, instante, competencia, enum (exige valores), booleano, inteiro, anexo, lista. Origem: usuario, sistema, derivado, importacao, referencia. Comandos sem 'modulo' pertencem ao módulo do formulário. O contrato é comum ao React e ao Java; a validação final é sempre do servidor.",
+  "rastreabilidadePadrao": [
+    "id",
+    "codigo",
+    "versao",
+    "createdAt",
+    "createdBy",
+    "updatedAt",
+    "updatedBy",
+    "origem (UI/IMPORT/SYSTEM + commandId)",
+    "historico de auditoria",
+    "anexos"
+  ],
+  "formularios": [
+    {
+      "id": "dashboard",
+      "versao": 1,
+      "nome": "Visão geral",
+      "tipo": "painel",
+      "modulo": "consultas",
+      "conceito": "INDICADOR",
+      "significado": "Painel de indicadores oficiais com base temporal e composição; não registra fatos",
+      "campos": [
+        {"nome": "periodo", "tipo": "competencia", "obrigatorio": true, "origem": "usuario"},
+        {
+          "nome": "visao",
+          "tipo": "enum",
+          "valores": ["GERAL", "VENDAS", "FINANCEIRO", "INDUSTRIAL", "IMPOSTOS"],
+          "obrigatorio": true,
+          "origem": "usuario"
+        },
+        {"nome": "projeto", "tipo": "ref", "conceito": "PROJETO", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "atualizadoEm", "tipo": "instante", "obrigatorio": true, "origem": "sistema"}
+      ],
+      "classificacoes": ["area", "periodo"],
+      "validacoes": [{"regra": "Cada indicador exibe base, período, filtros e updatedAt; ausente aparece como Não informado"}],
+      "comandos": [],
+      "indicadores": ["IND-001", "IND-005", "IND-006", "IND-008", "IND-009", "IND-010", "IND-017", "IND-018", "IND-020"],
+      "analises": ["AN-035", "AN-038"],
+      "acoes": ["Abrir composição do indicador", "Abrir pendências filtradas"],
+      "permissoes": ["dashboard.read"]
+    },
+    {
+      "id": "clientes",
+      "versao": 1,
+      "nome": "Clientes e unidades",
+      "tipo": "cadastro",
+      "modulo": "cadastros",
+      "conceito": "CLIENTE",
+      "significado": "Identidade do cliente, suas unidades industriais e contatos",
+      "campos": [
+        {"nome": "codigo", "tipo": "codigo", "obrigatorio": true, "origem": "sistema"},
+        {"nome": "razaoSocial", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "nomeComercial", "tipo": "texto", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "cnpj", "tipo": "texto", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "grupo", "tipo": "texto", "obrigatorio": false, "origem": "usuario"},
+        {
+          "nome": "unidades",
+          "tipo": "lista",
+          "itens": "UNIDADE_CLIENTE (nome, cidade, UF, endereço)",
+          "obrigatorio": false,
+          "origem": "usuario"
+        },
+        {
+          "nome": "contatos",
+          "tipo": "lista",
+          "itens": "contato (nome, função, telefone, e-mail)",
+          "obrigatorio": false,
+          "origem": "usuario"
+        },
+        {"nome": "aliases", "tipo": "lista", "itens": "nome alternativo com origem", "obrigatorio": false, "origem": "importacao"},
+        {"nome": "situacao", "tipo": "enum", "valores": ["ATIVO", "INATIVO"], "obrigatorio": true, "origem": "sistema"}
+      ],
+      "classificacoes": ["segmento", "UF", "possuiRendaMais"],
+      "validacoes": [
+        {"regra": "CNPJ, quando informado, é válido e único por empresa; ausente não é inventado"},
+        {"regra": "Não unir parceiros apenas por similaridade de nome; possível duplicidade vira revisão"},
+        {"regra": "Inativação preserva histórico; parceiro referenciado não é apagado"}
+      ],
+      "comandos": [
+        {"nome": "RegisterPartner", "permissao": "partner.create", "idempotente": true, "eventos": ["PartnerRegistered"]},
+        {"nome": "UpdatePartner", "permissao": "partner.update", "idempotente": false, "eventos": ["PartnerUpdated"]},
+        {"nome": "DeactivatePartner", "permissao": "partner.deactivate", "idempotente": true, "eventos": ["PartnerDeactivated"]}
+      ],
+      "indicadores": ["IND-001", "IND-007"],
+      "analises": ["AN-001", "AN-009"],
+      "acoes": ["Cadastrar", "Editar com versão", "Relacionar unidade", "Revisar possível duplicidade", "Inativar"],
+      "permissoes": ["partner.read", "partner.create", "partner.update", "partner.deactivate"]
+    },
+    {
+      "id": "fornecedores",
+      "versao": 1,
+      "nome": "Fornecedores",
+      "tipo": "cadastro",
+      "modulo": "cadastros",
+      "conceito": "FORNECEDOR",
+      "significado": "Parceiro com papel de fornecedor, categorias fornecidas e condições",
+      "campos": [
+        {"nome": "codigo", "tipo": "codigo", "obrigatorio": true, "origem": "sistema"},
+        {"nome": "razaoSocial", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "cnpj", "tipo": "texto", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "categoriasFornecidas", "tipo": "lista", "itens": "categoria de item", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "prazoReferenciaDias", "tipo": "inteiro", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "condicoesPagamento", "tipo": "texto", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "situacao", "tipo": "enum", "valores": ["ATIVO", "INATIVO"], "obrigatorio": true, "origem": "sistema"}
+      ],
+      "classificacoes": ["categoriaFornecida", "UF"],
+      "validacoes": [{"regra": "Mesmo parceiro pode ser cliente e fornecedor (papéis), sem duplicar cadastro"}],
+      "comandos": [
+        {"nome": "RegisterPartner", "permissao": "partner.create", "idempotente": true, "eventos": ["PartnerRegistered"]},
+        {"nome": "UpdatePartner", "permissao": "partner.update", "idempotente": false, "eventos": ["PartnerUpdated"]},
+        {"nome": "DeactivatePartner", "permissao": "partner.deactivate", "idempotente": true, "eventos": ["PartnerDeactivated"]}
+      ],
+      "indicadores": ["IND-008"],
+      "analises": ["AN-026", "AN-029"],
+      "acoes": ["Cadastrar", "Consultar compras, entregas e materiais sob guarda"],
+      "permissoes": ["partner.read", "partner.create", "partner.update", "partner.deactivate"]
+    },
+    {
+      "id": "materiais",
+      "versao": 1,
+      "nome": "Materiais e serviços",
+      "tipo": "cadastro",
+      "modulo": "cadastros",
+      "conceito": "ITEM",
+      "significado": "Item comprável, estocável ou executável com unidade de medida",
+      "campos": [
+        {"nome": "codigo", "tipo": "codigo", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "descricao", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "natureza", "tipo": "enum", "valores": ["MATERIAL", "SERVICO"], "obrigatorio": true, "origem": "usuario"},
+        {"nome": "unidadeMedida", "tipo": "codigo", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "categoria", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "controlaEstoque", "tipo": "booleano", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "custoReferencia", "tipo": "precoUnitario", "unidade": "BRL/UoM", "precisao": 6, "obrigatorio": false, "origem": "usuario"},
+        {
+          "nome": "conversoes",
+          "tipo": "lista",
+          "itens": "unidade de compra → unidade do item com fator",
+          "obrigatorio": false,
+          "origem": "usuario"
+        }
+      ],
+      "classificacoes": ["categoria", "natureza"],
+      "validacoes": [
+        {"regra": "Serviço não controla estoque físico"},
+        {"regra": "Conversão de unidade exige fator explícito maior que zero"},
+        {"regra": "Precisão de quantidades e custos unitários", "pendencia": "PD-007"}
+      ],
+      "comandos": [
+        {"nome": "RegisterItem", "permissao": "item.create", "idempotente": true, "eventos": ["ItemRegistered"]},
+        {"nome": "UpdateItem", "permissao": "item.update", "idempotente": false, "eventos": ["ItemUpdated"]},
+        {"nome": "DeactivateItem", "permissao": "item.deactivate", "idempotente": true, "eventos": ["ItemDeactivated"]}
+      ],
+      "indicadores": ["IND-014"],
+      "analises": ["AN-020", "AN-028"],
+      "acoes": ["Cadastrar", "Atualizar referências", "Inativar"],
+      "permissoes": ["item.read", "item.create", "item.update", "item.deactivate"]
+    },
+    {
+      "id": "equipamentos",
+      "versao": 1,
+      "nome": "Equipamentos",
+      "tipo": "cadastro",
+      "modulo": "projetos",
+      "conceito": "EQUIPAMENTO",
+      "significado": "Equipamento com identidade própria e histórico completo de fabricação, instalação e assistência",
+      "campos": [
+        {"nome": "identificador", "tipo": "codigo", "obrigatorio": true, "origem": "sistema"},
+        {"nome": "numeroSerie", "tipo": "texto", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "modelo", "tipo": "texto", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "revisaoBom", "tipo": "ref", "conceito": "BOM", "obrigatorio": false, "origem": "referencia"},
+        {"nome": "cliente", "tipo": "ref", "conceito": "CLIENTE", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "unidade", "tipo": "ref", "conceito": "UNIDADE_CLIENTE", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "projeto", "tipo": "ref", "conceito": "PROJETO", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "dataAceite", "tipo": "data", "obrigatorio": false, "origem": "derivado"},
+        {"nome": "inicioGarantia", "tipo": "data", "obrigatorio": false, "origem": "derivado"}
+      ],
+      "classificacoes": ["modelo", "situacaoOperacional", "UF"],
+      "validacoes": [
+        {"regra": "Série, quando informada, é única por modelo"},
+        {"regra": "Data de aceite e início de garantia vêm do aceite registrado, nunca da previsão", "pendencia": "PD-015"}
+      ],
+      "comandos": [
+        {"nome": "UpdateEquipment", "permissao": "equipment.update", "idempotente": false, "eventos": ["EquipmentUpdated"]},
+        {
+          "nome": "AttachDocument",
+          "modulo": "plataforma",
+          "permissao": "attachment.create",
+          "idempotente": true,
+          "eventos": ["AttachmentAdded"]
+        },
+        {
+          "nome": "OpenServiceTicket",
+          "modulo": "posvenda",
+          "permissao": "service_ticket.create",
+          "idempotente": true,
+          "eventos": ["ServiceTicketOpened"]
+        }
+      ],
+      "indicadores": ["IND-002", "IND-017"],
+      "analises": ["AN-031", "AN-008"],
+      "acoes": ["Consultar histórico", "Anexar documentação", "Abrir chamado"],
+      "permissoes": ["equipment.read", "equipment.update"]
+    },
+    {
+      "id": "prospeccao",
+      "versao": 1,
+      "nome": "Prospecção",
+      "tipo": "cadastro",
+      "modulo": "comercial",
+      "conceito": "LEAD",
+      "significado": "Empresas/unidades-alvo e acompanhamento; não representa venda",
+      "campos": [
+        {"nome": "codigo", "tipo": "codigo", "obrigatorio": true, "origem": "sistema"},
+        {"nome": "empresa", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "parceiro", "tipo": "ref", "conceito": "CLIENTE", "obrigatorio": false, "origem": "referencia"},
+        {"nome": "cidadeUf", "tipo": "texto", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "possuiRendaMais", "tipo": "enum", "valores": ["SIM", "NAO", "DESCONHECIDO"], "obrigatorio": true, "origem": "usuario"},
+        {"nome": "classificacaoEstrelas", "tipo": "inteiro", "obrigatorio": false, "origem": "usuario"},
+        {
+          "nome": "etapa",
+          "tipo": "enum",
+          "valores": ["IDENTIFICADO", "CONTATADO", "INTERESSADO", "DESCARTADO"],
+          "obrigatorio": true,
+          "origem": "usuario"
+        },
+        {"nome": "proximaAcao", "tipo": "data", "obrigatorio": false, "origem": "usuario"}
+      ],
+      "classificacoes": ["UF", "classificacaoEstrelas", "etapa"],
+      "validacoes": [
+        {"regra": "Classificação vazia permanece desconhecida, não zero estrelas; valor entre 1 e 5 quando informado"},
+        {"regra": "Linhas de prospecção não viram equipamentos vendidos automaticamente"}
+      ],
+      "comandos": [
+        {"nome": "RegisterLead", "permissao": "lead.create", "idempotente": true, "eventos": ["LeadRegistered"]},
+        {"nome": "RecordInteraction", "permissao": "lead.update", "idempotente": true, "eventos": ["LeadInteractionRecorded"]},
+        {"nome": "OpenOpportunity", "permissao": "opportunity.create", "idempotente": true, "eventos": ["OpportunityOpened"]}
+      ],
+      "indicadores": ["IND-016"],
+      "analises": ["AN-002", "AN-006"],
+      "acoes": ["Registrar contato", "Agendar acompanhamento", "Abrir oportunidade"],
+      "permissoes": ["lead.read", "lead.create", "lead.update", "opportunity.create"]
+    },
+    {
+      "id": "propostas",
+      "versao": 1,
+      "nome": "Oportunidades e propostas",
+      "tipo": "documento",
+      "modulo": "comercial",
+      "conceito": "PROPOSTA",
+      "significado": "Oferta versionada; nova revisão preserva as anteriores",
+      "campos": [
+        {"nome": "numero", "tipo": "codigo", "obrigatorio": true, "origem": "sistema"},
+        {"nome": "revisao", "tipo": "inteiro", "obrigatorio": true, "origem": "sistema"},
+        {"nome": "cliente", "tipo": "ref", "conceito": "CLIENTE", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "unidade", "tipo": "ref", "conceito": "UNIDADE_CLIENTE", "obrigatorio": false, "origem": "referencia"},
+        {
+          "nome": "linhas",
+          "tipo": "lista",
+          "itens": "item, quantidade, precoUnitario, desconto, custoEstimado",
+          "obrigatorio": true,
+          "origem": "usuario"
+        },
+        {"nome": "total", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "custoEstimado", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": false, "origem": "derivado"},
+        {"nome": "margemEstimada", "tipo": "fracao", "obrigatorio": false, "origem": "derivado"},
+        {"nome": "validade", "tipo": "data", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "condicoesPagamento", "tipo": "texto", "obrigatorio": false, "origem": "usuario"}
+      ],
+      "classificacoes": ["etapaFunil", "tipoEscopo"],
+      "validacoes": [
+        {"regra": "Revisão emitida é imutável; alteração cria nova revisão"},
+        {"regra": "Total = Σ linhas com arredondamento definido", "pendencia": "PD-002"},
+        {"regra": "Margem com custo ausente é Não calculável"}
+      ],
+      "comandos": [
+        {"nome": "IssueProposalRevision", "permissao": "proposal.issue", "idempotente": true, "eventos": ["ProposalRevisionIssued"]},
+        {
+          "nome": "RecordProposalOutcome",
+          "permissao": "proposal.update",
+          "idempotente": true,
+          "eventos": ["ProposalOutcomeRecorded", "OpportunityStageChanged"]
+        },
+        {"nome": "ConvertProposalToOrder", "permissao": "sales_order.create", "idempotente": true, "eventos": ["SalesOrderDrafted"]},
+        {
+          "nome": "ExportProposal",
+          "modulo": "plataforma",
+          "permissao": "proposal.export",
+          "idempotente": true,
+          "eventos": ["ExportRequested"]
+        }
+      ],
+      "indicadores": ["IND-016"],
+      "analises": ["AN-003", "AN-002"],
+      "acoes": ["Versionar", "Exportar PDF", "Registrar ganho/perda", "Converter em pedido"],
+      "permissoes": ["proposal.read", "proposal.issue", "proposal.update", "proposal.export", "sales_order.create"]
+    },
+    {
+      "id": "pedidos",
+      "versao": 1,
+      "nome": "Pedidos e contratos",
+      "tipo": "documento",
+      "modulo": "comercial",
+      "conceito": "PEDIDO",
+      "significado": "Compromisso do cliente; confirmar cria projetos, equipamentos e títulos uma única vez",
+      "campos": [
+        {"nome": "numero", "tipo": "codigo", "obrigatorio": true, "origem": "sistema"},
+        {"nome": "cliente", "tipo": "ref", "conceito": "CLIENTE", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "unidade", "tipo": "ref", "conceito": "UNIDADE_CLIENTE", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "propostaOrigem", "tipo": "ref", "conceito": "PROPOSTA", "obrigatorio": false, "origem": "referencia"},
+        {"nome": "dataContratacao", "tipo": "data", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "prazoPrometido", "tipo": "data", "obrigatorio": false, "origem": "usuario"},
+        {
+          "nome": "linhas",
+          "tipo": "lista",
+          "itens": "item, tipo (EQUIPAMENTO/SERVICO/MATERIAL), quantidade, precoUnitario, desconto, total",
+          "obrigatorio": true,
+          "origem": "usuario"
+        },
+        {"nome": "total", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {
+          "nome": "parcelas",
+          "tipo": "lista",
+          "itens": "sequência, vencimento, valor (dinheiro), descrição do marco",
+          "obrigatorio": true,
+          "origem": "usuario"
+        },
+        {
+          "nome": "situacao",
+          "tipo": "enum",
+          "valores": ["DRAFT", "CONFIRMED", "IN_EXECUTION", "COMPLETED", "CANCELLED"],
+          "obrigatorio": true,
+          "origem": "sistema"
+        },
+        {"nome": "versao", "tipo": "inteiro", "obrigatorio": true, "origem": "sistema"}
+      ],
+      "classificacoes": ["tipoEscopo", "UF", "regiao"],
+      "validacoes": [
+        {"regra": "Pelo menos uma linha; quantidade > 0; preço ≥ 0; desconto ≤ valor bruto da linha"},
+        {"regra": "Σ parcelas = total exato em centavos"},
+        {"regra": "Unidade pertence ao cliente e ambos ativos"},
+        {"regra": "Confirmado é imutável; mudança por aditivo"},
+        {"regra": "Geração de projetos por pedido", "pendencia": "PD-001"},
+        {"regra": "Cancelamento de pedido com efeitos", "pendencia": "PD-003"}
+      ],
+      "comandos": [
+        {
+          "nome": "ConfirmSalesOrder",
+          "permissao": "sales_order.confirm",
+          "idempotente": true,
+          "eventos": ["SalesOrderConfirmed", "ProjectCreated", "EquipmentCreated", "FinancialTitleCreated"]
+        },
+        {"nome": "AmendSalesOrder", "permissao": "sales_order.amend", "idempotente": true, "eventos": ["SalesOrderAmended"]},
+        {
+          "nome": "CancelSalesOrder",
+          "permissao": "sales_order.cancel",
+          "idempotente": true,
+          "eventos": ["SalesOrderCancelled", "FinancialTitleCancelled", "ProjectStageChanged"]
+        }
+      ],
+      "indicadores": ["IND-001", "IND-002", "IND-003", "IND-004"],
+      "analises": ["AN-004", "AN-005"],
+      "acoes": ["Salvar rascunho", "Confirmar pedido", "Registrar aditivo", "Cancelar pedido"],
+      "permissoes": ["sales_order.read", "sales_order.create", "sales_order.update", "sales_order.confirm", "sales_order.amend", "sales_order.cancel"]
+    },
+    {
+      "id": "carteira",
+      "versao": 1,
+      "nome": "Carteira de projetos",
+      "tipo": "consulta",
+      "modulo": "consultas",
+      "conceito": "PROJETO",
+      "significado": "Consulta paginada de projetos com estágio, avanço e valores na base declarada",
+      "campos": [
+        {"nome": "cliente", "tipo": "ref", "conceito": "CLIENTE", "obrigatorio": false, "origem": "usuario"},
+        {
+          "nome": "estagio",
+          "tipo": "enum",
+          "valores": ["PLANEJADO", "ENGENHARIA", "SUPRIMENTOS", "PRODUCAO", "INSTALACAO", "ACEITO", "ENCERRADO"],
+          "obrigatorio": false,
+          "origem": "usuario"
+        },
+        {"nome": "responsavel", "tipo": "texto", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "valorContratado", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "avanco", "tipo": "fracao", "obrigatorio": false, "origem": "derivado"}
+      ],
+      "classificacoes": ["estagio", "cliente", "UF"],
+      "validacoes": [{"regra": "Totais informam escopo (página ou resultado filtrado)"}],
+      "comandos": [],
+      "indicadores": ["IND-001", "IND-015", "IND-020"],
+      "analises": ["AN-004"],
+      "acoes": ["Filtrar", "Abrir projeto", "Exportar"],
+      "permissoes": ["project.read"]
+    },
+    {
+      "id": "projeto",
+      "versao": 1,
+      "nome": "Detalhe do projeto",
+      "tipo": "documento",
+      "modulo": "projetos",
+      "conceito": "PROJETO",
+      "significado": "Ficha central com vínculos a equipamentos, planejamento, materiais, compras, financeiro e documentos (fachada de consulta)",
+      "campos": [
+        {"nome": "codigo", "tipo": "codigo", "obrigatorio": true, "origem": "sistema"},
+        {"nome": "pedido", "tipo": "ref", "conceito": "PEDIDO", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "cliente", "tipo": "ref", "conceito": "CLIENTE", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "unidade", "tipo": "ref", "conceito": "UNIDADE_CLIENTE", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "responsaveis", "tipo": "lista", "itens": "membro e papel", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "entregaContratual", "tipo": "data", "obrigatorio": false, "origem": "referencia"},
+        {"nome": "estagiosAtivos", "tipo": "lista", "itens": "estágio (podem coexistir)", "obrigatorio": true, "origem": "derivado"},
+        {
+          "nome": "previstoRealizado",
+          "tipo": "lista",
+          "itens": "orçado, comprometido, incorrido, faturado, recebido",
+          "obrigatorio": false,
+          "origem": "derivado"
+        }
+      ],
+      "classificacoes": ["estagio", "tipoEscopo"],
+      "validacoes": [{"regra": "Status sozinho não prova conclusão; conclusão exige aceite e marcos"}],
+      "comandos": [
+        {"nome": "AssignProjectResponsible", "permissao": "project.update", "idempotente": true, "eventos": ["ProjectResponsibleAssigned"]},
+        {"nome": "ChangeProjectStage", "permissao": "project.update", "idempotente": true, "eventos": ["ProjectStageChanged"]},
+        {
+          "nome": "RecordDecision",
+          "modulo": "analitico",
+          "permissao": "decision.create",
+          "idempotente": true,
+          "eventos": ["DecisionRecorded"]
+        }
+      ],
+      "indicadores": ["IND-011", "IND-012", "IND-013", "IND-015"],
+      "analises": ["AN-014", "AN-021"],
+      "acoes": ["Abrir registros vinculados", "Registrar decisão", "Abrir cronograma"],
+      "permissoes": ["project.read", "project.update"]
+    },
+    {
+      "id": "bom",
+      "versao": 1,
+      "nome": "BOM — composição de custos",
+      "tipo": "documento",
+      "modulo": "engenharia",
+      "conceito": "BOM",
+      "significado": "Composição versionada do modelo; a revisão aplicada ao projeto não muda com o modelo",
+      "campos": [
+        {"nome": "modelo", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "revisao", "tipo": "inteiro", "obrigatorio": true, "origem": "sistema"},
+        {
+          "nome": "linhas",
+          "tipo": "lista",
+          "itens": "item/serviço, quantidade, unidade, custo unitário referencial, categoria, atividade",
+          "obrigatorio": true,
+          "origem": "usuario"
+        },
+        {"nome": "totalReferencial", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "totalInformadoOrigem", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": false, "origem": "importacao"},
+        {"nome": "situacao", "tipo": "enum", "valores": ["DRAFT", "APPROVED", "SUPERSEDED"], "obrigatorio": true, "origem": "sistema"}
+      ],
+      "classificacoes": ["categoria", "subsistema", "atividade"],
+      "validacoes": [
+        {"regra": "Linha exige item, quantidade > 0, unidade compatível, custo referencial e categoria"},
+        {"regra": "Diferença entre Σ linhas e total informado da origem é exibida como divergência, não corrigida (ex.: R$ 3.000,00)"},
+        {"regra": "Revisão aprovada é imutável"}
+      ],
+      "comandos": [
+        {"nome": "ApproveBomRevision", "permissao": "bom.approve", "idempotente": true, "eventos": ["BomRevisionApproved"]},
+        {"nome": "ApplyBomToProject", "permissao": "project_bom.apply", "idempotente": true, "eventos": ["ProjectBomApplied"]}
+      ],
+      "indicadores": ["IND-011"],
+      "analises": ["AN-020"],
+      "acoes": ["Criar revisão", "Aplicar ao projeto", "Comparar revisões", "Comparar estimado × realizado"],
+      "permissoes": ["bom.read", "bom.update", "bom.approve", "project_bom.apply"]
+    },
+    {
+      "id": "cronograma",
+      "versao": 1,
+      "nome": "EAP e cronograma",
+      "tipo": "documento",
+      "modulo": "engenharia",
+      "conceito": "ATIVIDADE",
+      "significado": "Atividades, dependências, calendário, linha de base e avanço do projeto",
+      "campos": [
+        {"nome": "projeto", "tipo": "ref", "conceito": "PROJETO", "obrigatorio": true, "origem": "referencia"},
+        {
+          "nome": "atividades",
+          "tipo": "lista",
+          "itens": "código EAP, nome, responsável, duração (dias), peso, entregável",
+          "obrigatorio": true,
+          "origem": "usuario"
+        },
+        {
+          "nome": "dependencias",
+          "tipo": "lista",
+          "itens": "predecessora, tipo (TI/II), defasagem (dias)",
+          "obrigatorio": false,
+          "origem": "usuario"
+        },
+        {"nome": "calendario", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "linhaBase", "tipo": "ref", "conceito": "LINHA_BASE", "obrigatorio": false, "origem": "sistema"},
+        {"nome": "avanco", "tipo": "fracao", "obrigatorio": false, "origem": "derivado"}
+      ],
+      "classificacoes": ["grupoEap", "critica"],
+      "validacoes": [
+        {"regra": "Dependências sem ciclos; datas incompatíveis sinalizadas"},
+        {"regra": "Σ pesos = 100% do cronograma", "pendencia": "PD-018"},
+        {"regra": "Convenção de início/fim e dias não úteis", "pendencia": "PD-017"},
+        {"regra": "Recálculo não altera linha de base aprovada"}
+      ],
+      "comandos": [
+        {"nome": "RecalculateSchedule", "permissao": "schedule.recalculate", "idempotente": true, "eventos": ["ScheduleRecalculated"]},
+        {"nome": "RecordActivityProgress", "permissao": "schedule.progress", "idempotente": true, "eventos": ["ActivityProgressRecorded"]},
+        {"nome": "ApproveBaseline", "permissao": "baseline.approve", "idempotente": true, "eventos": ["BaselineApproved"]}
+      ],
+      "indicadores": ["IND-015", "IND-020"],
+      "analises": ["AN-021"],
+      "acoes": ["Aplicar modelo", "Recalcular", "Registrar avanço", "Salvar linha de base", "Exportar Gantt"],
+      "permissoes": ["schedule.read", "schedule.update", "schedule.recalculate", "schedule.progress", "baseline.approve"]
+    },
+    {
+      "id": "necessidades",
+      "versao": 1,
+      "nome": "Necessidades e cotações",
+      "tipo": "documento",
+      "modulo": "suprimentos",
+      "conceito": "NECESSIDADE",
+      "significado": "MRP por projeto: necessidade líquida por item e data e comparação de cotações",
+      "campos": [
+        {"nome": "projetos", "tipo": "lista", "itens": "ref PROJETO", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "item", "tipo": "ref", "conceito": "ITEM", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "necessario", "tipo": "quantidade", "unidade": "UoM do item", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "disponivelAlocado", "tipo": "quantidade", "unidade": "UoM do item", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "faltante", "tipo": "quantidade", "unidade": "UoM do item", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "dataNecessaria", "tipo": "data", "obrigatorio": true, "origem": "derivado"},
+        {
+          "nome": "cotacoes",
+          "tipo": "lista",
+          "itens": "fornecedor, preço unitário, frete, prazo, validade",
+          "obrigatorio": false,
+          "origem": "usuario"
+        }
+      ],
+      "classificacoes": ["categoria", "criticidade"],
+      "validacoes": [
+        {"regra": "Cada suprimento alocado uma única vez; compra em cotação não conta como disponível"},
+        {"regra": "Fórmula exata de necessidade líquida", "pendencia": "PD-016"}
+      ],
+      "comandos": [
+        {"nome": "CalculateRequirements", "permissao": "requirement.calculate", "idempotente": true, "eventos": ["RequirementsCalculated"]},
+        {
+          "nome": "CreatePurchaseRequest",
+          "permissao": "purchase_request.create",
+          "idempotente": true,
+          "eventos": ["PurchaseRequestCreated"]
+        },
+        {"nome": "RecordQuotation", "permissao": "quotation.create", "idempotente": true, "eventos": ["QuotationRecorded"]}
+      ],
+      "indicadores": ["IND-018"],
+      "analises": ["AN-027", "AN-026"],
+      "acoes": ["Calcular necessidades", "Gerar solicitação", "Registrar cotação", "Comparar fornecedores"],
+      "permissoes": ["requirement.read", "requirement.calculate", "purchase_request.create", "quotation.create"]
+    },
+    {
+      "id": "compras",
+      "versao": 1,
+      "nome": "Pedidos de compra",
+      "tipo": "documento",
+      "modulo": "suprimentos",
+      "conceito": "COMPRA",
+      "significado": "Compromisso com fornecedor; aprovação gera compromisso de custo e programação a pagar",
+      "campos": [
+        {"nome": "numero", "tipo": "codigo", "obrigatorio": true, "origem": "sistema"},
+        {"nome": "fornecedor", "tipo": "ref", "conceito": "FORNECEDOR", "obrigatorio": true, "origem": "referencia"},
+        {
+          "nome": "linhas",
+          "tipo": "lista",
+          "itens": "item, quantidade, unidade, preço unitário, projeto, data de entrega",
+          "obrigatorio": true,
+          "origem": "usuario"
+        },
+        {"nome": "frete", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "total", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "condicaoPagamento", "tipo": "lista", "itens": "vencimento e valor", "obrigatorio": true, "origem": "usuario"},
+        {
+          "nome": "situacao",
+          "tipo": "enum",
+          "valores": ["DRAFT", "IN_APPROVAL", "APPROVED", "PARTIALLY_RECEIVED", "RECEIVED", "CLOSED", "CANCELLED"],
+          "obrigatorio": true,
+          "origem": "sistema"
+        }
+      ],
+      "classificacoes": ["categoria", "projeto"],
+      "validacoes": [
+        {"regra": "Σ condição de pagamento = total"},
+        {"regra": "Aprovação por valor/alçada", "pendencia": "PD-009"},
+        {"regra": "Cancelamento do saldo remanescente é rastreável"}
+      ],
+      "comandos": [
+        {
+          "nome": "ApprovePurchaseOrder",
+          "permissao": "purchase_order.approve",
+          "idempotente": true,
+          "eventos": ["PurchaseApproved", "FinancialTitleCreated"]
+        },
+        {
+          "nome": "CancelPurchaseOrderRemainder",
+          "permissao": "purchase_order.cancel",
+          "idempotente": true,
+          "eventos": ["PurchaseOrderRemainderCancelled"]
+        }
+      ],
+      "indicadores": ["IND-008", "IND-012"],
+      "analises": ["AN-026", "AN-027"],
+      "acoes": ["Aprovar", "Registrar alteração", "Cancelar saldo"],
+      "permissoes": ["purchase_order.read", "purchase_order.update", "purchase_order.approve", "purchase_order.cancel"]
+    },
+    {
+      "id": "recebimentos",
+      "versao": 1,
+      "nome": "Recebimentos e terceiros",
+      "tipo": "documento",
+      "modulo": "recebimentos",
+      "conceito": "RECEBIMENTO_MATERIAL",
+      "significado": "Entrada física conferida, aceite de serviço, remessas e retornos de terceiros",
+      "campos": [
+        {"nome": "pedidoCompra", "tipo": "ref", "conceito": "COMPRA", "obrigatorio": true, "origem": "referencia"},
+        {
+          "nome": "linhas",
+          "tipo": "lista",
+          "itens": "linha do pedido, quantidade conferida, unidade, local",
+          "obrigatorio": true,
+          "origem": "usuario"
+        },
+        {"nome": "dataRecebimento", "tipo": "data", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "documentoFornecedor", "tipo": "ref", "conceito": "FATURAMENTO", "obrigatorio": false, "origem": "referencia"},
+        {"nome": "perdas", "tipo": "lista", "itens": "item, quantidade, motivo", "obrigatorio": false, "origem": "usuario"}
+      ],
+      "classificacoes": ["local", "propriedade"],
+      "validacoes": [
+        {"regra": "Quantidade conferida ≤ saldo pendente da linha, salvo tolerância aprovada"},
+        {"regra": "Serviço recebe aceite, não entrada física"},
+        {"regra": "Remessa a terceiro preserva propriedade Fourtech"}
+      ],
+      "comandos": [
+        {"nome": "PostGoodsReceipt", "permissao": "receipt.post", "idempotente": true, "eventos": ["GoodsReceived"]},
+        {"nome": "AcceptService", "permissao": "service_acceptance.post", "idempotente": true, "eventos": ["ServiceAccepted"]},
+        {"nome": "ReturnGoodsToSupplier", "permissao": "receipt.return", "idempotente": true, "eventos": ["GoodsReturnedToSupplier"]},
+        {
+          "nome": "DispatchToThirdParty",
+          "modulo": "estoque",
+          "permissao": "third_party.dispatch",
+          "idempotente": true,
+          "eventos": ["ThirdPartyDispatched"]
+        },
+        {
+          "nome": "ReceiveFromThirdParty",
+          "modulo": "estoque",
+          "permissao": "third_party.return",
+          "idempotente": true,
+          "eventos": ["ThirdPartyReturned"]
+        }
+      ],
+      "indicadores": ["IND-014"],
+      "analises": ["AN-029", "AN-026"],
+      "acoes": ["Receber parcialmente", "Aceitar serviço", "Devolver", "Remeter a terceiro", "Registrar retorno/perda"],
+      "permissoes": ["receipt.read", "receipt.post", "receipt.return", "service_acceptance.post", "third_party.dispatch", "third_party.return"]
+    },
+    {
+      "id": "estoque",
+      "versao": 1,
+      "nome": "Estoque e inventário",
+      "tipo": "documento",
+      "modulo": "estoque",
+      "conceito": "ESTOQUE_FISICO",
+      "significado": "Saldos físico/reservado/disponível por item, local e propriedade, e movimentos",
+      "campos": [
+        {"nome": "item", "tipo": "ref", "conceito": "ITEM", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "local", "tipo": "texto", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "propriedade", "tipo": "enum", "valores": ["PROPRIO", "DE_TERCEIRO"], "obrigatorio": true, "origem": "referencia"},
+        {"nome": "fisico", "tipo": "quantidade", "unidade": "UoM do item", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "reservado", "tipo": "quantidade", "unidade": "UoM do item", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "disponivel", "tipo": "quantidade", "unidade": "UoM do item", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "custoMedio", "tipo": "precoUnitario", "unidade": "BRL/UoM", "precisao": 6, "obrigatorio": false, "origem": "derivado"}
+      ],
+      "classificacoes": ["local", "propriedade", "projeto"],
+      "validacoes": [
+        {"regra": "Reserva ≤ disponível sob concorrência real"},
+        {"regra": "Disponível nunca negativo; ajuste e perda exigem motivo"},
+        {"regra": "Custo médio e retroatividade", "pendencia": "PD-011"}
+      ],
+      "comandos": [
+        {"nome": "ReserveStock", "permissao": "stock.reserve", "idempotente": true, "eventos": ["StockReserved"]},
+        {"nome": "ReleaseReservation", "permissao": "stock.reserve", "idempotente": true, "eventos": ["StockReservationReleased"]},
+        {"nome": "ConsumeMaterial", "permissao": "stock.consume", "idempotente": true, "eventos": ["MaterialConsumed"]},
+        {"nome": "ReturnMaterial", "permissao": "stock.consume", "idempotente": true, "eventos": ["MaterialReturned"]},
+        {"nome": "TransferStock", "permissao": "stock.transfer", "idempotente": true, "eventos": ["StockTransferred"]},
+        {"nome": "AdjustStock", "permissao": "stock.adjust", "idempotente": true, "eventos": ["StockAdjusted"]},
+        {"nome": "PostInventoryCount", "permissao": "stock.adjust", "idempotente": true, "eventos": ["InventoryCountPosted"]}
+      ],
+      "indicadores": ["IND-014"],
+      "analises": ["AN-028"],
+      "acoes": ["Reservar", "Consumir", "Transferir", "Devolver", "Ajustar com motivo", "Inventariar"],
+      "permissoes": ["stock.read", "stock.reserve", "stock.consume", "stock.transfer", "stock.adjust"]
+    },
+    {
+      "id": "producao",
+      "versao": 1,
+      "nome": "Ordens de produção",
+      "tipo": "documento",
+      "modulo": "producao",
+      "conceito": "ORDEM_PRODUCAO",
+      "significado": "Execução liberada com roteiro, consumo, horas, perdas e retrabalho",
+      "campos": [
+        {"nome": "numero", "tipo": "codigo", "obrigatorio": true, "origem": "sistema"},
+        {"nome": "projeto", "tipo": "ref", "conceito": "PROJETO", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "equipamento", "tipo": "ref", "conceito": "EQUIPAMENTO", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "revisaoBom", "tipo": "ref", "conceito": "BOM", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "executor", "tipo": "enum", "valores": ["PROPRIO", "TERCEIRO"], "obrigatorio": true, "origem": "usuario"},
+        {
+          "nome": "apontamentos",
+          "tipo": "lista",
+          "itens": "operação, horas, quantidade, perdas, recurso",
+          "obrigatorio": false,
+          "origem": "usuario"
+        },
+        {
+          "nome": "situacao",
+          "tipo": "enum",
+          "valores": ["PLANNED", "RELEASED", "IN_PROGRESS", "SUSPENDED", "COMPLETED", "CANCELLED"],
+          "obrigatorio": true,
+          "origem": "sistema"
+        }
+      ],
+      "classificacoes": ["operacao", "recurso"],
+      "validacoes": [
+        {"regra": "Liberar exige revisão de BOM aplicada e materiais/condições definidos"},
+        {"regra": "Retrabalho explícito e apropriado uma vez"},
+        {"regra": "Liberação condicionada a inspeção", "pendencia": "PD-014"}
+      ],
+      "comandos": [
+        {
+          "nome": "ReleaseProductionOrder",
+          "permissao": "production_order.release",
+          "idempotente": true,
+          "eventos": ["ProductionOrderReleased"]
+        },
+        {"nome": "ReportProduction", "permissao": "production_entry.post", "idempotente": true, "eventos": ["ProductionReported"]},
+        {
+          "nome": "CompleteProductionOrder",
+          "permissao": "production_order.complete",
+          "idempotente": true,
+          "eventos": ["ProductionOrderCompleted"]
+        }
+      ],
+      "indicadores": ["IND-011", "IND-015"],
+      "analises": ["AN-022", "AN-023"],
+      "acoes": ["Liberar", "Apontar execução/horas/consumo", "Concluir"],
+      "permissoes": ["production_order.read", "production_order.release", "production_entry.post", "production_order.complete"]
+    },
+    {
+      "id": "qualidade",
+      "versao": 1,
+      "nome": "Inspeções e qualidade",
+      "tipo": "documento",
+      "modulo": "qualidade",
+      "conceito": "INSPECAO",
+      "significado": "Inspeção por checklist versionado, evidências, não conformidade e retrabalho",
+      "campos": [
+        {"nome": "objeto", "tipo": "texto", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "revisaoChecklist", "tipo": "inteiro", "obrigatorio": true, "origem": "referencia"},
+        {
+          "nome": "itens",
+          "tipo": "lista",
+          "itens": "critério, medição/resultado, limite técnico, evidência",
+          "obrigatorio": true,
+          "origem": "usuario"
+        },
+        {"nome": "responsavel", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
+        {
+          "nome": "resultado",
+          "tipo": "enum",
+          "valores": ["PENDING", "IN_REVIEW", "APPROVED", "REJECTED"],
+          "obrigatorio": true,
+          "origem": "sistema"
+        }
+      ],
+      "classificacoes": ["etapa", "tipoDefeito"],
+      "validacoes": [
+        {"regra": "Critérios e evidências obrigatórias", "pendencia": "PD-014"},
+        {"regra": "Reprovação abre não conformidade; nova inspeção após correção preserva a anterior"}
+      ],
+      "comandos": [
+        {"nome": "RecordInspection", "permissao": "inspection.record", "idempotente": true, "eventos": ["InspectionRecorded"]},
+        {"nome": "ApproveInspection", "permissao": "inspection.approve", "idempotente": true, "eventos": ["InspectionApproved"]},
+        {"nome": "OpenNonconformity", "permissao": "nonconformity.create", "idempotente": true, "eventos": ["NonconformityOpened"]},
+        {"nome": "OpenRework", "permissao": "nonconformity.create", "idempotente": true, "eventos": ["ReworkOrderOpened"]}
+      ],
+      "indicadores": [],
+      "analises": ["AN-024", "AN-025"],
+      "acoes": ["Registrar", "Aprovar/Reprovar", "Abrir correção", "Liberar próxima etapa"],
+      "permissoes": ["inspection.read", "inspection.record", "inspection.approve", "nonconformity.create"]
+    },
+    {
+      "id": "instalacao",
+      "versao": 1,
+      "nome": "Instalação e entrega",
+      "tipo": "documento",
+      "modulo": "instalacao",
+      "conceito": "ACEITE_CLIENTE",
+      "significado": "Agenda, execução, despesas, testes, pendências e aceite real do equipamento",
+      "campos": [
+        {"nome": "equipamento", "tipo": "ref", "conceito": "EQUIPAMENTO", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "inicioPrevisto", "tipo": "data", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "equipe", "tipo": "lista", "itens": "pessoa ou prestador", "obrigatorio": true, "origem": "usuario"},
+        {
+          "nome": "despesas",
+          "tipo": "lista",
+          "itens": "categoria, valor (dinheiro), comprovante",
+          "obrigatorio": false,
+          "origem": "usuario"
+        },
+        {"nome": "pendencias", "tipo": "lista", "itens": "descrição, responsável, prazo", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "dataAceite", "tipo": "data", "obrigatorio": false, "origem": "usuario"}
+      ],
+      "classificacoes": ["etapaMecanicaEletrica"],
+      "validacoes": [{"regra": "Data real de aceite distinta da prevista; exige evidência"}, {"regra": "Início de garantia", "pendencia": "PD-015"}],
+      "comandos": [
+        {"nome": "ScheduleInstallation", "permissao": "installation.schedule", "idempotente": true, "eventos": ["InstallationScheduled"]},
+        {
+          "nome": "RecordInstallationExecution",
+          "permissao": "installation.record",
+          "idempotente": true,
+          "eventos": ["InstallationExecutionRecorded"]
+        },
+        {"nome": "RecognizeInstallationExpense", "permissao": "installation.expense", "idempotente": true, "eventos": ["ExpenseRecognized"]},
+        {"nome": "ConfirmAcceptance", "permissao": "acceptance.confirm", "idempotente": true, "eventos": ["InstallationAccepted"]}
+      ],
+      "indicadores": ["IND-002", "IND-011"],
+      "analises": ["AN-030"],
+      "acoes": ["Programar", "Registrar execução", "Registrar despesa", "Emitir relatório", "Confirmar aceite"],
+      "permissoes": ["installation.read", "installation.schedule", "installation.record", "installation.expense", "acceptance.confirm"]
+    },
+    {
+      "id": "documentos",
+      "versao": 1,
+      "nome": "Documentos e faturamento",
+      "tipo": "documento",
+      "modulo": "documentos",
+      "conceito": "FATURAMENTO",
+      "significado": "Documento emitido/recebido externamente, classificado e vinculado a títulos existentes",
+      "campos": [
+        {"nome": "numero", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "direcao", "tipo": "enum", "valores": ["SAIDA", "ENTRADA"], "obrigatorio": true, "origem": "usuario"},
+        {"nome": "contraparte", "tipo": "ref", "conceito": "PARCEIRO", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "emissao", "tipo": "data", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "competencia", "tipo": "competencia", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "linhas", "tipo": "lista", "itens": "descrição, tipo PRODUTO/SERVICO, valor", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "total", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "vinculos", "tipo": "lista", "itens": "título e valor vinculado", "obrigatorio": false, "origem": "usuario"}
+      ],
+      "classificacoes": ["tipoProdutoServico", "naturezaOperacao", "projeto"],
+      "validacoes": [
+        {"regra": "Documento vincula títulos existentes; não cria nova obrigação de venda"},
+        {"regra": "Σ vínculos ≤ total e ≤ saldo das parcelas", "pendencia": "PD-023"},
+        {"regra": "Classificação fiscal não é inferida só pela descrição"}
+      ],
+      "comandos": [
+        {"nome": "RegisterDocument", "permissao": "document.register", "idempotente": true, "eventos": ["DocumentRegistered"]},
+        {"nome": "LinkDocumentToTitles", "permissao": "document.link", "idempotente": true, "eventos": ["DocumentLinkedToTitles"]},
+        {"nome": "ClassifyDocument", "permissao": "document.classify", "idempotente": true, "eventos": ["DocumentClassified"]}
+      ],
+      "indicadores": ["IND-003", "IND-005"],
+      "analises": ["AN-018", "AN-019"],
+      "acoes": ["Registrar faturamento parcial", "Vincular a títulos", "Classificar", "Anexar"],
+      "permissoes": ["document.read", "document.register", "document.link", "document.classify"]
+    },
+    {
+      "id": "receber",
+      "versao": 1,
+      "nome": "Contas a receber",
+      "tipo": "documento",
+      "modulo": "financeiro",
+      "conceito": "TITULO",
+      "significado": "Títulos a receber, liquidações parciais, ajustes, renegociação e estorno",
+      "campos": [
+        {"nome": "codigo", "tipo": "codigo", "obrigatorio": true, "origem": "sistema"},
+        {"nome": "cliente", "tipo": "ref", "conceito": "CLIENTE", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "origem", "tipo": "texto", "obrigatorio": true, "origem": "sistema"},
+        {"nome": "projeto", "tipo": "ref", "conceito": "PROJETO", "obrigatorio": false, "origem": "referencia"},
+        {"nome": "vencimento", "tipo": "data", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "competencia", "tipo": "competencia", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "valorOriginal", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "ajustes", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "recebido", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "saldo", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {
+          "nome": "situacao",
+          "tipo": "enum",
+          "valores": ["OPEN", "PARTIAL", "SETTLED", "RENEGOTIATED", "CANCELLED"],
+          "obrigatorio": true,
+          "origem": "derivado"
+        }
+      ],
+      "classificacoes": ["categoria", "faixaAtraso", "projeto"],
+      "validacoes": [
+        {"regra": "Saldo = original + ajustes − alocações válidas; nunca negativo"},
+        {"regra": "Vencido é condição por data e saldo, não estado"},
+        {"regra": "Excedente de pagamento", "pendencia": "PD-004"},
+        {"regra": "Estorno parcial", "pendencia": "PD-005"}
+      ],
+      "comandos": [
+        {"nome": "PostSettlement", "permissao": "financial_title.settle", "idempotente": true, "eventos": ["SettlementPosted"]},
+        {"nome": "ReverseSettlement", "permissao": "settlement.reverse", "idempotente": true, "eventos": ["SettlementReversed"]},
+        {"nome": "AdjustTitle", "permissao": "financial_title.adjust", "idempotente": true, "eventos": ["FinancialTitleAdjusted"]},
+        {
+          "nome": "RenegotiateTitles",
+          "permissao": "financial_title.renegotiate",
+          "idempotente": true,
+          "eventos": ["FinancialTitlesRenegotiated"]
+        }
+      ],
+      "indicadores": ["IND-006", "IND-007", "IND-010"],
+      "analises": ["AN-010"],
+      "acoes": ["Registrar recebimento", "Estornar", "Ajustar", "Renegociar"],
+      "permissoes": ["financial_title.read", "financial_title.settle", "settlement.reverse", "financial_title.adjust", "financial_title.renegotiate"]
+    },
+    {
+      "id": "pagar",
+      "versao": 1,
+      "nome": "Contas a pagar",
+      "tipo": "documento",
+      "modulo": "financeiro",
+      "conceito": "TITULO",
+      "significado": "Obrigações a pagar e suas liquidações; pagamento não cria custo",
+      "campos": [
+        {"nome": "codigo", "tipo": "codigo", "obrigatorio": true, "origem": "sistema"},
+        {"nome": "beneficiario", "tipo": "ref", "conceito": "FORNECEDOR", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "origem", "tipo": "texto", "obrigatorio": true, "origem": "sistema"},
+        {"nome": "categoria", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "competencia", "tipo": "competencia", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "vencimento", "tipo": "data", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "valorOriginal", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "pago", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "saldo", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"}
+      ],
+      "classificacoes": ["categoria", "centroResultado", "projeto"],
+      "validacoes": [
+        {"regra": "Título manual exige categoria e competência", "pendencia": "PD-010"},
+        {"regra": "Título originado de compra/repasse/fiscal não é duplicado por documento posterior"}
+      ],
+      "comandos": [
+        {"nome": "RegisterPayableTitle", "permissao": "financial_title.create", "idempotente": true, "eventos": ["FinancialTitleCreated"]},
+        {"nome": "PostSettlement", "permissao": "financial_title.settle", "idempotente": true, "eventos": ["SettlementPosted"]},
+        {"nome": "ReverseSettlement", "permissao": "settlement.reverse", "idempotente": true, "eventos": ["SettlementReversed"]},
+        {"nome": "CancelTitle", "permissao": "financial_title.cancel", "idempotente": true, "eventos": ["FinancialTitleCancelled"]}
+      ],
+      "indicadores": ["IND-008", "IND-010"],
+      "analises": ["AN-011"],
+      "acoes": ["Registrar obrigação", "Programar pagamento", "Baixar parcialmente", "Estornar"],
+      "permissoes": ["financial_title.read", "financial_title.create", "financial_title.settle", "settlement.reverse", "financial_title.cancel"]
+    },
+    {
+      "id": "conciliacao",
+      "versao": 1,
+      "nome": "Contas e conciliação",
+      "tipo": "documento",
+      "modulo": "financeiro",
+      "conceito": "CONCILIACAO",
+      "significado": "Contas, transferências, importação de extrato e conciliação N:N",
+      "campos": [
+        {"nome": "conta", "tipo": "texto", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "periodo", "tipo": "competencia", "obrigatorio": true, "origem": "usuario"},
+        {
+          "nome": "linhasExtrato",
+          "tipo": "lista",
+          "itens": "data, descrição, valor, chave de deduplicação",
+          "obrigatorio": false,
+          "origem": "importacao"
+        },
+        {"nome": "movimentos", "tipo": "lista", "itens": "movimento de caixa", "obrigatorio": false, "origem": "derivado"},
+        {
+          "nome": "diferencas",
+          "tipo": "lista",
+          "itens": "componente explícito (taxa, ajuste) com valor",
+          "obrigatorio": false,
+          "origem": "usuario"
+        }
+      ],
+      "classificacoes": ["conta", "tipoDiferenca"],
+      "validacoes": [
+        {"regra": "Reimportar extrato não duplica linhas nem movimentos"},
+        {"regra": "Transferência própria: saída e entrada vinculadas, efeito consolidado zero"},
+        {"regra": "Estorno de lançamento conciliado", "pendencia": "PD-006"}
+      ],
+      "comandos": [
+        {"nome": "ImportStatement", "permissao": "statement.import", "idempotente": true, "eventos": ["StatementImported"]},
+        {"nome": "Reconcile", "permissao": "reconciliation.create", "idempotente": true, "eventos": ["ReconciliationRecorded"]},
+        {"nome": "UndoReconciliation", "permissao": "reconciliation.undo", "idempotente": true, "eventos": ["ReconciliationUndone"]},
+        {"nome": "TransferBetweenAccounts", "permissao": "transfer.post", "idempotente": true, "eventos": ["TransferPosted"]}
+      ],
+      "indicadores": ["IND-009"],
+      "analises": ["AN-012"],
+      "acoes": ["Importar OFX/CSV", "Conciliar", "Desconciliar", "Transferir", "Tratar diferença"],
+      "permissoes": ["bank_account.read", "statement.import", "reconciliation.create", "reconciliation.undo", "transfer.post"]
+    },
+    {
+      "id": "caixa",
+      "versao": 1,
+      "nome": "Fluxo de caixa",
+      "tipo": "consulta",
+      "modulo": "financeiro",
+      "conceito": "PREVISAO_CAIXA",
+      "significado": "Matriz ANTES + meses, realizado e previsto separados, com composição por célula",
+      "campos": [
+        {
+          "nome": "base",
+          "tipo": "enum",
+          "valores": ["REALIZADO_E_PREVISTO", "SOMENTE_REALIZADO", "SOMENTE_A_REALIZAR"],
+          "obrigatorio": true,
+          "origem": "usuario"
+        },
+        {"nome": "horizonteInicio", "tipo": "competencia", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "horizonteFim", "tipo": "competencia", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "contas", "tipo": "lista", "itens": "conta", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "saldoInicial", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "entradas", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "saidas", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "saldoFinal", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"}
+      ],
+      "classificacoes": ["categoria", "projeto", "beneficiario"],
+      "validacoes": [
+        {"regra": "Saldo inicial + movimento líquido = saldo final; saldos não são somados entre meses"},
+        {"regra": "Parte liquidada não reaparece como previsão"},
+        {"regra": "Repasses, impostos e reservas ausentes aparecem como pendência, não zero"}
+      ],
+      "comandos": [
+        {
+          "nome": "ExportCashMatrix",
+          "modulo": "plataforma",
+          "permissao": "cash_flow.export",
+          "idempotente": true,
+          "eventos": ["ExportRequested"]
+        }
+      ],
+      "indicadores": ["IND-009", "IND-010"],
+      "analises": ["AN-013"],
+      "acoes": ["Filtrar conta/projeto/categoria", "Abrir composição da célula", "Exportar"],
+      "permissoes": ["cash_flow.read", "cash_flow.export"]
+    },
+    {
+      "id": "custos",
+      "versao": 1,
+      "nome": "Custos e resultado",
+      "tipo": "consulta",
+      "modulo": "custos",
+      "conceito": "RESULTADO_PROJETO",
+      "significado": "Orçado, comprometido e incorrido por origem única; resultado na base declarada",
+      "campos": [
+        {"nome": "projeto", "tipo": "ref", "conceito": "PROJETO", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "revisaoOrcamento", "tipo": "inteiro", "obrigatorio": false, "origem": "referencia"},
+        {"nome": "orcado", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "comprometido", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "incorrido", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "baseReceita", "tipo": "enum", "valores": ["CONTRATADA", "FATURADA", "RECEBIDA"], "obrigatorio": true, "origem": "usuario"},
+        {"nome": "margem", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": false, "origem": "derivado"}
+      ],
+      "classificacoes": ["categoria", "equipamento", "area"],
+      "validacoes": [
+        {"regra": "Comprometido e incorrido não são somados automaticamente"},
+        {"regra": "Cada lançamento de custo tem origem única (sourceType, sourceId)"}
+      ],
+      "comandos": [{"nome": "ApproveProjectBudget", "permissao": "project_budget.approve", "idempotente": true, "eventos": ["ProjectBudgetApproved"]}],
+      "indicadores": ["IND-011", "IND-012", "IND-013"],
+      "analises": ["AN-014", "AN-015"],
+      "acoes": ["Comparar orçado/realizado", "Abrir composição", "Aprovar revisão orçamentária"],
+      "permissoes": ["cost.read", "project_budget.approve"]
+    },
+    {
+      "id": "repasses",
+      "versao": 1,
+      "nome": "Repasses",
+      "tipo": "documento",
+      "modulo": "repasses",
+      "conceito": "REPASSE",
+      "significado": "Regra versionada, simulação, confirmação com memória congelada e ajustes",
+      "campos": [
+        {"nome": "regra", "tipo": "texto", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "revisaoRegra", "tipo": "inteiro", "obrigatorio": true, "origem": "referencia"},
+        {
+          "nome": "base",
+          "tipo": "enum",
+          "valores": ["FATURAMENTO", "RECEBIMENTO", "RESULTADO"],
+          "obrigatorio": true,
+          "origem": "referencia"
+        },
+        {"nome": "periodo", "tipo": "competencia", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "valorBase", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {
+          "nome": "linhas",
+          "tipo": "lista",
+          "itens": "beneficiário, percentual, previsto, aprovado, pago, saldo",
+          "obrigatorio": true,
+          "origem": "derivado"
+        },
+        {"nome": "reservaInterna", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": false, "origem": "derivado"},
+        {"nome": "situacao", "tipo": "enum", "valores": ["SIMULATED", "REVIEWED", "CONFIRMED"], "obrigatorio": true, "origem": "sistema"}
+      ],
+      "classificacoes": ["area", "projeto", "beneficiario"],
+      "validacoes": [
+        {"regra": "Simulação não cria obrigação"},
+        {"regra": "Σ distribuição + reserva = base conforme regra; resíduos por política", "pendencia": "PD-002"},
+        {"regra": "Regras, beneficiários e percentuais", "pendencia": "PD-012"}
+      ],
+      "comandos": [
+        {
+          "nome": "ReviseDistributionRule",
+          "permissao": "distribution_rule.revise",
+          "idempotente": true,
+          "eventos": ["DistributionRuleRevised"]
+        },
+        {"nome": "SimulateDistribution", "permissao": "distribution.simulate", "idempotente": true, "eventos": ["DistributionSimulated"]},
+        {
+          "nome": "ConfirmDistribution",
+          "permissao": "distribution.confirm",
+          "idempotente": true,
+          "eventos": ["DistributionConfirmed", "FinancialTitleCreated"]
+        },
+        {"nome": "AdjustDistribution", "permissao": "distribution.adjust", "idempotente": true, "eventos": ["DistributionAdjusted"]}
+      ],
+      "indicadores": ["IND-008", "IND-010"],
+      "analises": ["AN-017"],
+      "acoes": ["Simular", "Aprovar distribuição", "Gerar títulos", "Registrar ajuste"],
+      "permissoes": ["distribution.read", "distribution_rule.revise", "distribution.simulate", "distribution.confirm", "distribution.adjust"]
+    },
+    {
+      "id": "impostos",
+      "versao": 1,
+      "nome": "Impostos gerenciais",
+      "tipo": "documento",
+      "modulo": "fiscal",
+      "conceito": "COMPETENCIA_FISCAL",
+      "significado": "Histórico importado, simulação gerencial e valor do contador separados por competência",
+      "campos": [
+        {"nome": "competencia", "tipo": "competencia", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "receitaDocumentada", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "valorHistorico", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": false, "origem": "importacao"},
+        {"nome": "valorSimulado", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": false, "origem": "derivado"},
+        {"nome": "valorContador", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "revisaoParametros", "tipo": "inteiro", "obrigatorio": false, "origem": "referencia"},
+        {
+          "nome": "situacao",
+          "tipo": "enum",
+          "valores": ["OPEN", "IN_REVIEW", "CONFIRMED", "CLOSED"],
+          "obrigatorio": true,
+          "origem": "sistema"
+        }
+      ],
+      "classificacoes": ["tipoProdutoServico", "anexo"],
+      "validacoes": [
+        {"regra": "Sem histórico/enquadramento, simulação é NOT_CALCULABLE; mês desconhecido não vira zero"},
+        {"regra": "Parâmetros e regra de RBT12", "pendencia": "PD-013"},
+        {"regra": "Reabertura exige permissão e motivo"}
+      ],
+      "comandos": [
+        {"nome": "ReviseTaxParameters", "permissao": "tax_parameter.revise", "idempotente": true, "eventos": ["TaxParameterRevised"]},
+        {"nome": "SimulateTaxPeriod", "permissao": "tax_period.simulate", "idempotente": true, "eventos": ["TaxSimulationRecorded"]},
+        {
+          "nome": "ConfirmTaxPeriod",
+          "permissao": "tax_period.confirm",
+          "idempotente": true,
+          "eventos": ["TaxPeriodConfirmed", "FinancialTitleCreated"]
+        },
+        {"nome": "CloseTaxPeriod", "permissao": "tax_period.close", "idempotente": true, "eventos": ["TaxPeriodClosed"]},
+        {"nome": "ReopenTaxPeriod", "permissao": "tax_period.reopen", "idempotente": true, "eventos": ["TaxPeriodReopened"]}
+      ],
+      "indicadores": ["IND-005"],
+      "analises": ["AN-019"],
+      "acoes": ["Conferir", "Anexar apuração externa", "Confirmar obrigação", "Fechar", "Reabrir com motivo"],
+      "permissoes": ["tax_period.read", "tax_parameter.revise", "tax_period.simulate", "tax_period.confirm", "tax_period.close", "tax_period.reopen"]
+    },
+    {
+      "id": "assistencia",
+      "versao": 1,
+      "nome": "Assistência técnica",
+      "tipo": "documento",
+      "modulo": "posvenda",
+      "conceito": "CHAMADO",
+      "significado": "Chamado → diagnóstico → OS → peças/horas/despesas → solução vinculados ao equipamento",
+      "campos": [
+        {"nome": "numero", "tipo": "codigo", "obrigatorio": true, "origem": "sistema"},
+        {"nome": "equipamento", "tipo": "ref", "conceito": "EQUIPAMENTO", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "sintoma", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "prioridade", "tipo": "enum", "valores": ["BAIXA", "MEDIA", "ALTA", "CRITICA"], "obrigatorio": true, "origem": "usuario"},
+        {
+          "nome": "garantia",
+          "tipo": "enum",
+          "valores": ["EM_GARANTIA", "FORA_GARANTIA", "A_AVALIAR"],
+          "obrigatorio": true,
+          "origem": "derivado"
+        },
+        {"nome": "pecas", "tipo": "lista", "itens": "item, quantidade (consumo de estoque)", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "horas", "tipo": "quantidade", "unidade": "h", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "solucao", "tipo": "texto", "obrigatorio": false, "origem": "usuario"}
+      ],
+      "classificacoes": ["codigoFalha", "prioridade", "garantia"],
+      "validacoes": [
+        {"regra": "Garantia avaliada por termos registrados", "pendencia": "PD-015"},
+        {"regra": "Peças consumidas pelo estoque; custo de assistência aparece uma vez"}
+      ],
+      "comandos": [
+        {"nome": "OpenServiceTicket", "permissao": "service_ticket.create", "idempotente": true, "eventos": ["ServiceTicketOpened"]},
+        {"nome": "CreateServiceOrder", "permissao": "service_order.create", "idempotente": true, "eventos": ["ServiceOrderCreated"]},
+        {"nome": "ConsumeMaterial", "modulo": "estoque", "permissao": "stock.consume", "idempotente": true, "eventos": ["MaterialConsumed"]},
+        {"nome": "RecordServiceExecution", "permissao": "service_order.execute", "idempotente": true, "eventos": ["ServiceOrderExecuted"]},
+        {"nome": "CloseServiceTicket", "permissao": "service_ticket.close", "idempotente": true, "eventos": ["ServiceTicketClosed"]}
+      ],
+      "indicadores": ["IND-017", "IND-011"],
+      "analises": ["AN-031", "AN-009"],
+      "acoes": ["Abrir OS", "Consumir peças", "Registrar atendimento", "Encerrar"],
+      "permissoes": ["service_ticket.read", "service_ticket.create", "service_order.create", "service_order.execute", "service_ticket.close"]
+    },
+    {
+      "id": "preventiva",
+      "versao": 1,
+      "nome": "Manutenção preventiva",
+      "tipo": "documento",
+      "modulo": "posvenda",
+      "conceito": "PREVENTIVA",
+      "significado": "Plano versionado por equipamento; cada ocorrência gera no máximo uma OS",
+      "campos": [
+        {"nome": "equipamento", "tipo": "ref", "conceito": "EQUIPAMENTO", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "plano", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "revisaoPlano", "tipo": "inteiro", "obrigatorio": true, "origem": "sistema"},
+        {"nome": "periodicidadeDias", "tipo": "inteiro", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "ultimaExecucao", "tipo": "data", "obrigatorio": false, "origem": "derivado"},
+        {"nome": "proximaExecucao", "tipo": "data", "obrigatorio": true, "origem": "derivado"}
+      ],
+      "classificacoes": ["tipoPlano"],
+      "validacoes": [
+        {"regra": "Chave única (plano, revisão, equipamento, data programada) impede OS duplicada"},
+        {"regra": "Reagendamento preserva a data anterior"}
+      ],
+      "comandos": [
+        {"nome": "RevisePreventivePlan", "permissao": "preventive_plan.revise", "idempotente": true, "eventos": ["PreventivePlanRevised"]},
+        {
+          "nome": "GeneratePreventiveOrders",
+          "permissao": "preventive_plan.generate",
+          "idempotente": true,
+          "eventos": ["PreventiveOrderCreated"]
+        }
+      ],
+      "indicadores": ["IND-017"],
+      "analises": ["AN-031"],
+      "acoes": ["Programar", "Gerar OS", "Registrar execução"],
+      "permissoes": ["preventive_plan.read", "preventive_plan.revise", "preventive_plan.generate"]
+    },
+    {
+      "id": "relatorios",
+      "versao": 1,
+      "nome": "Relatórios",
+      "tipo": "consulta",
+      "modulo": "consultas",
+      "conceito": "INDICADOR",
+      "significado": "Relatórios com a mesma base, filtros e autorização das telas; exportação por job",
+      "campos": [
+        {"nome": "relatorio", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "periodo", "tipo": "competencia", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "filtros", "tipo": "lista", "itens": "filtro tipado", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "formato", "tipo": "enum", "valores": ["PDF", "CSV", "XLSX"], "obrigatorio": false, "origem": "usuario"},
+        {"nome": "dataCorte", "tipo": "instante", "obrigatorio": true, "origem": "sistema"}
+      ],
+      "classificacoes": ["area"],
+      "validacoes": [
+        {"regra": "CSV neutraliza fórmulas; exportação usa mesmo corte da tela"},
+        {"regra": "Sem fórmula duplicada: usa IndicatorDefinition"}
+      ],
+      "comandos": [{"nome": "RequestExport", "modulo": "plataforma", "permissao": "report.export", "idempotente": true, "eventos": ["ExportRequested"]}],
+      "indicadores": ["IND-001", "IND-007", "IND-009", "IND-011", "IND-013", "IND-014", "IND-017"],
+      "analises": ["AN-038"],
+      "acoes": ["Filtrar", "Detalhar", "Exportar"],
+      "permissoes": ["report.read", "report.export"]
+    },
+    {
+      "id": "importacao",
+      "versao": 1,
+      "nome": "Importação e conferência",
+      "tipo": "documento",
+      "modulo": "integracao",
+      "conceito": "IMPORTACAO",
+      "significado": "Arquivo processado para área de conferência; aplicação somente após decisão, idempotente",
+      "campos": [
+        {"nome": "arquivo", "tipo": "anexo", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "sha256", "tipo": "texto", "obrigatorio": true, "origem": "sistema"},
+        {"nome": "processador", "tipo": "texto", "obrigatorio": true, "origem": "sistema"},
+        {
+          "nome": "candidatos",
+          "tipo": "lista",
+          "itens": "página, linha/coordenadas, texto original, valor proposto, correspondência, problemas",
+          "obrigatorio": false,
+          "origem": "importacao"
+        },
+        {
+          "nome": "decisoes",
+          "tipo": "lista",
+          "itens": "aprovar/rejeitar/corrigir com valor corrigido",
+          "obrigatorio": false,
+          "origem": "usuario"
+        },
+        {
+          "nome": "totaisReconciliacao",
+          "tipo": "lista",
+          "itens": "total da origem × total aplicado",
+          "obrigatorio": false,
+          "origem": "derivado"
+        }
+      ],
+      "classificacoes": ["tipoFonte", "tipoProblema"],
+      "validacoes": [
+        {"regra": "Original e corrigido preservados; evidência nunca sobrescrita"},
+        {"regra": "Reenvio do mesmo arquivo não duplica aplicação"},
+        {"regra": "Data de corte e saldos iniciais", "pendencia": "PD-019"}
+      ],
+      "comandos": [
+        {"nome": "UploadImportFile", "permissao": "import.upload", "idempotente": true, "eventos": ["ImportFileReceived"]},
+        {"nome": "DecideStagingRecord", "permissao": "import.review", "idempotente": true, "eventos": ["ImportReviewDecided"]},
+        {"nome": "ApplyImport", "permissao": "import.apply", "idempotente": true, "eventos": ["ImportApplied"]}
+      ],
+      "indicadores": ["IND-019"],
+      "analises": ["AN-012"],
+      "acoes": ["Enviar arquivo", "Corrigir mapeamento", "Aprovar registros", "Aplicar lote"],
+      "permissoes": ["import.read", "import.upload", "import.review", "import.apply"]
+    },
+    {
+      "id": "configuracoes",
+      "versao": 1,
+      "nome": "Configurações e manutenção",
+      "tipo": "cadastro",
+      "modulo": "plataforma",
+      "conceito": "FATO_OPERACIONAL",
+      "significado": "Empresa, acesso, parâmetros, calendários, auditoria e backups conforme permissão",
+      "campos": [
+        {
+          "nome": "grupo",
+          "tipo": "enum",
+          "valores": ["EMPRESA", "ACESSO", "CONEXAO", "PARAMETROS", "CALENDARIOS", "AUDITORIA", "BACKUPS"],
+          "obrigatorio": true,
+          "origem": "usuario"
+        },
+        {"nome": "chave", "tipo": "texto", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "valor", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "vigenteDesde", "tipo": "data", "obrigatorio": false, "origem": "usuario"}
+      ],
+      "classificacoes": ["grupo"],
+      "validacoes": [
+        {"regra": "Sem shell remoto nem restauração irrestrita; operações administrativas restritas"},
+        {"regra": "Perfis reais", "pendencia": "PD-009"},
+        {"regra": "Metas de backup", "pendencia": "PD-021"}
+      ],
+      "comandos": [
+        {"nome": "ChangeSetting", "permissao": "settings.update", "idempotente": true, "eventos": ["SettingChanged"]},
+        {"nome": "GrantAccess", "modulo": "acesso", "permissao": "access.admin", "idempotente": true, "eventos": ["AccessGranted"]},
+        {"nome": "RevokeAccess", "modulo": "acesso", "permissao": "access.admin", "idempotente": true, "eventos": ["AccessRevoked"]},
+        {"nome": "RequestBackup", "permissao": "backup.request", "idempotente": true, "eventos": ["BackupRequested"]}
+      ],
+      "indicadores": [],
+      "analises": [],
+      "acoes": ["Versionar parâmetro", "Administrar acesso", "Consultar auditoria", "Solicitar backup"],
+      "permissoes": ["settings.read", "settings.update", "access.admin", "audit.read", "backup.request"]
+    }
+  ]
+}

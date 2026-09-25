@@ -31,3 +31,7 @@ Spring Boot, PostgreSQL, bibliotecas analíticas e versões são propostas a reg
 ## Documentos canônicos no projeto
 
 As versões atuais deste plano estão em `docs/backend/`. Os documentos gerais em `docs/` receberam uma nota de atualização apontando para essa ampliação. Esta pasta exportada é um retrato com data, adequado para compartilhar. O ZIP não inclui código executável do backend; contém o planejamento completo.
+
+## Execução no repositório
+
+O andamento real está em `progresso.md` e `backlog-execucao.md`. As entregas do B01 começam em `10-b01-fundacao.md` (documentos 10–15, catálogos em `b01/` e verificador em `tools/b01/`).
