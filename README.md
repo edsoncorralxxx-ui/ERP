@@ -29,6 +29,14 @@ Não é preciso instalar Maven: o projeto usa o Maven Wrapper (`./mvnw`).
 
 ### 2. Criar o banco (uma vez)
 
+Antes, confirme que o PostgreSQL está rodando:
+
+```bash
+pg_isready          # esperado: "/tmp:5432 - accepting connections"
+```
+
+Se não estiver, veja **Problemas comuns** no fim desta seção. Depois:
+
 ```bash
 createuser renda --pwprompt        # digite a senha: renda
 createdb renda --owner renda
@@ -64,6 +72,19 @@ npm run dev
 ```
 
 A janela do Renda+ ERP abre. No rodapé deve aparecer **Conectado · servidor 0.1.0-SNAPSHOT**. Em *Módulos → Administração → Dados da empresa* você edita e salva os dados.
+
+### Problemas comuns
+
+**`createuser: erro: a conexão com o servidor no soquete "/tmp/.s.PGSQL.5432" falhou`** — o PostgreSQL não está rodando.
+
+1. `brew services list` — veja a situação de `postgresql@16`.
+2. `brew services restart postgresql@16`, espere alguns segundos e rode `pg_isready`.
+3. Se continuar, leia o log: `tail -20 "$(brew --prefix)/var/log/postgresql@16.log"`
+   - `Address already in use`: outro PostgreSQL (ex.: Postgres.app) já usa a porta 5432; feche-o.
+   - `does not exist` / `is not a database cluster`: inicialize com `initdb --locale=C -E UTF-8 "$(brew --prefix)/var/postgresql@16"` e repita o passo 2.
+   - `lock file "postmaster.pid" already exists`: `rm "$(brew --prefix)/var/postgresql@16/postmaster.pid"` e repita o passo 2.
+
+**`java: command not found` ou versão errada** — refaça o comando do PATH do passo 1 e abra um novo Terminal.
 
 ### Rodar os testes
 
