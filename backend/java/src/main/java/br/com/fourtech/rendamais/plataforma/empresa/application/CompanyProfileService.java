@@ -1,5 +1,7 @@
 package br.com.fourtech.rendamais.plataforma.empresa.application;
 
+import br.com.fourtech.rendamais.acesso.api.CurrentUserHolder;
+import br.com.fourtech.rendamais.acesso.api.Permissions;
 import br.com.fourtech.rendamais.auditoria.api.AuditEntry;
 import br.com.fourtech.rendamais.auditoria.api.AuditTrail;
 import br.com.fourtech.rendamais.kernel.VersionConflictException;
@@ -29,16 +31,17 @@ public class CompanyProfileService {
 
     @Transactional(readOnly = true)
     public CompanyProfile get() {
+        CurrentUserHolder.require(Permissions.COMPANY_READ);
         return repository.get();
     }
 
     @Transactional
     public CompanyProfile update(long expectedVersion, CompanyProfileData data) {
+        String actor = CurrentUserHolder.require(Permissions.COMPANY_UPDATE).username();
         CompanyProfile current = repository.getForUpdate();
         if (current.version() != expectedVersion) {
             throw new VersionConflictException("company_profile", expectedVersion, current.version());
         }
-        String actor = CurrentActor.name();
         CompanyProfile updated = current.update(data, clock.instant(), actor);
         if (!repository.save(updated, expectedVersion)) {
             throw new VersionConflictException("company_profile", expectedVersion, repository.get().version());

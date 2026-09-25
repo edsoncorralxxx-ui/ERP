@@ -10,7 +10,7 @@ Um ADR Proposto orienta o trabalho, mas não equivale a aprovação. A lista ori
 | [ADR-002](ADR-002-oop-e-padroes.md) | Orientação a objetos e padrões de projeto | Aceito — definido pelo usuário |
 | [ADR-003](ADR-003-motor-integrado.md) | Motor integrado de dados, análise e decisão | Aceito — incluído por solicitação do usuário |
 | [ADR-004](ADR-004-framework-versoes-banco.md) | Framework, versões e banco | Aceito pelo PO em 25/09/2026 (Sprint 1) |
-| [ADR-005](ADR-005-autenticacao-sessoes.md) | Autenticação, sessões e perfis | Pendente |
+| [ADR-005](ADR-005-autenticacao-sessoes.md) | Autenticação, sessões e perfis | Aceito pelo PO em 25/09/2026 (Sprint 2) |
 | [ADR-006](ADR-006-valores-unidades-arredondamento.md) | Valores, unidades e arredondamento | Proposto — regras finais pendentes |
 | [ADR-007](ADR-007-topologia-capacidade.md) | Topologia e capacidade | Pendente |
 | [ADR-008](ADR-008-arquivos-e-tarefas.md) | Arquivos e tarefas duráveis | Proposto — detalhar em B02–B04 |
