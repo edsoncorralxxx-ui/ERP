@@ -1,0 +1,16 @@
+﻿ID;Tema;Situação;Conteúdo;Momento
+ADR-001;Arquitetura cliente-servidor;Definido pelo usuário;"Electron + React macOS; Java + Python servidor";Manter
+ADR-002;Orientação a objetos e padrões;Definido pelo usuário;"OOP aplicado conforme documento 06; padrões por responsabilidade";Desde B01
+ADR-003;Motor integrado de dados/análise/decisão;Incluído por solicitação do usuário;"Catálogo 38 recursos; dados/validação condicionam métodos";B01–B16
+ADR-004;Framework, versões e banco;Proposta a registrar;"Spring Boot modular e PostgreSQL; versões não fixadas";Antes B02
+ADR-005;Autenticação e sessões;Pendente;Mecanismo, expiração, revogação, administração e perfis reais;B02–B03
+ADR-006;Valores, unidades e arredondamento;Proposta + regras pendentes;"Centavos/string API, decimal em cálculo; modo e resíduos definidos por contrato";Antes B05
+ADR-007;Topologia e capacidade;Pendente;Local/remota, SO, usuários, volumes, rede e recursos;Antes piloto
+ADR-008;Arquivos e jobs;Proposta a detalhar;Storage privado, API interna, leases/generation, outbox;B02–B04
+ADR-009;Custo/retroatividade/estoque;Regra do plano + detalhe pendente;Custo médio móvel, propriedade/local, política retroativa;Antes B08
+ADR-010;Comercial/financeiro;Pendente de regras específicas;Geração de projetos, parcelas, cancelamento, renegociação e adiantamentos;Antes B05–B06
+ADR-011;Repasses/fiscal;Pendente de validação;Bases/beneficiários/vigência, contador, parâmetros e histórico;Antes B10 operacional
+ADR-012;Modelos e critérios de habilitação;Proposto;Estado por versão, baseline, qualidade, métricas, fallback e monitoramento;Por método em B15
+ADR-013;Operação e retenção;Pendente;RPO/RTO, backup, retenção dados/anexos/analíticos, responsáveis;Antes B13
+ADR-014;IA externa;Futuro/desativado;Provedor, dados permitidos, retenção e acesso autorizado;Antes B16
+ADR-015;Escrita offline e sincronização;Fora da versão inicial;"Documento antigo não substitui decisão cliente-servidor; rede local pode operar sem internet externa";Nova decisão explícita se necessário
