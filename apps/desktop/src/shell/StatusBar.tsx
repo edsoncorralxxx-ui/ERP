@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { data, hora } from '../format';
 import type { Connection } from './useConnection';
 
 export type StatusMessage = { tone: 'erro' | 'aviso' | 'sucesso' | 'info'; text: string };
@@ -25,9 +26,26 @@ const ICON: Record<StatusMessage['tone'], string> = { erro: 'status-erro', aviso
 export function StatusBar({ connection, user, activeTitle, company, message, log, onDismiss }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [logMode, setLogMode] = useState<'fechado' | 'aberto' | 'max'>('fechado');
+  const [limite, setLimite] = useState<number | null>(null);
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(t);
+  }, []);
+
+  // Campo com limite de tamanho em foco: o compartimento da esquerda mostra "(250 caracteres)" (componente Barra de status).
+  useEffect(() => {
+    const entrou = (e: FocusEvent) => {
+      const el = e.target;
+      const editavel = (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) && !el.readOnly && !el.disabled;
+      setLimite(editavel && el.maxLength > 0 ? el.maxLength : null);
+    };
+    const saiu = () => setLimite(null);
+    document.addEventListener('focusin', entrou);
+    document.addEventListener('focusout', saiu);
+    return () => {
+      document.removeEventListener('focusin', entrou);
+      document.removeEventListener('focusout', saiu);
+    };
   }, []);
 
   // Sucesso e informação somem após 5 s; erro e aviso ficam até a próxima ação (componente Barra de status).
@@ -82,7 +100,7 @@ export function StatusBar({ connection, user, activeTitle, company, message, log
                           {TONE[m.tone]}
                         </span>
                       </td>
-                      <td>{m.at.toLocaleTimeString('pt-BR')}</td>
+                      <td>{hora(m.at, true)}</td>
                       <td>{m.text}</td>
                     </tr>
                   ))}
@@ -120,11 +138,17 @@ export function StatusBar({ connection, user, activeTitle, company, message, log
           </span>
         </div>
         <div className="rp-slots rp-slots--marca" role="status" aria-live="polite">
-          <span className="rp-slot" title="Usuário">
-            <i className="rp-ico rp-ico-usuario" aria-hidden="true" />
-            {user}
-          </span>
-          <span className="rp-slot rp-slot--centro">{now.toLocaleDateString('pt-BR')}</span>
+          {limite !== null ? (
+            <span className="rp-slot rp-status-limite" title="Tamanho permitido do campo">
+              ({limite.toLocaleString('pt-BR')} {limite === 1 ? 'caractere' : 'caracteres'})
+            </span>
+          ) : (
+            <span className="rp-slot" title="Usuário">
+              <i className="rp-ico rp-ico-usuario" aria-hidden="true" />
+              {user}
+            </span>
+          )}
+          <span className="rp-slot rp-slot--centro">{data(now)}</span>
           <span className="rp-slot" title="Empresa">
             <i className="rp-ico rp-ico-bancos" aria-hidden="true" />
             {company ?? 'Empresa não configurada'}
@@ -134,7 +158,7 @@ export function StatusBar({ connection, user, activeTitle, company, message, log
             {connText}
           </span>
           <span className="rp-slot" title="Janela ativa">{activeTitle ?? ''}</span>
-          <span className="rp-slot rp-slot--centro">{now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+          <span className="rp-slot rp-slot--centro">{hora(now)}</span>
           <span className="rp-slot" title="Versão do servidor">{connection.state === 'online' ? `Servidor ${connection.status.serverVersion}` : ''}</span>
           <span className="rp-slot" title="Versão da API">{connection.state === 'online' ? `API ${connection.status.apiVersion}` : ''}</span>
           <span className="rp-logo rp-logo--rodape rp-rodape-marca" aria-label="Renda+ ERP">

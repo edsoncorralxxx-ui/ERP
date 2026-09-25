@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { api, ApiError } from '../api/client';
 import type { Customer, CustomerContact, CustomerUnit, HistoryEntry } from '../api/types';
+import { dataHora as formatarDataHora } from '../format';
 import { Dialog } from '../shell/Dialog';
 import { useSession } from '../shell/SessionContext';
 import { useWindow } from '../windows/WindowContext';
@@ -18,7 +19,11 @@ const CONTATO: Contact = { id: null, name: '', role: '', phone: '', email: '' };
 const s = (v: string | null | undefined) => v ?? '';
 const n = (v: string) => (v.trim() === '' ? null : v.trim());
 const cep = (v: string | null) => (v && /^\d{8}$/.test(v) ? `${v.slice(0, 5)}-${v.slice(5)}` : s(v));
-const dataHora = (iso: string | null) => (iso ? new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '');
+const dataHora = (iso: string | null) => formatarDataHora(iso);
+
+// Tamanho máximo de cada campo (colunas de cadastros.partner, partner_unit e partner_contact); o rodapé mostra o
+// limite quando o campo está em foco.
+const MAX = { legalName: 200, tradeName: 200, cnpj: 18, group: 100, name: 120, street: 200, number: 20, district: 100, city: 100, state: 2, postalCode: 9, role: 100, phone: 30, email: 200 } as const;
 
 function toForm(c: Customer): Form {
   return {
@@ -98,6 +103,7 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
     } catch (e) {
       const x = e as ApiError;
       setErroCarga(x.isNetwork ? 'Sem conexão com o servidor. Tente de novo quando a conexão voltar.' : `${x.message} (${x.code})`);
+      winRef.current.notify({ tone: 'erro', text: `${x.message} (${x.code}) [${x.correlationId ?? '—'}]` });
     } finally {
       setCarregando(false);
     }
@@ -221,6 +227,7 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
           id={fid(k)}
           className={`rp-field${somenteLeitura ? ' rp-field--readonly' : ''}`}
           value={form[k]}
+          maxLength={MAX[k]}
           readOnly={somenteLeitura}
           required={obrigatorio}
           aria-invalid={!!erro}
@@ -241,13 +248,14 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
     );
   };
 
-  const celula = (prefixo: string, i: number, chaveCampo: string, valor: string, onChange: (v: string) => void, rotulo: string, extra = '') => {
+  const celula = (prefixo: string, i: number, chaveCampo: keyof typeof MAX, valor: string, onChange: (v: string) => void, rotulo: string, extra = '') => {
     const erro = erros[`${prefixo}[${i}].${chaveCampo}`];
     return (
       <td>
         <input
           className={`rp-field${extra}`}
           value={valor}
+          maxLength={MAX[chaveCampo]}
           readOnly={somenteLeitura}
           aria-label={`${rotulo} da linha ${i + 1}`}
           aria-invalid={!!erro}
@@ -257,6 +265,30 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
       </td>
     );
   };
+
+  // Tabela de edição: Ctrl+Insert adiciona uma linha e Ctrl+Delete remove a linha em foco.
+  const teclasDaTabela = (lista: 'units' | 'contacts', vazia: Unit | Contact) => (e: KeyboardEvent<HTMLTableElement>) => {
+    if (somenteLeitura || !e.ctrlKey || (e.key !== 'Insert' && e.key !== 'Delete')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.key === 'Insert') {
+      setForm((f) => ({ ...f, [lista]: [...f[lista], { ...vazia }] }));
+      return;
+    }
+    const linha = (e.target as HTMLElement).closest('tr');
+    const i = linha ? Array.from(linha.parentElement?.children ?? []).indexOf(linha) : -1;
+    setForm((f) => (i >= 0 && i < f[lista].length ? { ...f, [lista]: f[lista].filter((_, j) => j !== i) } : f));
+  };
+
+  // Última linha da tabela de edição: clicar (ou Enter) nela cria o item, sem botão "+" no meio da grade.
+  const linhaNova = (numero: number, colunas: number, texto: string, criar: () => void) => (
+    <tr className="nova">
+      <td className="rownum">{numero}</td>
+      <td colSpan={colunas} role="button" tabIndex={0} onClick={criar} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), criar())}>
+        {texto}
+      </td>
+    </tr>
+  );
 
   const errosDaLista = (prefixo: string, nome: string) =>
     Object.entries(erros)
@@ -353,11 +385,13 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
                     <span className="rp-tabela-tit">Unidades industriais do cliente</span>
                   </div>
                   <div className="rp-grid-rolagem rp-rolagem rp-ficha__grade">
-                    <table className={`rp-grid rp-grid--edicao${adicao && !somenteLeitura ? ' rp-form--adicao' : ''}`}>
+                    <table className={`rp-grid rp-grid--edicao${adicao && !somenteLeitura ? ' rp-form--adicao' : ''}`} onKeyDown={teclasDaTabela('units', UNIDADE)}>
                       <thead>
                         <tr>
                           <th className="rp-ficha__col-num">#</th>
-                          <th>Nome *</th>
+                          <th>
+                            Nome <span className="rp-req">*</span>
+                          </th>
                           <th>Logradouro</th>
                           <th className="rp-ficha__col-curta">Nº</th>
                           <th>Bairro</th>
@@ -391,16 +425,7 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
                             </td>
                           </tr>
                         ))}
-                        {!somenteLeitura && (
-                          <tr className="nova">
-                            <td className="rownum">{form.units.length + 1}</td>
-                            <td colSpan={8}>
-                              <button type="button" className="rp-ficha__nova" onClick={() => set({ units: [...form.units, { ...UNIDADE }] })}>
-                                Clique para adicionar uma unidade…
-                              </button>
-                            </td>
-                          </tr>
-                        )}
+                        {!somenteLeitura && linhaNova(form.units.length + 1, 8, 'Clique para adicionar uma unidade…', () => set({ units: [...form.units, { ...UNIDADE }] }))}
                       </tbody>
                     </table>
                   </div>
@@ -416,11 +441,13 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
                     <span className="rp-tabela-tit">Contatos do cliente</span>
                   </div>
                   <div className="rp-grid-rolagem rp-rolagem rp-ficha__grade">
-                    <table className="rp-grid rp-grid--edicao">
+                    <table className={`rp-grid rp-grid--edicao${adicao && !somenteLeitura ? ' rp-form--adicao' : ''}`} onKeyDown={teclasDaTabela('contacts', CONTATO)}>
                       <thead>
                         <tr>
                           <th className="rp-ficha__col-num">#</th>
-                          <th>Nome *</th>
+                          <th>
+                            Nome <span className="rp-req">*</span>
+                          </th>
                           <th>Função</th>
                           <th>Telefone</th>
                           <th>E-mail</th>
@@ -448,16 +475,7 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
                             </td>
                           </tr>
                         ))}
-                        {!somenteLeitura && (
-                          <tr className="nova">
-                            <td className="rownum">{form.contacts.length + 1}</td>
-                            <td colSpan={5}>
-                              <button type="button" className="rp-ficha__nova" onClick={() => set({ contacts: [...form.contacts, { ...CONTATO }] })}>
-                                Clique para adicionar um contato…
-                              </button>
-                            </td>
-                          </tr>
-                        )}
+                        {!somenteLeitura && linhaNova(form.contacts.length + 1, 5, 'Clique para adicionar um contato…', () => set({ contacts: [...form.contacts, { ...CONTATO }] }))}
                       </tbody>
                     </table>
                   </div>
@@ -545,17 +563,23 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
         >
           O cliente {cliente?.code} deixa de aparecer na lista de ativos; o histórico é preservado.
           <br />
-          <label className="rp-ficha__motivo">
-            Motivo da inativação
+          <div className="rp-form rp-msgbox__form">
+            <label className="rp-label" htmlFor={fid('motivo')}>Motivo</label>
             <input
+              id={fid('motivo')}
               className="rp-field"
+              maxLength={500}
               value={inativar.motivo}
               aria-invalid={!!inativar.erro}
               onChange={(e) => setInativar({ motivo: e.target.value, erro: null })}
               onKeyDown={(e) => e.key === 'Enter' && void confirmarInativacao()}
             />
-          </label>
-          {inativar.erro && <span className="rp-campo-erro">{inativar.erro}</span>}
+          </div>
+          {inativar.erro && (
+            <span className="rp-campo-erro">
+              <i className="rp-ico rp-ico-status-erro" aria-hidden="true" /> {inativar.erro}
+            </span>
+          )}
         </Dialog>
       )}
 

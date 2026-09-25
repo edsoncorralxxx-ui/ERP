@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { api, ApiError } from '../api/client';
 import type { CompanyProfile } from '../api/types';
+import { dataHora } from '../format';
 import { Dialog } from '../shell/Dialog';
 import { useWindow } from '../windows/WindowContext';
 
@@ -61,6 +62,11 @@ const API_FIELD: Record<keyof Form, string> = {
 };
 
 type Tab = 'geral' | 'endereco';
+
+// Tamanho máximo de cada campo (colunas de plataforma.company_profile); o rodapé mostra o limite no foco.
+const MAX: Record<keyof Form, number> = {
+  legalName: 200, tradeName: 200, cnpj: 18, street: 200, number: 20, complement: 100, district: 100, city: 100, state: 2, postalCode: 9, phone: 30, email: 200,
+};
 
 const GERAL: [keyof Form, string, boolean][] = [
   ['legalName', 'Razão social', true],
@@ -196,6 +202,7 @@ export function CompanyProfileWindow() {
               id={id}
               className={`rp-field${key === 'state' || key === 'postalCode' || key === 'number' ? ' rp-field--curto' : ''}`}
               value={form[key]}
+              maxLength={MAX[key]}
               required={required}
               aria-invalid={!!error}
               aria-describedby={error ? `${id}-erro` : undefined}
@@ -217,7 +224,7 @@ export function CompanyProfileWindow() {
     </div>
   );
 
-  const updated = profile?.updatedAt ? `${new Date(profile.updatedAt).toLocaleString('pt-BR')} por ${profile.updatedBy}` : '';
+  const updated = profile?.updatedAt ? `${dataHora(profile.updatedAt)} por ${profile.updatedBy}` : '';
 
   return (
     <>

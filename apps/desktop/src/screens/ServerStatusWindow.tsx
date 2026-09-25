@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
+import { dataHora, hora } from '../format';
 import type { Connection } from '../shell/useConnection';
 import { useWindow } from '../windows/WindowContext';
 
@@ -20,28 +21,21 @@ export function ServerStatusWindow({ connection }: { connection: Connection }) {
     rows.push(['Versão do servidor', connection.status.serverVersion]);
     rows.push(['Versão da API', connection.status.apiVersion]);
     rows.push(['Banco de dados', connection.status.database === 'UP' ? 'Disponível' : 'Indisponível']);
-    rows.push(['Horário do servidor', new Date(connection.status.serverTime).toLocaleString('pt-BR')]);
+    rows.push(['Horário do servidor', dataHora(connection.status.serverTime, true)]);
   }
-  if (connection.state !== 'checking') rows.push(['Última verificação', connection.checkedAt.toLocaleTimeString('pt-BR')]);
+  if (connection.state !== 'checking') rows.push(['Última verificação', hora(connection.checkedAt, true)]);
   return (
     <>
       <div className="rp-window-body rp-janela-mdi__corpo">
-        <table className="rp-grid rp-janela-mdi__grade">
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th>Valor</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(([k, v]) => (
-              <tr key={k}>
-                <td>{k}</td>
-                <td>{v}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {/* Valores só de consulta: rótulo à esquerda e campo somente leitura (componente Campo de texto). */}
+        <div className="rp-form rp-janela-mdi__form rp-status-servidor">
+          {rows.map(([k, v]) => (
+            <Fragment key={k}>
+              <label className="rp-label" htmlFor={`${win.windowId}-${k}`}>{k}</label>
+              <input id={`${win.windowId}-${k}`} className="rp-field rp-field--readonly" readOnly value={v} />
+            </Fragment>
+          ))}
+        </div>
       </div>
       <div className="rp-window-foot">
         <div className="rp-btn-row">

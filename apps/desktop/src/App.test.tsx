@@ -93,6 +93,18 @@ describe('moldura do aplicativo', () => {
     expect(futura).toHaveAttribute('aria-disabled', 'true');
   });
 
+  it('campo com limite em foco mostra o tamanho permitido no rodapé', async () => {
+    servidor();
+    const user = await entrar();
+    const gaveta = screen.getByRole('complementary', { name: 'Módulos' });
+    await user.click(within(gaveta).getByRole('button', { name: /Clientes e unidades/ }));
+    const busca = await screen.findByRole('searchbox');
+    await user.click(busca);
+    expect(screen.getByTitle('Tamanho permitido do campo')).toHaveTextContent('(200 caracteres)');
+    await user.click(await screen.findByText('Nenhum cliente cadastrado ainda.'));
+    expect(screen.getByTitle('Usuário')).toHaveTextContent('Ana Souza (Administrador)');
+  });
+
   it('perfil Consulta não abre Usuários e não vê o botão Novo de clientes', async () => {
     servidor();
     const user = await entrar('bia');

@@ -149,15 +149,16 @@ export function UsersWindow() {
             </tbody>
           </table>
         </div>
-        <div className="rp-usuarios__ficha">
-          <h2 className="rp-usuarios__titulo">{sel ? `Usuário ${sel.username}` : 'Novo usuário'}</h2>
-          <div className={`rp-form rp-form--req rp-janela-mdi__form${sel ? '' : ' rp-form--adicao'}`}>
+        <fieldset className="rp-grupo rp-usuarios__ficha">
+          <legend>{sel ? `Usuário ${sel.username}` : 'Novo usuário'}</legend>
+          <div className={`rp-grupo-corpo rp-form rp-form--req rp-janela-mdi__form${sel ? '' : ' rp-form--adicao'}`}>
             <label className="rp-label" htmlFor={fid('username')}>Usuário</label>
             <span className="rp-req" aria-hidden="true">*</span>
             <input
               id={fid('username')}
               className={`rp-field${sel ? ' rp-field--readonly' : ''}`}
               readOnly={!!sel}
+              maxLength={60}
               value={form.username}
               aria-invalid={!!erros.username}
               onChange={(e) => setForm({ ...form, username: e.target.value })}
@@ -165,7 +166,7 @@ export function UsersWindow() {
             {erro('username')}
             <label className="rp-label" htmlFor={fid('displayName')}>Nome</label>
             <span className="rp-req" aria-hidden="true">*</span>
-            <input id={fid('displayName')} className="rp-field" value={form.displayName} aria-invalid={!!erros.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} />
+            <input id={fid('displayName')} className="rp-field" maxLength={120} value={form.displayName} aria-invalid={!!erros.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} />
             {erro('displayName')}
             <label className="rp-label" htmlFor={fid('profile')}>Perfil</label>
             <span className="rp-req" aria-hidden="true">*</span>
@@ -176,17 +177,7 @@ export function UsersWindow() {
               </select>
             </div>
             {erro('profile')}
-            {sel ? (
-              <>
-                <span className="rp-label">Situação</span>
-                <span />
-                <label className="rp-login__lembrar">
-                  <input type="checkbox" checked={form.active} disabled={sel.id === eu.id} onChange={(e) => setForm({ ...form, active: e.target.checked })} />
-                  Ativo (pode entrar no sistema)
-                </label>
-                {erro('active')}
-              </>
-            ) : (
+            {!sel && (
               <>
                 <label className="rp-label" htmlFor={fid('password')}>Senha inicial</label>
                 <span className="rp-req" aria-hidden="true">*</span>
@@ -195,10 +186,26 @@ export function UsersWindow() {
               </>
             )}
           </div>
-          <p className="rp-login__nota">
-            <i className="rp-ico rp-ico-status-info" aria-hidden="true" /> Senha com pelo menos 10 caracteres. Mudar o perfil ou desativar encerra as sessões do usuário.
+          <p className="rp-tip rp-usuarios__nota" role="note">
+            Senha com pelo menos 10 caracteres. Mudar o perfil ou desativar encerra as sessões do usuário.
           </p>
-        </div>
+          {/* Estado do registro: rádios empilhados, embaixo à esquerda (componente Opções). */}
+          {sel && (
+            <div className="rp-usuarios__situacao" role="radiogroup" aria-label="Situação">
+              <label className="rp-choice">
+                <input type="radio" name={fid('situacao')} checked={form.active} disabled={sel.id === eu.id} onChange={() => setForm({ ...form, active: true })} /> Ativo
+              </label>
+              <label className="rp-choice">
+                <input type="radio" name={fid('situacao')} checked={!form.active} disabled={sel.id === eu.id} onChange={() => setForm({ ...form, active: false })} /> Inativo
+              </label>
+              {erros.active && (
+                <span className="rp-campo-erro">
+                  <i className="rp-ico rp-ico-status-erro" aria-hidden="true" /> {erros.active}
+                </span>
+              )}
+            </div>
+          )}
+        </fieldset>
       </div>
       <div className="rp-window-foot">
         <div className="rp-btn-row">
@@ -232,11 +239,15 @@ export function UsersWindow() {
         >
           Nova senha para {sel.username}. O bloqueio por tentativas é liberado e as sessões dele são encerradas.
           <br />
-          <label className="rp-ficha__motivo">
-            Nova senha
-            <input className="rp-field" type="password" autoComplete="new-password" value={senha.valor} aria-invalid={!!senha.erro} onChange={(e) => setSenha({ valor: e.target.value, erro: null })} />
-          </label>
-          {senha.erro && <span className="rp-campo-erro">{senha.erro}</span>}
+          <div className="rp-form rp-msgbox__form">
+            <label className="rp-label" htmlFor={fid('nova-senha')}>Nova senha</label>
+            <input id={fid('nova-senha')} className="rp-field" type="password" autoComplete="new-password" value={senha.valor} aria-invalid={!!senha.erro} onChange={(e) => setSenha({ valor: e.target.value, erro: null })} />
+          </div>
+          {senha.erro && (
+            <span className="rp-campo-erro">
+              <i className="rp-ico rp-ico-status-erro" aria-hidden="true" /> {senha.erro}
+            </span>
+          )}
         </Dialog>
       )}
     </>

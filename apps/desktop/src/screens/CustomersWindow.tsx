@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, ApiError } from '../api/client';
 import type { CustomerSummary } from '../api/types';
+import { numero } from '../format';
 import { useSession } from '../shell/SessionContext';
 import { useWindow } from '../windows/WindowContext';
 
@@ -40,7 +41,8 @@ export function CustomersWindow() {
       setErro(null);
     } catch (e) {
       const x = e as ApiError;
-      setErro(x.isNetwork ? 'Sem conexão com o servidor.' : `${x.message} (${x.code})`);
+      setErro(x.isNetwork ? 'Sem conexão com o servidor. A lista volta quando a conexão voltar.' : `${x.message} (${x.code})`);
+      winRef.current.notify({ tone: x.isNetwork ? 'aviso' : 'erro', text: `${x.isNetwork ? 'Sem conexão com o servidor' : x.message} (${x.code}) [${x.correlationId ?? '—'}]` });
     }
   }, []);
 
@@ -65,26 +67,51 @@ export function CustomersWindow() {
     return (linhas ?? []).filter((l) => !f || `${l.city ?? ''}/${l.state ?? ''}`.toLowerCase().includes(f));
   }, [linhas, local]);
   const filtrado = situacao !== 'ATIVO' || local.trim() !== '';
+  const limpar = () => {
+    setSituacao('ATIVO');
+    setLocal('');
+  };
 
   return (
     <>
       <div className="rp-window-body rp-janela-mdi__corpo rp-jlista">
-        <div className="rp-jlista__filtros">
-          <label className="rp-jlista__campo">
-            <span className="rp-label">Localizar</span>
+        {/* Faixa de filtros (componente Barra de filtros): a busca e, à direita, a marca de cada filtro aplicado. */}
+        <div className="rp-filtros rp-jlista__filtros">
+          <label>
+            Localizar
             <input
               className="rp-field rp-jlista__busca"
               type="search"
               placeholder="Código, razão social, nome fantasia ou CNPJ"
+              maxLength={200}
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               autoFocus
             />
           </label>
-          <span className="rp-jlista__resumo" role="status">
-            {linhas === null ? 'Carregando' : `${visiveis.length} ${visiveis.length === 1 ? 'cliente' : 'clientes'}`}
-            {situacao !== 'ATIVO' && ` · ${situacao === 'INATIVO' ? 'só inativos' : 'ativos e inativos'}`}
-          </span>
+          {filtrado && (
+            <button type="button" className="rp-btn" onClick={limpar}>
+              <u>L</u>impar
+            </button>
+          )}
+          <div className="rp-filtros-dir">
+            {situacao !== 'ATIVO' && (
+              <span className="rp-chip">
+                <b>Situação:</b> {situacao === 'INATIVO' ? 'Inativos' : 'Todos'}
+                <i className="x" role="button" tabIndex={0} title="Remover" aria-label="Remover o filtro de situação" onClick={() => setSituacao('ATIVO')} onKeyDown={(e) => e.key === 'Enter' && setSituacao('ATIVO')}>
+                  &times;
+                </i>
+              </span>
+            )}
+            {local.trim() !== '' && (
+              <span className="rp-chip">
+                <b>Cidade / UF:</b> {local.trim()}
+                <i className="x" role="button" tabIndex={0} title="Remover" aria-label="Remover o filtro de cidade" onClick={() => setLocal('')} onKeyDown={(e) => e.key === 'Enter' && setLocal('')}>
+                  &times;
+                </i>
+              </span>
+            )}
+          </div>
         </div>
         {erro ? (
           <p className="rp-janela-mdi__aviso">
@@ -148,6 +175,17 @@ export function CustomersWindow() {
             )}
           </div>
         )}
+        {!erro && (
+          <div className="rp-pag rp-jlista__pag">
+            <span className="rp-pag-info" role="status">
+              {linhas === null
+                ? 'Carregando'
+                : visiveis.length === 0
+                  ? 'Nenhum registro'
+                  : `1 a ${numero(visiveis.length)} de ${numero(visiveis.length)} ${visiveis.length === 1 ? 'registro' : 'registros'}`}
+            </span>
+          </div>
+        )}
       </div>
       <div className="rp-lista-foot">
         <div className="rp-btn-row">
@@ -195,23 +233,13 @@ export function CustomersWindow() {
                 </select>
               </div>
               <label className="rp-label" htmlFor={`${win.windowId}-local`}>Cidade / UF</label>
-              <input id={`${win.windowId}-local`} className="rp-field" value={local} onChange={(e) => setLocal(e.target.value)} />
+              <input id={`${win.windowId}-local`} className="rp-field" maxLength={100} value={local} onChange={(e) => setLocal(e.target.value)} />
             </div>
           </div>
           <div className="rp-window-foot">
             <div className="rp-btn-row">
               <button type="button" className="rp-btn rp-btn--default" onClick={() => setFiltroAberto(false)}>
                 OK
-              </button>
-              <button
-                type="button"
-                className="rp-btn"
-                onClick={() => {
-                  setSituacao('ATIVO');
-                  setLocal('');
-                }}
-              >
-                <span><u>L</u>impar</span>
               </button>
             </div>
           </div>

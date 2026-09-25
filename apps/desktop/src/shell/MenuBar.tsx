@@ -52,7 +52,7 @@ export function MenuBar(p: Props) {
       ],
     },
     { id: 'editar', label: (<><u>E</u>ditar</>), items: PROXIMAS },
-    { id: 'exibir', label: (<><u>V</u>isualizar</>), items: [{ label: 'Menu lateral', action: p.onToggleDrawer }] },
+    { id: 'exibir', label: (<>E<u>x</u>ibir</>), items: [{ label: 'Menu lateral', action: p.onToggleDrawer }] },
     { id: 'dados', label: (<><u>D</u>ados</>), items: PROXIMAS },
     { id: 'irpara', label: (<><u>I</u>r para</>), items: PROXIMAS },
     {

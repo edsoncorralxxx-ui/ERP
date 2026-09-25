@@ -67,8 +67,8 @@ export function ChangePasswordWindow() {
           {linha('nova', 'Nova senha', erros.newPassword)}
           {linha('confirma', 'Confirmar nova senha', erros.confirma)}
         </div>
-        <p className="rp-login__nota">
-          <i className="rp-ico rp-ico-status-info" aria-hidden="true" /> Pelo menos 10 caracteres, diferente do nome de usuário.
+        <p className="rp-tip rp-janela-mdi__nota" role="note">
+          A nova senha precisa ter pelo menos 10 caracteres e ser diferente do nome de usuário.
         </p>
       </div>
       <div className="rp-window-foot">

@@ -124,4 +124,19 @@ describe('Cliente', () => {
     expect(screen.queryByRole('button', { name: 'Atualizar' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Inativar' })).not.toBeInTheDocument();
   });
+
+  it('tabela de edição: Ctrl+Insert adiciona uma linha e Ctrl+Delete remove a linha em foco', async () => {
+    setTransport(async () => resposta(200, cliente('1'), { etag: '"1"' }));
+    abrir('c-1');
+    const user = userEvent.setup();
+    await screen.findByLabelText(/^Nome fantasia$/);
+    await user.click(screen.getByRole('tab', { name: /Unidades/ }));
+    await user.click(screen.getByLabelText('Nome da linha 1'));
+    await user.keyboard('{Control>}{Insert}{/Control}');
+    expect(screen.getByLabelText('Nome da linha 2')).toHaveValue('');
+    await user.click(screen.getByLabelText('Nome da linha 1'));
+    await user.keyboard('{Control>}{Delete}{/Control}');
+    expect(screen.getByLabelText('Nome da linha 1')).toHaveValue('');
+    expect(screen.queryByLabelText('Nome da linha 2')).not.toBeInTheDocument();
+  });
 });

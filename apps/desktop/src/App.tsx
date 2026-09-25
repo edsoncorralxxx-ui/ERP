@@ -27,7 +27,7 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   customers: { title: 'Clientes e unidades', size: { w: 1100, h: 620 } },
   customer: { title: 'Cliente', size: { w: 980, h: 640 } },
   users: { title: 'Usuários e permissões', size: { w: 980, h: 560 } },
-  password: { title: 'Trocar senha', size: { w: 520, h: 330 } },
+  password: { title: 'Alteração de senha', size: { w: 520, h: 330 } },
 };
 
 type Lock = 'BLOQUEIO' | 'EXPIRADA';

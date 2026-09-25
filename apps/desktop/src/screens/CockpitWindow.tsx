@@ -2,11 +2,12 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { api } from '../api/client';
 import type { CompanyProfile } from '../api/types';
 import { Chart, type ChartSpec } from '../charts/Chart';
+import { hora as horaDe, numero } from '../format';
 import type { Connection } from '../shell/useConnection';
 import { useWindow } from '../windows/WindowContext';
 
-const pct = (n: number) => `${n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
-const hora = (d: Date) => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const pct = (n: number) => `${numero(n, 1)}%`;
+const hora = (d: Date) => horaDe(d, true);
 
 // Campos que compõem o cadastro da empresa (complemento é opcional por natureza e fica de fora).
 const CAMPOS: [string, (p: CompanyProfile) => string | null][] = [
@@ -117,7 +118,7 @@ export function CockpitWindow({ connection }: { connection: Connection }) {
 
   return (
     <>
-      <div className="rp-window-body rp-janela-mdi__corpo rp-cockpit rp-rolagem">
+      <div className="rp-window-body rp-janela-mdi__corpo rp-dash rp-cockpit rp-rolagem">
         <div className="rp-dash-kpis rp-cockpit__kpis">
           <div className="rp-kpi">
             <div className="rp-kpi-head">
@@ -145,9 +146,9 @@ export function CockpitWindow({ connection }: { connection: Connection }) {
               <i className="rp-ico rp-ico-atualizar" aria-hidden="true" />
               Tempo de resposta
             </div>
-            <div className="rp-kpi-valor">{ok.length ? `${media.toLocaleString('pt-BR')} ms` : '—'}</div>
+            <div className="rp-kpi-valor">{ok.length ? `${numero(media)} ms` : '—'}</div>
             <div className={`rp-kpi-delta ${ultima <= media ? 'rp-kpi-delta--up' : 'rp-kpi-delta--down'}`}>
-              {ok.length ? `${ultima <= media ? '▲' : '▼'} última ${ultima.toLocaleString('pt-BR')} ms vs. média` : ''}
+              {ok.length ? `${ultima <= media ? '▲' : '▼'} última ${numero(ultima)} ms vs. média` : ''}
             </div>
           </div>
           <div className="rp-kpi">
@@ -169,7 +170,7 @@ export function CockpitWindow({ connection }: { connection: Connection }) {
             spec={linha}
             vazio="Aguardando a segunda verificação do servidor."
             altura={240}
-            tabela={['Hora', 'Tempo', hist.map((c) => [hora(c.at), c.ok ? `${c.ms.toLocaleString('pt-BR')} ms` : 'Sem resposta'] as Linha)]}
+            tabela={['Hora', 'Tempo', hist.map((c) => [hora(c.at), c.ok ? `${numero(c.ms)} ms` : 'Sem resposta'] as Linha)]}
             nota="Uma verificação a cada 10 segundos, desde a abertura do aplicativo."
           />
           <Cartao

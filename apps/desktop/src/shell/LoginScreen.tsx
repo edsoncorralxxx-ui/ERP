@@ -137,6 +137,7 @@ export function LoginScreen({ onEnter, lockedUser, notice }: Props) {
                 ref={campoUsuario}
                 className={`rp-field${lockedUser ? ' rp-field--readonly' : ''}`}
                 autoComplete="username"
+                maxLength={60}
                 required
                 readOnly={!!lockedUser}
                 aria-describedby={erro ? 'login-erro' : undefined}
@@ -160,7 +161,7 @@ export function LoginScreen({ onEnter, lockedUser, notice }: Props) {
                 <>
                   <span />
                   <span />
-                  <label className="rp-login__lembrar" htmlFor="login-lembrar">
+                  <label className="rp-choice" htmlFor="login-lembrar">
                     <input id="login-lembrar" type="checkbox" checked={lembrar} onChange={(e) => setLembrar(e.target.checked)} />
                     Lembrar meu usuário
                   </label>

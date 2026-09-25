@@ -26,7 +26,7 @@ body { background: var(--ground); }
 .rp-appbody > .rp-drawer .rp-drawer-inner { width: 330px; height: 100%; display: flex; flex-direction: column; }
 .rp-appbody > .rp-drawer .rp-drawer-head { flex: none; background: var(--panel-head); }
 .rp-appbody > .rp-drawer .rp-drawer-view[data-active=true] { flex: 1; min-height: 0; height: auto; }
-.rp-gaveta .rp-nav-item { width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; font-weight: 600; text-align: left;
+.rp-gaveta .rp-nav-item { width: 100%; box-sizing: border-box; font: var(--text-nav-item); text-align: left;
   color: var(--on-dark); border-left: 0; border-right: 0; cursor: pointer; }
 .rp-gaveta .rp-nav-item:focus-visible { outline: 2px solid var(--field-active); outline-offset: -3px; }
 
@@ -35,7 +35,7 @@ body { background: var(--ground); }
 .rp-gaveta .rp-nav-subs { background: var(--nav-selected); }
 .rp-gaveta .rp-nav-group[data-open=true] > .rp-nav-subs { border-bottom: 1px solid var(--nav-deep); }
 .rp-gaveta .rp-nav-sub { height: 36px; box-sizing: border-box; padding: 0 12px 0 40px; display: flex; align-items: center; gap: 10px;
-  font-size: 13px; line-height: 18px; font-weight: 600; color: var(--on-dark); background: var(--nav-selected); cursor: pointer; }
+  font: var(--text-label-strong); color: var(--on-dark); background: var(--nav-selected); cursor: pointer; }
 .rp-gaveta .rp-nav-sub .rp-ico { flex: none; transition: transform .15s ease; }
 .rp-gaveta .rp-nav-sub:not(.rp-nav-sub--indisponivel):hover { background: var(--nav); text-decoration: underline; }
 .rp-gaveta .rp-nav-sub:not(.rp-nav-sub--indisponivel):hover .rp-ico { transform: translateX(2px); }
@@ -80,7 +80,7 @@ body { background: var(--ground); }
 .rp-gaveta .rp-nav-sub--indisponivel:hover { text-decoration: none; background: var(--nav-selected); } /* mantém o azul: fundo transparente mostrava a gaveta clara (piscar branco) */
 .rp-nav-sub { min-width: 0; }
 .rp-nav-sub__rotulo { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rp-nav-sub__fase { flex: none; margin-right: var(--space-2); font-size: 11px; font-weight: 400; opacity: .85; }
+.rp-nav-sub__fase { flex: none; margin-right: var(--space-2); font: var(--text-caption); opacity: .85; }
 .rp-drawer-aviso { margin: 0; padding: var(--space-4) var(--space-5); color: var(--ink-muted); }
 
 /* Janela interna (MDI) sobre a área de trabalho. */
@@ -89,7 +89,7 @@ body { background: var(--ground); }
 .rp-janela-mdi .rp-titlebar { flex: none; cursor: default; }
 .rp-janela-mdi .rp-titlebar { gap: var(--space-3); }
 .rp-janela-mdi__titulo { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font: inherit; font-size: 15px; line-height: 20px; font-weight: 400; color: var(--on-dark); }
+  font: var(--text-window-title); color: var(--on-dark); }
 
 .rp-janela-mdi__corpo { flex: 1; min-height: 0; overflow: auto; user-select: text; }
 .rp-janela-mdi .rp-window-foot { flex: none; }
@@ -101,7 +101,7 @@ body { background: var(--ground); }
 .rp-janela-mdi__selo { margin-left: var(--space-2); }
 .rp-janela-mdi__aviso { display: flex; gap: var(--space-2); align-items: center; margin: 0; color: var(--ink-muted); }
 .rp-field--curto { max-width: 120px; }
-.rp-campo-erro { display: flex; gap: var(--space-2); align-items: center; color: var(--ink-danger); font-size: 12px; }
+.rp-campo-erro { display: flex; gap: var(--space-2); align-items: center; color: var(--ink-danger); font: var(--text-caption); }
 .rp-campo-erro .rp-ico { width: 14px; height: 14px; }
 .rp-field[aria-invalid=true] { border-color: var(--status-error); }
 
@@ -112,7 +112,7 @@ body { background: var(--ground); }
 /* Janelas minimizadas: botões com a barra de título, embaixo à esquerda da área de trabalho (protótipo Mock). */
 /* Fica atrás das janelas abertas (que começam no nível 1), como a faixa de minimizadas do cliente clássico. */
 .rp-minimizadas { position: absolute; left: var(--space-3); bottom: var(--space-2); z-index: 0; display: flex; gap: var(--space-1); }
-.rp-minimizada { height: 26px; min-width: 160px; max-width: 220px; padding: 0 10px; font: inherit; font-size: 12px; text-align: left;
+.rp-minimizada { height: 26px; min-width: 160px; max-width: 220px; padding: 0 var(--space-3); font: var(--text-caption); text-align: left;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; color: var(--on-dark);
   background: linear-gradient(var(--titlebar), var(--titlebar-bottom)); border: 1px solid var(--window-border); border-radius: var(--radius-sm); }
 .rp-minimizada:hover { background: linear-gradient(var(--nav-selected-top), var(--nav-selected)); }
@@ -127,7 +127,8 @@ body { background: var(--ground); }
 .rp-log__grade { width: 100%; }
 .rp-log__tipo { display: inline-flex; align-items: center; gap: var(--space-2); }
 .rp-log__vazio { margin: 0; padding: var(--space-4); color: var(--ink-muted); }
-.rp-slot { display: flex; align-items: center; gap: var(--space-2); min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
+.rp-slot { display: flex; align-items: center; gap: var(--space-2); min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: var(--text-caption); }
+.rp-slots .rp-status-limite { color: var(--ink-muted); }
 .rp-slot .rp-ico { width: 14px; height: 14px; flex: none; }
 .rp-slot--centro { justify-content: center; }
 .rp-slot { padding: 0 var(--space-2); box-sizing: border-box; }
@@ -141,18 +142,17 @@ body { background: var(--ground); }
 /* Tela de abertura (Janela de login): centralizada na área clara, 720px, ilustração à esquerda. */
 .rp-login { height: 100%; display: grid; place-content: center; background: var(--ground); }
 .rp-login__janela { width: 720px; max-width: calc(100vw - 32px); box-shadow: var(--shadow-window); overflow: hidden; }
-.rp-login__titulo { margin: 0; font: inherit; font-size: 15px; line-height: 20px; font-weight: 400; color: var(--on-dark); }
+.rp-login__titulo { margin: 0; font: var(--text-window-title); color: var(--on-dark); }
 .rp-login__corpo { display: flex; min-height: 300px; }
 .rp-login__ilustracao { width: 232px; flex: none; display: flex; background: var(--surface-panel); border-right: 1px solid var(--tab-border); }
 .rp-login__arte { display: block; width: 100%; height: 100%; }
-.rp-login__form { flex: 1; display: flex; flex-direction: column; gap: 28px; padding: 32px 36px 24px; background: var(--field); }
+.rp-login__form { flex: 1; display: flex; flex-direction: column; gap: var(--space-6); padding: var(--space-6) var(--space-6) var(--space-5); background: var(--field); }
 .rp-login__marca { font-size: 40px; line-height: 44px; font-weight: 700; letter-spacing: -1px; }
 .rp-login__campos { grid-template-columns: 96px 16px 260px; }
 .rp-login__campos .rp-label, .rp-login__campos .rp-req { border-bottom: 1px solid var(--grid-row-alt); }
-.rp-login__lembrar { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; }
-.rp-login__nota { display: flex; align-items: center; gap: var(--space-2); margin: 0; font-size: 12px; color: var(--ink-muted); }
+.rp-login__nota { display: flex; align-items: center; gap: var(--space-2); margin: 0; font: var(--text-caption); color: var(--ink-muted); }
 .rp-login .rp-window-foot { justify-content: space-between; align-items: center; }
-.rp-login__obrigatorio { font-size: 12px; color: var(--ink-muted); }
+.rp-login__obrigatorio { font: var(--text-caption); color: var(--ink-muted); }
 .rp-login__arte .a-fundo { fill: var(--surface-panel); }
 .rp-login__arte .a-janela { fill: var(--field); stroke: var(--grid-rule); }
 .rp-login__arte .a-caixilho { stroke: var(--grid-row-alt); stroke-width: 3; fill: none; }
@@ -179,13 +179,13 @@ body { background: var(--ground); }
 .rp-login__arte .a-folhas { fill: var(--status-success); }
 
 /* Meu cockpit (componente Dashboard 3D) dentro da janela. */
-.rp-cockpit { display: flex; flex-direction: column; gap: var(--space-5); background: var(--surface-form); }
+.rp-cockpit { align-content: start; } /* o .rp-dash do design system dá a grade, o espaçamento e o fundo */
 .rp-cockpit__kpis { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
 .rp-cockpit .rp-kpi-head .rp-link { flex: none; }
 .rp-cockpit .rp-dash-row { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
 .rp-cockpit__cartao { min-width: 0; display: flex; flex-direction: column; }
 .rp-cockpit__titulo-cartao { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rp-cockpit__acoes { margin-left: auto; display: flex; gap: 2px; font-weight: 400; }
+.rp-cockpit__acoes { margin-left: auto; display: flex; gap: var(--space-1); font-weight: 400; }
 .rp-cockpit__acoes .rp-tool { width: 24px; height: 24px; }
 .rp-cockpit__acoes .rp-tool[aria-pressed=true] { background: var(--field-active); border-color: var(--gold-light); }
 .rp-cockpit__tabela { overflow: auto; margin: var(--space-2) var(--space-3); }
@@ -199,17 +199,18 @@ body { background: var(--ground); }
 .rp-login--bloqueio .rp-login__janela { box-shadow: var(--shadow-window); }
 
 /* Janela de lista (Clientes e unidades). */
-.rp-jlista { display: flex; flex-direction: column; gap: var(--space-3); }
-.rp-jlista__filtros { display: flex; align-items: flex-end; gap: var(--space-4); flex: none; }
-.rp-jlista__campo { display: flex; flex-direction: column; gap: var(--space-1); }
-.rp-jlista__busca { width: 360px; background: var(--field-active); }
-.rp-jlista__resumo { margin-left: auto; color: var(--ink-muted); font-size: 12px; }
+.rp-jlista { display: flex; flex-direction: column; }
+/* Barra de filtros encostada no topo da grade e Paginação logo abaixo dela, sem borda entre as peças. */
+.rp-jlista__filtros { flex: none; border-bottom: 0; }
+.rp-filtros .rp-jlista__busca { width: 320px; }
 .rp-jlista__grade { flex: 1; min-height: 0; overflow: auto; }
+.rp-jlista__pag { flex: none; }
 .rp-jlista__grade .rp-grid { width: 100%; }
 .rp-jlista__grade tbody tr { cursor: default; }
 .rp-jlista__vazio { margin: 0; padding: var(--space-4); color: var(--ink-muted); }
 .rp-lista-foot { flex: none; }
 .rp-jlista__filtro { position: absolute; right: var(--space-5); bottom: 64px; z-index: 5; width: 360px; box-shadow: var(--shadow-window); }
+.rp-jlista__filtro .rp-form { grid-template-columns: 110px minmax(0, 1fr); }
 
 /* Ficha do cliente. */
 .rp-ficha__cabecalho .rp-ficha__principal { grid-template-columns: 110px 14px minmax(220px, 320px); }
@@ -220,11 +221,13 @@ body { background: var(--ground); }
 .rp-ficha__col-uf { width: 44px; }
 .rp-ficha__col-cep { width: 90px; }
 .rp-ficha__col-x { width: 22px; }
-.rp-ficha__nova { all: unset; cursor: pointer; padding: 0 var(--space-2); color: var(--ink-muted); font-style: italic; }
-.rp-ficha__nova:hover, .rp-ficha__nova:focus-visible { color: var(--ink); text-decoration: underline; }
+/* Linha nova da tabela de edição: o próprio texto em itálico do design system é o que se clica. */
+.rp-grid--edicao tr.nova td[role=button] { padding: 0 var(--space-2); cursor: pointer; }
+.rp-grid--edicao tr.nova td[role=button]:hover, .rp-grid--edicao tr.nova td[role=button]:focus-visible { color: var(--ink); text-decoration: underline; }
 .rp-ficha__erro { margin: var(--space-1) var(--space-2); }
 .rp-ficha__antes { color: var(--ink-muted); }
-.rp-ficha__motivo { display: flex; flex-direction: column; gap: var(--space-1); margin-top: var(--space-3); }
+/* Campo dentro da caixa de mensagem (motivo, nova senha). */
+.rp-msgbox__form { grid-template-columns: auto 260px; column-gap: var(--space-3); margin-top: var(--space-3); }
 .rp-grid--edicao .rp-field[aria-invalid=true] { background: var(--field-note); box-shadow: inset 0 -2px 0 var(--status-error); }
 .rp-form--adicao.rp-grid--edicao td .rp-field { background: var(--field-note); }
 .rp-tab[aria-disabled=true] { opacity: .55; cursor: default; }
@@ -233,6 +236,15 @@ body { background: var(--ground); }
 .rp-usuarios { display: grid; grid-template-columns: minmax(300px, 1fr) minmax(360px, 1fr); gap: var(--space-5); }
 .rp-usuarios__lista { overflow: auto; min-height: 0; }
 .rp-usuarios__lista .rp-grid { width: 100%; }
-.rp-usuarios__ficha { display: flex; flex-direction: column; gap: var(--space-3); }
-.rp-usuarios__titulo { margin: 0; font-size: 13px; font-weight: 600; color: var(--ink-heading); border-bottom: 1px solid var(--grid-rule); padding-bottom: var(--space-1); }
+.rp-usuarios__ficha { margin: 0; min-width: 0; align-self: start; }
+.rp-usuarios__situacao { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); margin-top: var(--space-4); }
 .rp-usuarios .rp-janela-mdi__form { grid-template-columns: 120px 14px minmax(160px, 1fr); }
+
+/* Nota de campo (componente Dica) fixa na janela, explicando o que entra nos campos. */
+.rp-usuarios__nota, .rp-janela-mdi__nota { display: block; max-width: 360px; margin: var(--space-4) 0 0; }
+
+/* Status do servidor: só consulta, rótulo e valor. */
+.rp-status-servidor { grid-template-columns: 160px minmax(160px, 1fr); }
+
+/* Dica de ferramenta: segue o ponteiro, logo abaixo e à direita dele. */
+.rp-dica-ferramenta { position: fixed; z-index: 70; pointer-events: none; }
