@@ -25,7 +25,28 @@ Ordenado por prioridade. Épicos correspondem às fases do roteiro (`../backend/
 
 O cliente macOS (Electron + React, janelas SAP B1, design system) entra junto das histórias de cada fluxo a partir do épico 3, e uma história própria de estrutura visual antes do primeiro fluxo com tela.
 
-## Histórias refinadas — épico 2 (B02)
+## Roteiro de sprints (fatias verticais)
+
+Decidido com o PO em 25/09/2026: cada sprint entrega uma **fatia vertical completa** (tela no app do Mac + API + regras + banco + testes) de um fluxo real, na ordem das dependências. Os épicos acima continuam sendo o mapa técnico; as sprints os atravessam.
+
+| Sprint | Fatia vertical | Resultado para o usuário | Épicos |
+|---|---|---|---|
+| 1 | Esqueleto do sistema: servidor, banco, app do Mac com janelas, primeira tela de ponta a ponta (dados da empresa) | Abrir o app, ver a conexão com o servidor e salvar dados reais | B02 |
+| 2 | Login, permissões e auditoria + Clientes e unidades | Entrar, cadastrar clientes/unidades, ver histórico | B02, B03 |
+| 3 | Materiais e serviços, fornecedores, equipamentos | Cadastros básicos completos | B03 |
+| 4 | Proposta → pedido confirmado → projeto, equipamento e parcelas | Vender e ver projeto e parcelas gerados uma única vez | B05 |
+| 5 | Contas a receber: baixa parcial e estorno | Registrar e estornar recebimentos | B05, B06 |
+| 6 | Documentos e faturamento vinculados às parcelas | Registrar notas sem duplicar cobrança | B06 |
+| 7 | Fiscal gerencial: histórico, simulação e conferência do contador | Conferir impostos por competência | B10 |
+| 8+ | Contas a pagar, conciliação, fluxo de caixa, BOM, cronograma, compras, estoque, produção, qualidade, instalação, repasses, pós-venda, importação do histórico | Um fluxo novo por sprint | B04–B12 |
+
+A ordem pode ser revista em cada refinamento. O worker Python entra na primeira sprint que precisar dele (importação de arquivos).
+
+## Histórias refinadas — Sprint 1
+
+Ver `sprints/sprint-01.md`. As histórias abaixo (épico B02) serão distribuídas entre as Sprints 1 e 2.
+
+### Épico 2 (B02)
 
 | ID | História | Critério de aceite | Depende de |
 |---|---|---|---|
