@@ -12,8 +12,8 @@ body { background: var(--ground); }
 
 /* Menus suspensos da barra de menus usam o componente Menu (MenuContexto).
    Na Barra superior os menus ficam dentro de um div; repete-se a regra de .rp-menubar > span do bundle. */
+.rp-appbar .rp-menubar { z-index: 4; } /* o bundle põe barra de menus e de ferramentas no mesmo nível; o menu suspenso precisa ficar por cima */
 .rp-menubar > div > span { position: relative; padding: 3px 9px; line-height: 18px; cursor: pointer; }
-.rp-menubar > div > span:hover, .rp-menubar > div > span[aria-expanded=true] { background: var(--tab); outline: 1px solid var(--tab-border); }
 .rp-menu--suspenso { position: absolute; top: calc(100% + 2px); left: 0; z-index: 20; }
 .rp-menu-item[aria-disabled=true] { cursor: default; }
 .rp-menu-item[aria-disabled=true]:hover { background: none; }
@@ -39,7 +39,20 @@ body { background: var(--ground); }
   background: linear-gradient(90deg, var(--nav-selected-top), var(--rail-selected)); transition: opacity .2s ease; }
 .rp-rail-tab[aria-selected=true]::before { opacity: 1; }
 
+/* Hover amarelo em todos os componentes, exceto o menu lateral (pedido do PO). Amarelo = "você pode agir aqui". */
+.rp-btn, .rp-tool, .rp-campo-btn, .rp-pag button, .rp-tab, .rp-menubar > div > span, .rp-grid tbody tr td, .rp-cockpit-list div {
+  transition: background-color .18s ease, border-color .18s ease, outline-color .18s ease; }
+.rp-btn:hover:not(:disabled), .rp-campo-btn:hover, .rp-pag button:hover { background: var(--field-active); }
+.rp-tool:hover:not([disabled]) { background: var(--field-active); border-color: var(--gold-light); }
+.rp-menubar > div > span:hover, .rp-menubar > div > span[aria-expanded=true] { background: var(--field-active); outline: 1px solid var(--gold-light); }
+.rp-tab:not([aria-selected=true]):hover { background: var(--field-active); }
+.rp-grid tbody tr:hover td, .rp-grid tbody tr:hover td.rownum { background: var(--field-note); }
+.rp-grid tbody tr[aria-selected=true]:hover td { background: var(--field-active); }
+.rp-cockpit-list div:hover { background: var(--field-active); }
+.rp-rolagem::-webkit-scrollbar-thumb:hover { background: linear-gradient(90deg, var(--field-note), var(--gold-light)); }
+
 @media (prefers-reduced-motion: reduce) {
+  .rp-btn, .rp-tool, .rp-tab, .rp-menubar > div > span, .rp-grid tbody tr td,
   .rp-nav-item::before, .rp-rail-tab, .rp-rail-tab::before, .rp-nav-sub, .rp-drawer { transition: none; }
 }
 
