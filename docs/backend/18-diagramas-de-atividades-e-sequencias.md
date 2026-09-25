@@ -1,10 +1,10 @@
 # Diagramas de atividades e de sequência do backend
 
-Situação em 25/09/2026. A parte **implementada** descreve o que o código da Sprint 1 faz hoje. A parte **planejada** segue a especificação do B01 (`13-b01-especificacao-de-comandos.md`, `12-b01-modelo-de-dominio.md` e `01-plano-completo-backend.md`) e entra na sprint indicada. As classes citadas estão em `17-diagramas-de-classes-e-padroes.md`.
+Situação em 25/09/2026. A parte **implementada** descreve o que o código das Sprints 1 e 2 faz hoje. A parte **planejada** segue a especificação do B01 (`13-b01-especificacao-de-comandos.md`, `12-b01-modelo-de-dominio.md` e `01-plano-completo-backend.md`) e entra na sprint indicada. As classes citadas estão em `17-diagramas-de-classes-e-padroes.md`.
 
 Diagrama de **atividades**: o passo a passo de um processo, com decisões e caminhos alternativos. Diagrama de **sequência**: as mensagens trocadas entre as partes do sistema, na ordem em que acontecem.
 
-## Parte 1 — Implementado (Sprint 1)
+## Parte 1 — Implementado (Sprints 1 e 2)
 
 ### 1. Atividade: iniciar o servidor
 
@@ -29,7 +29,7 @@ flowchart TD
 
 ### 2. Sequência: abrir o app e verificar a conexão
 
-A tela do app nunca acessa a rede diretamente. Ela pede ao processo principal do Electron, que valida método, caminho e cabeçalhos antes de chamar o servidor. O rodapé consulta o status a cada 10 segundos.
+A tela do app nunca acessa a rede diretamente. Ela pede ao processo principal do Electron, que valida método, caminho e cabeçalhos antes de chamar o servidor. O rodapé consulta o status a cada 10 segundos. O status é público; nas demais chamadas, o processo principal acrescenta o token da sessão (sequência 8).
 
 ```mermaid
 sequenceDiagram
@@ -73,13 +73,17 @@ sequenceDiagram
     autonumber
     participant U as Usuário
     participant W as CompanyProfileWindow
+    participant SF as SessionFilter
     participant C as CompanyProfileController
     participant S as CompanyProfileService
     participant R as JdbcCompanyProfileRepository
     participant DB as PostgreSQL
     U->>W: Módulos › Configurações › Dados da empresa
-    W->>C: GET /api/v1/company-profile
+    W->>SF: GET /api/v1/company-profile + Bearer
+    SF->>SF: valida a sessão e preenche CurrentUserHolder
+    SF->>C: segue a requisição
     C->>S: get()
+    S->>S: require(company.read), senão 403
     Note over S: transação somente leitura
     S->>R: get()
     R->>DB: select ... from company_profile
@@ -95,11 +99,15 @@ sequenceDiagram
 ```mermaid
 flowchart TD
     A((Usuário clica em Salvar)) --> B["App envia PUT com If-Match<br/>da versão lida"]
-    B --> C{"If-Match<br/>presente?"}
+    B --> SS{"Sessão válida?"}
+    SS -- não --> E401["401: app mostra o login<br/>por cima das janelas"] --> Z(((Fim)))
+    SS -- sim --> C{"If-Match<br/>presente?"}
     C -- não --> E428["428 PRECONDITION_REQUIRED"] --> Z(((Fim)))
     C -- sim --> D{"If-Match é<br/>um número?"}
     D -- não --> E400["400 VALIDATION_FAILED"] --> Z
-    D -- sim --> T["Abre a transação"]
+    D -- sim --> PM{"Perfil tem<br/>company.update?"}
+    PM -- não --> E403["403 ACCESS_DENIED<br/>registrado na auditoria"] --> Z
+    PM -- sim --> T["Abre a transação"]
     T --> L["Trava a linha<br/>select ... for update"]
     L --> V{"Versão atual =<br/>versão enviada?"}
     V -- não --> E412["Desfaz a transação<br/>412 VERSION_MISMATCH"] --> AV["App mostra o aviso de conflito<br/>e oferece recarregar"] --> Z
@@ -162,11 +170,197 @@ sequenceDiagram
     F->>F: limpa o MDC
 ```
 
+### 7. Atividade: entrar no sistema (Sprint 2)
+
+A mensagem de erro é a mesma para usuário inexistente e para senha errada, e as duas levam o mesmo tempo: assim ninguém descobre quais usuários existem. As tentativas erradas ficam gravadas mesmo com a recusa, para contar até o bloqueio.
+
+```mermaid
+flowchart TD
+    A((Tela de abertura)) --> B["Usuário digita usuário e senha"]
+    B --> N["Normaliza o usuário<br/>(minúsculas, sem espaços)"]
+    N --> U{"Usuário existe<br/>e está ativo?"}
+    U -- não --> DH["Calcula um hash de referência<br/>(mesmo tempo de resposta)"] --> F1["Audita LOGIN_FAILED"] --> E1["401 INVALID_CREDENTIALS<br/>Usuário ou senha incorretos"] --> Z(((Fim)))
+    U -- sim --> L{"Bloqueado agora?"}
+    L -- sim --> F2["Audita LOGIN_LOCKED"] --> E2["401 ACCOUNT_LOCKED<br/>com o horário de liberação"] --> Z
+    L -- não --> H{"Senha confere<br/>com o hash Argon2id?"}
+    H -- não --> INC["Tentativas + 1"]
+    INC --> Q{"Chegou a 5?"}
+    Q -- sim --> BL["Bloqueia por 15 minutos"] --> F2
+    Q -- não --> F1
+    H -- sim --> ZR["Zera as tentativas"]
+    ZR --> TK["Gera token aleatório;<br/>grava só o hash do token"]
+    TK --> EX["Sessão válida por até 12 h"]
+    EX --> OK["Audita LOGIN_SUCCEEDED"] --> R["200: usuário, perfil, permissões<br/>e token"] --> Z
+```
+
+### 8. Sequência: login e guarda do token (Sprint 2)
+
+O token nunca chega ao React. O processo principal do Electron o retira da resposta, guarda na memória e o acrescenta como `Authorization: Bearer` em toda chamada seguinte. Ao sair, ou ao receber um 401, ele descarta o token.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant R as Tela React
+    participant M as Processo principal Electron
+    participant C as SessionController
+    participant A as SessionApplicationService
+    participant S as SessionService
+    participant T as AuditTrail
+    R->>M: POST /api/v1/session {usuário, senha}
+    M->>C: repassa (sem Authorization)
+    C->>A: login(usuário, senha)
+    A->>S: login(usuário, senha)
+    S-->>A: Success(user, token, expiresAt)
+    A->>T: LOGIN_SUCCEEDED
+    A-->>C: Success
+    C-->>M: 200 {token, expiresAt, user, permissions}
+    M->>M: guarda o token na memória
+    M-->>R: 200 {expiresAt, user, permissions} sem o token
+    R->>R: rodapé com nome e perfil
+    R->>M: GET /api/v1/customers
+    M->>C: + Authorization: Bearer token
+    Note over R,M: ao sair (DELETE /session) ou ao receber 401,<br/>o processo principal descarta o token
+```
+
+### 9. Atividade: validar a sessão em cada requisição (Sprint 2)
+
+```mermaid
+flowchart TD
+    A((Requisição chega)) --> P{"Caminho público?<br/>GET /status ou POST /session"}
+    P -- sim --> SEG["Segue sem sessão"] --> Z(((Fim)))
+    P -- não --> T{"Tem Bearer<br/>com até 200 caracteres?"}
+    T -- não --> E["401 UNAUTHENTICATED"] --> Z
+    T -- sim --> H["Calcula o hash do token<br/>e busca a sessão ativa"]
+    H --> S{"Sessão encontrada?"}
+    S -- não --> E
+    S -- sim --> AB{"Passou das 12 h<br/>desde o login?"}
+    AB -- sim --> RV1["Revoga: EXPIRADA"] --> E
+    AB -- não --> ID{"Mais de 8 h<br/>sem uso?"}
+    ID -- sim --> RV2["Revoga: INATIVIDADE"] --> E
+    ID -- não --> UA{"Usuário ainda<br/>ativo?"}
+    UA -- não --> E
+    UA -- sim --> TC{"Último uso há mais<br/>de 1 minuto?"}
+    TC -- sim --> TO["Atualiza o último uso"] --> CU
+    TC -- não --> CU["Guarda o usuário em<br/>CurrentUserHolder"]
+    CU --> CH["Executa a requisição"]
+    CH --> CL["Limpa CurrentUserHolder"] --> Z
+```
+
+### 10. Sequência: acesso negado (Sprint 2)
+
+Um usuário com perfil Consulta tenta cadastrar um cliente. O servidor recusa e registra a tentativa na auditoria, numa transação própria, para o registro não se perder quando a operação for desfeita.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant R as App (perfil Consulta)
+    participant SF as SessionFilter
+    participant C as CustomerController
+    participant S as CustomerService
+    participant H as ApiExceptionHandler
+    participant T as AuditTrail
+    R->>SF: POST /api/v1/customers + Bearer
+    SF->>SF: sessão válida, CurrentUser = Consulta
+    SF->>C: segue
+    C->>S: register(chave, dados)
+    S->>S: CurrentUserHolder.require(partner.create)
+    S--xH: AccessDeniedException
+    Note over S: a transação do comando é desfeita
+    H->>T: nova transação: ACCESS_DENIED (usuário, permissão)
+    H-->>R: 403 ACCESS_DENIED
+    R->>R: mensagem na linha de status
+```
+
+### 11. Atividade: cadastrar cliente (Sprint 2)
+
+```mermaid
+flowchart TD
+    A((Usuário clica em Gravar)) --> K["App cria uma chave de idempotência<br/>e a guarda até receber resposta"]
+    K --> PM{"Perfil tem<br/>partner.create?"}
+    PM -- não --> E403["403, auditado"] --> Z(((Fim)))
+    PM -- sim --> KE{"Idempotency-Key<br/>informada?"}
+    KE -- não --> E422k["422 chave obrigatória"] --> Z
+    KE -- sim --> CL["Reserva a chave:<br/>insert on conflict do nothing"]
+    CL --> JA{"Chave já usada?"}
+    JA -- "sim, mesmo conteúdo" --> MS["Devolve o cliente já criado"] --> Z
+    JA -- "sim, outro conteúdo" --> E422r["422 IDEMPOTENCY_KEY_REUSED"] --> Z
+    JA -- não --> CD["Gera o código C00001, C00002..."]
+    CD --> VL["Valida razão social, CNPJ,<br/>unidades e contatos de uma vez"]
+    VL --> IV{"Algum problema?"}
+    IV -- sim --> E422["422 com a lista de campos<br/>(a reserva da chave é desfeita)"] --> Z
+    IV -- não --> CN{"CNPJ já usado<br/>por outro cliente?"}
+    CN -- sim --> E422c["422 com o código<br/>do cliente existente"] --> Z
+    CN -- não --> INS["Grava cliente, unidades e contatos"]
+    INS --> AU["Auditoria PARTNER_REGISTERED"]
+    AU --> OB["Outbox: PartnerRegistered"]
+    OB --> CP["Recibo completo com o id do cliente"]
+    CP --> OK["201 + ETag"] --> Z
+```
+
+### 12. Sequência: resposta perdida e reenvio com a mesma chave (Sprint 2)
+
+O servidor gravou, mas a resposta não chegou. O app reenvia com a **mesma chave** e recebe o mesmo cliente, sem criar outro. O `CustomerApiTest` também manda 6 reenvios simultâneos e confere que só um cliente é criado.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant A as CustomerWindow
+    participant S as CustomerService
+    participant RC as CommandReceipts
+    participant DB as PostgreSQL
+    A->>S: POST /customers + Idempotency-Key K1
+    S->>RC: claim(usuário, K1, RegisterPartner, dados)
+    RC->>DB: insert command_receipt on conflict do nothing
+    DB-->>RC: 1 linha inserida
+    RC-->>S: vazio (primeira vez)
+    S->>DB: cliente + auditoria + outbox + complete(K1, id)
+    S--xA: resposta perdida (queda de rede)
+    A->>S: POST /customers + Idempotency-Key K1 (mesma chave)
+    S->>RC: claim(usuário, K1, RegisterPartner, dados)
+    RC->>DB: insert on conflict do nothing
+    DB-->>RC: 0 linhas (já existe)
+    RC->>DB: lê comando, hash e resource_id
+    RC-->>S: id do cliente já criado
+    S-->>A: o mesmo cliente (nada é recriado)
+```
+
+### 13. Sequência: entrega de eventos pelo outbox (Sprint 2)
+
+O evento é gravado na mesma transação do cadastro: se o cadastro for desfeito, o evento também é. A cada 2 segundos, o entregador pega **um** evento pendente com `for update skip locked` e o entrega aos consumidores interessados. O registro em `event_consumption` impede processar o mesmo evento duas vezes.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant CS as CustomerService
+    participant OB as outbox_event
+    participant D as OutboxDispatcher
+    participant EC as event_consumption
+    participant F as OperationalFacts
+    CS->>OB: append(PartnerRegistered) na transação do cadastro
+    Note over CS,OB: commit: cliente e evento juntos
+    loop a cada 2 segundos
+        D->>OB: select pendente order by occurred_at<br/>limit 1 for update skip locked
+        alt nenhum pendente
+            OB-->>D: vazio: espera o próximo ciclo
+        else evento encontrado
+            OB-->>D: PartnerRegistered
+            D->>EC: insert (OperationalFacts, eventId) on conflict do nothing
+            alt primeira entrega
+                D->>F: handle(evento)
+                F->>F: grava operational_fact
+            else já consumido
+                D->>D: ignora
+            end
+            D->>OB: published_at = agora (commit)
+        end
+    end
+```
+
 ## Parte 2 — Planejado (especificado no B01)
 
-### 7. Atividade: pipeline comum de um comando (Sprint 2 · B02)
+### 14. Atividade: pipeline comum de um comando (Sprint 4+ · B05)
 
-Todos os comandos que mudam dinheiro, estoque ou compromissos seguem este caminho. O recibo de comando garante que repetir a mesma intenção não duplica nada.
+Todos os comandos que mudam dinheiro, estoque ou compromissos seguem este caminho. Sessão, permissão, recibo de comando e outbox já existem desde a Sprint 2 (atividades 9 e 11); estado, travas e novas tentativas entram com os comandos do pedido e do financeiro.
 
 ```mermaid
 flowchart TD
@@ -175,10 +369,10 @@ flowchart TD
     B -- sim --> C{"Sessão válida?"}
     C -- não --> E401["401 UNAUTHENTICATED"] --> Z
     C -- sim --> D{"Permissão para a ação<br/>e para o registro?"}
-    D -- não --> E403["403 ou 404"] --> Z
-    D -- sim --> R{"Recibo para<br/>(empresa, operação, chave)?"}
+    D -- não --> E403["403 auditado ou 404"] --> Z
+    D -- sim --> R{"Recibo para<br/>(usuário, chave)?"}
     R -- "concluído, mesmo conteúdo" --> ORIG["Devolve a resposta original"] --> Z
-    R -- "mesma chave, conteúdo diferente" --> E409["409 IDEMPOTENCY_KEY_REUSED"] --> Z
+    R -- "mesma chave, conteúdo diferente" --> E409["422 IDEMPOTENCY_KEY_REUSED"] --> Z
     R -- não existe --> T["Abre a transação"]
     T --> LK["Carrega o agregado com trava"]
     LK --> VS{"Versão confere?"}
@@ -193,34 +387,7 @@ flowchart TD
     DL -- não --> OK["200/201 com commandId,<br/>recursos, versão e correlationId"] --> Z
 ```
 
-### 8. Sequência: resposta perdida e repetição segura (Sprint 2 · B02)
-
-A conexão cai depois que o servidor confirmou. O app repete com a **mesma chave** e recebe o mesmo resultado, sem criar nada novo.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant A as App
-    participant H as Handler
-    participant RC as CommandReceiptStore
-    participant DB as PostgreSQL
-    A->>H: POST + Idempotency-Key K1
-    H->>RC: find(empresa, operação, K1)
-    RC-->>H: não existe
-    H->>DB: efeitos + recibo COMPLETED (commit)
-    H--xA: resposta perdida (queda de rede)
-    Note over A: o app guarda K1 até receber resposta
-    A->>H: POST + Idempotency-Key K1 (repetição)
-    H->>RC: find(empresa, operação, K1)
-    RC-->>H: COMPLETED, mesmo hash
-    H-->>A: 200 com os mesmos IDs (nada é recriado)
-    opt alternativa
-        A->>H: GET /api/v1/commands/{commandId}
-        H-->>A: estado e resultado do comando
-    end
-```
-
-### 9. Atividade: confirmar pedido (Sprint 4 · B05)
+### 15. Atividade: confirmar pedido (Sprint 4 · B05)
 
 A confirmação cria projeto, equipamentos e parcelas a receber **de uma vez**. Se qualquer parte falhar, nada é gravado.
 
@@ -246,7 +413,7 @@ flowchart TD
     GR --> OK["200: projectIds, equipmentIds,<br/>financialTitleIds, versão 8"] --> Z
 ```
 
-### 10. Sequência: confirmar pedido (Sprint 4 · B05)
+### 16. Sequência: confirmar pedido (Sprint 4 · B05)
 
 Exemplo: pedido com 3 máquinas e 6 parcelas. Tudo abaixo da nota acontece numa única transação.
 
@@ -284,7 +451,7 @@ sequenceDiagram
     C-->>A: 200 {projectIds, equipmentIds, financialTitleIds, version 8}
 ```
 
-### 11. Atividade: cancelar pedido (Sprint 4 · B05)
+### 17. Atividade: cancelar pedido (Sprint 4 · B05)
 
 A premissa atual (PD-003) só permite cancelar um pedido confirmado se nada tiver acontecido depois: nenhum recebimento, reserva, consumo, produção ou documento.
 
@@ -307,7 +474,7 @@ flowchart TD
     G --> OK["200"] --> Z
 ```
 
-### 12. Atividade: registrar baixa (Sprint 5 · B05/B06)
+### 18. Atividade: registrar baixa (Sprint 5 · B05/B06)
 
 Uma baixa pode quitar várias parcelas de uma vez. Os títulos são travados sempre na mesma ordem, para dois usuários nunca ficarem esperando um pelo outro.
 
@@ -331,7 +498,7 @@ flowchart TD
     GR --> OK["200: saldos atualizados"] --> Z
 ```
 
-### 13. Sequência: duas baixas simultâneas no mesmo título (Sprint 5 · B05)
+### 19. Sequência: duas baixas simultâneas no mesmo título (Sprint 5 · B05)
 
 Título com saldo de R$ 100,00 e duas baixas de R$ 70,00 ao mesmo tempo. Uma é confirmada; a outra recebe o saldo atual de R$ 30,00. O saldo nunca fica negativo.
 
@@ -358,7 +525,7 @@ sequenceDiagram
     H-->>U2: 422 INSUFFICIENT_TITLE_BALANCE (saldo R$ 30,00)
 ```
 
-### 14. Sequência: estornar baixa (Sprint 5 · B05)
+### 20. Sequência: estornar baixa (Sprint 5 · B05)
 
 O estorno é total. A baixa original continua consultável como REVERSED, e um movimento de caixa inverso é criado vinculado a ela.
 
@@ -391,36 +558,7 @@ sequenceDiagram
     end
 ```
 
-### 15. Sequência: entrega de eventos pelo outbox (Sprint 2 · B02)
-
-O evento é gravado na mesma transação do comando. Um publicador lê os pendentes e entrega aos consumidores; se entregar duas vezes, o consumidor reconhece o evento e ignora a repetição.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant H as Handler do comando
-    participant OB as outbox_event
-    participant RL as OutboxRelay
-    participant CN as Consumidor (ex.: consultas)
-    participant CR as consumer_receipt
-    H->>OB: append(evento) na transação do comando
-    Note over H,OB: commit: negócio e evento juntos
-    loop periodicamente
-        RL->>OB: lê pendentes em ordem
-        RL->>CN: entrega(evento)
-        CN->>CR: já processado (consumidor, eventId)?
-        alt primeira vez
-            CN->>CN: aplica o efeito (ex.: atualiza projeção)
-            CN->>CR: markProcessed na mesma transação
-        else repetido
-            CN->>CN: ignora
-        end
-        CN-->>RL: ok
-        RL->>OB: marca como publicado
-    end
-```
-
-### 16. Sequência: tarefa do worker Python com lease (Sprint 2 / B04)
+### 21. Sequência: tarefa do worker Python com lease (B04)
 
 O worker não acessa as tabelas de negócio: fala com o Java por uma API interna. Cada posse da tarefa tem uma geração; um resultado de uma posse antiga é recusado.
 
@@ -450,7 +588,7 @@ sequenceDiagram
     J-->>W2: aceito
 ```
 
-### 17. Atividade: importar arquivo e conferir (B04 / B12)
+### 22. Atividade: importar arquivo e conferir (B04 / B12)
 
 Nada importado entra no sistema sem decisão de uma pessoa. O arquivo original e a origem de cada valor (página e linha) ficam guardados.
 
@@ -475,7 +613,7 @@ flowchart TD
     AP --> OK["Registro criado, com a<br/>origem guardada"] --> Z
 ```
 
-### 18. Atividade: calcular um indicador (B10)
+### 23. Atividade: calcular um indicador (B10)
 
 O mesmo cálculo serve para a tela, o relatório e a exportação. Dado ausente fica como "desconhecido", nunca como zero.
 
@@ -496,7 +634,7 @@ flowchart TD
     CP -- não --> Z
 ```
 
-### 19. Atividade: execução analítica (B15)
+### 24. Atividade: execução analítica (B15)
 
 Um modelo só roda quando há dados suficientes. "Dados insuficientes" é uma resposta válida, com as causas.
 
@@ -517,7 +655,7 @@ flowchart TD
     DC --> Z
 ```
 
-### 20. Atividade: inspeção de qualidade (B09)
+### 25. Atividade: inspeção de qualidade (B09)
 
 ```mermaid
 flowchart TD
@@ -534,7 +672,7 @@ flowchart TD
     CR --> NV["Nova inspeção referencia<br/>a anterior sem alterá-la"] --> CK
 ```
 
-### 21. Atividade: gerar manutenção preventiva (B11)
+### 26. Atividade: gerar manutenção preventiva (B11)
 
 Rodar a geração duas vezes não duplica ordens de serviço: cada ocorrência é única por plano, revisão, equipamento e data.
 
@@ -549,7 +687,7 @@ flowchart TD
     MAIS -- não --> Z(((Fim)))
 ```
 
-### 22. Atividade: confirmar repasse (B10)
+### 27. Atividade: confirmar repasse (B10)
 
 ```mermaid
 flowchart TD

@@ -1,45 +1,52 @@
 # Diagramas de classes e padrões do backend
 
-Situação em 25/09/2026. A parte **implementada** mostra as classes que existem hoje em `backend/java` (Sprint 1). A parte **planejada** mostra os agregados especificados no B01 (`12-b01-modelo-de-dominio.md`, `13-b01-especificacao-de-comandos.md` e `06-oop-e-design-patterns.md`), que ganham código na sprint indicada. Os nomes de classes seguem o código, em inglês; os textos, em português.
+Situação em 25/09/2026. A parte **implementada** mostra as classes que existem hoje em `backend/java` (Sprints 1 e 2). A parte **planejada** mostra os agregados especificados no B01 (`12-b01-modelo-de-dominio.md`, `13-b01-especificacao-de-comandos.md` e `06-oop-e-design-patterns.md`), que ganham código na sprint indicada. Os nomes de classes seguem o código, em inglês; os textos, em português.
 
 Notação: `+` público, `-` privado, `$` estático, `*` abstrato. `<|--` herança, `<|..` implementa interface, `*--` composição (a parte não existe sem o todo), `-->` referência, `..>` usa ou cria.
 
-## Parte 1 — Implementado (Sprint 1)
+## Parte 1 — Implementado (Sprints 1 e 2)
 
 ### 1. Arquitetura em camadas: portas e adaptadores
 
-Cada módulo tem três camadas. O domínio fica no centro e não conhece Spring, HTTP nem banco; isso é verificado no build pelo `ArchitectureTest`. As setas mostram a direção das dependências.
+Cada módulo tem três camadas. O domínio fica no centro e não conhece Spring, HTTP nem banco; isso é verificado no build pelo `ArchitectureTest`. As setas mostram a direção das dependências. O exemplo é o cadastro de clientes; os dados da empresa e os usuários seguem o mesmo desenho.
 
 ```mermaid
 flowchart LR
     APP["App do Mac<br/>Electron + React"]
     subgraph INFRA["infrastructure: adaptadores"]
-        CTRL["CompanyProfileController<br/>REST /api/v1"]
-        JDBC["JdbcCompanyProfileRepository"]
+        FIL["CorrelationId<br/>SessionFilter"]
+        CTRL["CustomerController<br/>REST /api/v1/customers"]
+        JDBC["JdbcPartnerRepository"]
         AUDJ["JdbcAuditTrail"]
     end
     subgraph APPL["application: casos de uso e portas"]
-        SVC["CompanyProfileService"]
-        PORT["CompanyProfileRepository<br/>(porta)"]
-        AUDP["AuditTrail<br/>(porta pública da auditoria)"]
+        SVC["CustomerService"]
+        PORT["PartnerRepository<br/>(porta)"]
+        AUDP["AuditTrail · AuditQuery<br/>(portas da auditoria)"]
+        PLT["CommandReceipts · Outbox<br/>(plataforma)"]
+        ACS["CurrentUserHolder<br/>(acesso)"]
     end
     subgraph DOM["domain: regras"]
-        AGG["CompanyProfile"]
+        AGG["Partner<br/>Unit · Contact"]
     end
     subgraph KER["kernel: Value Objects"]
         VO["Money · Quantity · Cnpj"]
     end
-    DB[("PostgreSQL 16<br/>Flyway")]
-    APP -- "HTTP + ETag/If-Match" --> CTRL
+    DB[("PostgreSQL 16<br/>Flyway V1–V4")]
+    APP -- "HTTP + Bearer + ETag/If-Match<br/>+ Idempotency-Key" --> FIL
+    FIL --> CTRL
     CTRL --> SVC
+    SVC --> ACS
     SVC --> PORT
     SVC --> AUDP
+    SVC --> PLT
     SVC --> AGG
     AGG --> VO
     JDBC -. implementa .-> PORT
     AUDJ -. implementa .-> AUDP
     JDBC --> DB
     AUDJ --> DB
+    PLT --> DB
 ```
 
 ### 2. Kernel: Value Objects e políticas
@@ -124,7 +131,7 @@ classDiagram
 
 ### 3. Erros de domínio e contrato de erro da API
 
-As exceções de negócio carregam um código estável. Um único tratador (`ApiExceptionHandler`) converte cada uma no corpo padrão `ApiError` e no código HTTP correspondente: 412 versão desatualizada, 422 regra violada, 404 não encontrado, 428 falta `If-Match` e 400 formato inválido.
+As exceções de negócio carregam um código estável. Um único tratador (`ApiExceptionHandler`) converte cada uma no corpo padrão `ApiError` e no código HTTP correspondente: 401 sem sessão, 403 sem permissão, 404 não encontrado, 412 versão desatualizada, 422 regra violada, 428 falta `If-Match` e 400 formato inválido. O acesso negado é gravado na auditoria numa transação separada, para ficar registrado mesmo que a operação seja desfeita.
 
 ```mermaid
 classDiagram
@@ -151,6 +158,15 @@ classDiagram
     class NotFoundException {
         HTTP 404 NOT_FOUND
     }
+    class UnauthenticatedException {
+        HTTP 401 UNAUTHENTICATED
+        +sessionRequired()$ UnauthenticatedException
+    }
+    class AccessDeniedException {
+        HTTP 403 ACCESS_DENIED
+        -String permission
+        -String username
+    }
     class PreconditionRequiredException {
         HTTP 428 PRECONDITION_REQUIRED
     }
@@ -159,6 +175,8 @@ classDiagram
         +versionConflict(e) ResponseEntity~ApiError~
         +ruleViolation(e) ResponseEntity~ApiError~
         +notFound(e) ResponseEntity~ApiError~
+        +unauthenticated(e) ResponseEntity~ApiError~
+        +accessDenied(e) ResponseEntity~ApiError~
         +preconditionRequired(e) ResponseEntity~ApiError~
         +badRequest(e) ResponseEntity~ApiError~
         +unexpected(e) ResponseEntity~ApiError~
@@ -181,15 +199,21 @@ classDiagram
     DomainException <|-- RuleViolationException
     DomainException <|-- VersionConflictException
     DomainException <|-- NotFoundException
+    DomainException <|-- UnauthenticatedException
+    DomainException <|-- AccessDeniedException
     DomainException *-- FieldIssue
     ApiExceptionHandler ..> DomainException : traduz
     ApiExceptionHandler ..> ApiError : cria
     ApiError *-- Detail
+    ApiExceptionHandler ..> AuditTrail : registra ACCESS_DENIED
+    class AuditTrail {
+        <<interface>>
+    }
 ```
 
-### 4. Plataforma web: correlação, status e relógio
+### 4. Plataforma web: correlação, sessão, status e relógio
 
-`CorrelationId` é um filtro que roda antes de tudo: lê ou gera o `X-Correlation-Id`, grava no log (MDC) e devolve na resposta. O mesmo código aparece no erro, na auditoria e no log, para rastrear uma operação de ponta a ponta.
+Dois filtros rodam antes de qualquer controller. `CorrelationId` lê ou gera o `X-Correlation-Id`, grava no log (MDC) e devolve na resposta; o mesmo código aparece no erro, na auditoria e no log. `SessionFilter` valida o token `Bearer` e guarda o usuário da requisição em `CurrentUserHolder`. Só `GET /api/v1/status` e o login (`POST /api/v1/session`) dispensam sessão.
 
 ```mermaid
 classDiagram
@@ -202,6 +226,16 @@ classDiagram
         +HEADER$ String = "X-Correlation-Id"
         +current()$ String
         #doFilterInternal(req, res, chain)
+    }
+    class SessionFilter {
+        <<Component · ordem 10>>
+        -SessionService sessions
+        #shouldNotFilter(req) boolean
+        #doFilterInternal(req, res, chain)
+        ~bearer(req)$ String
+    }
+    class Versions {
+        +parse(String ifMatch)$ long
     }
     class StatusController {
         <<RestController>>
@@ -226,6 +260,11 @@ classDiagram
         +main(String[])$
     }
     OncePerRequestFilter <|-- CorrelationId
+    OncePerRequestFilter <|-- SessionFilter
+    SessionFilter ..> CurrentUserHolder : set e clear
+    class CurrentUserHolder {
+        <<acesso · ThreadLocal>>
+    }
     StatusController ..> Status : GET /api/v1/status
 ```
 
@@ -316,15 +355,16 @@ classDiagram
         +String before
         +String after
     }
-    class CurrentActor {
-        +name()$ String
+    class CurrentUserHolder {
+        <<acesso>>
+        +require(String permission)$ CurrentUser
     }
     CompanyProfileController --> CompanyProfileService
     CompanyProfileController ..> CompanyProfileRequest
     CompanyProfileController ..> CompanyProfileResponse
     CompanyProfileService --> CompanyProfileRepository
     CompanyProfileService --> AuditTrail
-    CompanyProfileService ..> CurrentActor
+    CompanyProfileService ..> CurrentUserHolder : company.read e company.update
     CompanyProfileService ..> CompanyProfile
     CompanyProfileRepository <|.. JdbcCompanyProfileRepository
     AuditTrail <|.. JdbcAuditTrail
@@ -371,81 +411,361 @@ sequenceDiagram
     C-->>A: 200 + ETag "4"
 ```
 
-## Parte 2 — Planejado (especificado no B01)
+### 7. Acesso: usuários, perfis e sessões (Sprint 2)
 
-### 7. Plataforma de comandos: recibo, outbox e fatos (Sprint 2 · B02)
-
-Todo comando que muda dinheiro, estoque ou compromisso grava, **na mesma transação**, os agregados, o recibo do comando, a auditoria, os fatos operacionais e os eventos do outbox. Repetir a mesma intenção (queda de conexão, clique duplo) devolve o resultado original.
+Usuários do próprio Renda+, com senha guardada só como hash Argon2id. A sessão é um token opaco: o banco guarda apenas o hash do token, e a sessão expira após 8 h sem uso ou 12 h no total. Depois de 5 senhas erradas, o usuário fica bloqueado por 15 minutos. Há dois perfis nesta fase, com permissões por ação.
 
 ```mermaid
 classDiagram
-    class CommandReceiptStore {
-        <<interface · porta>>
-        +find(companyId, operation, key) Optional~CommandReceipt~
-        +begin(CommandReceipt)
-        +complete(commandId, response, affectedIds)
-        +reject(commandId, error)
+    class User {
+        <<aggregate root>>
+        +MAX_FAILED_ATTEMPTS$ int = 5
+        +LOCK_DURATION$ Duration = 15 min
+        -UUID id
+        -String username
+        -String displayName
+        -Profile profile
+        -boolean active
+        -int failedAttempts
+        -Instant lockedUntil
+        -long version
+        +create(username, displayName, profile, password, now, actor)$ User
+        +update(displayName, profile, active, now, actor) User
+        +passwordReset(now, actor) User
+        +failedLogin(now) User
+        +successfulLogin() User
+        +lockedAt(now) boolean
+        +diff(User) Map
     }
-    class CommandReceipt {
-        <<entity>>
-        +UUID commandId
-        +UUID companyId
-        +String operation
-        +IdempotencyKey key
-        +String requestHash
-        +String actor
-        +ReceiptState state
-        +String response
-        +List~EntityRef~ affectedIds
-    }
-    class ReceiptState {
+    class Profile {
         <<enumeration>>
-        IN_PROGRESS
-        COMPLETED
-        REJECTED
+        ADMINISTRADOR
+        CONSULTA
+        +label() String
+        +permissions() Set~String~
     }
-    class EventOutbox {
+    class Permissions {
+        +COMPANY_READ$ "company.read"
+        +COMPANY_UPDATE$ "company.update"
+        +PARTNER_READ$ "partner.read"
+        +PARTNER_CREATE$ "partner.create"
+        +PARTNER_UPDATE$ "partner.update"
+        +PARTNER_DEACTIVATE$ "partner.deactivate"
+        +USER_ADMIN$ "user.admin"
+    }
+    class PasswordPolicy {
+        +MIN$ int = 10
+        +MAX$ int = 128
+        +check(field, password, username, issues)$
+        +require(field, password, username)$
+    }
+    class CurrentUser {
+        <<record>>
+        +UUID id
+        +String username
+        +String displayName
+        +Profile profile
+        +UUID sessionId
+        +can(String permission) boolean
+    }
+    class CurrentUserHolder {
+        <<ThreadLocal>>
+        +set(CurrentUser)$
+        +clear()$
+        +current()$ Optional~CurrentUser~
+        +require(String permission)$ CurrentUser
+        +actorName()$ String
+    }
+    class SessionService {
+        <<Service>>
+        +IDLE_TIMEOUT$ Duration = 8 h
+        +ABSOLUTE_TIMEOUT$ Duration = 12 h
+        +login(username, password) LoginResult
+        +authenticate(token) Optional~CurrentUser~
+        +logout(sessionId, reason)
+        +changeOwnPassword(current, old, new)
+        +hash(token)$ String
+    }
+    class LoginResult {
+        <<sealed interface>>
+    }
+    class Success {
+        <<record>>
+        +CurrentUser user
+        +String token
+        +Instant expiresAt
+    }
+    class Invalid {
+        <<record>>
+        +String attemptedUsername
+    }
+    class Locked {
+        <<record>>
+        +String username
+        +Instant until
+    }
+    class UserService {
+        <<Service>>
+        +list() List~User~
+        +create(...) User
+        +update(id, expectedVersion, ...) Change
+        +resetPassword(id, newPassword, actor) User
+    }
+    class UserRepository {
         <<interface · porta>>
-        +append(DomainEvent)
+        +findByUsernameForUpdate(String) Optional~User~
+        +findByIdForUpdate(UUID) Optional~User~
+        +countActiveAdministrators() long
+        +insert(User, passwordHash, createdBy)
+        +update(User, expectedVersion) boolean
+        +updateLoginState(User)
+    }
+    class SessionRepository {
+        <<interface · porta>>
+        +create(userId, tokenHash, now, expiresAt) UUID
+        +findActive(tokenHash) Optional~StoredSession~
+        +touch(sessionId, now)
+        +revoke(sessionId, now, reason)
+        +revokeAllOf(userId, now, reason) int
+    }
+    class PasswordHasher {
+        <<interface · porta>>
+        +hash(String) String
+        +matches(String, String) boolean
+    }
+    class Argon2PasswordHasher {
+        <<adaptador>>
+    }
+    class JdbcUserRepository {
+        <<adaptador>>
+    }
+    class JdbcSessionRepository {
+        <<adaptador>>
+    }
+    class SessionApplicationService {
+        <<plataforma · Service>>
+        +login(username, password) Success
+        +logout(reason)
+        +createUser(...) User
+        +updateUser(...) User
+        +resetPassword(id, password) User
+    }
+    class SessionController {
+        <<RestController>>
+        POST GET DELETE /api/v1/session
+        POST /api/v1/session/password
+    }
+    class UserAdminController {
+        <<RestController>>
+        /api/v1/users
+    }
+    class BootstrapAdministrator {
+        <<ApplicationRunner>>
+        cria o primeiro administrador
+    }
+    User --> Profile
+    Profile ..> Permissions
+    CurrentUser --> Profile
+    CurrentUserHolder --> CurrentUser
+    LoginResult <|.. Success
+    LoginResult <|.. Invalid
+    LoginResult <|.. Locked
+    SessionService ..> LoginResult
+    SessionService --> UserRepository
+    SessionService --> SessionRepository
+    SessionService --> PasswordHasher
+    UserService --> UserRepository
+    UserService --> SessionRepository
+    UserService ..> PasswordPolicy
+    UserRepository <|.. JdbcUserRepository
+    SessionRepository <|.. JdbcSessionRepository
+    PasswordHasher <|.. Argon2PasswordHasher
+    SessionController --> SessionApplicationService
+    UserAdminController --> SessionApplicationService
+    SessionApplicationService --> SessionService
+    SessionApplicationService --> UserService
+    BootstrapAdministrator --> UserService
+```
+
+### 8. Cadastros: clientes, unidades e contatos (Sprint 2)
+
+O cliente é um `Partner` com papel de cliente. Unidades e contatos fazem parte do agregado e são gravados junto com ele. O código (`C00001`) é gerado pelo sistema; o CNPJ, quando informado, é válido e único. Cadastrar usa recibo de comando; editar usa versão; nada é apagado, só inativado com motivo.
+
+```mermaid
+classDiagram
+    class Partner {
+        <<aggregate root>>
+        -UUID id
+        -String code
+        -String legalName
+        -String tradeName
+        -Cnpj cnpj
+        -String group
+        -Status status
+        -List~Unit~ units
+        -List~Contact~ contacts
+        -long version
+        +register(code, PartnerData, now, actor)$ Partner
+        +update(PartnerData, now, actor) Partner
+        +deactivate(now, actor) Partner
+        +diff(Partner) Map
+    }
+    class Status {
+        <<enumeration>>
+        ATIVO
+        INATIVO
+    }
+    class Unit {
+        <<record>>
+        +UUID id
+        +String name
+        +String street
+        +String city
+        +String state
+    }
+    class Contact {
+        <<record>>
+        +UUID id
+        +String name
+        +String role
+        +String phone
+        +String email
+    }
+    class PartnerData {
+        <<record>>
+        dados digitados, com UnitData e ContactData
+    }
+    class CustomerService {
+        <<Service>>
+        +list(search, Status) List~Summary~
+        +get(UUID) Partner
+        +history(UUID) List~AuditRecord~
+        +register(idempotencyKey, PartnerData) Partner
+        +update(UUID, expectedVersion, PartnerData) Partner
+        +deactivate(UUID, expectedVersion, reason) Partner
+    }
+    class PartnerRepository {
+        <<interface · porta>>
+        +nextCustomerCode() String
+        +insert(Partner)
+        +update(Partner, expectedVersion) boolean
+        +findByIdForUpdate(UUID) Optional~Partner~
+        +findByCnpj(cnpj, exceptId) Optional~Summary~
+        +list(search, Status, limit) List~Summary~
+    }
+    class JdbcPartnerRepository {
+        <<adaptador>>
+    }
+    class CustomerController {
+        <<RestController>>
+        GET POST /api/v1/customers
+        GET PUT /api/v1/customers/id
+        POST /customers/id/deactivate
+        GET /customers/id/history
+    }
+    class AuditQuery {
+        <<interface · auditoria>>
+        +history(entityType, entityId) List~AuditRecord~
+    }
+    class AuditTrail {
+        <<interface · auditoria>>
+    }
+    class CommandReceipts {
+        <<plataforma>>
+    }
+    class Outbox {
+        <<plataforma>>
+    }
+    class CurrentUserHolder {
+        <<acesso>>
+    }
+    Partner --> Status
+    Partner "1" *-- "0..50" Unit
+    Partner "1" *-- "0..50" Contact
+    Partner ..> PartnerData : valida
+    CustomerController --> CustomerService
+    CustomerService --> PartnerRepository
+    CustomerService --> AuditTrail
+    CustomerService --> AuditQuery
+    CustomerService --> CommandReceipts
+    CustomerService --> Outbox
+    CustomerService ..> CurrentUserHolder : partner.*
+    PartnerRepository <|.. JdbcPartnerRepository
+```
+
+### 9. Plataforma: recibos de comando, outbox e fatos (Sprint 2)
+
+`CommandReceipts` reserva a chave de idempotência com um `insert ... on conflict do nothing`. Por isso duas tentativas simultâneas com a mesma chave se enfileiram no banco, e a segunda recebe o resultado da primeira. `Outbox` grava o evento na transação do comando. `OutboxDispatcher` entrega os pendentes a cada 2 segundos, usando `for update skip locked`, e registra cada consumo em `event_consumption`. Assim, cada consumidor processa um evento uma única vez.
+
+Diferenças em relação à especificação do B01, adotadas na Sprint 2: o recibo é identificado por (usuário, chave), e reutilizar a chave com outro conteúdo devolve 422 `IDEMPOTENCY_KEY_REUSED`, em vez de 409.
+
+```mermaid
+classDiagram
+    class CommandReceipts {
+        <<Component>>
+        +requireKey(String)$ String
+        +claim(actor, key, command, request) Optional~String~
+        +complete(actor, key, resourceId)
+        -hash(request) String
+    }
+    class command_receipt {
+        <<tabela>>
+        PK actor, idempotency_key
+        command
+        request_hash
+        resource_id
+    }
+    class Outbox {
+        <<Component>>
+        +append(type, aggregateType, aggregateId, payload, actor) UUID
     }
     class DomainEvent {
         <<record>>
-        +UUID eventId
+        +UUID id
         +String type
-        +int schemaVersion
-        +EntityRef aggregate
-        +long aggregateVersion
+        +String aggregateType
+        +String aggregateId
+        +Map payload
         +Instant occurredAt
         +String actor
         +String correlationId
-        +payload
     }
-    class OutboxRelay {
-        publica em lote, pelo menos uma vez
+    class OutboxDispatcher {
+        <<Component · Scheduled 2 s>>
+        +poll()
+        +dispatchPending() int
+        +deliver(DomainEvent)
     }
-    class ConsumerReceiptStore {
-        <<interface · porta>>
-        +alreadyProcessed(consumer, eventId) boolean
-        +markProcessed(consumer, eventId)
-    }
-    class IdempotentConsumer {
-        <<abstract>>
+    class EventConsumer {
+        <<interface>>
+        +name() String
+        +accepts(String eventType) boolean
         +handle(DomainEvent)
-        #apply(DomainEvent)*
     }
-    class OperationalFactStore {
-        <<interface · porta>>
-        +append(OperationalFact)
+    class OperationalFacts {
+        <<consumidor>>
+        grava operational_fact
     }
-    CommandReceiptStore ..> CommandReceipt
-    CommandReceipt --> ReceiptState
-    EventOutbox ..> DomainEvent
-    OutboxRelay ..> EventOutbox : lê pendentes
-    OutboxRelay ..> IdempotentConsumer : entrega
-    IdempotentConsumer --> ConsumerReceiptStore : deduplica
+    class outbox_event {
+        <<tabela>>
+        published_at nulo = pendente
+    }
+    class event_consumption {
+        <<tabela>>
+        PK consumer, event_id
+    }
+    CommandReceipts ..> command_receipt
+    Outbox ..> outbox_event : insert na transação do comando
+    OutboxDispatcher ..> outbox_event : lê pendentes
+    OutboxDispatcher ..> DomainEvent
+    OutboxDispatcher --> EventConsumer : entrega
+    OutboxDispatcher ..> event_consumption : deduplica
+    EventConsumer <|.. OperationalFacts
 ```
 
-### 8. Comercial: agregado SalesOrder (Sprint 4 · B05)
+## Parte 2 — Planejado (especificado no B01)
+
+### 10. Comercial: agregado SalesOrder (Sprint 4 · B05)
 
 O pedido protege suas regras: pelo menos uma linha, parcelas que somam exatamente o total e edição só em rascunho. A confirmação acontece uma única vez; a segunda tentativa devolve a confirmação existente.
 
@@ -547,7 +867,7 @@ classDiagram
     note for SalesOrder "INV-SO-3: soma das parcelas = total, exato em centavos"
 ```
 
-### 9. Estados do pedido
+### 11. Estados do pedido
 
 ```mermaid
 stateDiagram-v2
@@ -562,9 +882,9 @@ stateDiagram-v2
     CANCELLED --> [*]
 ```
 
-### 10. Caso de uso: confirmar pedido (Sprint 4 · B05)
+### 12. Caso de uso: confirmar pedido (Sprint 4 · B05)
 
-O handler coordena; a regra fica no agregado. Projetos, equipamentos e parcelas são criados por portas de outros módulos, **dentro da mesma transação**, porque a confirmação não pode ficar pela metade.
+O handler coordena; a regra fica no agregado. Projetos, equipamentos e parcelas são criados por portas de outros módulos, **dentro da mesma transação**, porque a confirmação não pode ficar pela metade. Recibo, outbox e auditoria reaproveitam as classes da Sprint 2.
 
 ```mermaid
 classDiagram
@@ -599,36 +919,36 @@ classDiagram
         <<interface · financeiro>>
         +createReceivables(OrderConfirmed) TitleIds
     }
-    class Authorizer {
-        <<interface · acesso>>
-        +require(Actor, "sales_order.confirm", orderId)
+    class CurrentUserHolder {
+        <<acesso>>
+        +require("sales_order.confirm")$
     }
-    class CommandReceiptStore {
-        <<interface · plataforma>>
+    class CommandReceipts {
+        <<plataforma>>
     }
-    class EventOutbox {
-        <<interface · plataforma>>
+    class Outbox {
+        <<plataforma>>
     }
     class AuditTrail {
         <<interface · auditoria>>
     }
-    class OperationalFactStore {
-        <<interface · plataforma>>
+    class OperationalFacts {
+        <<plataforma · consumidor>>
     }
     SalesOrderController --> ConfirmSalesOrderHandler
     SalesOrderController ..> ConfirmSalesOrder
-    ConfirmSalesOrderHandler --> Authorizer
-    ConfirmSalesOrderHandler --> CommandReceiptStore
+    ConfirmSalesOrderHandler ..> CurrentUserHolder
+    ConfirmSalesOrderHandler --> CommandReceipts
     ConfirmSalesOrderHandler --> SalesOrderRepository
     ConfirmSalesOrderHandler --> PartnerQueryApi
     ConfirmSalesOrderHandler --> ProjectProvisioning
     ConfirmSalesOrderHandler --> TitleProvisioning
     ConfirmSalesOrderHandler --> AuditTrail
-    ConfirmSalesOrderHandler --> OperationalFactStore
-    ConfirmSalesOrderHandler --> EventOutbox
+    Outbox ..> OperationalFacts : fatos pelo outbox
+    ConfirmSalesOrderHandler --> Outbox
 ```
 
-### 11. Financeiro: FinancialTitle e Settlement (Sprints 5 e 8+ · B05/B06)
+### 13. Financeiro: FinancialTitle e Settlement (Sprints 5 e 8+ · B05/B06)
 
 O título (parcela a receber ou conta a pagar) nunca tem saldo negativo. A liquidação (baixa) distribui um pagamento entre títulos; a soma das alocações, créditos e componentes é sempre igual ao total. O estorno é total, cria um movimento de caixa inverso e preserva o original.
 
@@ -746,7 +1066,7 @@ classDiagram
     note for Settlement "INV-ST-1: alocações + crédito + componentes = total"
 ```
 
-### 12. Motor de dados e análise (B02, B10, B14 e B15)
+### 14. Motor de dados e análise (B02, B10, B14 e B15)
 
 Fatos são imutáveis e alimentam os indicadores. Cada indicador tem uma definição única e versionada; valor ausente nunca vira zero. Os métodos analíticos são estratégias trocáveis, habilitadas só quando há dados suficientes.
 
@@ -844,7 +1164,7 @@ classDiagram
     Finding "1" --> "0..*" Decision
 ```
 
-### 13. Estados de uma execução analítica
+### 15. Estados de uma execução analítica
 
 ```mermaid
 stateDiagram-v2
@@ -863,7 +1183,7 @@ stateDiagram-v2
     CANCELLED --> [*]
 ```
 
-### 14. Qualidade de produto e qualidade de dados (B04 e B09)
+### 16. Qualidade de produto e qualidade de dados (B04 e B09)
 
 ```mermaid
 classDiagram
@@ -929,7 +1249,7 @@ classDiagram
     DataQualityIssue *-- Evidence
 ```
 
-### 15. Demais agregados previstos
+### 17. Demais agregados previstos
 
 | Agregado | Regra central | Fase |
 |---|---|---|
@@ -950,7 +1270,7 @@ classDiagram
 
 ## Parte 3 — Técnicas e padrões de engenharia de software
 
-Situação: **Em uso** já está no código da Sprint 1. **Planejado** está especificado e entra na sprint indicada.
+Situação: **Em uso** já está no código (Sprints 1 e 2). **Planejado** está especificado e entra na sprint indicada.
 
 ### 3.1 Arquitetura
 
@@ -963,7 +1283,7 @@ Situação: **Em uso** já está no código da Sprint 1. **Planejado** está esp
 | Inversão e injeção de dependência | O serviço recebe as portas pelo construtor e pode ser testado sem banco | `CompanyProfileService(repository, audit, clock)` | Em uso |
 | Testes de arquitetura | O build falha se um módulo usar outro não declarado, ou se o domínio importar Spring | `ArchitectureTest` (ArchUnit lendo `modulos.json`) | Em uso |
 | CQRS leve | Escrita por comandos; consultas gerenciais separadas, no mesmo banco | módulo `consultas` | Planejado · Sprint 4+ |
-| Worker Python separado | Processamento pesado sem acesso às tabelas de negócio | ADR-008 | Planejado · Sprint 2 |
+| Worker Python separado | Processamento pesado sem acesso às tabelas de negócio | ADR-008 (ficou fora da Sprint 2) | Planejado · B04 |
 
 ### 3.2 Domínio (DDD)
 
@@ -972,11 +1292,11 @@ Situação: **Em uso** já está no código da Sprint 1. **Planejado** está esp
 | Linguagem ubíqua | Mesmas palavras no negócio, no código e nas telas | `b01/conceitos.json` (57 conceitos) | Em uso |
 | Contextos delimitados | Cada conceito tem um único módulo dono | `modulos.json`, `conceitos.json` | Em uso |
 | Value Object | Dinheiro, quantidade e CNPJ se validam sozinhos e não mudam | `Money`, `Quantity`, `Cnpj`, `UnitOfMeasure`, `UnitConversion`, `Address` | Em uso |
-| Agregado e raiz | Um objeto protege suas próprias regras | `CompanyProfile`; depois `SalesOrder`, `FinancialTitle`, `Settlement` | Em uso / Planejado |
-| Repositório | Salvar e buscar agregados sem expor SQL | `CompanyProfileRepository` | Em uso |
-| Serviço de aplicação | Coordena transação, versão e auditoria de um caso de uso | `CompanyProfileService`; depois `ConfirmSalesOrderHandler` | Em uso |
+| Agregado e raiz | Um objeto protege suas próprias regras | `CompanyProfile`, `User`, `Partner` (com unidades e contatos); depois `SalesOrder`, `FinancialTitle`, `Settlement` | Em uso |
+| Repositório | Salvar e buscar agregados sem expor SQL | `CompanyProfileRepository`, `UserRepository`, `SessionRepository`, `PartnerRepository` | Em uso |
+| Serviço de aplicação | Coordena permissão, transação, versão e auditoria de um caso de uso | `CompanyProfileService`, `CustomerService`, `SessionService`, `UserService`; depois `ConfirmSalesOrderHandler` | Em uso |
 | Invariantes numeradas | Regras testáveis e rastreáveis (INV-*) | `12-b01-modelo-de-dominio.md` | Em uso (especificação) |
-| Eventos de domínio | Um módulo avisa os outros do que aconteceu | 95 eventos em `b01/eventos.json` | Planejado · Sprint 2 |
+| Eventos de domínio | Um módulo avisa os outros do que aconteceu | `PartnerRegistered`, `PartnerUpdated`, `PartnerDeactivated` (dos 95 de `b01/eventos.json`) | Em uso · Sprint 2 |
 | Registros compensatórios | Nada confirmado é apagado; corrige-se com estorno ou ajuste | `Settlement.reverse`, `OperationalFact.reverses` | Planejado · Sprint 5 |
 
 ### 3.3 Padrões de projeto
@@ -992,6 +1312,9 @@ Situação: **Em uso** já está no código da Sprint 1. **Planejado** está esp
 | Template Method | O filtro implementa só o passo variável | `CorrelationId extends OncePerRequestFilter` | Em uso |
 | Chain of Responsibility (filtros) | Correlação aplicada antes de qualquer controller | cadeia de filtros do servidor | Em uso |
 | Tratamento centralizado de erros | Uma exceção vira sempre o mesmo formato de erro | `ApiExceptionHandler` + `ApiError` | Em uso |
+| Tipo fechado (sealed interface) | O login só pode terminar em sucesso, inválido ou bloqueado, e o compilador confere | `SessionService.LoginResult` | Em uso |
+| Contexto da requisição por thread | O usuário da requisição fica disponível sem passá-lo em todo método | `CurrentUserHolder` (preenchido pelo `SessionFilter`) | Em uso |
+| Observer (consumidores de eventos) | Um evento é entregue a quem se interessa por ele | `EventConsumer` + `OperationalFacts` | Em uso |
 | Policy / Specification | Regras compostas e testáveis para confirmar, cancelar e habilitar modelos | `ConfirmationPolicy`, `CancellationPolicy`, `EligibilityPolicy` | Planejado · Sprint 4 |
 | State (enum + transições) | Pedido, tarefa e execução analítica só mudam por transições válidas | `OrderStatus`, `RunState` | Planejado · Sprint 4 |
 | Strategy + Registry | Métodos analíticos trocáveis e versionados | `AnalysisStrategy`, `StrategyRegistry` | Planejado · B10/B15 |
@@ -1013,10 +1336,12 @@ Situação: **Em uso** já está no código da Sprint 1. **Planejado** está esp
 | Transação única com auditoria | A auditoria nunca fica de fora | `@Transactional` + `AuditTrail` com `Propagation.MANDATORY` | Em uso |
 | Restrições no banco | Segunda linha de defesa, mesmo contra bugs | `check` de CNPJ e CEP; índice que garante uma única empresa | Em uso |
 | Migrações versionadas | Banco evolui junto com o código, igual em toda máquina | Flyway `V1__...sql` | Em uso |
-| Comando idempotente | Clique duplo ou queda de conexão não duplicam | `Idempotency-Key` + recibo de comando | Planejado · Sprint 2 |
-| Outbox transacional + consumidor idempotente | Eventos entregues pelo menos uma vez, sem efeito duplicado | `outbox_event`, `consumer_receipt` | Planejado · Sprint 2 |
+| Comando idempotente | Clique duplo ou queda de conexão não duplicam | `Idempotency-Key` + `CommandReceipts` (`insert ... on conflict do nothing`) | Em uso · Sprint 2 |
+| Outbox transacional + consumidor idempotente | Eventos entregues pelo menos uma vez, sem efeito duplicado | `Outbox`, `OutboxDispatcher`, `outbox_event`, `event_consumption` | Em uso · Sprint 2 |
+| Fila no banco sem disputa | Vários entregadores nunca pegam o mesmo evento | `for update skip locked` no `OutboxDispatcher` | Em uso · Sprint 2 |
+| Auditoria em transação separada | Acesso negado fica registrado mesmo que a operação seja desfeita | `ApiExceptionHandler.accessDenied` (nova transação) | Em uso · Sprint 2 |
 | Travas em ordem estável | Evita impasse (deadlock) em baixas de vários títulos | INV-ST-3 | Planejado · Sprint 5 |
-| Lease com geração | Resultado de tentativa antiga do worker é recusado | tarefas Python | Planejado · Sprint 2 / B04 |
+| Lease com geração | Resultado de tentativa antiga do worker é recusado | tarefas Python | Planejado · B04 |
 | Snapshot imutável | Análise reproduzível: mesmos dados, mesma semente | `DatasetSnapshot` | Planejado · B04/B15 |
 
 ### 3.5 API e observabilidade
@@ -1030,22 +1355,41 @@ Situação: **Em uso** já está no código da Sprint 1. **Planejado** está esp
 | Endpoint de status (servidor e banco) | `StatusController` | Em uso |
 | Relógio injetável (testes com data controlada) | `ClockConfig` | Em uso |
 | Configuração por variáveis de ambiente | `RENDA_DB_URL`, `RENDA_SERVER_PORT`… | Em uso |
-| Contrato OpenAPI | B02 | Planejado · Sprint 2 |
+| Contrato OpenAPI conferido por teste | `docs/backend/api/openapi.yaml` + `OpenApiContractTest` | Em uso · Sprint 2 |
+| Autenticação por token `Bearer` | `SessionFilter`; públicos só `GET /status` e `POST /session` | Em uso · Sprint 2 |
 
-### 3.6 Qualidade e testes
+### 3.6 Segurança
+
+| Técnica | Onde | Situação |
+|---|---|---|
+| Senha com hash Argon2id (nunca a senha em si) | `Argon2PasswordHasher` | Em uso · Sprint 2 |
+| Política de senha (10 a 128 caracteres, diferente do usuário) | `PasswordPolicy` | Em uso · Sprint 2 |
+| Sessão opaca: o banco guarda só o hash do token | `SessionService.hash`, `JdbcSessionRepository` | Em uso · Sprint 2 |
+| Expiração por inatividade (8 h) e absoluta (12 h); sair revoga na hora | `SessionService.authenticate`, `logout` | Em uso · Sprint 2 |
+| Bloqueio após 5 tentativas, por 15 minutos | `User.failedLogin` | Em uso · Sprint 2 |
+| Mesma resposta para usuário inexistente e senha errada, com o mesmo tempo de cálculo | `SessionService.login` (hash de referência) | Em uso · Sprint 2 |
+| Permissões por ação, verificadas no servidor | `Profile`, `Permissions`, `CurrentUserHolder.require` | Em uso · Sprint 2 |
+| Token só no processo principal do Electron, nunca no React | `electron/main.ts` | Em uso · Sprint 2 |
+| Primeiro administrador criado por configuração, sem senha padrão | `BootstrapAdministrator` | Em uso · Sprint 2 |
+| Sempre resta um administrador ativo; ninguém retira o próprio acesso | `UserService.update` | Em uso · Sprint 2 |
+| TLS obrigatório para acesso por outros computadores | ADR-007 | Planejado · B13 |
+
+### 3.7 Qualidade e testes
 
 | Técnica | Onde | Situação |
 |---|---|---|
 | Testes unitários de Value Objects | `MoneyTest`, `QuantityTest`, `CnpjTest` | Em uso |
 | Testes baseados em propriedades | `MoneyTest`: 20.000 casos gerados com semente fixa conferem que o rateio soma o total | Em uso |
 | Testes de integração com PostgreSQL real | `IntegrationTest` (Testcontainers ou `RENDA_TEST_JDBC_URL`) | Em uso |
-| Teste de concorrência real | `CompanyProfileApiTest`: 8 gravações simultâneas → 1 sucesso e 7 conflitos | Em uso |
+| Teste de concorrência real | `CompanyProfileApiTest`: 8 gravações simultâneas → 1 sucesso e 7 conflitos; `CustomerApiTest`: 6 reenvios simultâneos criam um único cliente | Em uso |
+| Testes de segurança da sessão | `SessionApiTest`: 401, 403 auditado, bloqueio, expiração de 8 h e 12 h, senha nunca na resposta | Em uso · Sprint 2 |
+| Teste de contrato da API | `OpenApiContractTest`: falha se o servidor e o `openapi.yaml` divergirem | Em uso · Sprint 2 |
 | Testes de arquitetura | `ArchitectureTest` | Em uso |
 | Especificação executável | catálogos JSON do B01 + `tools/b01/verificar_b01.py` (e testes do próprio verificador) | Em uso |
 | Integração contínua | GitHub Actions: especificação, servidor e app | Em uso |
 | Testes de contrato por adaptador | parsers, armazenamento, worker | Planejado · B04 |
 
-### 3.7 No app do Mac
+### 3.8 No app do Mac
 
 | Técnica | Onde | Situação |
 |---|---|---|
@@ -1053,9 +1397,10 @@ Situação: **Em uso** já está no código da Sprint 1. **Planejado** está esp
 | Adapter de transporte (troca em testes) | `api/client.ts` (`setTransport`) | Em uso |
 | Ponte IPC isolada e validada | `electron/preload.ts` (`window.renda`) | Em uso |
 | Menu gerado a partir de catálogo | `SideNav.tsx` lê `b01/menu.json` | Em uso |
+| Chave de idempotência guardada até a resposta chegar | `CustomerWindow.tsx` reenvia com a mesma chave | Em uso · Sprint 2 |
 | Design tokens (fonte única do visual) | `design-system/tokens.css`, classes `rp-*`; ADR-017 | Em uso |
 
-### 3.8 Processo
+### 3.9 Processo
 
 | Técnica | Onde | Situação |
 |---|---|---|
@@ -1064,7 +1409,7 @@ Situação: **Em uso** já está no código da Sprint 1. **Planejado** está esp
 | Registros de decisão de arquitetura (ADR) | `docs/adr/` (17 ADRs) | Em uso |
 | Pendências explícitas em vez de suposições escondidas | `b01/pendencias.json`, planilha de decisões | Em uso |
 
-### 3.9 Evitados de propósito
+### 3.10 Evitados de propósito
 
 | Não usamos | Motivo |
 |---|---|

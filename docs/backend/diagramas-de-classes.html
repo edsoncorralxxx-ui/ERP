@@ -55,6 +55,7 @@
   nav.indice a { display: block; color: var(--tinta); text-decoration: none; padding: 3px 8px; border-radius: 3px; transition: background-color .18s ease; }
   nav.indice a:hover, nav.indice a:focus-visible { background: var(--ouro-fundo); outline: none; }
   nav.indice a.nav-parte { font-weight: 600; color: var(--azul); }
+  nav.indice code { background: none; padding: 0; font-size: .92em; }
 
   main { display: grid; gap: 22px; min-width: 0; }
   h2.parte { margin: 18px 0 0; padding-top: 14px; border-top: 2px solid var(--azul); font-size: 24px; line-height: 1.25; text-wrap: balance; scroll-margin-top: 16px; }
@@ -90,9 +91,9 @@
   <header>
     <div class="eyebrow">Renda+ ERP · servidor Java / Spring Boot</div>
     <h1>Classes e padrões <b>Renda+</b></h1>
-    <p>Situação em 25/09/2026. A parte <strong>implementada</strong> mostra as classes que existem hoje em <code>backend/java</code> (Sprint 1). A parte <strong>planejada</strong> mostra os agregados especificados no B01 (<code>12-b01-modelo-de-dominio.md</code>, <code>13-b01-especificacao-de-comandos.md</code> e <code>06-oop-e-design-patterns.md</code>), que ganham código na sprint indicada. Os nomes de classes seguem o código, em inglês; os textos, em português.</p><p>Notação: <code>+</code> público, <code>-</code> privado, <code>$</code> estático, <code>*</code> abstrato. <code>&lt;|--</code> herança, <code>&lt;|..</code> implementa interface, <code>*--</code> composição (a parte não existe sem o todo), <code>--&gt;</code> referência, <code>..&gt;</code> usa ou cria.</p>
+    <p>Situação em 25/09/2026. A parte <strong>implementada</strong> mostra as classes que existem hoje em <code>backend/java</code> (Sprints 1 e 2). A parte <strong>planejada</strong> mostra os agregados especificados no B01 (<code>12-b01-modelo-de-dominio.md</code>, <code>13-b01-especificacao-de-comandos.md</code> e <code>06-oop-e-design-patterns.md</code>), que ganham código na sprint indicada. Os nomes de classes seguem o código, em inglês; os textos, em português.</p><p>Notação: <code>+</code> público, <code>-</code> privado, <code>$</code> estático, <code>*</code> abstrato. <code>&lt;|--</code> herança, <code>&lt;|..</code> implementa interface, <code>*--</code> composição (a parte não existe sem o todo), <code>--&gt;</code> referência, <code>..&gt;</code> usa ou cria.</p>
     <div class="numeros">
-      <div><strong>14</strong><span>diagramas</span></div><div><strong>53</strong><span>técnicas em uso</span></div><div><strong>19</strong><span>técnicas planejadas</span></div>
+      <div><strong>16</strong><span>diagramas</span></div><div><strong>76</strong><span>técnicas em uso</span></div><div><strong>16</strong><span>técnicas planejadas</span></div>
     </div>
   </header>
 
@@ -100,43 +101,50 @@
     <nav class="indice" aria-label="Índice">
       <details open>
         <summary>Índice</summary>
-        <ul><li><a href="#s-parte-1" class="nav-parte">Parte 1 — Implementado (Sprint 1)</a><ul><li><a href="#s-1-arquitetura-em-camadas-portas-e-adaptadores">1. Arquitetura em camadas: portas e adaptadores</a></li><li><a href="#s-2-kernel-value-objects-e-politicas">2. Kernel: Value Objects e políticas</a></li><li><a href="#s-3-erros-de-dominio-e-contrato-de-erro-da-api">3. Erros de domínio e contrato de erro da API</a></li><li><a href="#s-4-plataforma-web-correlacao-status-e-relogio">4. Plataforma web: correlação, status e relógio</a></li><li><a href="#s-5-dados-da-empresa-a-fatia-vertical-completa">5. Dados da empresa: a fatia vertical completa</a></li><li><a href="#s-6-sequencia-salvar-os-dados-da-empresa">6. Sequência: salvar os dados da empresa</a></li></ul></li><li><a href="#s-parte-2" class="nav-parte">Parte 2 — Planejado (especificado no B01)</a><ul><li><a href="#s-7-plataforma-de-comandos-recibo-outbox-e-fatos-sprint-2-b02">7. Plataforma de comandos: recibo, outbox e fatos (Sprint 2 · B02)</a></li><li><a href="#s-8-comercial-agregado-salesorder-sprint-4-b05">8. Comercial: agregado SalesOrder (Sprint 4 · B05)</a></li><li><a href="#s-9-estados-do-pedido">9. Estados do pedido</a></li><li><a href="#s-10-caso-de-uso-confirmar-pedido-sprint-4-b05">10. Caso de uso: confirmar pedido (Sprint 4 · B05)</a></li><li><a href="#s-11-financeiro-financialtitle-e-settlement-sprints-5-e-8-b05-b06">11. Financeiro: FinancialTitle e Settlement (Sprints 5 e 8+ · B05/B06)</a></li><li><a href="#s-12-motor-de-dados-e-analise-b02-b10-b14-e-b15">12. Motor de dados e análise (B02, B10, B14 e B15)</a></li><li><a href="#s-13-estados-de-uma-execucao-analitica">13. Estados de uma execução analítica</a></li><li><a href="#s-14-qualidade-de-produto-e-qualidade-de-dados-b04-e-b09">14. Qualidade de produto e qualidade de dados (B04 e B09)</a></li><li><a href="#s-15-demais-agregados-previstos">15. Demais agregados previstos</a></li></ul></li><li><a href="#s-parte-3" class="nav-parte">Parte 3 — Técnicas e padrões de engenharia de software</a><ul><li><a href="#s-3-1-arquitetura">3.1 Arquitetura</a></li><li><a href="#s-3-2-dominio-ddd">3.2 Domínio (DDD)</a></li><li><a href="#s-3-3-padroes-de-projeto">3.3 Padrões de projeto</a></li><li><a href="#s-3-4-dados-concorrencia-e-integridade">3.4 Dados, concorrência e integridade</a></li><li><a href="#s-3-5-api-e-observabilidade">3.5 API e observabilidade</a></li><li><a href="#s-3-6-qualidade-e-testes">3.6 Qualidade e testes</a></li><li><a href="#s-3-7-no-app-do-mac">3.7 No app do Mac</a></li><li><a href="#s-3-8-processo">3.8 Processo</a></li><li><a href="#s-3-9-evitados-de-proposito">3.9 Evitados de propósito</a></li></ul></li></ul>
+        <ul><li><a href="#s-parte-1" class="nav-parte">Parte 1 — Implementado (Sprints 1 e 2)</a><ul><li><a href="#s-1-arquitetura-em-camadas-portas-e-adaptadores">1. Arquitetura em camadas: portas e adaptadores</a></li><li><a href="#s-2-kernel-value-objects-e-politicas">2. Kernel: Value Objects e políticas</a></li><li><a href="#s-3-erros-de-dominio-e-contrato-de-erro-da-api">3. Erros de domínio e contrato de erro da API</a></li><li><a href="#s-4-plataforma-web-correlacao-sessao-status-e-relogio">4. Plataforma web: correlação, sessão, status e relógio</a></li><li><a href="#s-5-dados-da-empresa-a-fatia-vertical-completa">5. Dados da empresa: a fatia vertical completa</a></li><li><a href="#s-6-sequencia-salvar-os-dados-da-empresa">6. Sequência: salvar os dados da empresa</a></li><li><a href="#s-7-acesso-usuarios-perfis-e-sessoes-sprint-2">7. Acesso: usuários, perfis e sessões (Sprint 2)</a></li><li><a href="#s-8-cadastros-clientes-unidades-e-contatos-sprint-2">8. Cadastros: clientes, unidades e contatos (Sprint 2)</a></li><li><a href="#s-9-plataforma-recibos-de-comando-outbox-e-fatos-sprint-2">9. Plataforma: recibos de comando, outbox e fatos (Sprint 2)</a></li></ul></li><li><a href="#s-parte-2" class="nav-parte">Parte 2 — Planejado (especificado no B01)</a><ul><li><a href="#s-10-comercial-agregado-salesorder-sprint-4-b05">10. Comercial: agregado SalesOrder (Sprint 4 · B05)</a></li><li><a href="#s-11-estados-do-pedido">11. Estados do pedido</a></li><li><a href="#s-12-caso-de-uso-confirmar-pedido-sprint-4-b05">12. Caso de uso: confirmar pedido (Sprint 4 · B05)</a></li><li><a href="#s-13-financeiro-financialtitle-e-settlement-sprints-5-e-8-b05-b06">13. Financeiro: FinancialTitle e Settlement (Sprints 5 e 8+ · B05/B06)</a></li><li><a href="#s-14-motor-de-dados-e-analise-b02-b10-b14-e-b15">14. Motor de dados e análise (B02, B10, B14 e B15)</a></li><li><a href="#s-15-estados-de-uma-execucao-analitica">15. Estados de uma execução analítica</a></li><li><a href="#s-16-qualidade-de-produto-e-qualidade-de-dados-b04-e-b09">16. Qualidade de produto e qualidade de dados (B04 e B09)</a></li><li><a href="#s-17-demais-agregados-previstos">17. Demais agregados previstos</a></li></ul></li><li><a href="#s-parte-3" class="nav-parte">Parte 3 — Técnicas e padrões de engenharia de software</a><ul><li><a href="#s-3-1-arquitetura">3.1 Arquitetura</a></li><li><a href="#s-3-2-dominio-ddd">3.2 Domínio (DDD)</a></li><li><a href="#s-3-3-padroes-de-projeto">3.3 Padrões de projeto</a></li><li><a href="#s-3-4-dados-concorrencia-e-integridade">3.4 Dados, concorrência e integridade</a></li><li><a href="#s-3-5-api-e-observabilidade">3.5 API e observabilidade</a></li><li><a href="#s-3-6-seguranca">3.6 Segurança</a></li><li><a href="#s-3-7-qualidade-e-testes">3.7 Qualidade e testes</a></li><li><a href="#s-3-8-no-app-do-mac">3.8 No app do Mac</a></li><li><a href="#s-3-9-processo">3.9 Processo</a></li><li><a href="#s-3-10-evitados-de-proposito">3.10 Evitados de propósito</a></li></ul></li></ul>
       </details>
     </nav>
     <main>
-      <h2 class="parte" id="s-parte-1">Parte 1 — Implementado (Sprint 1)</h2>
+      <h2 class="parte" id="s-parte-1">Parte 1 — Implementado (Sprints 1 e 2)</h2>
 <section class="bloco" id="s-1-arquitetura-em-camadas-portas-e-adaptadores"><h3>1. Arquitetura em camadas: portas e adaptadores</h3>
-<p>Cada módulo tem três camadas. O domínio fica no centro e não conhece Spring, HTTP nem banco; isso é verificado no build pelo <code>ArchitectureTest</code>. As setas mostram a direção das dependências.</p>
+<p>Cada módulo tem três camadas. O domínio fica no centro e não conhece Spring, HTTP nem banco; isso é verificado no build pelo <code>ArchitectureTest</code>. As setas mostram a direção das dependências. O exemplo é o cadastro de clientes; os dados da empresa e os usuários seguem o mesmo desenho.</p>
 <div class="diagrama"><pre class="mermaid">
 flowchart LR
     APP["App do Mac&lt;br/&gt;Electron + React"]
     subgraph INFRA["infrastructure: adaptadores"]
-        CTRL["CompanyProfileController&lt;br/&gt;REST /api/v1"]
-        JDBC["JdbcCompanyProfileRepository"]
+        FIL["CorrelationId&lt;br/&gt;SessionFilter"]
+        CTRL["CustomerController&lt;br/&gt;REST /api/v1/customers"]
+        JDBC["JdbcPartnerRepository"]
         AUDJ["JdbcAuditTrail"]
     end
     subgraph APPL["application: casos de uso e portas"]
-        SVC["CompanyProfileService"]
-        PORT["CompanyProfileRepository&lt;br/&gt;(porta)"]
-        AUDP["AuditTrail&lt;br/&gt;(porta pública da auditoria)"]
+        SVC["CustomerService"]
+        PORT["PartnerRepository&lt;br/&gt;(porta)"]
+        AUDP["AuditTrail · AuditQuery&lt;br/&gt;(portas da auditoria)"]
+        PLT["CommandReceipts · Outbox&lt;br/&gt;(plataforma)"]
+        ACS["CurrentUserHolder&lt;br/&gt;(acesso)"]
     end
     subgraph DOM["domain: regras"]
-        AGG["CompanyProfile"]
+        AGG["Partner&lt;br/&gt;Unit · Contact"]
     end
     subgraph KER["kernel: Value Objects"]
         VO["Money · Quantity · Cnpj"]
     end
-    DB[("PostgreSQL 16&lt;br/&gt;Flyway")]
-    APP -- "HTTP + ETag/If-Match" --&gt; CTRL
+    DB[("PostgreSQL 16&lt;br/&gt;Flyway V1–V4")]
+    APP -- "HTTP + Bearer + ETag/If-Match&lt;br/&gt;+ Idempotency-Key" --&gt; FIL
+    FIL --&gt; CTRL
     CTRL --&gt; SVC
+    SVC --&gt; ACS
     SVC --&gt; PORT
     SVC --&gt; AUDP
+    SVC --&gt; PLT
     SVC --&gt; AGG
     AGG --&gt; VO
     JDBC -. implementa .-&gt; PORT
     AUDJ -. implementa .-&gt; AUDP
     JDBC --&gt; DB
     AUDJ --&gt; DB
+    PLT --&gt; DB
 </pre></div>
 </section>
 <section class="bloco" id="s-2-kernel-value-objects-e-politicas"><h3>2. Kernel: Value Objects e políticas</h3>
@@ -218,7 +226,7 @@ classDiagram
 </pre></div>
 </section>
 <section class="bloco" id="s-3-erros-de-dominio-e-contrato-de-erro-da-api"><h3>3. Erros de domínio e contrato de erro da API</h3>
-<p>As exceções de negócio carregam um código estável. Um único tratador (<code>ApiExceptionHandler</code>) converte cada uma no corpo padrão <code>ApiError</code> e no código HTTP correspondente: 412 versão desatualizada, 422 regra violada, 404 não encontrado, 428 falta <code>If-Match</code> e 400 formato inválido.</p>
+<p>As exceções de negócio carregam um código estável. Um único tratador (<code>ApiExceptionHandler</code>) converte cada uma no corpo padrão <code>ApiError</code> e no código HTTP correspondente: 401 sem sessão, 403 sem permissão, 404 não encontrado, 412 versão desatualizada, 422 regra violada, 428 falta <code>If-Match</code> e 400 formato inválido. O acesso negado é gravado na auditoria numa transação separada, para ficar registrado mesmo que a operação seja desfeita.</p>
 <div class="diagrama"><pre class="mermaid">
 classDiagram
     class RuntimeException
@@ -244,6 +252,15 @@ classDiagram
     class NotFoundException {
         HTTP 404 NOT_FOUND
     }
+    class UnauthenticatedException {
+        HTTP 401 UNAUTHENTICATED
+        +sessionRequired()$ UnauthenticatedException
+    }
+    class AccessDeniedException {
+        HTTP 403 ACCESS_DENIED
+        -String permission
+        -String username
+    }
     class PreconditionRequiredException {
         HTTP 428 PRECONDITION_REQUIRED
     }
@@ -252,6 +269,8 @@ classDiagram
         +versionConflict(e) ResponseEntity~ApiError~
         +ruleViolation(e) ResponseEntity~ApiError~
         +notFound(e) ResponseEntity~ApiError~
+        +unauthenticated(e) ResponseEntity~ApiError~
+        +accessDenied(e) ResponseEntity~ApiError~
         +preconditionRequired(e) ResponseEntity~ApiError~
         +badRequest(e) ResponseEntity~ApiError~
         +unexpected(e) ResponseEntity~ApiError~
@@ -274,14 +293,20 @@ classDiagram
     DomainException &lt;|-- RuleViolationException
     DomainException &lt;|-- VersionConflictException
     DomainException &lt;|-- NotFoundException
+    DomainException &lt;|-- UnauthenticatedException
+    DomainException &lt;|-- AccessDeniedException
     DomainException *-- FieldIssue
     ApiExceptionHandler ..&gt; DomainException : traduz
     ApiExceptionHandler ..&gt; ApiError : cria
     ApiError *-- Detail
+    ApiExceptionHandler ..&gt; AuditTrail : registra ACCESS_DENIED
+    class AuditTrail {
+        &lt;&lt;interface&gt;&gt;
+    }
 </pre></div>
 </section>
-<section class="bloco" id="s-4-plataforma-web-correlacao-status-e-relogio"><h3>4. Plataforma web: correlação, status e relógio</h3>
-<p><code>CorrelationId</code> é um filtro que roda antes de tudo: lê ou gera o <code>X-Correlation-Id</code>, grava no log (MDC) e devolve na resposta. O mesmo código aparece no erro, na auditoria e no log, para rastrear uma operação de ponta a ponta.</p>
+<section class="bloco" id="s-4-plataforma-web-correlacao-sessao-status-e-relogio"><h3>4. Plataforma web: correlação, sessão, status e relógio</h3>
+<p>Dois filtros rodam antes de qualquer controller. <code>CorrelationId</code> lê ou gera o <code>X-Correlation-Id</code>, grava no log (MDC) e devolve na resposta; o mesmo código aparece no erro, na auditoria e no log. <code>SessionFilter</code> valida o token <code>Bearer</code> e guarda o usuário da requisição em <code>CurrentUserHolder</code>. Só <code>GET /api/v1/status</code> e o login (<code>POST /api/v1/session</code>) dispensam sessão.</p>
 <div class="diagrama"><pre class="mermaid">
 classDiagram
     class OncePerRequestFilter {
@@ -293,6 +318,16 @@ classDiagram
         +HEADER$ String = "X-Correlation-Id"
         +current()$ String
         #doFilterInternal(req, res, chain)
+    }
+    class SessionFilter {
+        &lt;&lt;Component · ordem 10&gt;&gt;
+        -SessionService sessions
+        #shouldNotFilter(req) boolean
+        #doFilterInternal(req, res, chain)
+        ~bearer(req)$ String
+    }
+    class Versions {
+        +parse(String ifMatch)$ long
     }
     class StatusController {
         &lt;&lt;RestController&gt;&gt;
@@ -317,6 +352,11 @@ classDiagram
         +main(String[])$
     }
     OncePerRequestFilter &lt;|-- CorrelationId
+    OncePerRequestFilter &lt;|-- SessionFilter
+    SessionFilter ..&gt; CurrentUserHolder : set e clear
+    class CurrentUserHolder {
+        &lt;&lt;acesso · ThreadLocal&gt;&gt;
+    }
     StatusController ..&gt; Status : GET /api/v1/status
 </pre></div>
 </section>
@@ -405,15 +445,16 @@ classDiagram
         +String before
         +String after
     }
-    class CurrentActor {
-        +name()$ String
+    class CurrentUserHolder {
+        &lt;&lt;acesso&gt;&gt;
+        +require(String permission)$ CurrentUser
     }
     CompanyProfileController --&gt; CompanyProfileService
     CompanyProfileController ..&gt; CompanyProfileRequest
     CompanyProfileController ..&gt; CompanyProfileResponse
     CompanyProfileService --&gt; CompanyProfileRepository
     CompanyProfileService --&gt; AuditTrail
-    CompanyProfileService ..&gt; CurrentActor
+    CompanyProfileService ..&gt; CurrentUserHolder : company.read e company.update
     CompanyProfileService ..&gt; CompanyProfile
     CompanyProfileRepository &lt;|.. JdbcCompanyProfileRepository
     AuditTrail &lt;|.. JdbcAuditTrail
@@ -458,78 +499,353 @@ sequenceDiagram
     C--&gt;&gt;A: 200 + ETag "4"
 </pre></div>
 </section>
-<h2 class="parte" id="s-parte-2">Parte 2 — Planejado (especificado no B01)</h2>
-<section class="bloco" id="s-7-plataforma-de-comandos-recibo-outbox-e-fatos-sprint-2-b02"><h3>7. Plataforma de comandos: recibo, outbox e fatos (Sprint 2 · B02)</h3>
-<p>Todo comando que muda dinheiro, estoque ou compromisso grava, <strong>na mesma transação</strong>, os agregados, o recibo do comando, a auditoria, os fatos operacionais e os eventos do outbox. Repetir a mesma intenção (queda de conexão, clique duplo) devolve o resultado original.</p>
+<section class="bloco" id="s-7-acesso-usuarios-perfis-e-sessoes-sprint-2"><h3>7. Acesso: usuários, perfis e sessões (Sprint 2)</h3>
+<p>Usuários do próprio Renda+, com senha guardada só como hash Argon2id. A sessão é um token opaco: o banco guarda apenas o hash do token, e a sessão expira após 8 h sem uso ou 12 h no total. Depois de 5 senhas erradas, o usuário fica bloqueado por 15 minutos. Há dois perfis nesta fase, com permissões por ação.</p>
 <div class="diagrama"><pre class="mermaid">
 classDiagram
-    class CommandReceiptStore {
-        &lt;&lt;interface · porta&gt;&gt;
-        +find(companyId, operation, key) Optional~CommandReceipt~
-        +begin(CommandReceipt)
-        +complete(commandId, response, affectedIds)
-        +reject(commandId, error)
+    class User {
+        &lt;&lt;aggregate root&gt;&gt;
+        +MAX_FAILED_ATTEMPTS$ int = 5
+        +LOCK_DURATION$ Duration = 15 min
+        -UUID id
+        -String username
+        -String displayName
+        -Profile profile
+        -boolean active
+        -int failedAttempts
+        -Instant lockedUntil
+        -long version
+        +create(username, displayName, profile, password, now, actor)$ User
+        +update(displayName, profile, active, now, actor) User
+        +passwordReset(now, actor) User
+        +failedLogin(now) User
+        +successfulLogin() User
+        +lockedAt(now) boolean
+        +diff(User) Map
     }
-    class CommandReceipt {
-        &lt;&lt;entity&gt;&gt;
-        +UUID commandId
-        +UUID companyId
-        +String operation
-        +IdempotencyKey key
-        +String requestHash
-        +String actor
-        +ReceiptState state
-        +String response
-        +List~EntityRef~ affectedIds
-    }
-    class ReceiptState {
+    class Profile {
         &lt;&lt;enumeration&gt;&gt;
-        IN_PROGRESS
-        COMPLETED
-        REJECTED
+        ADMINISTRADOR
+        CONSULTA
+        +label() String
+        +permissions() Set~String~
     }
-    class EventOutbox {
+    class Permissions {
+        +COMPANY_READ$ "company.read"
+        +COMPANY_UPDATE$ "company.update"
+        +PARTNER_READ$ "partner.read"
+        +PARTNER_CREATE$ "partner.create"
+        +PARTNER_UPDATE$ "partner.update"
+        +PARTNER_DEACTIVATE$ "partner.deactivate"
+        +USER_ADMIN$ "user.admin"
+    }
+    class PasswordPolicy {
+        +MIN$ int = 10
+        +MAX$ int = 128
+        +check(field, password, username, issues)$
+        +require(field, password, username)$
+    }
+    class CurrentUser {
+        &lt;&lt;record&gt;&gt;
+        +UUID id
+        +String username
+        +String displayName
+        +Profile profile
+        +UUID sessionId
+        +can(String permission) boolean
+    }
+    class CurrentUserHolder {
+        &lt;&lt;ThreadLocal&gt;&gt;
+        +set(CurrentUser)$
+        +clear()$
+        +current()$ Optional~CurrentUser~
+        +require(String permission)$ CurrentUser
+        +actorName()$ String
+    }
+    class SessionService {
+        &lt;&lt;Service&gt;&gt;
+        +IDLE_TIMEOUT$ Duration = 8 h
+        +ABSOLUTE_TIMEOUT$ Duration = 12 h
+        +login(username, password) LoginResult
+        +authenticate(token) Optional~CurrentUser~
+        +logout(sessionId, reason)
+        +changeOwnPassword(current, old, new)
+        +hash(token)$ String
+    }
+    class LoginResult {
+        &lt;&lt;sealed interface&gt;&gt;
+    }
+    class Success {
+        &lt;&lt;record&gt;&gt;
+        +CurrentUser user
+        +String token
+        +Instant expiresAt
+    }
+    class Invalid {
+        &lt;&lt;record&gt;&gt;
+        +String attemptedUsername
+    }
+    class Locked {
+        &lt;&lt;record&gt;&gt;
+        +String username
+        +Instant until
+    }
+    class UserService {
+        &lt;&lt;Service&gt;&gt;
+        +list() List~User~
+        +create(...) User
+        +update(id, expectedVersion, ...) Change
+        +resetPassword(id, newPassword, actor) User
+    }
+    class UserRepository {
         &lt;&lt;interface · porta&gt;&gt;
-        +append(DomainEvent)
+        +findByUsernameForUpdate(String) Optional~User~
+        +findByIdForUpdate(UUID) Optional~User~
+        +countActiveAdministrators() long
+        +insert(User, passwordHash, createdBy)
+        +update(User, expectedVersion) boolean
+        +updateLoginState(User)
+    }
+    class SessionRepository {
+        &lt;&lt;interface · porta&gt;&gt;
+        +create(userId, tokenHash, now, expiresAt) UUID
+        +findActive(tokenHash) Optional~StoredSession~
+        +touch(sessionId, now)
+        +revoke(sessionId, now, reason)
+        +revokeAllOf(userId, now, reason) int
+    }
+    class PasswordHasher {
+        &lt;&lt;interface · porta&gt;&gt;
+        +hash(String) String
+        +matches(String, String) boolean
+    }
+    class Argon2PasswordHasher {
+        &lt;&lt;adaptador&gt;&gt;
+    }
+    class JdbcUserRepository {
+        &lt;&lt;adaptador&gt;&gt;
+    }
+    class JdbcSessionRepository {
+        &lt;&lt;adaptador&gt;&gt;
+    }
+    class SessionApplicationService {
+        &lt;&lt;plataforma · Service&gt;&gt;
+        +login(username, password) Success
+        +logout(reason)
+        +createUser(...) User
+        +updateUser(...) User
+        +resetPassword(id, password) User
+    }
+    class SessionController {
+        &lt;&lt;RestController&gt;&gt;
+        POST GET DELETE /api/v1/session
+        POST /api/v1/session/password
+    }
+    class UserAdminController {
+        &lt;&lt;RestController&gt;&gt;
+        /api/v1/users
+    }
+    class BootstrapAdministrator {
+        &lt;&lt;ApplicationRunner&gt;&gt;
+        cria o primeiro administrador
+    }
+    User --&gt; Profile
+    Profile ..&gt; Permissions
+    CurrentUser --&gt; Profile
+    CurrentUserHolder --&gt; CurrentUser
+    LoginResult &lt;|.. Success
+    LoginResult &lt;|.. Invalid
+    LoginResult &lt;|.. Locked
+    SessionService ..&gt; LoginResult
+    SessionService --&gt; UserRepository
+    SessionService --&gt; SessionRepository
+    SessionService --&gt; PasswordHasher
+    UserService --&gt; UserRepository
+    UserService --&gt; SessionRepository
+    UserService ..&gt; PasswordPolicy
+    UserRepository &lt;|.. JdbcUserRepository
+    SessionRepository &lt;|.. JdbcSessionRepository
+    PasswordHasher &lt;|.. Argon2PasswordHasher
+    SessionController --&gt; SessionApplicationService
+    UserAdminController --&gt; SessionApplicationService
+    SessionApplicationService --&gt; SessionService
+    SessionApplicationService --&gt; UserService
+    BootstrapAdministrator --&gt; UserService
+</pre></div>
+</section>
+<section class="bloco" id="s-8-cadastros-clientes-unidades-e-contatos-sprint-2"><h3>8. Cadastros: clientes, unidades e contatos (Sprint 2)</h3>
+<p>O cliente é um <code>Partner</code> com papel de cliente. Unidades e contatos fazem parte do agregado e são gravados junto com ele. O código (<code>C00001</code>) é gerado pelo sistema; o CNPJ, quando informado, é válido e único. Cadastrar usa recibo de comando; editar usa versão; nada é apagado, só inativado com motivo.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class Partner {
+        &lt;&lt;aggregate root&gt;&gt;
+        -UUID id
+        -String code
+        -String legalName
+        -String tradeName
+        -Cnpj cnpj
+        -String group
+        -Status status
+        -List~Unit~ units
+        -List~Contact~ contacts
+        -long version
+        +register(code, PartnerData, now, actor)$ Partner
+        +update(PartnerData, now, actor) Partner
+        +deactivate(now, actor) Partner
+        +diff(Partner) Map
+    }
+    class Status {
+        &lt;&lt;enumeration&gt;&gt;
+        ATIVO
+        INATIVO
+    }
+    class Unit {
+        &lt;&lt;record&gt;&gt;
+        +UUID id
+        +String name
+        +String street
+        +String city
+        +String state
+    }
+    class Contact {
+        &lt;&lt;record&gt;&gt;
+        +UUID id
+        +String name
+        +String role
+        +String phone
+        +String email
+    }
+    class PartnerData {
+        &lt;&lt;record&gt;&gt;
+        dados digitados, com UnitData e ContactData
+    }
+    class CustomerService {
+        &lt;&lt;Service&gt;&gt;
+        +list(search, Status) List~Summary~
+        +get(UUID) Partner
+        +history(UUID) List~AuditRecord~
+        +register(idempotencyKey, PartnerData) Partner
+        +update(UUID, expectedVersion, PartnerData) Partner
+        +deactivate(UUID, expectedVersion, reason) Partner
+    }
+    class PartnerRepository {
+        &lt;&lt;interface · porta&gt;&gt;
+        +nextCustomerCode() String
+        +insert(Partner)
+        +update(Partner, expectedVersion) boolean
+        +findByIdForUpdate(UUID) Optional~Partner~
+        +findByCnpj(cnpj, exceptId) Optional~Summary~
+        +list(search, Status, limit) List~Summary~
+    }
+    class JdbcPartnerRepository {
+        &lt;&lt;adaptador&gt;&gt;
+    }
+    class CustomerController {
+        &lt;&lt;RestController&gt;&gt;
+        GET POST /api/v1/customers
+        GET PUT /api/v1/customers/id
+        POST /customers/id/deactivate
+        GET /customers/id/history
+    }
+    class AuditQuery {
+        &lt;&lt;interface · auditoria&gt;&gt;
+        +history(entityType, entityId) List~AuditRecord~
+    }
+    class AuditTrail {
+        &lt;&lt;interface · auditoria&gt;&gt;
+    }
+    class CommandReceipts {
+        &lt;&lt;plataforma&gt;&gt;
+    }
+    class Outbox {
+        &lt;&lt;plataforma&gt;&gt;
+    }
+    class CurrentUserHolder {
+        &lt;&lt;acesso&gt;&gt;
+    }
+    Partner --&gt; Status
+    Partner "1" *-- "0..50" Unit
+    Partner "1" *-- "0..50" Contact
+    Partner ..&gt; PartnerData : valida
+    CustomerController --&gt; CustomerService
+    CustomerService --&gt; PartnerRepository
+    CustomerService --&gt; AuditTrail
+    CustomerService --&gt; AuditQuery
+    CustomerService --&gt; CommandReceipts
+    CustomerService --&gt; Outbox
+    CustomerService ..&gt; CurrentUserHolder : partner.*
+    PartnerRepository &lt;|.. JdbcPartnerRepository
+</pre></div>
+</section>
+<section class="bloco" id="s-9-plataforma-recibos-de-comando-outbox-e-fatos-sprint-2"><h3>9. Plataforma: recibos de comando, outbox e fatos (Sprint 2)</h3>
+<p><code>CommandReceipts</code> reserva a chave de idempotência com um <code>insert ... on conflict do nothing</code>. Por isso duas tentativas simultâneas com a mesma chave se enfileiram no banco, e a segunda recebe o resultado da primeira. <code>Outbox</code> grava o evento na transação do comando. <code>OutboxDispatcher</code> entrega os pendentes a cada 2 segundos, usando <code>for update skip locked</code>, e registra cada consumo em <code>event_consumption</code>. Assim, cada consumidor processa um evento uma única vez.</p>
+<p>Diferenças em relação à especificação do B01, adotadas na Sprint 2: o recibo é identificado por (usuário, chave), e reutilizar a chave com outro conteúdo devolve 422 <code>IDEMPOTENCY_KEY_REUSED</code>, em vez de 409.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class CommandReceipts {
+        &lt;&lt;Component&gt;&gt;
+        +requireKey(String)$ String
+        +claim(actor, key, command, request) Optional~String~
+        +complete(actor, key, resourceId)
+        -hash(request) String
+    }
+    class command_receipt {
+        &lt;&lt;tabela&gt;&gt;
+        PK actor, idempotency_key
+        command
+        request_hash
+        resource_id
+    }
+    class Outbox {
+        &lt;&lt;Component&gt;&gt;
+        +append(type, aggregateType, aggregateId, payload, actor) UUID
     }
     class DomainEvent {
         &lt;&lt;record&gt;&gt;
-        +UUID eventId
+        +UUID id
         +String type
-        +int schemaVersion
-        +EntityRef aggregate
-        +long aggregateVersion
+        +String aggregateType
+        +String aggregateId
+        +Map payload
         +Instant occurredAt
         +String actor
         +String correlationId
-        +payload
     }
-    class OutboxRelay {
-        publica em lote, pelo menos uma vez
+    class OutboxDispatcher {
+        &lt;&lt;Component · Scheduled 2 s&gt;&gt;
+        +poll()
+        +dispatchPending() int
+        +deliver(DomainEvent)
     }
-    class ConsumerReceiptStore {
-        &lt;&lt;interface · porta&gt;&gt;
-        +alreadyProcessed(consumer, eventId) boolean
-        +markProcessed(consumer, eventId)
-    }
-    class IdempotentConsumer {
-        &lt;&lt;abstract&gt;&gt;
+    class EventConsumer {
+        &lt;&lt;interface&gt;&gt;
+        +name() String
+        +accepts(String eventType) boolean
         +handle(DomainEvent)
-        #apply(DomainEvent)*
     }
-    class OperationalFactStore {
-        &lt;&lt;interface · porta&gt;&gt;
-        +append(OperationalFact)
+    class OperationalFacts {
+        &lt;&lt;consumidor&gt;&gt;
+        grava operational_fact
     }
-    CommandReceiptStore ..&gt; CommandReceipt
-    CommandReceipt --&gt; ReceiptState
-    EventOutbox ..&gt; DomainEvent
-    OutboxRelay ..&gt; EventOutbox : lê pendentes
-    OutboxRelay ..&gt; IdempotentConsumer : entrega
-    IdempotentConsumer --&gt; ConsumerReceiptStore : deduplica
+    class outbox_event {
+        &lt;&lt;tabela&gt;&gt;
+        published_at nulo = pendente
+    }
+    class event_consumption {
+        &lt;&lt;tabela&gt;&gt;
+        PK consumer, event_id
+    }
+    CommandReceipts ..&gt; command_receipt
+    Outbox ..&gt; outbox_event : insert na transação do comando
+    OutboxDispatcher ..&gt; outbox_event : lê pendentes
+    OutboxDispatcher ..&gt; DomainEvent
+    OutboxDispatcher --&gt; EventConsumer : entrega
+    OutboxDispatcher ..&gt; event_consumption : deduplica
+    EventConsumer &lt;|.. OperationalFacts
 </pre></div>
 </section>
-<section class="bloco" id="s-8-comercial-agregado-salesorder-sprint-4-b05"><h3>8. Comercial: agregado SalesOrder (Sprint 4 · B05)</h3>
+<h2 class="parte" id="s-parte-2">Parte 2 — Planejado (especificado no B01)</h2>
+<section class="bloco" id="s-10-comercial-agregado-salesorder-sprint-4-b05"><h3>10. Comercial: agregado SalesOrder (Sprint 4 · B05)</h3>
 <p>O pedido protege suas regras: pelo menos uma linha, parcelas que somam exatamente o total e edição só em rascunho. A confirmação acontece uma única vez; a segunda tentativa devolve a confirmação existente.</p>
 <div class="diagrama"><pre class="mermaid">
 classDiagram
@@ -629,7 +945,7 @@ classDiagram
     note for SalesOrder "INV-SO-3: soma das parcelas = total, exato em centavos"
 </pre></div>
 </section>
-<section class="bloco" id="s-9-estados-do-pedido"><h3>9. Estados do pedido</h3>
+<section class="bloco" id="s-11-estados-do-pedido"><h3>11. Estados do pedido</h3>
 <div class="diagrama"><pre class="mermaid">
 stateDiagram-v2
     [*] --&gt; DRAFT
@@ -643,8 +959,8 @@ stateDiagram-v2
     CANCELLED --&gt; [*]
 </pre></div>
 </section>
-<section class="bloco" id="s-10-caso-de-uso-confirmar-pedido-sprint-4-b05"><h3>10. Caso de uso: confirmar pedido (Sprint 4 · B05)</h3>
-<p>O handler coordena; a regra fica no agregado. Projetos, equipamentos e parcelas são criados por portas de outros módulos, <strong>dentro da mesma transação</strong>, porque a confirmação não pode ficar pela metade.</p>
+<section class="bloco" id="s-12-caso-de-uso-confirmar-pedido-sprint-4-b05"><h3>12. Caso de uso: confirmar pedido (Sprint 4 · B05)</h3>
+<p>O handler coordena; a regra fica no agregado. Projetos, equipamentos e parcelas são criados por portas de outros módulos, <strong>dentro da mesma transação</strong>, porque a confirmação não pode ficar pela metade. Recibo, outbox e auditoria reaproveitam as classes da Sprint 2.</p>
 <div class="diagrama"><pre class="mermaid">
 classDiagram
     class SalesOrderController {
@@ -678,36 +994,36 @@ classDiagram
         &lt;&lt;interface · financeiro&gt;&gt;
         +createReceivables(OrderConfirmed) TitleIds
     }
-    class Authorizer {
-        &lt;&lt;interface · acesso&gt;&gt;
-        +require(Actor, "sales_order.confirm", orderId)
+    class CurrentUserHolder {
+        &lt;&lt;acesso&gt;&gt;
+        +require("sales_order.confirm")$
     }
-    class CommandReceiptStore {
-        &lt;&lt;interface · plataforma&gt;&gt;
+    class CommandReceipts {
+        &lt;&lt;plataforma&gt;&gt;
     }
-    class EventOutbox {
-        &lt;&lt;interface · plataforma&gt;&gt;
+    class Outbox {
+        &lt;&lt;plataforma&gt;&gt;
     }
     class AuditTrail {
         &lt;&lt;interface · auditoria&gt;&gt;
     }
-    class OperationalFactStore {
-        &lt;&lt;interface · plataforma&gt;&gt;
+    class OperationalFacts {
+        &lt;&lt;plataforma · consumidor&gt;&gt;
     }
     SalesOrderController --&gt; ConfirmSalesOrderHandler
     SalesOrderController ..&gt; ConfirmSalesOrder
-    ConfirmSalesOrderHandler --&gt; Authorizer
-    ConfirmSalesOrderHandler --&gt; CommandReceiptStore
+    ConfirmSalesOrderHandler ..&gt; CurrentUserHolder
+    ConfirmSalesOrderHandler --&gt; CommandReceipts
     ConfirmSalesOrderHandler --&gt; SalesOrderRepository
     ConfirmSalesOrderHandler --&gt; PartnerQueryApi
     ConfirmSalesOrderHandler --&gt; ProjectProvisioning
     ConfirmSalesOrderHandler --&gt; TitleProvisioning
     ConfirmSalesOrderHandler --&gt; AuditTrail
-    ConfirmSalesOrderHandler --&gt; OperationalFactStore
-    ConfirmSalesOrderHandler --&gt; EventOutbox
+    Outbox ..&gt; OperationalFacts : fatos pelo outbox
+    ConfirmSalesOrderHandler --&gt; Outbox
 </pre></div>
 </section>
-<section class="bloco" id="s-11-financeiro-financialtitle-e-settlement-sprints-5-e-8-b05-b06"><h3>11. Financeiro: FinancialTitle e Settlement (Sprints 5 e 8+ · B05/B06)</h3>
+<section class="bloco" id="s-13-financeiro-financialtitle-e-settlement-sprints-5-e-8-b05-b06"><h3>13. Financeiro: FinancialTitle e Settlement (Sprints 5 e 8+ · B05/B06)</h3>
 <p>O título (parcela a receber ou conta a pagar) nunca tem saldo negativo. A liquidação (baixa) distribui um pagamento entre títulos; a soma das alocações, créditos e componentes é sempre igual ao total. O estorno é total, cria um movimento de caixa inverso e preserva o original.</p>
 <div class="diagrama"><pre class="mermaid">
 classDiagram
@@ -823,7 +1139,7 @@ classDiagram
     note for Settlement "INV-ST-1: alocações + crédito + componentes = total"
 </pre></div>
 </section>
-<section class="bloco" id="s-12-motor-de-dados-e-analise-b02-b10-b14-e-b15"><h3>12. Motor de dados e análise (B02, B10, B14 e B15)</h3>
+<section class="bloco" id="s-14-motor-de-dados-e-analise-b02-b10-b14-e-b15"><h3>14. Motor de dados e análise (B02, B10, B14 e B15)</h3>
 <p>Fatos são imutáveis e alimentam os indicadores. Cada indicador tem uma definição única e versionada; valor ausente nunca vira zero. Os métodos analíticos são estratégias trocáveis, habilitadas só quando há dados suficientes.</p>
 <div class="diagrama"><pre class="mermaid">
 classDiagram
@@ -919,7 +1235,7 @@ classDiagram
     Finding "1" --&gt; "0..*" Decision
 </pre></div>
 </section>
-<section class="bloco" id="s-13-estados-de-uma-execucao-analitica"><h3>13. Estados de uma execução analítica</h3>
+<section class="bloco" id="s-15-estados-de-uma-execucao-analitica"><h3>15. Estados de uma execução analítica</h3>
 <div class="diagrama"><pre class="mermaid">
 stateDiagram-v2
     [*] --&gt; REQUESTED
@@ -937,7 +1253,7 @@ stateDiagram-v2
     CANCELLED --&gt; [*]
 </pre></div>
 </section>
-<section class="bloco" id="s-14-qualidade-de-produto-e-qualidade-de-dados-b04-e-b09"><h3>14. Qualidade de produto e qualidade de dados (B04 e B09)</h3>
+<section class="bloco" id="s-16-qualidade-de-produto-e-qualidade-de-dados-b04-e-b09"><h3>16. Qualidade de produto e qualidade de dados (B04 e B09)</h3>
 <div class="diagrama"><pre class="mermaid">
 classDiagram
     class Inspection {
@@ -1002,36 +1318,39 @@ classDiagram
     DataQualityIssue *-- Evidence
 </pre></div>
 </section>
-<section class="bloco" id="s-15-demais-agregados-previstos"><h3>15. Demais agregados previstos</h3>
+<section class="bloco" id="s-17-demais-agregados-previstos"><h3>17. Demais agregados previstos</h3>
 <div class="tabela"><table><thead><tr><th>Agregado</th><th>Regra central</th><th>Fase</th></tr></thead><tbody><tr><td>Partner</td><td>CNPJ único quando presente; cliente e fornecedor são papéis do mesmo parceiro</td><td>Sprint 2–3 · B03</td></tr><tr><td>Proposal / Revision</td><td>revisão emitida não muda</td><td>Sprint 4 · B05</td></tr><tr><td>Project</td><td>ligado a pedido, cliente e unidade</td><td>Sprint 4 · B05</td></tr><tr><td>Equipment</td><td>identidade própria; aceite e garantia vêm de evento real</td><td>B05/B09</td></tr><tr><td>BomRevision / ProjectBom</td><td>revisão aprovada não muda; o projeto conserva a sua</td><td>B07</td></tr><tr><td>Schedule / Baseline</td><td>sem ciclos; recalcular não altera a linha de base</td><td>B07</td></tr><tr><td>StockPosition / Reservation</td><td>reservado ≤ físico, mesmo com acessos simultâneos</td><td>B08</td></tr><tr><td>PurchaseOrder</td><td>soma das condições = total</td><td>B08</td></tr><tr><td>ProductionOrder</td><td>liberação exige revisão e inspeção</td><td>B09</td></tr><tr><td>CostEntry</td><td>um custo por origem</td><td>B08/B09</td></tr><tr><td>DistributionRun</td><td>confirmação congela a memória de cálculo; títulos gerados uma vez</td><td>B10</td></tr><tr><td>TaxPeriod</td><td>histórico, simulação e valor do contador separados</td><td>Sprint 7 · B10</td></tr><tr><td>PreventiveOccurrence</td><td>uma ocorrência por plano, revisão, equipamento e data</td><td>B11</td></tr><tr><td>StagingRecord</td><td>o original é preservado; aplicar de novo não duplica</td><td>B04/B12</td></tr></tbody></table></div>
 </section>
 <h2 class="parte" id="s-parte-3">Parte 3 — Técnicas e padrões de engenharia de software</h2>
-<p>Situação: <strong>Em uso</strong> já está no código da Sprint 1. <strong>Planejado</strong> está especificado e entra na sprint indicada.</p>
+<p>Situação: <strong>Em uso</strong> já está no código (Sprints 1 e 2). <strong>Planejado</strong> está especificado e entra na sprint indicada.</p>
 <section class="bloco" id="s-3-1-arquitetura"><h3>3.1 Arquitetura</h3>
-<div class="tabela"><table><thead><tr><th>Técnica</th><th>O que resolve</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>Cliente-servidor</td><td>App do Mac sem regra de negócio; o servidor decide</td><td>ADR-001; app Electron + API <code>/api/v1</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Monólito modular</td><td>24 módulos com fronteiras claras, num único servidor</td><td>pacotes em <code>br.com.fourtech.rendamais</code>; <code>modulos.json</code>; ADR-016</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Portas e adaptadores (hexagonal)</td><td>Domínio independente de banco e HTTP</td><td><code>CompanyProfileRepository</code> ↔ <code>JdbcCompanyProfileRepository</code>; <code>AuditTrail</code> ↔ <code>JdbcAuditTrail</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Camadas domain / application / infrastructure</td><td>Cada classe tem um só papel</td><td><code>plataforma/empresa/*</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Inversão e injeção de dependência</td><td>O serviço recebe as portas pelo construtor e pode ser testado sem banco</td><td><code>CompanyProfileService(repository, audit, clock)</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Testes de arquitetura</td><td>O build falha se um módulo usar outro não declarado, ou se o domínio importar Spring</td><td><code>ArchitectureTest</code> (ArchUnit lendo <code>modulos.json</code>)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>CQRS leve</td><td>Escrita por comandos; consultas gerenciais separadas, no mesmo banco</td><td>módulo <code>consultas</code></td><td><span class="selo selo--plan">Planejado · Sprint 4+</span></td></tr><tr><td>Worker Python separado</td><td>Processamento pesado sem acesso às tabelas de negócio</td><td>ADR-008</td><td><span class="selo selo--plan">Planejado · Sprint 2</span></td></tr></tbody></table></div>
+<div class="tabela"><table><thead><tr><th>Técnica</th><th>O que resolve</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>Cliente-servidor</td><td>App do Mac sem regra de negócio; o servidor decide</td><td>ADR-001; app Electron + API <code>/api/v1</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Monólito modular</td><td>24 módulos com fronteiras claras, num único servidor</td><td>pacotes em <code>br.com.fourtech.rendamais</code>; <code>modulos.json</code>; ADR-016</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Portas e adaptadores (hexagonal)</td><td>Domínio independente de banco e HTTP</td><td><code>CompanyProfileRepository</code> ↔ <code>JdbcCompanyProfileRepository</code>; <code>AuditTrail</code> ↔ <code>JdbcAuditTrail</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Camadas domain / application / infrastructure</td><td>Cada classe tem um só papel</td><td><code>plataforma/empresa/*</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Inversão e injeção de dependência</td><td>O serviço recebe as portas pelo construtor e pode ser testado sem banco</td><td><code>CompanyProfileService(repository, audit, clock)</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Testes de arquitetura</td><td>O build falha se um módulo usar outro não declarado, ou se o domínio importar Spring</td><td><code>ArchitectureTest</code> (ArchUnit lendo <code>modulos.json</code>)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>CQRS leve</td><td>Escrita por comandos; consultas gerenciais separadas, no mesmo banco</td><td>módulo <code>consultas</code></td><td><span class="selo selo--plan">Planejado · Sprint 4+</span></td></tr><tr><td>Worker Python separado</td><td>Processamento pesado sem acesso às tabelas de negócio</td><td>ADR-008 (ficou fora da Sprint 2)</td><td><span class="selo selo--plan">Planejado · B04</span></td></tr></tbody></table></div>
 </section>
 <section class="bloco" id="s-3-2-dominio-ddd"><h3>3.2 Domínio (DDD)</h3>
-<div class="tabela"><table><thead><tr><th>Técnica</th><th>O que resolve</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>Linguagem ubíqua</td><td>Mesmas palavras no negócio, no código e nas telas</td><td><code>b01/conceitos.json</code> (57 conceitos)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Contextos delimitados</td><td>Cada conceito tem um único módulo dono</td><td><code>modulos.json</code>, <code>conceitos.json</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Value Object</td><td>Dinheiro, quantidade e CNPJ se validam sozinhos e não mudam</td><td><code>Money</code>, <code>Quantity</code>, <code>Cnpj</code>, <code>UnitOfMeasure</code>, <code>UnitConversion</code>, <code>Address</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Agregado e raiz</td><td>Um objeto protege suas próprias regras</td><td><code>CompanyProfile</code>; depois <code>SalesOrder</code>, <code>FinancialTitle</code>, <code>Settlement</code></td><td><span class="selo selo--uso">Em uso / Planejado</span></td></tr><tr><td>Repositório</td><td>Salvar e buscar agregados sem expor SQL</td><td><code>CompanyProfileRepository</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Serviço de aplicação</td><td>Coordena transação, versão e auditoria de um caso de uso</td><td><code>CompanyProfileService</code>; depois <code>ConfirmSalesOrderHandler</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Invariantes numeradas</td><td>Regras testáveis e rastreáveis (INV-*)</td><td><code>12-b01-modelo-de-dominio.md</code></td><td><span class="selo selo--uso">Em uso (especificação)</span></td></tr><tr><td>Eventos de domínio</td><td>Um módulo avisa os outros do que aconteceu</td><td>95 eventos em <code>b01/eventos.json</code></td><td><span class="selo selo--plan">Planejado · Sprint 2</span></td></tr><tr><td>Registros compensatórios</td><td>Nada confirmado é apagado; corrige-se com estorno ou ajuste</td><td><code>Settlement.reverse</code>, <code>OperationalFact.reverses</code></td><td><span class="selo selo--plan">Planejado · Sprint 5</span></td></tr></tbody></table></div>
+<div class="tabela"><table><thead><tr><th>Técnica</th><th>O que resolve</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>Linguagem ubíqua</td><td>Mesmas palavras no negócio, no código e nas telas</td><td><code>b01/conceitos.json</code> (57 conceitos)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Contextos delimitados</td><td>Cada conceito tem um único módulo dono</td><td><code>modulos.json</code>, <code>conceitos.json</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Value Object</td><td>Dinheiro, quantidade e CNPJ se validam sozinhos e não mudam</td><td><code>Money</code>, <code>Quantity</code>, <code>Cnpj</code>, <code>UnitOfMeasure</code>, <code>UnitConversion</code>, <code>Address</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Agregado e raiz</td><td>Um objeto protege suas próprias regras</td><td><code>CompanyProfile</code>, <code>User</code>, <code>Partner</code> (com unidades e contatos); depois <code>SalesOrder</code>, <code>FinancialTitle</code>, <code>Settlement</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Repositório</td><td>Salvar e buscar agregados sem expor SQL</td><td><code>CompanyProfileRepository</code>, <code>UserRepository</code>, <code>SessionRepository</code>, <code>PartnerRepository</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Serviço de aplicação</td><td>Coordena permissão, transação, versão e auditoria de um caso de uso</td><td><code>CompanyProfileService</code>, <code>CustomerService</code>, <code>SessionService</code>, <code>UserService</code>; depois <code>ConfirmSalesOrderHandler</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Invariantes numeradas</td><td>Regras testáveis e rastreáveis (INV-*)</td><td><code>12-b01-modelo-de-dominio.md</code></td><td><span class="selo selo--uso">Em uso (especificação)</span></td></tr><tr><td>Eventos de domínio</td><td>Um módulo avisa os outros do que aconteceu</td><td><code>PartnerRegistered</code>, <code>PartnerUpdated</code>, <code>PartnerDeactivated</code> (dos 95 de <code>b01/eventos.json</code>)</td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr><tr><td>Registros compensatórios</td><td>Nada confirmado é apagado; corrige-se com estorno ou ajuste</td><td><code>Settlement.reverse</code>, <code>OperationalFact.reverses</code></td><td><span class="selo selo--plan">Planejado · Sprint 5</span></td></tr></tbody></table></div>
 </section>
 <section class="bloco" id="s-3-3-padroes-de-projeto"><h3>3.3 Padrões de projeto</h3>
-<div class="tabela"><table><thead><tr><th>Padrão</th><th>Uso no Renda+</th><th>Situação</th></tr></thead><tbody><tr><td>Static Factory Method</td><td><code>Money.ofCents</code>, <code>Money.parseCents</code>, <code>Cnpj.of</code>, <code>Quantity.of</code>, <code>Address.empty</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Strategy (por enum)</td><td><code>RoundingPolicy</code> e <code>AllocationPolicy</code> escolhem como arredondar e ratear</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Imutabilidade / objeto que devolve nova versão</td><td><code>CompanyProfile.update</code> devolve uma nova versão; <code>Money.plus</code> devolve um novo valor</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Notification</td><td>A validação reúne todos os campos com problema antes de recusar</td><td><code>CompanyProfile.update</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Data Mapper</td><td>Converte linha do banco em objeto de domínio</td><td><code>JdbcCompanyProfileRepository.MAPPER</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>DTO</td><td>Formato da API separado do domínio</td><td>records <code>CompanyProfileRequest</code> e <code>CompanyProfileResponse</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Template Method</td><td>O filtro implementa só o passo variável</td><td><code>CorrelationId extends OncePerRequestFilter</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Chain of Responsibility (filtros)</td><td>Correlação aplicada antes de qualquer controller</td><td>cadeia de filtros do servidor</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Tratamento centralizado de erros</td><td>Uma exceção vira sempre o mesmo formato de erro</td><td><code>ApiExceptionHandler</code> + <code>ApiError</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Policy / Specification</td><td>Regras compostas e testáveis para confirmar, cancelar e habilitar modelos</td><td><code>ConfirmationPolicy</code>, <code>CancellationPolicy</code>, <code>EligibilityPolicy</code></td><td><span class="selo selo--plan">Planejado · Sprint 4</span></td></tr><tr><td>State (enum + transições)</td><td>Pedido, tarefa e execução analítica só mudam por transições válidas</td><td><code>OrderStatus</code>, <code>RunState</code></td><td><span class="selo selo--plan">Planejado · Sprint 4</span></td></tr><tr><td>Strategy + Registry</td><td>Métodos analíticos trocáveis e versionados</td><td><code>AnalysisStrategy</code>, <code>StrategyRegistry</code></td><td><span class="selo selo--plan">Planejado · B10/B15</span></td></tr><tr><td>Composite</td><td>Fórmula de indicador como árvore de operações</td><td><code>FormulaSpec</code></td><td><span class="selo selo--plan">Planejado · B10</span></td></tr><tr><td>Pipeline</td><td>arquivo → extração → normalização → qualidade → conferência</td><td>importação</td><td><span class="selo selo--plan">Planejado · B04</span></td></tr><tr><td>Adapter</td><td>Leitores de PDF e OFX, armazenamento, solver, IA</td><td>módulo <code>integracao</code></td><td><span class="selo selo--plan">Planejado · B04+</span></td></tr><tr><td>Facade</td><td>Visão do projeto reunindo vários módulos, só leitura</td><td><code>ProjectOverviewQuery</code></td><td><span class="selo selo--plan">Planejado · Sprint 4</span></td></tr><tr><td>Decorator</td><td>Métricas, logs e timeout em volta de consultas</td><td>plataforma</td><td><span class="selo selo--plan">Planejado · B13</span></td></tr></tbody></table></div>
+<div class="tabela"><table><thead><tr><th>Padrão</th><th>Uso no Renda+</th><th>Situação</th></tr></thead><tbody><tr><td>Static Factory Method</td><td><code>Money.ofCents</code>, <code>Money.parseCents</code>, <code>Cnpj.of</code>, <code>Quantity.of</code>, <code>Address.empty</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Strategy (por enum)</td><td><code>RoundingPolicy</code> e <code>AllocationPolicy</code> escolhem como arredondar e ratear</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Imutabilidade / objeto que devolve nova versão</td><td><code>CompanyProfile.update</code> devolve uma nova versão; <code>Money.plus</code> devolve um novo valor</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Notification</td><td>A validação reúne todos os campos com problema antes de recusar</td><td><code>CompanyProfile.update</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Data Mapper</td><td>Converte linha do banco em objeto de domínio</td><td><code>JdbcCompanyProfileRepository.MAPPER</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>DTO</td><td>Formato da API separado do domínio</td><td>records <code>CompanyProfileRequest</code> e <code>CompanyProfileResponse</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Template Method</td><td>O filtro implementa só o passo variável</td><td><code>CorrelationId extends OncePerRequestFilter</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Chain of Responsibility (filtros)</td><td>Correlação aplicada antes de qualquer controller</td><td>cadeia de filtros do servidor</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Tratamento centralizado de erros</td><td>Uma exceção vira sempre o mesmo formato de erro</td><td><code>ApiExceptionHandler</code> + <code>ApiError</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Tipo fechado (sealed interface)</td><td>O login só pode terminar em sucesso, inválido ou bloqueado, e o compilador confere</td><td><code>SessionService.LoginResult</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Contexto da requisição por thread</td><td>O usuário da requisição fica disponível sem passá-lo em todo método</td><td><code>CurrentUserHolder</code> (preenchido pelo <code>SessionFilter</code>)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Observer (consumidores de eventos)</td><td>Um evento é entregue a quem se interessa por ele</td><td><code>EventConsumer</code> + <code>OperationalFacts</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Policy / Specification</td><td>Regras compostas e testáveis para confirmar, cancelar e habilitar modelos</td><td><code>ConfirmationPolicy</code>, <code>CancellationPolicy</code>, <code>EligibilityPolicy</code></td><td><span class="selo selo--plan">Planejado · Sprint 4</span></td></tr><tr><td>State (enum + transições)</td><td>Pedido, tarefa e execução analítica só mudam por transições válidas</td><td><code>OrderStatus</code>, <code>RunState</code></td><td><span class="selo selo--plan">Planejado · Sprint 4</span></td></tr><tr><td>Strategy + Registry</td><td>Métodos analíticos trocáveis e versionados</td><td><code>AnalysisStrategy</code>, <code>StrategyRegistry</code></td><td><span class="selo selo--plan">Planejado · B10/B15</span></td></tr><tr><td>Composite</td><td>Fórmula de indicador como árvore de operações</td><td><code>FormulaSpec</code></td><td><span class="selo selo--plan">Planejado · B10</span></td></tr><tr><td>Pipeline</td><td>arquivo → extração → normalização → qualidade → conferência</td><td>importação</td><td><span class="selo selo--plan">Planejado · B04</span></td></tr><tr><td>Adapter</td><td>Leitores de PDF e OFX, armazenamento, solver, IA</td><td>módulo <code>integracao</code></td><td><span class="selo selo--plan">Planejado · B04+</span></td></tr><tr><td>Facade</td><td>Visão do projeto reunindo vários módulos, só leitura</td><td><code>ProjectOverviewQuery</code></td><td><span class="selo selo--plan">Planejado · Sprint 4</span></td></tr><tr><td>Decorator</td><td>Métricas, logs e timeout em volta de consultas</td><td>plataforma</td><td><span class="selo selo--plan">Planejado · B13</span></td></tr></tbody></table></div>
 </section>
 <section class="bloco" id="s-3-4-dados-concorrencia-e-integridade"><h3>3.4 Dados, concorrência e integridade</h3>
-<div class="tabela"><table><thead><tr><th>Técnica</th><th>O que resolve</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>Dinheiro em centavos inteiros</td><td>Sem erro de ponto flutuante; soma exata</td><td><code>Money</code> (<code>long</code>), colunas <code>*_cents</code>; API envia texto</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Aritmética com estouro detectado</td><td>Nunca "vira" um valor absurdo em silêncio</td><td><code>Math.addExact</code>, <code>longValueExact</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Rateio com resíduo controlado</td><td>Parcelas somam exatamente o total</td><td><code>Money.allocate</code> (maiores restos e resíduo pela primeira)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Concorrência otimista</td><td>Duas pessoas editando: a segunda é avisada, sem perder dados</td><td><code>version</code>, ETag/If-Match, <code>update ... where version = ?</code> → 412</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Bloqueio pessimista</td><td>Operações críticas em sequência dentro da transação</td><td><code>select ... for update</code> em <code>getForUpdate</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Transação única com auditoria</td><td>A auditoria nunca fica de fora</td><td><code>@Transactional</code> + <code>AuditTrail</code> com <code>Propagation.MANDATORY</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Restrições no banco</td><td>Segunda linha de defesa, mesmo contra bugs</td><td><code>check</code> de CNPJ e CEP; índice que garante uma única empresa</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Migrações versionadas</td><td>Banco evolui junto com o código, igual em toda máquina</td><td>Flyway <code>V1__...sql</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Comando idempotente</td><td>Clique duplo ou queda de conexão não duplicam</td><td><code>Idempotency-Key</code> + recibo de comando</td><td><span class="selo selo--plan">Planejado · Sprint 2</span></td></tr><tr><td>Outbox transacional + consumidor idempotente</td><td>Eventos entregues pelo menos uma vez, sem efeito duplicado</td><td><code>outbox_event</code>, <code>consumer_receipt</code></td><td><span class="selo selo--plan">Planejado · Sprint 2</span></td></tr><tr><td>Travas em ordem estável</td><td>Evita impasse (deadlock) em baixas de vários títulos</td><td>INV-ST-3</td><td><span class="selo selo--plan">Planejado · Sprint 5</span></td></tr><tr><td>Lease com geração</td><td>Resultado de tentativa antiga do worker é recusado</td><td>tarefas Python</td><td><span class="selo selo--plan">Planejado · Sprint 2 / B04</span></td></tr><tr><td>Snapshot imutável</td><td>Análise reproduzível: mesmos dados, mesma semente</td><td><code>DatasetSnapshot</code></td><td><span class="selo selo--plan">Planejado · B04/B15</span></td></tr></tbody></table></div>
+<div class="tabela"><table><thead><tr><th>Técnica</th><th>O que resolve</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>Dinheiro em centavos inteiros</td><td>Sem erro de ponto flutuante; soma exata</td><td><code>Money</code> (<code>long</code>), colunas <code>*_cents</code>; API envia texto</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Aritmética com estouro detectado</td><td>Nunca "vira" um valor absurdo em silêncio</td><td><code>Math.addExact</code>, <code>longValueExact</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Rateio com resíduo controlado</td><td>Parcelas somam exatamente o total</td><td><code>Money.allocate</code> (maiores restos e resíduo pela primeira)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Concorrência otimista</td><td>Duas pessoas editando: a segunda é avisada, sem perder dados</td><td><code>version</code>, ETag/If-Match, <code>update ... where version = ?</code> → 412</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Bloqueio pessimista</td><td>Operações críticas em sequência dentro da transação</td><td><code>select ... for update</code> em <code>getForUpdate</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Transação única com auditoria</td><td>A auditoria nunca fica de fora</td><td><code>@Transactional</code> + <code>AuditTrail</code> com <code>Propagation.MANDATORY</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Restrições no banco</td><td>Segunda linha de defesa, mesmo contra bugs</td><td><code>check</code> de CNPJ e CEP; índice que garante uma única empresa</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Migrações versionadas</td><td>Banco evolui junto com o código, igual em toda máquina</td><td>Flyway <code>V1__...sql</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Comando idempotente</td><td>Clique duplo ou queda de conexão não duplicam</td><td><code>Idempotency-Key</code> + <code>CommandReceipts</code> (<code>insert ... on conflict do nothing</code>)</td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr><tr><td>Outbox transacional + consumidor idempotente</td><td>Eventos entregues pelo menos uma vez, sem efeito duplicado</td><td><code>Outbox</code>, <code>OutboxDispatcher</code>, <code>outbox_event</code>, <code>event_consumption</code></td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr><tr><td>Fila no banco sem disputa</td><td>Vários entregadores nunca pegam o mesmo evento</td><td><code>for update skip locked</code> no <code>OutboxDispatcher</code></td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr><tr><td>Auditoria em transação separada</td><td>Acesso negado fica registrado mesmo que a operação seja desfeita</td><td><code>ApiExceptionHandler.accessDenied</code> (nova transação)</td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr><tr><td>Travas em ordem estável</td><td>Evita impasse (deadlock) em baixas de vários títulos</td><td>INV-ST-3</td><td><span class="selo selo--plan">Planejado · Sprint 5</span></td></tr><tr><td>Lease com geração</td><td>Resultado de tentativa antiga do worker é recusado</td><td>tarefas Python</td><td><span class="selo selo--plan">Planejado · B04</span></td></tr><tr><td>Snapshot imutável</td><td>Análise reproduzível: mesmos dados, mesma semente</td><td><code>DatasetSnapshot</code></td><td><span class="selo selo--plan">Planejado · B04/B15</span></td></tr></tbody></table></div>
 </section>
 <section class="bloco" id="s-3-5-api-e-observabilidade"><h3>3.5 API e observabilidade</h3>
-<div class="tabela"><table><thead><tr><th>Técnica</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>API REST versionada (<code>/api/v1</code>)</td><td>todos os controllers</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Contrato de erro estável (<code>code</code>, <code>message</code>, <code>details</code>, <code>correlationId</code>, <code>retryable</code>)</td><td><code>ApiError</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Códigos HTTP com significado (400, 404, 412, 422, 428)</td><td><code>ApiExceptionHandler</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Identificador de correlação de ponta a ponta</td><td><code>CorrelationId</code> + MDC nos logs + auditoria</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Endpoint de status (servidor e banco)</td><td><code>StatusController</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Relógio injetável (testes com data controlada)</td><td><code>ClockConfig</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Configuração por variáveis de ambiente</td><td><code>RENDA_DB_URL</code>, <code>RENDA_SERVER_PORT</code>…</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Contrato OpenAPI</td><td>B02</td><td><span class="selo selo--plan">Planejado · Sprint 2</span></td></tr></tbody></table></div>
+<div class="tabela"><table><thead><tr><th>Técnica</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>API REST versionada (<code>/api/v1</code>)</td><td>todos os controllers</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Contrato de erro estável (<code>code</code>, <code>message</code>, <code>details</code>, <code>correlationId</code>, <code>retryable</code>)</td><td><code>ApiError</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Códigos HTTP com significado (400, 404, 412, 422, 428)</td><td><code>ApiExceptionHandler</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Identificador de correlação de ponta a ponta</td><td><code>CorrelationId</code> + MDC nos logs + auditoria</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Endpoint de status (servidor e banco)</td><td><code>StatusController</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Relógio injetável (testes com data controlada)</td><td><code>ClockConfig</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Configuração por variáveis de ambiente</td><td><code>RENDA_DB_URL</code>, <code>RENDA_SERVER_PORT</code>…</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Contrato OpenAPI conferido por teste</td><td><code>docs/backend/api/openapi.yaml</code> + <code>OpenApiContractTest</code></td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr><tr><td>Autenticação por token <code>Bearer</code></td><td><code>SessionFilter</code>; públicos só <code>GET /status</code> e <code>POST /session</code></td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr></tbody></table></div>
 </section>
-<section class="bloco" id="s-3-6-qualidade-e-testes"><h3>3.6 Qualidade e testes</h3>
-<div class="tabela"><table><thead><tr><th>Técnica</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>Testes unitários de Value Objects</td><td><code>MoneyTest</code>, <code>QuantityTest</code>, <code>CnpjTest</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Testes baseados em propriedades</td><td><code>MoneyTest</code>: 20.000 casos gerados com semente fixa conferem que o rateio soma o total</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Testes de integração com PostgreSQL real</td><td><code>IntegrationTest</code> (Testcontainers ou <code>RENDA_TEST_JDBC_URL</code>)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Teste de concorrência real</td><td><code>CompanyProfileApiTest</code>: 8 gravações simultâneas → 1 sucesso e 7 conflitos</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Testes de arquitetura</td><td><code>ArchitectureTest</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Especificação executável</td><td>catálogos JSON do B01 + <code>tools/b01/verificar_b01.py</code> (e testes do próprio verificador)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Integração contínua</td><td>GitHub Actions: especificação, servidor e app</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Testes de contrato por adaptador</td><td>parsers, armazenamento, worker</td><td><span class="selo selo--plan">Planejado · B04</span></td></tr></tbody></table></div>
+<section class="bloco" id="s-3-6-seguranca"><h3>3.6 Segurança</h3>
+<div class="tabela"><table><thead><tr><th>Técnica</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>Senha com hash Argon2id (nunca a senha em si)</td><td><code>Argon2PasswordHasher</code></td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr><tr><td>Política de senha (10 a 128 caracteres, diferente do usuário)</td><td><code>PasswordPolicy</code></td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr><tr><td>Sessão opaca: o banco guarda só o hash do token</td><td><code>SessionService.hash</code>, <code>JdbcSessionRepository</code></td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr><tr><td>Expiração por inatividade (8 h) e absoluta (12 h); sair revoga na hora</td><td><code>SessionService.authenticate</code>, <code>logout</code></td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr><tr><td>Bloqueio após 5 tentativas, por 15 minutos</td><td><code>User.failedLogin</code></td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr><tr><td>Mesma resposta para usuário inexistente e senha errada, com o mesmo tempo de cálculo</td><td><code>SessionService.login</code> (hash de referência)</td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr><tr><td>Permissões por ação, verificadas no servidor</td><td><code>Profile</code>, <code>Permissions</code>, <code>CurrentUserHolder.require</code></td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr><tr><td>Token só no processo principal do Electron, nunca no React</td><td><code>electron/main.ts</code></td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr><tr><td>Primeiro administrador criado por configuração, sem senha padrão</td><td><code>BootstrapAdministrator</code></td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr><tr><td>Sempre resta um administrador ativo; ninguém retira o próprio acesso</td><td><code>UserService.update</code></td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr><tr><td>TLS obrigatório para acesso por outros computadores</td><td>ADR-007</td><td><span class="selo selo--plan">Planejado · B13</span></td></tr></tbody></table></div>
 </section>
-<section class="bloco" id="s-3-7-no-app-do-mac"><h3>3.7 No app do Mac</h3>
-<div class="tabela"><table><thead><tr><th>Técnica</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>Reducer (estado previsível das janelas)</td><td><code>windows/windowManager.ts</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Adapter de transporte (troca em testes)</td><td><code>api/client.ts</code> (<code>setTransport</code>)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Ponte IPC isolada e validada</td><td><code>electron/preload.ts</code> (<code>window.renda</code>)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Menu gerado a partir de catálogo</td><td><code>SideNav.tsx</code> lê <code>b01/menu.json</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Design tokens (fonte única do visual)</td><td><code>design-system/tokens.css</code>, classes <code>rp-*</code>; ADR-017</td><td><span class="selo selo--uso">Em uso</span></td></tr></tbody></table></div>
+<section class="bloco" id="s-3-7-qualidade-e-testes"><h3>3.7 Qualidade e testes</h3>
+<div class="tabela"><table><thead><tr><th>Técnica</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>Testes unitários de Value Objects</td><td><code>MoneyTest</code>, <code>QuantityTest</code>, <code>CnpjTest</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Testes baseados em propriedades</td><td><code>MoneyTest</code>: 20.000 casos gerados com semente fixa conferem que o rateio soma o total</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Testes de integração com PostgreSQL real</td><td><code>IntegrationTest</code> (Testcontainers ou <code>RENDA_TEST_JDBC_URL</code>)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Teste de concorrência real</td><td><code>CompanyProfileApiTest</code>: 8 gravações simultâneas → 1 sucesso e 7 conflitos; <code>CustomerApiTest</code>: 6 reenvios simultâneos criam um único cliente</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Testes de segurança da sessão</td><td><code>SessionApiTest</code>: 401, 403 auditado, bloqueio, expiração de 8 h e 12 h, senha nunca na resposta</td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr><tr><td>Teste de contrato da API</td><td><code>OpenApiContractTest</code>: falha se o servidor e o <code>openapi.yaml</code> divergirem</td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr><tr><td>Testes de arquitetura</td><td><code>ArchitectureTest</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Especificação executável</td><td>catálogos JSON do B01 + <code>tools/b01/verificar_b01.py</code> (e testes do próprio verificador)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Integração contínua</td><td>GitHub Actions: especificação, servidor e app</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Testes de contrato por adaptador</td><td>parsers, armazenamento, worker</td><td><span class="selo selo--plan">Planejado · B04</span></td></tr></tbody></table></div>
 </section>
-<section class="bloco" id="s-3-8-processo"><h3>3.8 Processo</h3>
+<section class="bloco" id="s-3-8-no-app-do-mac"><h3>3.8 No app do Mac</h3>
+<div class="tabela"><table><thead><tr><th>Técnica</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>Reducer (estado previsível das janelas)</td><td><code>windows/windowManager.ts</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Adapter de transporte (troca em testes)</td><td><code>api/client.ts</code> (<code>setTransport</code>)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Ponte IPC isolada e validada</td><td><code>electron/preload.ts</code> (<code>window.renda</code>)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Menu gerado a partir de catálogo</td><td><code>SideNav.tsx</code> lê <code>b01/menu.json</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Chave de idempotência guardada até a resposta chegar</td><td><code>CustomerWindow.tsx</code> reenvia com a mesma chave</td><td><span class="selo selo--uso">Em uso · Sprint 2</span></td></tr><tr><td>Design tokens (fonte única do visual)</td><td><code>design-system/tokens.css</code>, classes <code>rp-*</code>; ADR-017</td><td><span class="selo selo--uso">Em uso</span></td></tr></tbody></table></div>
+</section>
+<section class="bloco" id="s-3-9-processo"><h3>3.9 Processo</h3>
 <div class="tabela"><table><thead><tr><th>Técnica</th><th>Onde</th><th>Situação</th></tr></thead><tbody><tr><td>Scrum com fatias verticais (tela + servidor + banco)</td><td><code>docs/scrum/</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Definição de Pronto e de Preparado</td><td><code>docs/scrum/processo-scrum.md</code></td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Registros de decisão de arquitetura (ADR)</td><td><code>docs/adr/</code> (17 ADRs)</td><td><span class="selo selo--uso">Em uso</span></td></tr><tr><td>Pendências explícitas em vez de suposições escondidas</td><td><code>b01/pendencias.json</code>, planilha de decisões</td><td><span class="selo selo--uso">Em uso</span></td></tr></tbody></table></div>
 </section>
-<section class="bloco" id="s-3-9-evitados-de-proposito"><h3>3.9 Evitados de propósito</h3>
+<section class="bloco" id="s-3-10-evitados-de-proposito"><h3>3.10 Evitados de propósito</h3>
 <div class="tabela"><table><thead><tr><th>Não usamos</th><th>Motivo</th></tr></thead><tbody><tr><td>Microsserviços</td><td>Complexidade de operação sem ganho para o tamanho da Fourtech</td></tr><tr><td>Event sourcing de todo o sistema</td><td>Tabelas normais + auditoria + fatos já dão o histórico necessário</td></tr><tr><td>Herança profunda</td><td>Composição é mais simples; cliente e fornecedor são papéis de um parceiro</td></tr><tr><td>Service Locator e Singleton com estado</td><td>Escondem dependências e dificultam testes</td></tr><tr><td>ORM na Sprint 1</td><td>SQL explícito com <code>JdbcClient</code> deixa claras as travas e a condição de versão</td></tr><tr><td>Setters públicos no domínio</td><td>Um pedido não pode virar "confirmado" sem passar pelas regras</td></tr></tbody></table></div>
 </section>
     </main>

@@ -2,6 +2,7 @@
 
 - 17-diagramas-de-classes-e-padroes.md → diagramas-de-classes.html
 - 18-diagramas-de-atividades-e-sequencias.md → diagramas-de-atividades-e-sequencias.html
+- 19-diagramas-do-sistema-completo.md → diagramas-do-sistema-completo.html
 
 O Markdown é a fonte; a página só reapresenta o mesmo conteúdo com navegação e selos.
 Uso: python3 tools/diagramas/gerar_pagina.py
@@ -37,6 +38,17 @@ PAGINAS = [
         "numeros": lambda p: [(contar(p, 'class="mermaid"'), "diagramas"),
                               (contar(p, "\nflowchart"), "de atividades"),
                               (contar(p, "\nsequenceDiagram"), "de sequência")],
+    },
+    {
+        "origem": "19-diagramas-do-sistema-completo.md",
+        "destino": "diagramas-do-sistema-completo.html",
+        "titulo": "Mapa do sistema Renda+",
+        "h1": "Sistema completo <b>Renda+</b>",
+        "numeros": lambda p: [(contar(p, 'class="mermaid"'), "diagramas"),
+                              (24, "módulos"),
+                              (contar(p, "\nclassDiagram"), "de classes"),
+                              (contar(p, "\nflowchart") + contar(p, "\nsequenceDiagram") + contar(p, "\nstateDiagram"),
+                               "de fluxo e estados")],
     },
 ]
 

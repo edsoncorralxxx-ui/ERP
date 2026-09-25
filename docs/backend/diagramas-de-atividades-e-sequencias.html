@@ -55,6 +55,7 @@
   nav.indice a { display: block; color: var(--tinta); text-decoration: none; padding: 3px 8px; border-radius: 3px; transition: background-color .18s ease; }
   nav.indice a:hover, nav.indice a:focus-visible { background: var(--ouro-fundo); outline: none; }
   nav.indice a.nav-parte { font-weight: 600; color: var(--azul); }
+  nav.indice code { background: none; padding: 0; font-size: .92em; }
 
   main { display: grid; gap: 22px; min-width: 0; }
   h2.parte { margin: 18px 0 0; padding-top: 14px; border-top: 2px solid var(--azul); font-size: 24px; line-height: 1.25; text-wrap: balance; scroll-margin-top: 16px; }
@@ -90,9 +91,9 @@
   <header>
     <div class="eyebrow">Renda+ ERP · servidor Java / Spring Boot</div>
     <h1>Atividades e sequências <b>Renda+</b></h1>
-    <p>Situação em 25/09/2026. A parte <strong>implementada</strong> descreve o que o código da Sprint 1 faz hoje. A parte <strong>planejada</strong> segue a especificação do B01 (<code>13-b01-especificacao-de-comandos.md</code>, <code>12-b01-modelo-de-dominio.md</code> e <code>01-plano-completo-backend.md</code>) e entra na sprint indicada. As classes citadas estão em <code>17-diagramas-de-classes-e-padroes.md</code>.</p><p>Diagrama de <strong>atividades</strong>: o passo a passo de um processo, com decisões e caminhos alternativos. Diagrama de <strong>sequência</strong>: as mensagens trocadas entre as partes do sistema, na ordem em que acontecem.</p>
+    <p>Situação em 25/09/2026. A parte <strong>implementada</strong> descreve o que o código das Sprints 1 e 2 faz hoje. A parte <strong>planejada</strong> segue a especificação do B01 (<code>13-b01-especificacao-de-comandos.md</code>, <code>12-b01-modelo-de-dominio.md</code> e <code>01-plano-completo-backend.md</code>) e entra na sprint indicada. As classes citadas estão em <code>17-diagramas-de-classes-e-padroes.md</code>.</p><p>Diagrama de <strong>atividades</strong>: o passo a passo de um processo, com decisões e caminhos alternativos. Diagrama de <strong>sequência</strong>: as mensagens trocadas entre as partes do sistema, na ordem em que acontecem.</p>
     <div class="numeros">
-      <div><strong>22</strong><span>diagramas</span></div><div><strong>12</strong><span>de atividades</span></div><div><strong>10</strong><span>de sequência</span></div>
+      <div><strong>27</strong><span>diagramas</span></div><div><strong>15</strong><span>de atividades</span></div><div><strong>12</strong><span>de sequência</span></div>
     </div>
   </header>
 
@@ -100,11 +101,11 @@
     <nav class="indice" aria-label="Índice">
       <details open>
         <summary>Índice</summary>
-        <ul><li><a href="#s-parte-1" class="nav-parte">Parte 1 — Implementado (Sprint 1)</a><ul><li><a href="#s-1-atividade-iniciar-o-servidor">1. Atividade: iniciar o servidor</a></li><li><a href="#s-2-sequencia-abrir-o-app-e-verificar-a-conexao">2. Sequência: abrir o app e verificar a conexão</a></li><li><a href="#s-3-sequencia-abrir-dados-da-empresa">3. Sequência: abrir "Dados da empresa"</a></li><li><a href="#s-4-atividade-salvar-dados-da-empresa">4. Atividade: salvar "Dados da empresa"</a></li><li><a href="#s-5-sequencia-duas-janelas-salvam-ao-mesmo-tempo">5. Sequência: duas janelas salvam ao mesmo tempo</a></li><li><a href="#s-6-sequencia-erro-inesperado-com-codigo-de-correlacao">6. Sequência: erro inesperado com código de correlação</a></li></ul></li><li><a href="#s-parte-2" class="nav-parte">Parte 2 — Planejado (especificado no B01)</a><ul><li><a href="#s-7-atividade-pipeline-comum-de-um-comando-sprint-2-b02">7. Atividade: pipeline comum de um comando (Sprint 2 · B02)</a></li><li><a href="#s-8-sequencia-resposta-perdida-e-repeticao-segura-sprint-2-b02">8. Sequência: resposta perdida e repetição segura (Sprint 2 · B02)</a></li><li><a href="#s-9-atividade-confirmar-pedido-sprint-4-b05">9. Atividade: confirmar pedido (Sprint 4 · B05)</a></li><li><a href="#s-10-sequencia-confirmar-pedido-sprint-4-b05">10. Sequência: confirmar pedido (Sprint 4 · B05)</a></li><li><a href="#s-11-atividade-cancelar-pedido-sprint-4-b05">11. Atividade: cancelar pedido (Sprint 4 · B05)</a></li><li><a href="#s-12-atividade-registrar-baixa-sprint-5-b05-b06">12. Atividade: registrar baixa (Sprint 5 · B05/B06)</a></li><li><a href="#s-13-sequencia-duas-baixas-simultaneas-no-mesmo-titulo-sprint-5-b05">13. Sequência: duas baixas simultâneas no mesmo título (Sprint 5 · B05)</a></li><li><a href="#s-14-sequencia-estornar-baixa-sprint-5-b05">14. Sequência: estornar baixa (Sprint 5 · B05)</a></li><li><a href="#s-15-sequencia-entrega-de-eventos-pelo-outbox-sprint-2-b02">15. Sequência: entrega de eventos pelo outbox (Sprint 2 · B02)</a></li><li><a href="#s-16-sequencia-tarefa-do-worker-python-com-lease-sprint-2-b04">16. Sequência: tarefa do worker Python com lease (Sprint 2 / B04)</a></li><li><a href="#s-17-atividade-importar-arquivo-e-conferir-b04-b12">17. Atividade: importar arquivo e conferir (B04 / B12)</a></li><li><a href="#s-18-atividade-calcular-um-indicador-b10">18. Atividade: calcular um indicador (B10)</a></li><li><a href="#s-19-atividade-execucao-analitica-b15">19. Atividade: execução analítica (B15)</a></li><li><a href="#s-20-atividade-inspecao-de-qualidade-b09">20. Atividade: inspeção de qualidade (B09)</a></li><li><a href="#s-21-atividade-gerar-manutencao-preventiva-b11">21. Atividade: gerar manutenção preventiva (B11)</a></li><li><a href="#s-22-atividade-confirmar-repasse-b10">22. Atividade: confirmar repasse (B10)</a></li></ul></li></ul>
+        <ul><li><a href="#s-parte-1" class="nav-parte">Parte 1 — Implementado (Sprints 1 e 2)</a><ul><li><a href="#s-1-atividade-iniciar-o-servidor">1. Atividade: iniciar o servidor</a></li><li><a href="#s-2-sequencia-abrir-o-app-e-verificar-a-conexao">2. Sequência: abrir o app e verificar a conexão</a></li><li><a href="#s-3-sequencia-abrir-dados-da-empresa">3. Sequência: abrir "Dados da empresa"</a></li><li><a href="#s-4-atividade-salvar-dados-da-empresa">4. Atividade: salvar "Dados da empresa"</a></li><li><a href="#s-5-sequencia-duas-janelas-salvam-ao-mesmo-tempo">5. Sequência: duas janelas salvam ao mesmo tempo</a></li><li><a href="#s-6-sequencia-erro-inesperado-com-codigo-de-correlacao">6. Sequência: erro inesperado com código de correlação</a></li><li><a href="#s-7-atividade-entrar-no-sistema-sprint-2">7. Atividade: entrar no sistema (Sprint 2)</a></li><li><a href="#s-8-sequencia-login-e-guarda-do-token-sprint-2">8. Sequência: login e guarda do token (Sprint 2)</a></li><li><a href="#s-9-atividade-validar-a-sessao-em-cada-requisicao-sprint-2">9. Atividade: validar a sessão em cada requisição (Sprint 2)</a></li><li><a href="#s-10-sequencia-acesso-negado-sprint-2">10. Sequência: acesso negado (Sprint 2)</a></li><li><a href="#s-11-atividade-cadastrar-cliente-sprint-2">11. Atividade: cadastrar cliente (Sprint 2)</a></li><li><a href="#s-12-sequencia-resposta-perdida-e-reenvio-com-a-mesma-chave-sprint-2">12. Sequência: resposta perdida e reenvio com a mesma chave (Sprint 2)</a></li><li><a href="#s-13-sequencia-entrega-de-eventos-pelo-outbox-sprint-2">13. Sequência: entrega de eventos pelo outbox (Sprint 2)</a></li></ul></li><li><a href="#s-parte-2" class="nav-parte">Parte 2 — Planejado (especificado no B01)</a><ul><li><a href="#s-14-atividade-pipeline-comum-de-um-comando-sprint-4-b05">14. Atividade: pipeline comum de um comando (Sprint 4+ · B05)</a></li><li><a href="#s-15-atividade-confirmar-pedido-sprint-4-b05">15. Atividade: confirmar pedido (Sprint 4 · B05)</a></li><li><a href="#s-16-sequencia-confirmar-pedido-sprint-4-b05">16. Sequência: confirmar pedido (Sprint 4 · B05)</a></li><li><a href="#s-17-atividade-cancelar-pedido-sprint-4-b05">17. Atividade: cancelar pedido (Sprint 4 · B05)</a></li><li><a href="#s-18-atividade-registrar-baixa-sprint-5-b05-b06">18. Atividade: registrar baixa (Sprint 5 · B05/B06)</a></li><li><a href="#s-19-sequencia-duas-baixas-simultaneas-no-mesmo-titulo-sprint-5-b05">19. Sequência: duas baixas simultâneas no mesmo título (Sprint 5 · B05)</a></li><li><a href="#s-20-sequencia-estornar-baixa-sprint-5-b05">20. Sequência: estornar baixa (Sprint 5 · B05)</a></li><li><a href="#s-21-sequencia-tarefa-do-worker-python-com-lease-b04">21. Sequência: tarefa do worker Python com lease (B04)</a></li><li><a href="#s-22-atividade-importar-arquivo-e-conferir-b04-b12">22. Atividade: importar arquivo e conferir (B04 / B12)</a></li><li><a href="#s-23-atividade-calcular-um-indicador-b10">23. Atividade: calcular um indicador (B10)</a></li><li><a href="#s-24-atividade-execucao-analitica-b15">24. Atividade: execução analítica (B15)</a></li><li><a href="#s-25-atividade-inspecao-de-qualidade-b09">25. Atividade: inspeção de qualidade (B09)</a></li><li><a href="#s-26-atividade-gerar-manutencao-preventiva-b11">26. Atividade: gerar manutenção preventiva (B11)</a></li><li><a href="#s-27-atividade-confirmar-repasse-b10">27. Atividade: confirmar repasse (B10)</a></li></ul></li></ul>
       </details>
     </nav>
     <main>
-      <h2 class="parte" id="s-parte-1">Parte 1 — Implementado (Sprint 1)</h2>
+      <h2 class="parte" id="s-parte-1">Parte 1 — Implementado (Sprints 1 e 2)</h2>
 <section class="bloco" id="s-1-atividade-iniciar-o-servidor"><h3>1. Atividade: iniciar o servidor</h3>
 <p>Ao iniciar, o servidor aplica as migrações pendentes antes de aceitar requisições. Se o banco não estiver acessível ou o esquema for incompatível, ele para com erro explícito em vez de funcionar pela metade.</p>
 <div class="diagrama"><pre class="mermaid">
@@ -125,7 +126,7 @@ flowchart TD
 </pre></div>
 </section>
 <section class="bloco" id="s-2-sequencia-abrir-o-app-e-verificar-a-conexao"><h3>2. Sequência: abrir o app e verificar a conexão</h3>
-<p>A tela do app nunca acessa a rede diretamente. Ela pede ao processo principal do Electron, que valida método, caminho e cabeçalhos antes de chamar o servidor. O rodapé consulta o status a cada 10 segundos.</p>
+<p>A tela do app nunca acessa a rede diretamente. Ela pede ao processo principal do Electron, que valida método, caminho e cabeçalhos antes de chamar o servidor. O rodapé consulta o status a cada 10 segundos. O status é público; nas demais chamadas, o processo principal acrescenta o token da sessão (sequência 8).</p>
 <div class="diagrama"><pre class="mermaid">
 sequenceDiagram
     autonumber
@@ -166,13 +167,17 @@ sequenceDiagram
     autonumber
     participant U as Usuário
     participant W as CompanyProfileWindow
+    participant SF as SessionFilter
     participant C as CompanyProfileController
     participant S as CompanyProfileService
     participant R as JdbcCompanyProfileRepository
     participant DB as PostgreSQL
     U-&gt;&gt;W: Módulos › Configurações › Dados da empresa
-    W-&gt;&gt;C: GET /api/v1/company-profile
+    W-&gt;&gt;SF: GET /api/v1/company-profile + Bearer
+    SF-&gt;&gt;SF: valida a sessão e preenche CurrentUserHolder
+    SF-&gt;&gt;C: segue a requisição
     C-&gt;&gt;S: get()
+    S-&gt;&gt;S: require(company.read), senão 403
     Note over S: transação somente leitura
     S-&gt;&gt;R: get()
     R-&gt;&gt;DB: select ... from company_profile
@@ -187,11 +192,15 @@ sequenceDiagram
 <div class="diagrama"><pre class="mermaid">
 flowchart TD
     A((Usuário clica em Salvar)) --&gt; B["App envia PUT com If-Match&lt;br/&gt;da versão lida"]
-    B --&gt; C{"If-Match&lt;br/&gt;presente?"}
+    B --&gt; SS{"Sessão válida?"}
+    SS -- não --&gt; E401["401: app mostra o login&lt;br/&gt;por cima das janelas"] --&gt; Z(((Fim)))
+    SS -- sim --&gt; C{"If-Match&lt;br/&gt;presente?"}
     C -- não --&gt; E428["428 PRECONDITION_REQUIRED"] --&gt; Z(((Fim)))
     C -- sim --&gt; D{"If-Match é&lt;br/&gt;um número?"}
     D -- não --&gt; E400["400 VALIDATION_FAILED"] --&gt; Z
-    D -- sim --&gt; T["Abre a transação"]
+    D -- sim --&gt; PM{"Perfil tem&lt;br/&gt;company.update?"}
+    PM -- não --&gt; E403["403 ACCESS_DENIED&lt;br/&gt;registrado na auditoria"] --&gt; Z
+    PM -- sim --&gt; T["Abre a transação"]
     T --&gt; L["Trava a linha&lt;br/&gt;select ... for update"]
     L --&gt; V{"Versão atual =&lt;br/&gt;versão enviada?"}
     V -- não --&gt; E412["Desfaz a transação&lt;br/&gt;412 VERSION_MISMATCH"] --&gt; AV["App mostra o aviso de conflito&lt;br/&gt;e oferece recarregar"] --&gt; Z
@@ -250,9 +259,183 @@ sequenceDiagram
     F-&gt;&gt;F: limpa o MDC
 </pre></div>
 </section>
+<section class="bloco" id="s-7-atividade-entrar-no-sistema-sprint-2"><h3>7. Atividade: entrar no sistema (Sprint 2)</h3>
+<p>A mensagem de erro é a mesma para usuário inexistente e para senha errada, e as duas levam o mesmo tempo: assim ninguém descobre quais usuários existem. As tentativas erradas ficam gravadas mesmo com a recusa, para contar até o bloqueio.</p>
+<div class="diagrama"><pre class="mermaid">
+flowchart TD
+    A((Tela de abertura)) --&gt; B["Usuário digita usuário e senha"]
+    B --&gt; N["Normaliza o usuário&lt;br/&gt;(minúsculas, sem espaços)"]
+    N --&gt; U{"Usuário existe&lt;br/&gt;e está ativo?"}
+    U -- não --&gt; DH["Calcula um hash de referência&lt;br/&gt;(mesmo tempo de resposta)"] --&gt; F1["Audita LOGIN_FAILED"] --&gt; E1["401 INVALID_CREDENTIALS&lt;br/&gt;Usuário ou senha incorretos"] --&gt; Z(((Fim)))
+    U -- sim --&gt; L{"Bloqueado agora?"}
+    L -- sim --&gt; F2["Audita LOGIN_LOCKED"] --&gt; E2["401 ACCOUNT_LOCKED&lt;br/&gt;com o horário de liberação"] --&gt; Z
+    L -- não --&gt; H{"Senha confere&lt;br/&gt;com o hash Argon2id?"}
+    H -- não --&gt; INC["Tentativas + 1"]
+    INC --&gt; Q{"Chegou a 5?"}
+    Q -- sim --&gt; BL["Bloqueia por 15 minutos"] --&gt; F2
+    Q -- não --&gt; F1
+    H -- sim --&gt; ZR["Zera as tentativas"]
+    ZR --&gt; TK["Gera token aleatório;&lt;br/&gt;grava só o hash do token"]
+    TK --&gt; EX["Sessão válida por até 12 h"]
+    EX --&gt; OK["Audita LOGIN_SUCCEEDED"] --&gt; R["200: usuário, perfil, permissões&lt;br/&gt;e token"] --&gt; Z
+</pre></div>
+</section>
+<section class="bloco" id="s-8-sequencia-login-e-guarda-do-token-sprint-2"><h3>8. Sequência: login e guarda do token (Sprint 2)</h3>
+<p>O token nunca chega ao React. O processo principal do Electron o retira da resposta, guarda na memória e o acrescenta como <code>Authorization: Bearer</code> em toda chamada seguinte. Ao sair, ou ao receber um 401, ele descarta o token.</p>
+<div class="diagrama"><pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant R as Tela React
+    participant M as Processo principal Electron
+    participant C as SessionController
+    participant A as SessionApplicationService
+    participant S as SessionService
+    participant T as AuditTrail
+    R-&gt;&gt;M: POST /api/v1/session {usuário, senha}
+    M-&gt;&gt;C: repassa (sem Authorization)
+    C-&gt;&gt;A: login(usuário, senha)
+    A-&gt;&gt;S: login(usuário, senha)
+    S--&gt;&gt;A: Success(user, token, expiresAt)
+    A-&gt;&gt;T: LOGIN_SUCCEEDED
+    A--&gt;&gt;C: Success
+    C--&gt;&gt;M: 200 {token, expiresAt, user, permissions}
+    M-&gt;&gt;M: guarda o token na memória
+    M--&gt;&gt;R: 200 {expiresAt, user, permissions} sem o token
+    R-&gt;&gt;R: rodapé com nome e perfil
+    R-&gt;&gt;M: GET /api/v1/customers
+    M-&gt;&gt;C: + Authorization: Bearer token
+    Note over R,M: ao sair (DELETE /session) ou ao receber 401,&lt;br/&gt;o processo principal descarta o token
+</pre></div>
+</section>
+<section class="bloco" id="s-9-atividade-validar-a-sessao-em-cada-requisicao-sprint-2"><h3>9. Atividade: validar a sessão em cada requisição (Sprint 2)</h3>
+<div class="diagrama"><pre class="mermaid">
+flowchart TD
+    A((Requisição chega)) --&gt; P{"Caminho público?&lt;br/&gt;GET /status ou POST /session"}
+    P -- sim --&gt; SEG["Segue sem sessão"] --&gt; Z(((Fim)))
+    P -- não --&gt; T{"Tem Bearer&lt;br/&gt;com até 200 caracteres?"}
+    T -- não --&gt; E["401 UNAUTHENTICATED"] --&gt; Z
+    T -- sim --&gt; H["Calcula o hash do token&lt;br/&gt;e busca a sessão ativa"]
+    H --&gt; S{"Sessão encontrada?"}
+    S -- não --&gt; E
+    S -- sim --&gt; AB{"Passou das 12 h&lt;br/&gt;desde o login?"}
+    AB -- sim --&gt; RV1["Revoga: EXPIRADA"] --&gt; E
+    AB -- não --&gt; ID{"Mais de 8 h&lt;br/&gt;sem uso?"}
+    ID -- sim --&gt; RV2["Revoga: INATIVIDADE"] --&gt; E
+    ID -- não --&gt; UA{"Usuário ainda&lt;br/&gt;ativo?"}
+    UA -- não --&gt; E
+    UA -- sim --&gt; TC{"Último uso há mais&lt;br/&gt;de 1 minuto?"}
+    TC -- sim --&gt; TO["Atualiza o último uso"] --&gt; CU
+    TC -- não --&gt; CU["Guarda o usuário em&lt;br/&gt;CurrentUserHolder"]
+    CU --&gt; CH["Executa a requisição"]
+    CH --&gt; CL["Limpa CurrentUserHolder"] --&gt; Z
+</pre></div>
+</section>
+<section class="bloco" id="s-10-sequencia-acesso-negado-sprint-2"><h3>10. Sequência: acesso negado (Sprint 2)</h3>
+<p>Um usuário com perfil Consulta tenta cadastrar um cliente. O servidor recusa e registra a tentativa na auditoria, numa transação própria, para o registro não se perder quando a operação for desfeita.</p>
+<div class="diagrama"><pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant R as App (perfil Consulta)
+    participant SF as SessionFilter
+    participant C as CustomerController
+    participant S as CustomerService
+    participant H as ApiExceptionHandler
+    participant T as AuditTrail
+    R-&gt;&gt;SF: POST /api/v1/customers + Bearer
+    SF-&gt;&gt;SF: sessão válida, CurrentUser = Consulta
+    SF-&gt;&gt;C: segue
+    C-&gt;&gt;S: register(chave, dados)
+    S-&gt;&gt;S: CurrentUserHolder.require(partner.create)
+    S--xH: AccessDeniedException
+    Note over S: a transação do comando é desfeita
+    H-&gt;&gt;T: nova transação: ACCESS_DENIED (usuário, permissão)
+    H--&gt;&gt;R: 403 ACCESS_DENIED
+    R-&gt;&gt;R: mensagem na linha de status
+</pre></div>
+</section>
+<section class="bloco" id="s-11-atividade-cadastrar-cliente-sprint-2"><h3>11. Atividade: cadastrar cliente (Sprint 2)</h3>
+<div class="diagrama"><pre class="mermaid">
+flowchart TD
+    A((Usuário clica em Gravar)) --&gt; K["App cria uma chave de idempotência&lt;br/&gt;e a guarda até receber resposta"]
+    K --&gt; PM{"Perfil tem&lt;br/&gt;partner.create?"}
+    PM -- não --&gt; E403["403, auditado"] --&gt; Z(((Fim)))
+    PM -- sim --&gt; KE{"Idempotency-Key&lt;br/&gt;informada?"}
+    KE -- não --&gt; E422k["422 chave obrigatória"] --&gt; Z
+    KE -- sim --&gt; CL["Reserva a chave:&lt;br/&gt;insert on conflict do nothing"]
+    CL --&gt; JA{"Chave já usada?"}
+    JA -- "sim, mesmo conteúdo" --&gt; MS["Devolve o cliente já criado"] --&gt; Z
+    JA -- "sim, outro conteúdo" --&gt; E422r["422 IDEMPOTENCY_KEY_REUSED"] --&gt; Z
+    JA -- não --&gt; CD["Gera o código C00001, C00002..."]
+    CD --&gt; VL["Valida razão social, CNPJ,&lt;br/&gt;unidades e contatos de uma vez"]
+    VL --&gt; IV{"Algum problema?"}
+    IV -- sim --&gt; E422["422 com a lista de campos&lt;br/&gt;(a reserva da chave é desfeita)"] --&gt; Z
+    IV -- não --&gt; CN{"CNPJ já usado&lt;br/&gt;por outro cliente?"}
+    CN -- sim --&gt; E422c["422 com o código&lt;br/&gt;do cliente existente"] --&gt; Z
+    CN -- não --&gt; INS["Grava cliente, unidades e contatos"]
+    INS --&gt; AU["Auditoria PARTNER_REGISTERED"]
+    AU --&gt; OB["Outbox: PartnerRegistered"]
+    OB --&gt; CP["Recibo completo com o id do cliente"]
+    CP --&gt; OK["201 + ETag"] --&gt; Z
+</pre></div>
+</section>
+<section class="bloco" id="s-12-sequencia-resposta-perdida-e-reenvio-com-a-mesma-chave-sprint-2"><h3>12. Sequência: resposta perdida e reenvio com a mesma chave (Sprint 2)</h3>
+<p>O servidor gravou, mas a resposta não chegou. O app reenvia com a <strong>mesma chave</strong> e recebe o mesmo cliente, sem criar outro. O <code>CustomerApiTest</code> também manda 6 reenvios simultâneos e confere que só um cliente é criado.</p>
+<div class="diagrama"><pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant A as CustomerWindow
+    participant S as CustomerService
+    participant RC as CommandReceipts
+    participant DB as PostgreSQL
+    A-&gt;&gt;S: POST /customers + Idempotency-Key K1
+    S-&gt;&gt;RC: claim(usuário, K1, RegisterPartner, dados)
+    RC-&gt;&gt;DB: insert command_receipt on conflict do nothing
+    DB--&gt;&gt;RC: 1 linha inserida
+    RC--&gt;&gt;S: vazio (primeira vez)
+    S-&gt;&gt;DB: cliente + auditoria + outbox + complete(K1, id)
+    S--xA: resposta perdida (queda de rede)
+    A-&gt;&gt;S: POST /customers + Idempotency-Key K1 (mesma chave)
+    S-&gt;&gt;RC: claim(usuário, K1, RegisterPartner, dados)
+    RC-&gt;&gt;DB: insert on conflict do nothing
+    DB--&gt;&gt;RC: 0 linhas (já existe)
+    RC-&gt;&gt;DB: lê comando, hash e resource_id
+    RC--&gt;&gt;S: id do cliente já criado
+    S--&gt;&gt;A: o mesmo cliente (nada é recriado)
+</pre></div>
+</section>
+<section class="bloco" id="s-13-sequencia-entrega-de-eventos-pelo-outbox-sprint-2"><h3>13. Sequência: entrega de eventos pelo outbox (Sprint 2)</h3>
+<p>O evento é gravado na mesma transação do cadastro: se o cadastro for desfeito, o evento também é. A cada 2 segundos, o entregador pega <strong>um</strong> evento pendente com <code>for update skip locked</code> e o entrega aos consumidores interessados. O registro em <code>event_consumption</code> impede processar o mesmo evento duas vezes.</p>
+<div class="diagrama"><pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant CS as CustomerService
+    participant OB as outbox_event
+    participant D as OutboxDispatcher
+    participant EC as event_consumption
+    participant F as OperationalFacts
+    CS-&gt;&gt;OB: append(PartnerRegistered) na transação do cadastro
+    Note over CS,OB: commit: cliente e evento juntos
+    loop a cada 2 segundos
+        D-&gt;&gt;OB: select pendente order by occurred_at&lt;br/&gt;limit 1 for update skip locked
+        alt nenhum pendente
+            OB--&gt;&gt;D: vazio: espera o próximo ciclo
+        else evento encontrado
+            OB--&gt;&gt;D: PartnerRegistered
+            D-&gt;&gt;EC: insert (OperationalFacts, eventId) on conflict do nothing
+            alt primeira entrega
+                D-&gt;&gt;F: handle(evento)
+                F-&gt;&gt;F: grava operational_fact
+            else já consumido
+                D-&gt;&gt;D: ignora
+            end
+            D-&gt;&gt;OB: published_at = agora (commit)
+        end
+    end
+</pre></div>
+</section>
 <h2 class="parte" id="s-parte-2">Parte 2 — Planejado (especificado no B01)</h2>
-<section class="bloco" id="s-7-atividade-pipeline-comum-de-um-comando-sprint-2-b02"><h3>7. Atividade: pipeline comum de um comando (Sprint 2 · B02)</h3>
-<p>Todos os comandos que mudam dinheiro, estoque ou compromissos seguem este caminho. O recibo de comando garante que repetir a mesma intenção não duplica nada.</p>
+<section class="bloco" id="s-14-atividade-pipeline-comum-de-um-comando-sprint-4-b05"><h3>14. Atividade: pipeline comum de um comando (Sprint 4+ · B05)</h3>
+<p>Todos os comandos que mudam dinheiro, estoque ou compromissos seguem este caminho. Sessão, permissão, recibo de comando e outbox já existem desde a Sprint 2 (atividades 9 e 11); estado, travas e novas tentativas entram com os comandos do pedido e do financeiro.</p>
 <div class="diagrama"><pre class="mermaid">
 flowchart TD
     A((Comando chega)) --&gt; B{"Formato válido?"}
@@ -260,10 +443,10 @@ flowchart TD
     B -- sim --&gt; C{"Sessão válida?"}
     C -- não --&gt; E401["401 UNAUTHENTICATED"] --&gt; Z
     C -- sim --&gt; D{"Permissão para a ação&lt;br/&gt;e para o registro?"}
-    D -- não --&gt; E403["403 ou 404"] --&gt; Z
-    D -- sim --&gt; R{"Recibo para&lt;br/&gt;(empresa, operação, chave)?"}
+    D -- não --&gt; E403["403 auditado ou 404"] --&gt; Z
+    D -- sim --&gt; R{"Recibo para&lt;br/&gt;(usuário, chave)?"}
     R -- "concluído, mesmo conteúdo" --&gt; ORIG["Devolve a resposta original"] --&gt; Z
-    R -- "mesma chave, conteúdo diferente" --&gt; E409["409 IDEMPOTENCY_KEY_REUSED"] --&gt; Z
+    R -- "mesma chave, conteúdo diferente" --&gt; E409["422 IDEMPOTENCY_KEY_REUSED"] --&gt; Z
     R -- não existe --&gt; T["Abre a transação"]
     T --&gt; LK["Carrega o agregado com trava"]
     LK --&gt; VS{"Versão confere?"}
@@ -278,32 +461,7 @@ flowchart TD
     DL -- não --&gt; OK["200/201 com commandId,&lt;br/&gt;recursos, versão e correlationId"] --&gt; Z
 </pre></div>
 </section>
-<section class="bloco" id="s-8-sequencia-resposta-perdida-e-repeticao-segura-sprint-2-b02"><h3>8. Sequência: resposta perdida e repetição segura (Sprint 2 · B02)</h3>
-<p>A conexão cai depois que o servidor confirmou. O app repete com a <strong>mesma chave</strong> e recebe o mesmo resultado, sem criar nada novo.</p>
-<div class="diagrama"><pre class="mermaid">
-sequenceDiagram
-    autonumber
-    participant A as App
-    participant H as Handler
-    participant RC as CommandReceiptStore
-    participant DB as PostgreSQL
-    A-&gt;&gt;H: POST + Idempotency-Key K1
-    H-&gt;&gt;RC: find(empresa, operação, K1)
-    RC--&gt;&gt;H: não existe
-    H-&gt;&gt;DB: efeitos + recibo COMPLETED (commit)
-    H--xA: resposta perdida (queda de rede)
-    Note over A: o app guarda K1 até receber resposta
-    A-&gt;&gt;H: POST + Idempotency-Key K1 (repetição)
-    H-&gt;&gt;RC: find(empresa, operação, K1)
-    RC--&gt;&gt;H: COMPLETED, mesmo hash
-    H--&gt;&gt;A: 200 com os mesmos IDs (nada é recriado)
-    opt alternativa
-        A-&gt;&gt;H: GET /api/v1/commands/{commandId}
-        H--&gt;&gt;A: estado e resultado do comando
-    end
-</pre></div>
-</section>
-<section class="bloco" id="s-9-atividade-confirmar-pedido-sprint-4-b05"><h3>9. Atividade: confirmar pedido (Sprint 4 · B05)</h3>
+<section class="bloco" id="s-15-atividade-confirmar-pedido-sprint-4-b05"><h3>15. Atividade: confirmar pedido (Sprint 4 · B05)</h3>
 <p>A confirmação cria projeto, equipamentos e parcelas a receber <strong>de uma vez</strong>. Se qualquer parte falhar, nada é gravado.</p>
 <div class="diagrama"><pre class="mermaid">
 flowchart TD
@@ -327,7 +485,7 @@ flowchart TD
     GR --&gt; OK["200: projectIds, equipmentIds,&lt;br/&gt;financialTitleIds, versão 8"] --&gt; Z
 </pre></div>
 </section>
-<section class="bloco" id="s-10-sequencia-confirmar-pedido-sprint-4-b05"><h3>10. Sequência: confirmar pedido (Sprint 4 · B05)</h3>
+<section class="bloco" id="s-16-sequencia-confirmar-pedido-sprint-4-b05"><h3>16. Sequência: confirmar pedido (Sprint 4 · B05)</h3>
 <p>Exemplo: pedido com 3 máquinas e 6 parcelas. Tudo abaixo da nota acontece numa única transação.</p>
 <div class="diagrama"><pre class="mermaid">
 sequenceDiagram
@@ -363,7 +521,7 @@ sequenceDiagram
     C--&gt;&gt;A: 200 {projectIds, equipmentIds, financialTitleIds, version 8}
 </pre></div>
 </section>
-<section class="bloco" id="s-11-atividade-cancelar-pedido-sprint-4-b05"><h3>11. Atividade: cancelar pedido (Sprint 4 · B05)</h3>
+<section class="bloco" id="s-17-atividade-cancelar-pedido-sprint-4-b05"><h3>17. Atividade: cancelar pedido (Sprint 4 · B05)</h3>
 <p>A premissa atual (PD-003) só permite cancelar um pedido confirmado se nada tiver acontecido depois: nenhum recebimento, reserva, consumo, produção ou documento.</p>
 <div class="diagrama"><pre class="mermaid">
 flowchart TD
@@ -384,7 +542,7 @@ flowchart TD
     G --&gt; OK["200"] --&gt; Z
 </pre></div>
 </section>
-<section class="bloco" id="s-12-atividade-registrar-baixa-sprint-5-b05-b06"><h3>12. Atividade: registrar baixa (Sprint 5 · B05/B06)</h3>
+<section class="bloco" id="s-18-atividade-registrar-baixa-sprint-5-b05-b06"><h3>18. Atividade: registrar baixa (Sprint 5 · B05/B06)</h3>
 <p>Uma baixa pode quitar várias parcelas de uma vez. Os títulos são travados sempre na mesma ordem, para dois usuários nunca ficarem esperando um pelo outro.</p>
 <div class="diagrama"><pre class="mermaid">
 flowchart TD
@@ -406,7 +564,7 @@ flowchart TD
     GR --&gt; OK["200: saldos atualizados"] --&gt; Z
 </pre></div>
 </section>
-<section class="bloco" id="s-13-sequencia-duas-baixas-simultaneas-no-mesmo-titulo-sprint-5-b05"><h3>13. Sequência: duas baixas simultâneas no mesmo título (Sprint 5 · B05)</h3>
+<section class="bloco" id="s-19-sequencia-duas-baixas-simultaneas-no-mesmo-titulo-sprint-5-b05"><h3>19. Sequência: duas baixas simultâneas no mesmo título (Sprint 5 · B05)</h3>
 <p>Título com saldo de R$ 100,00 e duas baixas de R$ 70,00 ao mesmo tempo. Uma é confirmada; a outra recebe o saldo atual de R$ 30,00. O saldo nunca fica negativo.</p>
 <div class="diagrama"><pre class="mermaid">
 sequenceDiagram
@@ -431,7 +589,7 @@ sequenceDiagram
     H--&gt;&gt;U2: 422 INSUFFICIENT_TITLE_BALANCE (saldo R$ 30,00)
 </pre></div>
 </section>
-<section class="bloco" id="s-14-sequencia-estornar-baixa-sprint-5-b05"><h3>14. Sequência: estornar baixa (Sprint 5 · B05)</h3>
+<section class="bloco" id="s-20-sequencia-estornar-baixa-sprint-5-b05"><h3>20. Sequência: estornar baixa (Sprint 5 · B05)</h3>
 <p>O estorno é total. A baixa original continua consultável como REVERSED, e um movimento de caixa inverso é criado vinculado a ela.</p>
 <div class="diagrama"><pre class="mermaid">
 sequenceDiagram
@@ -462,34 +620,7 @@ sequenceDiagram
     end
 </pre></div>
 </section>
-<section class="bloco" id="s-15-sequencia-entrega-de-eventos-pelo-outbox-sprint-2-b02"><h3>15. Sequência: entrega de eventos pelo outbox (Sprint 2 · B02)</h3>
-<p>O evento é gravado na mesma transação do comando. Um publicador lê os pendentes e entrega aos consumidores; se entregar duas vezes, o consumidor reconhece o evento e ignora a repetição.</p>
-<div class="diagrama"><pre class="mermaid">
-sequenceDiagram
-    autonumber
-    participant H as Handler do comando
-    participant OB as outbox_event
-    participant RL as OutboxRelay
-    participant CN as Consumidor (ex.: consultas)
-    participant CR as consumer_receipt
-    H-&gt;&gt;OB: append(evento) na transação do comando
-    Note over H,OB: commit: negócio e evento juntos
-    loop periodicamente
-        RL-&gt;&gt;OB: lê pendentes em ordem
-        RL-&gt;&gt;CN: entrega(evento)
-        CN-&gt;&gt;CR: já processado (consumidor, eventId)?
-        alt primeira vez
-            CN-&gt;&gt;CN: aplica o efeito (ex.: atualiza projeção)
-            CN-&gt;&gt;CR: markProcessed na mesma transação
-        else repetido
-            CN-&gt;&gt;CN: ignora
-        end
-        CN--&gt;&gt;RL: ok
-        RL-&gt;&gt;OB: marca como publicado
-    end
-</pre></div>
-</section>
-<section class="bloco" id="s-16-sequencia-tarefa-do-worker-python-com-lease-sprint-2-b04"><h3>16. Sequência: tarefa do worker Python com lease (Sprint 2 / B04)</h3>
+<section class="bloco" id="s-21-sequencia-tarefa-do-worker-python-com-lease-b04"><h3>21. Sequência: tarefa do worker Python com lease (B04)</h3>
 <p>O worker não acessa as tabelas de negócio: fala com o Java por uma API interna. Cada posse da tarefa tem uma geração; um resultado de uma posse antiga é recusado.</p>
 <div class="diagrama"><pre class="mermaid">
 sequenceDiagram
@@ -517,7 +648,7 @@ sequenceDiagram
     J--&gt;&gt;W2: aceito
 </pre></div>
 </section>
-<section class="bloco" id="s-17-atividade-importar-arquivo-e-conferir-b04-b12"><h3>17. Atividade: importar arquivo e conferir (B04 / B12)</h3>
+<section class="bloco" id="s-22-atividade-importar-arquivo-e-conferir-b04-b12"><h3>22. Atividade: importar arquivo e conferir (B04 / B12)</h3>
 <p>Nada importado entra no sistema sem decisão de uma pessoa. O arquivo original e a origem de cada valor (página e linha) ficam guardados.</p>
 <div class="diagrama"><pre class="mermaid">
 flowchart TD
@@ -540,7 +671,7 @@ flowchart TD
     AP --&gt; OK["Registro criado, com a&lt;br/&gt;origem guardada"] --&gt; Z
 </pre></div>
 </section>
-<section class="bloco" id="s-18-atividade-calcular-um-indicador-b10"><h3>18. Atividade: calcular um indicador (B10)</h3>
+<section class="bloco" id="s-23-atividade-calcular-um-indicador-b10"><h3>23. Atividade: calcular um indicador (B10)</h3>
 <p>O mesmo cálculo serve para a tela, o relatório e a exportação. Dado ausente fica como "desconhecido", nunca como zero.</p>
 <div class="diagrama"><pre class="mermaid">
 flowchart TD
@@ -559,7 +690,7 @@ flowchart TD
     CP -- não --&gt; Z
 </pre></div>
 </section>
-<section class="bloco" id="s-19-atividade-execucao-analitica-b15"><h3>19. Atividade: execução analítica (B15)</h3>
+<section class="bloco" id="s-24-atividade-execucao-analitica-b15"><h3>24. Atividade: execução analítica (B15)</h3>
 <p>Um modelo só roda quando há dados suficientes. "Dados insuficientes" é uma resposta válida, com as causas.</p>
 <div class="diagrama"><pre class="mermaid">
 flowchart TD
@@ -578,7 +709,7 @@ flowchart TD
     DC --&gt; Z
 </pre></div>
 </section>
-<section class="bloco" id="s-20-atividade-inspecao-de-qualidade-b09"><h3>20. Atividade: inspeção de qualidade (B09)</h3>
+<section class="bloco" id="s-25-atividade-inspecao-de-qualidade-b09"><h3>25. Atividade: inspeção de qualidade (B09)</h3>
 <div class="diagrama"><pre class="mermaid">
 flowchart TD
     A((Inspeção)) --&gt; CK["Usa a revisão vigente do checklist"]
@@ -594,7 +725,7 @@ flowchart TD
     CR --&gt; NV["Nova inspeção referencia&lt;br/&gt;a anterior sem alterá-la"] --&gt; CK
 </pre></div>
 </section>
-<section class="bloco" id="s-21-atividade-gerar-manutencao-preventiva-b11"><h3>21. Atividade: gerar manutenção preventiva (B11)</h3>
+<section class="bloco" id="s-26-atividade-gerar-manutencao-preventiva-b11"><h3>26. Atividade: gerar manutenção preventiva (B11)</h3>
 <p>Rodar a geração duas vezes não duplica ordens de serviço: cada ocorrência é única por plano, revisão, equipamento e data.</p>
 <div class="diagrama"><pre class="mermaid">
 flowchart TD
@@ -607,7 +738,7 @@ flowchart TD
     MAIS -- não --&gt; Z(((Fim)))
 </pre></div>
 </section>
-<section class="bloco" id="s-22-atividade-confirmar-repasse-b10"><h3>22. Atividade: confirmar repasse (B10)</h3>
+<section class="bloco" id="s-27-atividade-confirmar-repasse-b10"><h3>27. Atividade: confirmar repasse (B10)</h3>
 <div class="diagrama"><pre class="mermaid">
 flowchart TD
     A((Repasse do período)) --&gt; RG["Seleciona a versão&lt;br/&gt;vigente da regra"]
