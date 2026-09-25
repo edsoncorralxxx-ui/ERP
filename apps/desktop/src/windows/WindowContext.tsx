@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { StatusMessage } from '../shell/StatusBar';
+import type { WindowKind } from './windowManager';
 
 /** Operações que uma janela oferece ao shell (barra de ferramentas, Cmd+S, fechar com alterações). */
 export type WindowCommands = {
@@ -14,6 +15,8 @@ export type WindowApi = {
   /** Mensagem na linha de status do aplicativo (padrão do design system para sucesso e erro). */
   notify: (message: StatusMessage) => void;
   requestClose: () => void;
+  /** Abre (ou traz à frente) outra janela: é o destino das setas de link. */
+  open: (kind: WindowKind) => void;
 };
 
 export const WindowContext = createContext<WindowApi | null>(null);

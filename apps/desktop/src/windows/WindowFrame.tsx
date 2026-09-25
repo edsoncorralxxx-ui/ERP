@@ -62,7 +62,7 @@ export function WindowFrame({ win, active, children, onFocus, onMove, onResize, 
         onPointerUp={() => (drag.current = null)}
         onDoubleClick={onToggleMaximize}
       >
-        <span className="rp-janela-mdi__titulo">{win.title}</span>
+        <h1 className="rp-janela-mdi__titulo">{win.title}</h1>
         {/* Botões do design system (Janela): minimizar, maximizar e fechar, à direita. */}
         <span className="rp-winbtns">
           <WinButton label="Minimizar" text="–" onClick={onMinimize} />

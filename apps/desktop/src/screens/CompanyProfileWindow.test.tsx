@@ -18,6 +18,7 @@ function renderWindow() {
     registerCommands: vi.fn(),
     notify: vi.fn(),
     requestClose: vi.fn(),
+    open: vi.fn(),
   };
   render(
     <WindowContext.Provider value={winApi}>

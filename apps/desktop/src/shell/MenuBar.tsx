@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import type { AppWindow } from '../windows/windowManager';
+import type { AppWindow, WindowKind } from '../windows/windowManager';
 
 type Props = {
   windows: AppWindow[];
@@ -7,8 +7,8 @@ type Props = {
   canSave: boolean;
   onSaveActive: () => void;
   onCloseActive: () => void;
-  onOpenCompany: () => void;
-  onOpenStatus: () => void;
+  onOpen: (kind: WindowKind) => void;
+  onLock: () => void;
   onCascade: () => void;
   onTile: () => void;
   onFocus: (id: string) => void;
@@ -42,18 +42,23 @@ export function MenuBar(p: Props) {
       items: [
         { label: 'Atualizar', kbd: '⌘S', disabled: !p.canSave, action: p.onSaveActive },
         { label: 'Fechar janela', kbd: 'Esc', disabled: !p.activeId, action: p.onCloseActive },
+        'sep',
+        { label: 'Bloquear tela', action: p.onLock },
+        { label: 'Sair', action: () => window.close() },
       ],
     },
     { id: 'editar', label: (<><u>E</u>ditar</>), items: PROXIMAS },
-    { id: 'exibir', label: (<>E<u>x</u>ibir</>), items: [{ label: 'Menu lateral', action: p.onToggleDrawer }] },
+    { id: 'exibir', label: (<><u>V</u>isualizar</>), items: [{ label: 'Menu lateral', action: p.onToggleDrawer }] },
     { id: 'dados', label: (<><u>D</u>ados</>), items: PROXIMAS },
     { id: 'irpara', label: (<><u>I</u>r para</>), items: PROXIMAS },
     {
       id: 'modulos',
       label: (<><u>M</u>ódulos</>),
       items: [
-        { label: 'Dados da empresa', action: p.onOpenCompany },
-        { label: 'Status do servidor', action: p.onOpenStatus },
+        { label: 'Meu cockpit', action: () => p.onOpen('cockpit') },
+        'sep',
+        { label: 'Dados da empresa', action: () => p.onOpen('company-profile') },
+        { label: 'Status do servidor', action: () => p.onOpen('server-status') },
       ],
     },
     { id: 'ferramentas', label: (<><u>F</u>erramentas</>), items: PROXIMAS },
@@ -71,7 +76,7 @@ export function MenuBar(p: Props) {
         })),
       ],
     },
-    { id: 'ajuda', label: (<>Aj<u>u</u>da</>), items: [{ label: 'Sobre o Renda+ ERP', action: p.onOpenStatus }] },
+    { id: 'ajuda', label: (<>Aj<u>u</u>da</>), items: [{ label: 'Sobre o Renda+ ERP', action: () => p.onOpen('server-status') }] },
   ];
 
   return (
