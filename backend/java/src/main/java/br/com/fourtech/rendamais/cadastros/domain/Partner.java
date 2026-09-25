@@ -6,7 +6,10 @@ import br.com.fourtech.rendamais.kernel.RuleViolationException;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -16,12 +19,40 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Parceiro no papel de cliente, com unidades e contatos (formulário "clientes", B01). Imutável: cada operação valida e
- * devolve uma nova versão. CNPJ é opcional e nunca inventado; a unicidade é conferida pelo caso de uso.
+ * Parceiro de negócios com unidades e contatos (formulários "clientes" e "fornecedores", B01). Cliente e fornecedor são
+ * papéis do mesmo parceiro, cada um com a sua situação: inativar um papel não mexe no outro. Imutável: cada operação
+ * valida e devolve uma nova versão. CNPJ é opcional e nunca inventado; a unicidade é conferida pelo caso de uso.
  */
 public final class Partner {
 
     public enum Status { ATIVO, INATIVO }
+
+    public enum Role {
+        CLIENTE("cliente"), FORNECEDOR("fornecedor");
+
+        private final String label;
+
+        Role(String label) {
+            this.label = label;
+        }
+
+        /** Nome do papel em minúsculas, para as mensagens ("cliente", "fornecedor"). */
+        public String label() {
+            return label;
+        }
+    }
+
+    /** Categoria de item já conferida pelo caso de uso (existe e está ativa). */
+    public record Category(UUID id, String name) { }
+
+    /** Dados do papel de fornecedor: prazo de referência em dias, condições de pagamento e categorias fornecidas. */
+    public record SupplierTerms(Integer leadTimeDays, String paymentTerms, List<Category> categories) {
+        public static final SupplierTerms EMPTY = new SupplierTerms(null, null, List.of());
+
+        public SupplierTerms {
+            categories = List.copyOf(categories);
+        }
+    }
 
     public record Unit(UUID id, String name, String street, String number, String district, String city, String state,
                        String postalCode) {
@@ -56,7 +87,8 @@ public final class Partner {
     private final String tradeName;
     private final Cnpj cnpj;
     private final String group;
-    private final Status status;
+    private final Map<Role, Status> roles;
+    private final SupplierTerms supplier;
     private final List<Unit> units;
     private final List<Contact> contacts;
     private final long version;
@@ -65,16 +97,19 @@ public final class Partner {
     private final Instant updatedAt;
     private final String updatedBy;
 
-    public Partner(UUID id, String code, String legalName, String tradeName, Cnpj cnpj, String group, Status status,
-                   List<Unit> units, List<Contact> contacts, long version, Instant createdAt, String createdBy,
-                   Instant updatedAt, String updatedBy) {
+    public Partner(UUID id, String code, String legalName, String tradeName, Cnpj cnpj, String group, Map<Role, Status> roles,
+                   SupplierTerms supplier, List<Unit> units, List<Contact> contacts, long version, Instant createdAt,
+                   String createdBy, Instant updatedAt, String updatedBy) {
         this.id = Objects.requireNonNull(id);
         this.code = Objects.requireNonNull(code);
         this.legalName = Objects.requireNonNull(legalName);
         this.tradeName = tradeName;
         this.cnpj = cnpj;
         this.group = group;
-        this.status = Objects.requireNonNull(status);
+        EnumMap<Role, Status> r = new EnumMap<>(Role.class);
+        r.putAll(roles);
+        this.roles = Collections.unmodifiableMap(r);
+        this.supplier = supplier == null ? SupplierTerms.EMPTY : supplier;
         this.units = List.copyOf(units);
         this.contacts = List.copyOf(contacts);
         this.version = version;
@@ -84,24 +119,53 @@ public final class Partner {
         this.updatedBy = updatedBy;
     }
 
-    /** Novo cliente ativo, versão 1, com o código dado pelo sistema. */
-    public static Partner register(String code, PartnerData data, Instant now, String actor) {
-        Valid v = validate(data, List.of(), List.of());
-        return new Partner(UUID.randomUUID(), code, v.legalName, v.tradeName, v.cnpj, v.group, Status.ATIVO, v.units,
-                v.contacts, 1, now, actor, now, actor);
+    /** Novo parceiro com um papel ativo, versão 1, com o código dado pelo sistema. */
+    public static Partner register(String code, Role role, PartnerData data, Instant now, String actor) {
+        Valid v = validate(data, SupplierTerms.EMPTY, List.of(), List.of());
+        return new Partner(UUID.randomUUID(), code, v.legalName, v.tradeName, v.cnpj, v.group, Map.of(role, Status.ATIVO),
+                v.supplier, v.units, v.contacts, 1, now, actor, now, actor);
     }
 
-    /** Próxima versão com os dados informados. Unidades e contatos com id conhecido mantêm a identidade. */
+    /**
+     * Próxima versão com os dados informados. Unidades e contatos com id conhecido mantêm a identidade; a parte que não
+     * veio nos dados (lista nula, dados de fornecedor nulos) continua como está.
+     */
     public Partner update(PartnerData data, Instant now, String actor) {
-        Valid v = validate(data, units, contacts);
-        return new Partner(id, code, v.legalName, v.tradeName, v.cnpj, v.group, status, v.units, v.contacts, version + 1,
+        Valid v = validate(data, supplier, units, contacts);
+        return new Partner(id, code, v.legalName, v.tradeName, v.cnpj, v.group, roles, v.supplier, v.units, v.contacts,
+                version + 1, createdAt, createdBy, now, actor);
+    }
+
+    /** Inativa o papel preservando o histórico; o parceiro referenciado nunca é apagado e o outro papel segue igual. */
+    public Partner deactivate(Role role, Instant now, String actor) {
+        return withRole(role, Status.INATIVO, now, actor);
+    }
+
+    /** Dá ao parceiro existente um papel novo (ou reativa o papel inativo), sem duplicar o cadastro. */
+    public Partner enable(Role role, Instant now, String actor) {
+        return withRole(role, Status.ATIVO, now, actor);
+    }
+
+    private Partner withRole(Role role, Status status, Instant now, String actor) {
+        EnumMap<Role, Status> r = new EnumMap<>(Role.class);
+        r.putAll(roles);
+        r.put(role, status);
+        return new Partner(id, code, legalName, tradeName, cnpj, group, r, supplier, units, contacts, version + 1,
                 createdAt, createdBy, now, actor);
     }
 
-    /** Inativa preservando o histórico; o cliente referenciado nunca é apagado. */
-    public Partner deactivate(Instant now, String actor) {
-        return new Partner(id, code, legalName, tradeName, cnpj, group, Status.INATIVO, units, contacts, version + 1,
-                createdAt, createdBy, now, actor);
+    /** Situação do papel; nula quando o parceiro não tem esse papel. */
+    public Status status(Role role) {
+        return roles.get(role);
+    }
+
+    public boolean hasRole(Role role) {
+        return roles.containsKey(role);
+    }
+
+    /** Situação do parceiro: ativo se ao menos um papel está ativo. */
+    public Status status() {
+        return roles.containsValue(Status.ATIVO) ? Status.ATIVO : Status.INATIVO;
     }
 
     /** Diferenças campo a campo, para a auditoria e o evento PartnerUpdated. */
@@ -123,15 +187,21 @@ public final class Partner {
         m.put("tradeName", tradeName);
         m.put("cnpj", cnpj == null ? null : cnpj.formatted());
         m.put("group", group);
-        m.put("status", status.name());
+        m.put("customerStatus", roles.containsKey(Role.CLIENTE) ? roles.get(Role.CLIENTE).name() : null);
+        m.put("supplierStatus", roles.containsKey(Role.FORNECEDOR) ? roles.get(Role.FORNECEDOR).name() : null);
         m.put("units", units.isEmpty() ? null : units.stream().map(Unit::summary).collect(Collectors.joining("; ")));
         m.put("contacts", contacts.isEmpty() ? null : contacts.stream().map(Contact::summary).collect(Collectors.joining("; ")));
+        m.put("leadTimeDays", supplier.leadTimeDays() == null ? null : supplier.leadTimeDays().toString());
+        m.put("paymentTerms", supplier.paymentTerms());
+        m.put("suppliedCategories", supplier.categories().isEmpty() ? null
+                : supplier.categories().stream().map(Category::name).collect(Collectors.joining("; ")));
         return m;
     }
 
-    private record Valid(String legalName, String tradeName, Cnpj cnpj, String group, List<Unit> units, List<Contact> contacts) { }
+    private record Valid(String legalName, String tradeName, Cnpj cnpj, String group, SupplierTerms supplier, List<Unit> units,
+                         List<Contact> contacts) { }
 
-    private static Valid validate(PartnerData data, List<Unit> knownUnits, List<Contact> knownContacts) {
+    private static Valid validate(PartnerData data, SupplierTerms knownSupplier, List<Unit> knownUnits, List<Contact> knownContacts) {
         List<FieldIssue> issues = new ArrayList<>();
         String legal = text(data.legalName());
         if (legal == null) {
@@ -149,8 +219,31 @@ public final class Partner {
                 issues.add(new FieldIssue("cnpj", e.getMessage() + "."));
             }
         }
-        List<PartnerData.UnitData> unitData = data.units() == null ? List.of() : data.units();
-        List<PartnerData.ContactData> contactData = data.contacts() == null ? List.of() : data.contacts();
+        SupplierTerms supplier = knownSupplier;
+        if (data.supplier() != null) {
+            PartnerData.SupplierData s = data.supplier();
+            Integer days = s.leadTimeDays();
+            if (days != null && (days < 0 || days > 365)) {
+                issues.add(new FieldIssue("leadTimeDays", "Prazo entre 0 e 365 dias."));
+            }
+            String terms = limit(text(s.paymentTerms()), 200, "paymentTerms", issues);
+            List<Category> categories = s.categories() == null ? List.of() : List.copyOf(new LinkedHashSet<>(s.categories()));
+            if (categories.size() > MAX_ITEMS) {
+                issues.add(new FieldIssue("suppliedCategories", "Máximo de " + MAX_ITEMS + " categorias."));
+            }
+            supplier = new SupplierTerms(days, terms, categories);
+        }
+        // Lista ausente mantém a atual: a ficha do fornecedor não edita as unidades do cliente.
+        List<PartnerData.UnitData> unitData = data.units() == null ? null : data.units();
+        List<PartnerData.ContactData> contactData = data.contacts() == null ? null : data.contacts();
+        if (unitData == null) {
+            unitData = knownUnits.stream().map(u -> new PartnerData.UnitData(u.id().toString(), u.name(), u.street(), u.number(),
+                    u.district(), u.city(), u.state(), u.postalCode())).toList();
+        }
+        if (contactData == null) {
+            contactData = knownContacts.stream().map(c -> new PartnerData.ContactData(c.id().toString(), c.name(), c.role(),
+                    c.phone(), c.email())).toList();
+        }
         if (unitData.size() > MAX_ITEMS) issues.add(new FieldIssue("units", "Máximo de " + MAX_ITEMS + " unidades."));
         if (contactData.size() > MAX_ITEMS) issues.add(new FieldIssue("contacts", "Máximo de " + MAX_ITEMS + " contatos."));
 
@@ -195,7 +288,7 @@ public final class Partner {
         if (!issues.isEmpty()) {
             throw new RuleViolationException("PARTNER_INVALID", "Corrija os campos indicados.", issues);
         }
-        return new Valid(legal, trade, cnpj, group, units, contacts);
+        return new Valid(legal, trade, cnpj, group, supplier, units, contacts);
     }
 
     /** Mantém o id só se ele pertence a este cliente; qualquer outro valor vira um item novo. */
@@ -228,7 +321,8 @@ public final class Partner {
     public String tradeName() { return tradeName; }
     public Cnpj cnpj() { return cnpj; }
     public String group() { return group; }
-    public Status status() { return status; }
+    public Map<Role, Status> roles() { return roles; }
+    public SupplierTerms supplier() { return supplier; }
     public List<Unit> units() { return units; }
     public List<Contact> contacts() { return contacts; }
     public long version() { return version; }

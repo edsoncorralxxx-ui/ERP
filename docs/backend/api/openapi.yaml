@@ -3,13 +3,16 @@ info:
   title: Renda+ ERP — API do servidor
   version: v1
   description: |
-    Contrato da API usada pelo app do Mac (Sprints 1 e 2).
+    Contrato da API usada pelo app do Mac (Sprints 1 a 3).
     Regras gerais:
     - Toda rota exige sessão (`Authorization: Bearer <token>`), exceto `GET /api/v1/status` e `POST /api/v1/session` (ADR-005).
       Sem sessão válida: 401 `UNAUTHENTICATED`. Perfil sem a permissão: 403 `FORBIDDEN` (a negativa fica na auditoria).
     - Edição exige `If-Match` com a versão lida (ETag); versão desatualizada: 412 `VERSION_MISMATCH`; sem cabeçalho: 428.
     - Cadastro exige `Idempotency-Key` (8 a 100 caracteres); repetir com a mesma chave devolve o mesmo registro;
       mesma chave com outro conteúdo: 422 `IDEMPOTENCY_KEY_REUSED`.
+    - Cliente e fornecedor são papéis do mesmo parceiro, cada um com a sua situação. Cadastrar num papel o CNPJ de um parceiro
+      que ainda não o tem devolve 422 `PARTNER_OTHER_ROLE`, com `details` `partnerId` e `version` para chamar `.../{id}/enable`.
+    - Valores decimais (custo de referência, fator de conversão) trafegam como texto com ponto, até 6 casas (ADR-006, PD-007).
     - Erros sempre no formato `ApiError`, em português, com `correlationId` (cabeçalho `X-Correlation-Id` é aceito e devolvido).
 servers:
   - url: http://localhost:8080
@@ -20,6 +23,9 @@ tags:
   - name: Sessão
   - name: Usuários
   - name: Clientes
+  - name: Fornecedores
+  - name: Materiais e serviços
+  - name: Unidades e categorias
 
 paths:
   /api/v1/status:
@@ -254,29 +260,226 @@ paths:
     parameters: [{ $ref: '#/components/parameters/Id' }]
     get:
       tags: [Clientes]
-      summary: Histórico do cliente lido da auditoria (partner.read), do mais recente ao mais antigo
+      summary: Histórico do parceiro lido da auditoria (partner.read), do mais recente ao mais antigo
       responses:
-        '200':
-          description: Registros
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    occurredAt: { type: string, format: date-time }
-                    actor: { type: string }
-                    action: { type: string, enum: [PARTNER_REGISTERED, PARTNER_UPDATED, PARTNER_DEACTIVATED] }
-                    version: { type: integer }
-                    reason: { type: [string, 'null'] }
-                    changes:
-                      type: object
-                      additionalProperties:
-                        type: object
-                        properties:
-                          before: { type: [string, 'null'] }
-                          after: { type: [string, 'null'] }
+        '200': { description: Registros, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/customers/{id}/enable:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Clientes]
+      summary: Torna cliente um parceiro já cadastrado (ou reativa o papel) — partner.update, idempotente
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      responses:
+        '200': { description: Parceiro com o papel de cliente ativo, content: { application/json: { schema: { $ref: '#/components/schemas/Customer' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/suppliers:
+    get:
+      tags: [Fornecedores]
+      summary: Lista de fornecedores (partner.read); a situação é a do papel de fornecedor
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Código, razão social, nome fantasia ou parte do CNPJ' }
+        - { name: status, in: query, required: false, schema: { type: string, enum: [ATIVO, INATIVO, TODOS], default: ATIVO } }
+      responses:
+        '200': { description: Fornecedores, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/SupplierSummary' } } } } }
+    post:
+      tags: [Fornecedores]
+      summary: Cadastra fornecedor — RegisterPartner (partner.create), idempotente; código F00001
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SupplierRequest' } } }
+      responses:
+        '201': { description: Cadastrado (ou o mesmo fornecedor, se a chave já foi usada), headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Supplier' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/suppliers/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Fornecedores]
+      summary: Ficha do fornecedor (partner.read); 404 se o parceiro não é fornecedor
+      responses:
+        '200': { description: Fornecedor, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Supplier' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Fornecedores]
+      summary: Edita — UpdatePartner (partner.update)
+      description: Não mexe nas unidades do parceiro. Categorias inativas que o fornecedor já tinha continuam aceitas.
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SupplierRequest' } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Supplier' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+        '428': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/suppliers/{id}/deactivate:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Fornecedores]
+      summary: Inativa o papel de fornecedor — DeactivatePartner (partner.deactivate), idempotente; o papel de cliente não muda
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string, maxLength: 500 } } } } }
+      responses:
+        '200': { description: Fornecedor inativo, content: { application/json: { schema: { $ref: '#/components/schemas/Supplier' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/suppliers/{id}/enable:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Fornecedores]
+      summary: Torna fornecedor um parceiro já cadastrado (ou reativa o papel) — partner.update, idempotente
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      responses:
+        '200': { description: Parceiro com o papel de fornecedor ativo, content: { application/json: { schema: { $ref: '#/components/schemas/Supplier' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/suppliers/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Fornecedores]
+      summary: Histórico do parceiro lido da auditoria (partner.read)
+      responses:
+        '200': { description: Registros, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/items:
+    get:
+      tags: [Materiais e serviços]
+      summary: Lista de materiais e serviços (item.read)
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Código ou descrição' }
+        - { name: nature, in: query, required: false, schema: { type: string, enum: [MATERIAL, SERVICO] } }
+        - { name: categoryId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: status, in: query, required: false, schema: { type: string, enum: [ATIVO, INATIVO, TODOS], default: ATIVO } }
+      responses:
+        '200': { description: Itens, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ItemSummary' } } } } }
+    post:
+      tags: [Materiais e serviços]
+      summary: Cadastra — RegisterItem (item.create), idempotente; código M00001 (material) ou S00001 (serviço)
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ItemRequest' } } }
+      responses:
+        '201': { description: Cadastrado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Item' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/items/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Materiais e serviços]
+      summary: Ficha do item (item.read)
+      responses:
+        '200': { description: Item, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Item' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Materiais e serviços]
+      summary: Edita — UpdateItem (item.update); a natureza não muda depois do cadastro
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ItemRequest' } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Item' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+        '428': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/items/{id}/deactivate:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Materiais e serviços]
+      summary: Inativa — DeactivateItem (item.deactivate), idempotente; preserva o histórico
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string, maxLength: 500 } } } } }
+      responses:
+        '200': { description: Item inativo, content: { application/json: { schema: { $ref: '#/components/schemas/Item' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/items/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Materiais e serviços]
+      summary: Histórico do item lido da auditoria (item.read)
+      responses:
+        '200': { description: Registros, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/units-of-measure:
+    get:
+      tags: [Unidades e categorias]
+      summary: Unidades de medida, ativas e inativas (item.read)
+      responses:
+        '200': { description: Unidades, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/UnitOfMeasure' } } } } }
+    post:
+      tags: [Unidades e categorias]
+      summary: Inclui unidade (catalog.admin); código de 1 a 10 letras ou algarismos, guardado em maiúsculas
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [code, name], properties: { code: { type: string, maxLength: 10 }, name: { type: string, maxLength: 60 } } } } }
+      responses:
+        '201': { description: Incluída, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/UnitOfMeasure' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/units-of-measure/{code}:
+    parameters: [{ name: code, in: path, required: true, schema: { type: string } }]
+    put:
+      tags: [Unidades e categorias]
+      summary: Renomeia ou inativa (catalog.admin); o código não muda
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [name, status], properties: { name: { type: string, maxLength: 60 }, status: { type: string, enum: [ATIVO, INATIVO] } } } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/UnitOfMeasure' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/item-categories:
+    get:
+      tags: [Unidades e categorias]
+      summary: Categorias de item, ativas e inativas (item.read)
+      responses:
+        '200': { description: Categorias, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ItemCategory' } } } } }
+    post:
+      tags: [Unidades e categorias]
+      summary: Inclui categoria (catalog.admin); nome único sem diferenciar maiúsculas
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [name], properties: { name: { type: string, maxLength: 100 } } } } }
+      responses:
+        '201': { description: Incluída, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/ItemCategory' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/item-categories/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    put:
+      tags: [Unidades e categorias]
+      summary: Renomeia ou inativa (catalog.admin)
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [name, status], properties: { name: { type: string, maxLength: 100 }, status: { type: string, enum: [ATIVO, INATIVO] } } } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/ItemCategory' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
 
 components:
   securitySchemes:
@@ -401,7 +604,8 @@ components:
             id: { type: string, format: uuid }
             code: { type: string, example: C00001 }
             cnpjFormatted: { type: [string, 'null'] }
-            status: { type: string, enum: [ATIVO, INATIVO] }
+            status: { type: string, enum: [ATIVO, INATIVO], description: 'Situação do papel de cliente' }
+            supplier: { type: boolean, description: 'Também é fornecedor ativo' }
             version: { type: string }
             createdAt: { type: string, format: date-time }
             createdBy: { type: string }
@@ -420,3 +624,140 @@ components:
         units: { type: integer }
         status: { type: string, enum: [ATIVO, INATIVO] }
         version: { type: string }
+    HistoryEntry:
+      type: object
+      properties:
+        occurredAt: { type: string, format: date-time }
+        actor: { type: string }
+        action: { type: string, enum: [PARTNER_REGISTERED, PARTNER_UPDATED, PARTNER_DEACTIVATED, PARTNER_ROLE_ENABLED, ITEM_REGISTERED, ITEM_UPDATED, ITEM_DEACTIVATED] }
+        version: { type: integer }
+        reason: { type: [string, 'null'] }
+        changes:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              before: { type: [string, 'null'] }
+              after: { type: [string, 'null'] }
+    CategoryRef:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+    SupplierRequest:
+      type: object
+      required: [legalName]
+      properties:
+        legalName: { type: string, maxLength: 200 }
+        tradeName: { type: [string, 'null'], maxLength: 200 }
+        cnpj: { type: [string, 'null'], description: 'Com ou sem máscara; válido e único quando informado' }
+        group: { type: [string, 'null'], maxLength: 100 }
+        leadTimeDays: { type: [integer, 'null'], minimum: 0, maximum: 365, description: 'Prazo de referência de entrega' }
+        paymentTerms: { type: [string, 'null'], maxLength: 200 }
+        suppliedCategoryIds: { type: array, maxItems: 50, items: { type: string, format: uuid } }
+        contacts: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/Contact' } }
+    Supplier:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: F00001, description: 'Código do parceiro; um cliente que vira fornecedor mantém o código C' }
+        legalName: { type: string }
+        tradeName: { type: [string, 'null'] }
+        cnpj: { type: [string, 'null'] }
+        cnpjFormatted: { type: [string, 'null'] }
+        group: { type: [string, 'null'] }
+        status: { type: string, enum: [ATIVO, INATIVO], description: 'Situação do papel de fornecedor' }
+        customer: { type: boolean, description: 'Também é cliente ativo' }
+        leadTimeDays: { type: [integer, 'null'] }
+        paymentTerms: { type: [string, 'null'] }
+        suppliedCategories: { type: array, items: { $ref: '#/components/schemas/CategoryRef' } }
+        contacts: { type: array, items: { $ref: '#/components/schemas/Contact' } }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    SupplierSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        legalName: { type: string }
+        tradeName: { type: [string, 'null'] }
+        cnpjFormatted: { type: [string, 'null'] }
+        city: { type: [string, 'null'] }
+        state: { type: [string, 'null'] }
+        suppliedCategories: { type: [string, 'null'], description: 'Nomes separados por vírgula' }
+        leadTimeDays: { type: [integer, 'null'] }
+        status: { type: string, enum: [ATIVO, INATIVO] }
+        version: { type: string }
+    Conversion:
+      type: object
+      required: [fromUom, factor]
+      properties:
+        id: { type: [string, 'null'], format: uuid }
+        fromUom: { type: string, description: 'Unidade de compra' }
+        factor: { type: string, example: '6', description: '1 fromUom = factor unidades do item; maior que zero, até 6 casas' }
+    ItemRequest:
+      type: object
+      required: [description, nature, uom, categoryId, stockControlled]
+      properties:
+        description: { type: string, maxLength: 200 }
+        nature: { type: string, enum: [MATERIAL, SERVICO] }
+        uom: { type: string, description: 'Código de unidade ativa' }
+        categoryId: { type: string, format: uuid }
+        stockControlled: { type: boolean, description: 'Serviço nunca controla estoque' }
+        referenceCost: { type: [string, 'null'], example: '184.50', description: 'BRL por unidade do item; maior ou igual a zero, até 6 casas' }
+        conversions: { type: array, maxItems: 20, items: { $ref: '#/components/schemas/Conversion' } }
+    Item:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: M00001 }
+        description: { type: string }
+        nature: { type: string, enum: [MATERIAL, SERVICO] }
+        uom: { type: string }
+        category: { $ref: '#/components/schemas/CategoryRef' }
+        stockControlled: { type: boolean }
+        referenceCost: { type: [string, 'null'], example: '184.500000' }
+        status: { type: string, enum: [ATIVO, INATIVO] }
+        conversions: { type: array, items: { $ref: '#/components/schemas/Conversion' } }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    ItemSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        description: { type: string }
+        nature: { type: string, enum: [MATERIAL, SERVICO] }
+        uom: { type: string }
+        category: { type: string }
+        stockControlled: { type: boolean }
+        referenceCost: { type: [string, 'null'] }
+        status: { type: string, enum: [ATIVO, INATIVO] }
+        version: { type: string }
+    UnitOfMeasure:
+      type: object
+      properties:
+        code: { type: string, example: KG }
+        name: { type: string }
+        status: { type: string, enum: [ATIVO, INATIVO] }
+        version: { type: string }
+        items: { type: integer, description: 'Itens que usam a unidade' }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    ItemCategory:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        status: { type: string, enum: [ATIVO, INATIVO] }
+        version: { type: string }
+        items: { type: integer }
+        suppliers: { type: integer, description: 'Fornecedores que a fornecem' }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }

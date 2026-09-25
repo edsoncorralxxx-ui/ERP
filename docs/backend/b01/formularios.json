@@ -127,7 +127,7 @@
       "conceito": "ITEM",
       "significado": "Item comprável, estocável ou executável com unidade de medida",
       "campos": [
-        {"nome": "codigo", "tipo": "codigo", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "codigo", "tipo": "codigo", "obrigatorio": true, "origem": "sistema"},
         {"nome": "descricao", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
         {"nome": "natureza", "tipo": "enum", "valores": ["MATERIAL", "SERVICO"], "obrigatorio": true, "origem": "usuario"},
         {"nome": "unidadeMedida", "tipo": "codigo", "obrigatorio": true, "origem": "usuario"},

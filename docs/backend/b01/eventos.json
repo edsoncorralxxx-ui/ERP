@@ -10,7 +10,13 @@
       "payload": ["partnerId", "changedFields"],
       "consumidores": []
     },
-    {"type": "PartnerDeactivated", "produtor": "cadastros", "conceito": "CLIENTE", "payload": ["partnerId", "reason"], "consumidores": []},
+    {
+      "type": "PartnerDeactivated",
+      "produtor": "cadastros",
+      "conceito": "CLIENTE",
+      "payload": ["partnerId", "role", "reason"],
+      "consumidores": []
+    },
     {"type": "ItemRegistered", "produtor": "cadastros", "conceito": "ITEM", "payload": ["itemId", "uom", "category"], "consumidores": []},
     {
       "type": "LeadInteractionRecorded",

@@ -25,8 +25,9 @@
       "icone": "cadastros",
       "itens": [
         {"rotulo": "Clientes e unidades", "tela": "clientes", "implementado": true, "fase": "Sprint 2 · B03"},
-        {"rotulo": "Fornecedores", "tela": "fornecedores", "fase": "Sprint 3 · B03"},
-        {"rotulo": "Materiais e serviços", "tela": "materiais", "fase": "Sprint 3 · B03"}
+        {"rotulo": "Fornecedores", "tela": "fornecedores", "fase": "Sprint 3 · B03", "implementado": true},
+        {"rotulo": "Materiais e serviços", "tela": "materiais", "fase": "Sprint 3 · B03", "implementado": true},
+        {"rotulo": "Unidades e categorias", "tela": "materiais", "secao": "CATALOGO", "implementado": true, "fase": "Sprint 3 · B03"}
       ]
     },
     {
@@ -101,7 +102,7 @@
     {
       "nome": "Equipamentos",
       "icone": "equipamentos",
-      "itens": [{"rotulo": "Equipamentos", "tela": "equipamentos", "fase": "Sprint 3 · B03"}]
+      "itens": [{"rotulo": "Equipamentos", "tela": "equipamentos", "fase": "Sprint 4 · B05"}]
     },
     {
       "nome": "Renda+",
