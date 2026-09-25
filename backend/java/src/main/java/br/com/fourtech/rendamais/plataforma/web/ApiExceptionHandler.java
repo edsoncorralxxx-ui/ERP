@@ -1,5 +1,9 @@
 package br.com.fourtech.rendamais.plataforma.web;
 
+import br.com.fourtech.rendamais.acesso.api.AccessDeniedException;
+import br.com.fourtech.rendamais.acesso.api.UnauthenticatedException;
+import br.com.fourtech.rendamais.auditoria.api.AuditEntry;
+import br.com.fourtech.rendamais.auditoria.api.AuditTrail;
 import br.com.fourtech.rendamais.kernel.DomainException;
 import br.com.fourtech.rendamais.kernel.NotFoundException;
 import br.com.fourtech.rendamais.kernel.RuleViolationException;
@@ -9,6 +13,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -16,11 +23,38 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
+import java.util.Map;
 
 @RestControllerAdvice
 class ApiExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
+
+    private final AuditTrail audit;
+    private final TransactionTemplate newTransaction;
+
+    ApiExceptionHandler(AuditTrail audit, PlatformTransactionManager transactions) {
+        this.audit = audit;
+        this.newTransaction = new TransactionTemplate(transactions);
+        this.newTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    }
+
+    /** 403: a operação foi desfeita; a negativa é gravada numa transação própria, para ficar registrada. */
+    @ExceptionHandler(AccessDeniedException.class)
+    ResponseEntity<ApiError> accessDenied(AccessDeniedException e) {
+        try {
+            newTransaction.executeWithoutResult(t -> audit.record(new AuditEntry(e.username(), "ACCESS_DENIED", "permission",
+                    e.permission(), 0, null, Map.of(), CorrelationId.current())));
+        } catch (RuntimeException ex) {
+            log.error("Falha ao registrar acesso negado [{}]", CorrelationId.current(), ex);
+        }
+        return error(HttpStatus.FORBIDDEN, e);
+    }
+
+    @ExceptionHandler(UnauthenticatedException.class)
+    ResponseEntity<ApiError> unauthenticated(UnauthenticatedException e) {
+        return error(HttpStatus.UNAUTHORIZED, e);
+    }
 
     @ExceptionHandler(VersionConflictException.class)
     ResponseEntity<ApiError> versionConflict(VersionConflictException e) {

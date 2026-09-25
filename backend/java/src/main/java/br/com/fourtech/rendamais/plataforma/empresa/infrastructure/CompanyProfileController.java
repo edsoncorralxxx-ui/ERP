@@ -5,6 +5,7 @@ import br.com.fourtech.rendamais.plataforma.empresa.domain.Address;
 import br.com.fourtech.rendamais.plataforma.empresa.domain.CompanyProfile;
 import br.com.fourtech.rendamais.plataforma.empresa.domain.CompanyProfileData;
 import br.com.fourtech.rendamais.plataforma.web.PreconditionRequiredException;
+import br.com.fourtech.rendamais.plataforma.web.Versions;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -47,25 +48,13 @@ class CompanyProfileController {
         if (ifMatch == null || ifMatch.isBlank()) {
             throw new PreconditionRequiredException();
         }
-        long expected = parseVersion(ifMatch);
+        long expected = Versions.parse(ifMatch);
         AddressDto a = body.address();
         Address address = a == null ? Address.empty()
                 : new Address(a.street(), a.number(), a.complement(), a.district(), a.city(), a.state(), a.postalCode());
         CompanyProfile updated = service.update(expected,
                 new CompanyProfileData(body.legalName(), body.tradeName(), body.cnpj(), address, body.phone(), body.email()));
         return respond(updated);
-    }
-
-    static long parseVersion(String ifMatch) {
-        String v = ifMatch.strip();
-        if (v.startsWith("W/")) {
-            v = v.substring(2);
-        }
-        v = v.replace("\"", "");
-        if (!v.matches("\\d{1,18}")) {
-            throw new IllegalArgumentException("If-Match inválido");
-        }
-        return Long.parseLong(v);
     }
 
     private static ResponseEntity<CompanyProfileResponse> respond(CompanyProfile p) {

@@ -5,8 +5,9 @@ Registro da execução real do roteiro B01–B16. Desde 25/09/2026 o trabalho se
 | Fase | Situação | Data | Evidência | Próximo passo |
 |---|---|---|---|---|
 | B01 — Fundação de domínio, semântica e OOP | Entregue para revisão | 2026-09-25 | `10-b01-fundacao.md`; `python3 tools/b01/verificar_b01.py` → OK; 12 testes do verificador passando | Revisão do usuário; aceite/ajuste de ADR-004, PD-002, PD-007 |
-| B02 — Base executável, contratos e persistência | Em execução (Sprint 1 entregue: kernel, plataforma mínima, arquitetura, CI) | 2026-09-25 | `docs/scrum/sprints/sprint-01.md` | Sprint 2: recibo de comando, outbox, login |
-| B03–B16 | Planejado | — | — | Conforme dependências do roteiro |
+| B02 — Base executável, contratos e persistência | Em execução (Sprints 1 e 2: kernel, plataforma, arquitetura, CI, recibo de comando, outbox, fatos operacionais, OpenAPI) | 2026-09-25 | `docs/scrum/sprints/sprint-01.md`, `sprint-02.md` | Worker Python (US-207) na sprint de importação |
+| B03 — Acesso, cadastros e metadados | Em execução (Sprint 2: sessões, perfis, permissões, clientes e unidades) | 2026-09-25 | `docs/scrum/sprints/sprint-02.md` | Sprint 3: fornecedores, materiais e serviços, equipamentos |
+| B04–B16 | Planejado | — | — | Conforme dependências do roteiro |
 
 ## Registro
 
@@ -24,3 +25,10 @@ Registro da execução real do roteiro B01–B16. Desde 25/09/2026 o trabalho se
 - App Electron + React + TypeScript com o design system oficial (ADR-017).
 - Verificação: 35 testes no servidor, 19 no app, verificador B01; roteiro de demonstração no navegador contra o servidor real.
 - Pendente de B02: recibo de comando/idempotência, outbox, fatos operacionais, worker Python, OpenAPI (Sprint 2+).
+
+### 2026-09-25 — Sprint 2 (B02 e B03 parciais)
+
+- ADR-005 aceito (usuários do Renda+, Argon2id, sessão opaca 8 h/12 h, bloqueio); perfis Administrador e Consulta (PD-009).
+- Servidor: módulos `acesso` e `cadastros`; recibo de comando, outbox e fatos operacionais na `plataforma`; histórico lido da `auditoria`; migrações V2–V4; contrato `docs/backend/api/openapi.yaml`.
+- App: login real (token no processo principal), bloqueio e sessão expirada por cima das janelas, Clientes e unidades, Cliente, Usuários e permissões, Trocar senha.
+- Verificação: 56 testes no servidor, 37 no app, verificador B01; roteiro no navegador contra o servidor real.

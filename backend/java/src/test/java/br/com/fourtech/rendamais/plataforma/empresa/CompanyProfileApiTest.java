@@ -3,9 +3,7 @@ package br.com.fourtech.rendamais.plataforma.empresa;
 import br.com.fourtech.rendamais.IntegrationTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -26,13 +24,13 @@ class CompanyProfileApiTest extends IntegrationTest {
     @LocalServerPort
     int port;
 
-    @Autowired
-    JdbcClient jdbc;
+    String token;
 
     private final HttpClient http = HttpClient.newHttpClient();
 
     @BeforeEach
     void reset() {
+        token = adminToken();
         jdbc.sql("delete from audit_event").update();
         jdbc.sql("""
                 update company_profile set legal_name = null, trade_name = null, cnpj = null, street = null, number = null,
@@ -42,7 +40,8 @@ class CompanyProfileApiTest extends IntegrationTest {
     }
 
     private HttpResponse<String> get(String path) throws Exception {
-        return http.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + path)).GET().build(),
+        return http.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
+                        .header("Authorization", "Bearer " + token).GET().build(),
                 HttpResponse.BodyHandlers.ofString());
     }
 
@@ -50,6 +49,7 @@ class CompanyProfileApiTest extends IntegrationTest {
         HttpRequest.Builder b = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/v1/company-profile"))
                 .header("Content-Type", "application/json")
                 .header("X-Correlation-Id", "teste-empresa-0001")
+                .header("Authorization", "Bearer " + token)
                 .PUT(HttpRequest.BodyPublishers.ofString(body));
         if (ifMatch != null) {
             b.header("If-Match", ifMatch);
@@ -85,7 +85,7 @@ class CompanyProfileApiTest extends IntegrationTest {
         assertThat(r.statusCode()).isEqualTo(200);
         assertThat(r.headers().firstValue("ETag")).hasValue("\"1\"");
         assertThat(r.body()).contains("\"cnpj\":\"11222333000181\"", "\"cnpjFormatted\":\"11.222.333/0001-81\"",
-                "\"state\":\"PR\"", "\"postalCode\":\"87000000\"", "\"configured\":true", "\"updatedBy\":\"desenvolvimento-local\"");
+                "\"state\":\"PR\"", "\"postalCode\":\"87000000\"", "\"configured\":true", "\"updatedBy\":\"admin.teste\"");
 
         HttpResponse<String> again = get("/api/v1/company-profile");
         assertThat(again.body()).contains("Fourtech Demonstração Ltda", "\"version\":\"1\"");

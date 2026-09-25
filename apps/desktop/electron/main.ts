@@ -10,6 +10,7 @@ import path from 'node:path';
 
 const DEFAULT_SERVER_URL = 'http://localhost:8080';
 const ALLOWED_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
+// Authorization não entra: o renderer não escolhe credenciais; o processo principal acrescenta o token.
 const ALLOWED_HEADERS = new Set(['if-match', 'idempotency-key', 'content-type', 'x-correlation-id']);
 const MAX_BODY = 1_000_000;
 
@@ -48,20 +49,38 @@ function validate(req: unknown): ApiRequest {
   return { method, path: reqPath, headers, body };
 }
 
+/**
+ * Token da sessão (ADR-005): vive só aqui, na memória do processo principal. O React nunca o recebe;
+ * a resposta do login chega ao renderer sem ele, e cada chamada à API ganha o cabeçalho Authorization aqui.
+ */
+let sessionToken: string | null = null;
+
 ipcMain.handle('api:request', async (_event, raw: unknown) => {
   const req = validate(raw);
+  const headers: Record<string, string> = { ...req.headers };
+  if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
   const response = await net.fetch(serverUrl() + req.path, {
     method: req.method,
-    headers: req.headers,
+    headers,
     body: req.body,
     signal: AbortSignal.timeout(15_000),
   });
-  const headers: Record<string, string> = {};
+  const out: Record<string, string> = {};
   for (const name of ['etag', 'content-type', 'x-correlation-id']) {
     const v = response.headers.get(name);
-    if (v) headers[name] = v;
+    if (v) out[name] = v;
   }
-  return { status: response.status, headers, body: await response.text() };
+  let body = await response.text();
+  const isSession = req.path === '/api/v1/session' || req.path.startsWith('/api/v1/session?');
+  if (isSession && req.method === 'POST' && response.ok) {
+    const parsed = JSON.parse(body) as { token?: string };
+    sessionToken = typeof parsed.token === 'string' ? parsed.token : null;
+    delete parsed.token;
+    body = JSON.stringify(parsed);
+  } else if ((isSession && req.method === 'DELETE') || response.status === 401) {
+    sessionToken = null;
+  }
+  return { status: response.status, headers: out, body };
 });
 
 ipcMain.handle('app:info', () => ({ version: app.getVersion(), serverUrl: serverUrl(), platform: process.platform }));

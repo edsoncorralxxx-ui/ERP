@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { api } from '../api/client';
 import type { AppWindow, WindowKind } from '../windows/windowManager';
 
 type Props = {
@@ -9,6 +10,7 @@ type Props = {
   onCloseActive: () => void;
   onOpen: (kind: WindowKind) => void;
   onLock: () => void;
+  onSignOut: () => void;
   onCascade: () => void;
   onTile: () => void;
   onFocus: (id: string) => void;
@@ -43,8 +45,10 @@ export function MenuBar(p: Props) {
         { label: 'Atualizar', kbd: '⌘S', disabled: !p.canSave, action: p.onSaveActive },
         { label: 'Fechar janela', kbd: 'Esc', disabled: !p.activeId, action: p.onCloseActive },
         'sep',
+        { label: 'Trocar senha', action: () => p.onOpen('password') },
         { label: 'Bloquear tela', action: p.onLock },
-        { label: 'Sair', action: () => window.close() },
+        { label: 'Encerrar sessão', action: p.onSignOut },
+        { label: 'Sair', action: () => void api.del('/api/v1/session').catch(() => undefined).finally(() => window.close()) },
       ],
     },
     { id: 'editar', label: (<><u>E</u>ditar</>), items: PROXIMAS },
@@ -56,6 +60,8 @@ export function MenuBar(p: Props) {
       label: (<><u>M</u>ódulos</>),
       items: [
         { label: 'Meu cockpit', action: () => p.onOpen('cockpit') },
+        'sep',
+        { label: 'Clientes e unidades', action: () => p.onOpen('customers') },
         'sep',
         { label: 'Dados da empresa', action: () => p.onOpen('company-profile') },
         { label: 'Status do servidor', action: () => p.onOpen('server-status') },

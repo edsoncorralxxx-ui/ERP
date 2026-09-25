@@ -36,7 +36,7 @@ export function Dialog({ icon, label, children, buttons, onEscape }: Props) {
             onEscape();
           }
           if (e.key === 'Tab') {
-            const focusable = Array.from(ref.current?.querySelectorAll<HTMLElement>('button, [role=button]') ?? []);
+            const focusable = Array.from(ref.current?.querySelectorAll<HTMLElement>('input, button, [role=button]') ?? []);
             const i = focusable.indexOf(document.activeElement as HTMLElement);
             focusable[e.shiftKey ? (i <= 0 ? focusable.length - 1 : i - 1) : (i + 1) % focusable.length]?.focus();
             e.preventDefault();

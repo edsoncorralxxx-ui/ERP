@@ -72,7 +72,8 @@
       "premissaB01": "Nenhuma; contratos usam ator autenticado abstrato",
       "bloqueia": "B03",
       "responsavel": "Negócio + infraestrutura",
-      "adr": "ADR-005"
+      "adr": "ADR-005",
+      "resposta": "Respondida pelo PO em 25/09/2026: usuários do próprio Renda+ no servidor, Argon2id, sessão opaca 8 h sem uso / 12 h no total, revogável, bloqueio após 5 tentativas (ADR-005)"
     },
     {
       "id": "PD-009",
@@ -81,7 +82,8 @@
       "premissaB01": "Perfis sugeridos no documento 01, sem usuários reais",
       "bloqueia": "Piloto B13",
       "responsavel": "Negócio",
-      "adr": "ADR-005"
+      "adr": "ADR-005",
+      "resposta": "Premissa aceita pelo PO em 25/09/2026: perfis Administrador e Consulta; demais perfis com seus módulos; alçadas e separação de funções seguem pendentes (B13)"
     },
     {
       "id": "PD-010",

@@ -1,5 +1,9 @@
 renda:
   version: "@project.version@"
+  # Primeiro administrador (ADR-005): usado só quando o banco ainda não tem nenhum usuário.
+  bootstrap-admin:
+    username: ${RENDA_BOOTSTRAP_ADMIN_USER:}
+    password: ${RENDA_BOOTSTRAP_ADMIN_PASSWORD:}
 
 spring:
   application:

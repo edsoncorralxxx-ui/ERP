@@ -3,7 +3,7 @@
  * Funções puras para facilitar teste; o React só despacha ações.
  */
 
-export type WindowKind = 'company-profile' | 'server-status' | 'cockpit';
+export type WindowKind = 'company-profile' | 'server-status' | 'cockpit' | 'customers' | 'customer' | 'users' | 'password';
 export type WindowMode = 'normal' | 'minimized' | 'maximized';
 
 export type Rect = { x: number; y: number; w: number; h: number };
@@ -71,7 +71,13 @@ export function windowReducer(state: WindowState, action: WindowAction): WindowS
       const existing = state.windows.find((w) => w.kind === action.kind && w.recordKey === action.recordKey);
       if (existing) return activate(state, existing.id);
       const offset = (state.windows.length % 8) * CASCADE_STEP;
-      const rect = clampRect({ x: 24 + offset, y: 16 + offset, ...action.size }, action.bounds);
+      const size = clampRect({ x: 0, y: 0, ...action.size }, action.bounds);
+      // Abre inteira dentro da área: a cascata recua quando a janela não cabe à direita ou embaixo.
+      const rect = {
+        ...size,
+        x: Math.max(0, Math.min(24 + offset, action.bounds.width - size.w)),
+        y: Math.max(0, Math.min(16 + offset, action.bounds.height - size.h)),
+      };
       const win: AppWindow = {
         ...rect,
         id: `w${state.seq}`,

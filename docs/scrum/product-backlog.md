@@ -32,7 +32,7 @@ Decidido com o PO em 25/09/2026: cada sprint entrega uma **fatia vertical comple
 | Sprint | Fatia vertical | Resultado para o usuário | Épicos |
 |---|---|---|---|
 | 1 | Esqueleto do sistema: servidor, banco, app do Mac com janelas, primeira tela de ponta a ponta (dados da empresa) — **entregue para Review** | Abrir o app, ver a conexão com o servidor e salvar dados reais | B02 |
-| 2 | Login, permissões e auditoria + Clientes e unidades | Entrar, cadastrar clientes/unidades, ver histórico | B02, B03 |
+| 2 | Login, permissões e auditoria + Clientes e unidades — **entregue para Review** | Entrar, cadastrar clientes/unidades, ver histórico | B02, B03 |
 | 3 | Materiais e serviços, fornecedores, equipamentos | Cadastros básicos completos | B03 |
 | 4 | Proposta → pedido confirmado → projeto, equipamento e parcelas | Vender e ver projeto e parcelas gerados uma única vez | B05 |
 | 5 | Contas a receber: baixa parcial e estorno | Registrar e estornar recebimentos | B05, B06 |
@@ -54,8 +54,8 @@ Ver `sprints/sprint-01.md`. As histórias abaixo (épico B02) serão distribuíd
 | US-202 | Como time, quero a estrutura do repositório e um ambiente local reproduzível, para qualquer pessoa subir o sistema | README com passos; banco sobe com um comando | US-201 |
 | US-203 | Como financeiro, quero que valores nunca percam centavos, para que parcelas e saldos fechem | Money/Quantity com testes de propriedade; soma de parcelas sempre exata | US-202, PD-002 |
 | US-204 | Como time, quero que o build falhe se um módulo depender de outro indevidamente, para manter a arquitetura | Teste arquitetural gerado de `modulos.json` | US-202 |
-| US-205 | Como usuário, quero que uma operação repetida por queda de conexão não se duplique, para confiar no sistema | Recibo de comando + consulta por ID; teste de resposta perdida | US-202 |
-| US-206 | Como sistema, quero eventos e fatos gravados junto com a operação, para indicadores e módulos ficarem consistentes | Outbox + fatos na mesma transação; consumidor idempotente testado | US-205 |
+| US-205 | Como usuário, quero que uma operação repetida por queda de conexão não se duplique, para confiar no sistema — **Sprint 2** | Recibo de comando + consulta por ID; teste de resposta perdida | US-202 |
+| US-206 | Como sistema, quero eventos e fatos gravados junto com a operação, para indicadores e módulos ficarem consistentes — **Sprint 2** | Outbox + fatos na mesma transação; consumidor idempotente testado | US-205 |
 | US-207 | Como time, quero um worker Python que retome tarefas após falha, para processar PDFs com segurança | Tarefa sobrevive a reinício; resultado de lease antigo rejeitado | US-206 |
-| US-208 | Como cliente Mac, quero uma API documentada com erros claros em português | OpenAPI publicada; formato de erro padronizado com correlationId | US-205 |
+| US-208 | Como cliente Mac, quero uma API documentada com erros claros em português — **Sprint 2** (`docs/backend/api/openapi.yaml`) | OpenAPI publicada; formato de erro padronizado com correlationId | US-205 |
 | US-209 | Como time, quero CI executando build, testes, verificador B01 e migrações | Pipeline verde em banco limpo | US-202 |

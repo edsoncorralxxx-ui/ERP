@@ -2,7 +2,7 @@
 
 ERP industrial orientado a projetos para a Fourtech/Renda+. App macOS em Electron + React; servidor em Java (Spring Boot) + PostgreSQL; Python para processamento (a partir da sprint de importação).
 
-Situação: **Sprint 1 — esqueleto do sistema.** Funciona de ponta a ponta a janela *Dados da empresa* (app → servidor → banco), com controle de versão, validação e auditoria. Os demais módulos entram a cada sprint (`docs/scrum/product-backlog.md`).
+Situação: **Sprint 2 — login, permissões e clientes.** Funcionam de ponta a ponta (app → servidor → banco): entrar com usuário e senha, perfis Administrador e Consulta, *Clientes e unidades* (com contatos, histórico e inativação), *Usuários e permissões* e *Dados da empresa*, com controle de versão, auditoria e comando que não se duplica. Os demais módulos entram a cada sprint (`docs/scrum/product-backlog.md`).
 
 ## Rodar no seu Mac
 
@@ -56,12 +56,21 @@ Para receber atualizações depois: `git pull` dentro da pasta `ERP`.
 
 ### 4. Iniciar o servidor (Terminal 1)
 
+Na **primeira vez**, informe o primeiro administrador (troque o usuário e a senha pelos seus; a senha precisa de pelo menos 10 caracteres):
+
+```bash
+cd ~/Documents/ERP/backend/java
+RENDA_BOOTSTRAP_ADMIN_USER=edson RENDA_BOOTSTRAP_ADMIN_PASSWORD='uma-senha-forte' ./mvnw spring-boot:run
+```
+
+Pronto quando aparecer `Started RendaErpApplication` e `Primeiro administrador criado: edson`. Isso só acontece enquanto o banco não tem nenhum usuário; não existe senha padrão. **Nas próximas vezes**, basta:
+
 ```bash
 cd ~/Documents/ERP/backend/java
 ./mvnw spring-boot:run
 ```
 
-Pronto quando aparecer `Started RendaErpApplication`. Teste em outro Terminal: `curl http://localhost:8080/api/v1/status`. O servidor cria as tabelas sozinho na primeira execução.
+Teste em outro Terminal: `curl http://localhost:8080/api/v1/status`. O servidor cria e atualiza as tabelas sozinho.
 
 ### 5. Abrir o app (Terminal 2)
 
@@ -71,7 +80,15 @@ npm install          # só na primeira vez
 npm run dev
 ```
 
-A janela do Renda+ ERP abre. No rodapé deve aparecer **Conectado · servidor 0.1.0-SNAPSHOT**. Em *Módulos → Administração → Dados da empresa* você edita e salva os dados.
+A janela do Renda+ ERP abre na tela de login: entre com o administrador criado no passo 4. No rodapé aparecem o seu nome e perfil e **Servidor conectado**. Pelo menu lateral:
+
+- *Cadastros → Clientes e unidades*: lista, **Novo**, ficha com Unidades, Contatos e Histórico, Inativar.
+- *Administração → Usuários e permissões*: crie outros usuários (Administrador ou Consulta) e redefina senhas.
+- *Configurações → Dados da empresa*: dados cadastrais da empresa.
+
+*Arquivo → Bloquear tela* pede a senha de novo sem fechar as janelas; *Arquivo → Trocar senha* troca a sua senha.
+
+**Esqueceu a senha do único administrador?** Peça a outro administrador para redefinir. Se não houver outro, no Terminal: `psql renda -c "delete from user_session; delete from app_user;"` e reinicie o servidor com as variáveis do passo 4 — isso apaga todos os usuários e sessões; clientes, empresa e auditoria continuam.
 
 ### Problemas comuns
 
@@ -108,6 +125,7 @@ python3 tools/b01/verificar_b01.py
 | `RENDA_DB_USER` / `RENDA_DB_PASSWORD` | `renda` / `renda` | credenciais do banco |
 | `RENDA_SERVER_ADDRESS` | `127.0.0.1` | só a própria máquina; use `0.0.0.0` para outros computadores da rede |
 | `RENDA_SERVER_PORT` | `8080` | porta da API |
+| `RENDA_BOOTSTRAP_ADMIN_USER` / `RENDA_BOOTSTRAP_ADMIN_PASSWORD` | — | primeiro administrador, usado só enquanto não há nenhum usuário |
 
 O app procura o servidor em `http://localhost:8080` (pode ser alterado com `RENDA_SERVER_URL`).
 
@@ -118,7 +136,7 @@ apps/desktop/      app do Mac (Electron + React + TypeScript)
 backend/java/      servidor (Spring Boot, módulos por pacote, migrações Flyway)
 infra/local/       banco via Docker (opcional)
 design-system/     design system Renda+ ERP (fonte única da interface)
-docs/              plano funcional, backend (B01–B16), ADRs, Scrum
+docs/              plano funcional, backend (B01–B16), ADRs, Scrum; contrato da API em docs/backend/api/openapi.yaml
 decisoes/          planilha das decisões pendentes
 tools/b01/         verificador da especificação
 ```

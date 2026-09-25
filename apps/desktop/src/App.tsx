@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { api } from './api/client';
-import type { CompanyProfile } from './api/types';
+import { api, setUnauthorizedHandler } from './api/client';
+import type { CompanyProfile, SessionUser } from './api/types';
+import { ChangePasswordWindow } from './screens/ChangePasswordWindow';
 import { CockpitWindow } from './screens/CockpitWindow';
 import { CompanyProfileWindow } from './screens/CompanyProfileWindow';
+import { CustomerWindow } from './screens/CustomerWindow';
+import { CustomersWindow } from './screens/CustomersWindow';
 import { ServerStatusWindow } from './screens/ServerStatusWindow';
+import { UsersWindow } from './screens/UsersWindow';
 import { Dialog } from './shell/Dialog';
 import { LoginScreen } from './shell/LoginScreen';
 import { MenuBar } from './shell/MenuBar';
+import { SessionContext, sessionOf } from './shell/SessionContext';
 import { Drawer, Rail, type RailView } from './shell/SideNav';
 import { StatusBar, type LoggedMessage, type StatusMessage } from './shell/StatusBar';
 import { Toolbar } from './shell/Toolbar';
@@ -19,18 +24,67 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   'company-profile': { title: 'Dados da empresa', size: { w: 760, h: 580 } },
   'server-status': { title: 'Status do servidor', size: { w: 500, h: 400 } },
   cockpit: { title: 'Meu cockpit', size: { w: 1180, h: 720 } },
+  customers: { title: 'Clientes e unidades', size: { w: 1100, h: 620 } },
+  customer: { title: 'Cliente', size: { w: 980, h: 640 } },
+  users: { title: 'Usuários e permissões', size: { w: 980, h: 560 } },
+  password: { title: 'Trocar senha', size: { w: 520, h: 330 } },
 };
+
+type Lock = 'BLOQUEIO' | 'EXPIRADA';
 
 /**
  * Moldura do aplicativo no padrão do protótipo Renda+ ERP Mock: tela de abertura, Barra superior, trilho com a gaveta
  * de módulos ao lado da área de trabalho, janelas internas sobrepostas e o Rodapé com o log de mensagens.
  */
 export function App() {
-  const [user, setUser] = useState<string | null>(null);
-  return user === null ? <LoginScreen onEnter={setUser} /> : <Shell user={user} onLock={() => setUser(null)} />;
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [lock, setLock] = useState<Lock | null>(null);
+  const session = useMemo(() => (user ? sessionOf(user) : null), [user]);
+
+  // Sessão expirada ou revogada no meio do trabalho: o login aparece por cima, sem fechar as janelas.
+  useEffect(() => {
+    setUnauthorizedHandler(() => setLock((l) => l ?? 'EXPIRADA'));
+    return () => setUnauthorizedHandler(null);
+  }, []);
+
+  const enter = (u: SessionUser) => {
+    setUser(u);
+    setLock(null);
+  };
+
+  if (!user || !session) return <LoginScreen onEnter={enter} />;
+  return (
+    <SessionContext.Provider value={session}>
+      <Shell
+        key={user.id}
+        user={user}
+        onLock={() => {
+          void api.del('/api/v1/session?reason=BLOQUEIO').catch(() => undefined);
+          setLock('BLOQUEIO');
+        }}
+        onSignOut={() => {
+          void api.del('/api/v1/session').catch(() => undefined);
+          setUser(null);
+        }}
+      />
+      {lock && (
+        <div className="rp-login-sobre">
+          <LoginScreen
+            lockedUser={user.username}
+            notice={
+              lock === 'EXPIRADA'
+                ? 'Sua sessão expirou. Entre de novo para continuar; o que você digitou nas janelas continua lá.'
+                : 'Tela bloqueada. Digite sua senha para continuar.'
+            }
+            onEnter={enter}
+          />
+        </div>
+      )}
+    </SessionContext.Provider>
+  );
 }
 
-function Shell({ user, onLock }: { user: string; onLock: () => void }) {
+function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => void; onSignOut: () => void }) {
   const [state, dispatch] = useReducer(windowReducer, initialWindowState);
   const [drawer, setDrawer] = useState<{ open: boolean; view: RailView }>({ open: true, view: 'modulos' });
   const [message, setMessage] = useState<StatusMessage | null>(null);
@@ -85,7 +139,7 @@ function Shell({ user, onLock }: { user: string; onLock: () => void }) {
     },
     [bounds],
   );
-  const openKind = useCallback((kind: WindowKind) => open(kind), [open]);
+  const openKind = useCallback((kind: WindowKind, recordKey?: string) => open(kind, recordKey), [open]);
   const openCockpit = useCallback(() => open('cockpit'), [open]);
 
   // Reajusta as janelas quando a área de trabalho muda de tamanho (gaveta abrindo/fechando, janela nativa).
@@ -103,6 +157,7 @@ function Shell({ user, onLock }: { user: string; onLock: () => void }) {
 
   const active = state.windows.find((w) => w.id === state.activeId) ?? null;
   const activeSave = active ? commands[active.id]?.save : undefined;
+  const activeNew = active ? commands[active.id]?.novo : undefined;
   const saveActive = useCallback(() => {
     if (activeSave) void activeSave();
   }, [activeSave]);
@@ -116,13 +171,15 @@ function Shell({ user, onLock }: { user: string; onLock: () => void }) {
     [state.windows],
   );
 
-  const lock = useCallback(() => {
+  // Bloquear mantém as janelas (e o que foi digitado) por trás do login; encerrar a sessão fecha tudo.
+  const lock = onLock;
+  const signOut = useCallback(() => {
     if (state.windows.some((w) => w.dirty)) {
-      notify({ tone: 'aviso', text: 'Grave ou descarte as alterações das janelas abertas antes de bloquear a tela (LOCK-001)' });
+      notify({ tone: 'aviso', text: 'Grave ou descarte as alterações das janelas abertas antes de encerrar a sessão (LOGOUT-001)' });
       return;
     }
-    onLock();
-  }, [state.windows, notify, onLock]);
+    onSignOut();
+  }, [state.windows, notify, onSignOut]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -144,7 +201,8 @@ function Shell({ user, onLock }: { user: string; onLock: () => void }) {
       map[w.id] = {
         windowId: w.id,
         setDirty: (dirty) => dispatch({ type: 'setDirty', id: w.id, dirty }),
-        registerCommands: (c) => setCommands((prev) => (prev[w.id]?.save === c.save ? prev : { ...prev, [w.id]: c })),
+        registerCommands: (c) =>
+          setCommands((prev) => (prev[w.id]?.save === c.save && prev[w.id]?.novo === c.novo ? prev : { ...prev, [w.id]: c })),
         notify,
         requestClose: () => requestClose(w.id),
         open: openKind,
@@ -170,6 +228,7 @@ function Shell({ user, onLock }: { user: string; onLock: () => void }) {
           onCloseActive={() => active && requestClose(active.id)}
           onOpen={openKind}
           onLock={lock}
+          onSignOut={signOut}
           onCascade={() => dispatch({ type: 'cascade', bounds: bounds() })}
           onTile={() => dispatch({ type: 'tile', bounds: bounds() })}
           onFocus={(id) => dispatch({ type: 'focus', id })}
@@ -178,6 +237,7 @@ function Shell({ user, onLock }: { user: string; onLock: () => void }) {
         <Toolbar
           actions={{
             bloquear: lock,
+            novo: activeNew,
             ajuda: () => open('server-status'),
             consulta: openCockpit,
           }}
@@ -189,7 +249,7 @@ function Shell({ user, onLock }: { user: string; onLock: () => void }) {
         <div className="rp-appmain">
           <div className="rp-apphead">
             <span>
-              Bem-vindo, {user}. Você está no cockpit inicial da {company ?? 'Fourtech'}.
+              Bem-vindo, {user.displayName}. Você está no cockpit inicial da {company ?? 'Fourtech'}.
             </span>
             <div className="rp-search">
               <input placeholder="Pesquisar operações, dados mestre e documentos" disabled title="A busca global entra nas próximas sprints" aria-label="Busca global" />
@@ -223,6 +283,14 @@ function Shell({ user, onLock }: { user: string; onLock: () => void }) {
                         <CompanyProfileWindow />
                       ) : w.kind === 'cockpit' ? (
                         <CockpitWindow connection={connection} />
+                      ) : w.kind === 'customers' ? (
+                        <CustomersWindow />
+                      ) : w.kind === 'customer' ? (
+                        <CustomerWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'users' ? (
+                        <UsersWindow />
+                      ) : w.kind === 'password' ? (
+                        <ChangePasswordWindow />
                       ) : (
                         <ServerStatusWindow connection={connection} />
                       ))}
@@ -242,7 +310,7 @@ function Shell({ user, onLock }: { user: string; onLock: () => void }) {
           </div>
         </div>
       </div>
-      <StatusBar connection={connection} user={user} activeTitle={active?.title ?? null} company={company} message={message} log={log} onDismiss={dismiss} />
+      <StatusBar connection={connection} user={`${user.displayName} (${user.profileLabel})`} activeTitle={active?.title ?? null} company={company} message={message} log={log} onDismiss={dismiss} />
 
       {closingWin && (
         <Dialog

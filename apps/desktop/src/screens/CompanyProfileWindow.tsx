@@ -250,10 +250,10 @@ export function CompanyProfileWindow() {
 
             <div className="rp-tabs" role="tablist">
               <div className="rp-tab" role="tab" tabIndex={0} aria-selected={tab === 'geral'} onClick={() => setTab('geral')} onKeyDown={(e) => e.key === 'Enter' && setTab('geral')}>
-                <u>G</u>eral
+                <span><u>G</u>eral</span>
               </div>
               <div className="rp-tab" role="tab" tabIndex={0} aria-selected={tab === 'endereco'} onClick={() => setTab('endereco')} onKeyDown={(e) => e.key === 'Enter' && setTab('endereco')}>
-                E<u>n</u>dereço
+                <span>E<u>n</u>dereço</span>
               </div>
             </div>
             <div className="rp-tabpanel" role="tabpanel">
@@ -274,7 +274,7 @@ export function CompanyProfileWindow() {
         </div>
         <div className="rp-btn-row">
           <button type="button" className="rp-btn" disabled={loading || saving} onClick={() => void load()}>
-            <u>R</u>ecarregar
+            <span><u>R</u>ecarregar</span>
           </button>
         </div>
       </div>

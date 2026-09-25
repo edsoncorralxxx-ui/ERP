@@ -40,11 +40,29 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Transporte do navegador de desenvolvimento (sem Electron): imita a ponte do processo principal, guardando o token
+ * da sessão só na memória desta página e tirando-o da resposta do login antes de entregá-la ao resto do app.
+ */
+let browserToken: string | null = null;
+
 const fetchTransport: Transport = async (req) => {
-  const res = await fetch(req.path, { method: req.method, headers: req.headers, body: req.body });
-  const headers: Record<string, string> = {};
-  res.headers.forEach((v, k) => (headers[k.toLowerCase()] = v));
-  return { status: res.status, headers, body: await res.text() };
+  const headers: Record<string, string> = { ...req.headers };
+  if (browserToken) headers['Authorization'] = `Bearer ${browserToken}`;
+  const res = await fetch(req.path, { method: req.method, headers, body: req.body });
+  const out: Record<string, string> = {};
+  res.headers.forEach((v, k) => (out[k.toLowerCase()] = v));
+  let body = await res.text();
+  const isSession = req.path === '/api/v1/session' || req.path.startsWith('/api/v1/session?');
+  if (isSession && req.method === 'POST' && res.ok) {
+    const parsed = JSON.parse(body) as { token?: string };
+    browserToken = parsed.token ?? null;
+    delete parsed.token;
+    body = JSON.stringify(parsed);
+  } else if ((isSession && req.method === 'DELETE') || res.status === 401) {
+    browserToken = null;
+  }
+  return { status: res.status, headers: out, body };
 };
 
 let transport: Transport = (req) => (window.renda ? window.renda.request(req) : fetchTransport(req));
@@ -62,6 +80,12 @@ function newCorrelationId(): string {
 
 export type ApiResult<T> = { data: T; etag?: string; correlationId?: string };
 
+/** Avisado quando uma chamada autenticada recebe 401 (sessão expirada ou revogada): o app mostra o login por cima. */
+let onUnauthorized: (() => void) | null = null;
+export function setUnauthorizedHandler(fn: (() => void) | null): void {
+  onUnauthorized = fn;
+}
+
 async function send<T>(method: string, path: string, body?: unknown, extraHeaders: Record<string, string> = {}): Promise<ApiResult<T>> {
   const correlationId = newCorrelationId();
   const headers: Record<string, string> = { 'X-Correlation-Id': correlationId, ...extraHeaders };
@@ -78,6 +102,7 @@ async function send<T>(method: string, path: string, body?: unknown, extraHeader
     return { data: parsed as T, etag: headerMap['etag'], correlationId: headerMap['x-correlation-id'] ?? correlationId };
   }
   const err = (parsed ?? {}) as { code?: string; message?: string; details?: ApiErrorDetail[]; correlationId?: string };
+  if (res.status === 401 && err.code === 'UNAUTHENTICATED') onUnauthorized?.();
   if (res.status === 502 || res.status === 503 || res.status === 504) {
     throw new ApiError(0, 'NETWORK_UNAVAILABLE', 'Servidor indisponível no momento.', [], correlationId);
   }
@@ -101,4 +126,6 @@ function safeJson(text: string): unknown {
 export const api = {
   get: <T>(path: string) => send<T>('GET', path),
   put: <T>(path: string, body: unknown, ifMatch: string) => send<T>('PUT', path, body, { 'If-Match': ifMatch }),
+  post: <T>(path: string, body: unknown, headers: Record<string, string> = {}) => send<T>('POST', path, body, headers),
+  del: <T>(path: string) => send<T>('DELETE', path),
 };
