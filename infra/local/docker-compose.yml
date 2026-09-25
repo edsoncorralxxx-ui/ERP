@@ -1,0 +1,16 @@
+# PostgreSQL 16 para desenvolvimento local (opcional: também pode usar Homebrew ou Postgres.app).
+# Uso: docker compose -f infra/local/docker-compose.yml up -d
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: renda
+      POSTGRES_USER: renda
+      POSTGRES_PASSWORD: renda
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - renda-pgdata:/var/lib/postgresql/data
+      - ./init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+volumes:
+  renda-pgdata:

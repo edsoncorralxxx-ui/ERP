@@ -1,0 +1,184 @@
+{
+  "versao": "B01-1",
+  "situacao": "Proposta B01 — confirmar em B02 (ADR-016)",
+  "regra": "dependsOn indica uso da API pública do outro módulo (comandos, consultas ou tipos de evento). O grafo deve ser acíclico. Referências a registros de outros módulos sem dependência usam EntityRef opaco.",
+  "modulos": [
+    {
+      "id": "kernel",
+      "nome": "Núcleo compartilhado",
+      "responsabilidade": "Value Objects (Money, Quantity, Rate, DateRange, CompetencePeriod, EntityRef, IDs, Version), políticas de arredondamento e alocação de resíduos",
+      "dependsOn": []
+    },
+    {
+      "id": "acesso",
+      "nome": "Acesso e identidade",
+      "responsabilidade": "Empresa, usuário, perfil, permissão, sessão; decisão de autorização por ação e objeto",
+      "dependsOn": ["kernel"]
+    },
+    {
+      "id": "auditoria",
+      "nome": "Auditoria",
+      "responsabilidade": "Trilha de operações confirmadas na mesma transação: ator, instante, motivo, diferenças, correlationId",
+      "dependsOn": ["kernel", "acesso"]
+    },
+    {
+      "id": "plataforma",
+      "nome": "Plataforma técnica",
+      "responsabilidade": "Recibos de comando/idempotência, outbox e consumidores idempotentes, registro de fatos operacionais, tarefas duráveis, arquivos privados, configurações; dados cadastrais da empresa (configuração)",
+      "dependsOn": ["kernel", "acesso", "auditoria"]
+    },
+    {
+      "id": "semantica",
+      "nome": "Catálogo semântico",
+      "responsabilidade": "Conceitos empresariais, definições de formulário, regras de classificação e atribuições confirmadas/sugeridas",
+      "dependsOn": ["kernel", "acesso", "plataforma"]
+    },
+    {
+      "id": "cadastros",
+      "nome": "Cadastros",
+      "responsabilidade": "Parceiros e papéis cliente/fornecedor, unidades, contatos, endereços, aliases, itens, unidades de medida e conversões, categorias",
+      "dependsOn": ["kernel", "acesso", "auditoria", "plataforma"]
+    },
+    {
+      "id": "projetos",
+      "nome": "Projetos e equipamentos",
+      "responsabilidade": "Projeto, responsáveis, marcos, modelo de equipamento, equipamento, composição montada",
+      "dependsOn": ["kernel", "plataforma", "cadastros"]
+    },
+    {
+      "id": "financeiro",
+      "nome": "Financeiro",
+      "responsabilidade": "Títulos, ajustes, liquidações e alocações, estornos, créditos, contas, movimentos, transferências, extratos, conciliação, matriz de caixa",
+      "dependsOn": ["kernel", "plataforma", "cadastros"]
+    },
+    {
+      "id": "comercial",
+      "nome": "Comercial",
+      "responsabilidade": "Leads, interações, oportunidades, propostas/revisões, pedidos, aditivos, plano de parcelas; provisiona projetos e títulos na confirmação",
+      "dependsOn": ["kernel", "plataforma", "cadastros", "projetos", "financeiro"]
+    },
+    {
+      "id": "engenharia",
+      "nome": "Engenharia e planejamento",
+      "responsabilidade": "BOM/modelo/revisão, BOM aplicada ao projeto, EAP, atividades, dependências, calendários, linhas de base, avanço",
+      "dependsOn": ["kernel", "plataforma", "cadastros", "projetos"]
+    },
+    {
+      "id": "estoque",
+      "nome": "Estoque",
+      "responsabilidade": "Locais, posições por item/local/propriedade, reservas, movimentos, custo médio, inventário, remessa/retorno de terceiros",
+      "dependsOn": ["kernel", "plataforma", "cadastros", "projetos"]
+    },
+    {
+      "id": "suprimentos",
+      "nome": "Suprimentos",
+      "responsabilidade": "Necessidades líquidas (MRP por projeto), solicitações, cotações, pedidos de compra, aprovações; programa obrigação a pagar",
+      "dependsOn": ["kernel", "plataforma", "cadastros", "projetos", "engenharia", "estoque", "financeiro"]
+    },
+    {
+      "id": "recebimentos",
+      "nome": "Recebimentos",
+      "responsabilidade": "Recebimento físico parcial conferido, aceite de serviço, perdas; gera movimento de entrada no estoque",
+      "dependsOn": ["kernel", "plataforma", "cadastros", "suprimentos", "estoque"]
+    },
+    {
+      "id": "qualidade",
+      "nome": "Qualidade",
+      "responsabilidade": "Checklists versionados, inspeções, evidências, não conformidades, retrabalho",
+      "dependsOn": ["kernel", "plataforma", "cadastros", "projetos"]
+    },
+    {
+      "id": "producao",
+      "nome": "Produção",
+      "responsabilidade": "Ordens, roteiros, apontamentos de execução/horas/consumo/perdas; libera conforme revisão, materiais e inspeção",
+      "dependsOn": ["kernel", "plataforma", "cadastros", "projetos", "engenharia", "estoque", "qualidade"]
+    },
+    {
+      "id": "instalacao",
+      "nome": "Instalação e entrega",
+      "responsabilidade": "Agenda, equipe, execução, despesas, testes, pendências, aceite real",
+      "dependsOn": ["kernel", "plataforma", "cadastros", "projetos", "qualidade", "financeiro"]
+    },
+    {
+      "id": "documentos",
+      "nome": "Documentos",
+      "responsabilidade": "Documentos recebidos/emitidos externamente, classificação, competência, vínculo a títulos existentes, anexos",
+      "dependsOn": ["kernel", "plataforma", "cadastros", "projetos", "financeiro"]
+    },
+    {
+      "id": "posvenda",
+      "nome": "Pós-venda",
+      "responsabilidade": "Chamados, diagnóstico, ordens de serviço, peças/horas/despesas, garantia, planos e ocorrências preventivas",
+      "dependsOn": ["kernel", "plataforma", "cadastros", "projetos", "estoque", "qualidade"]
+    },
+    {
+      "id": "custos",
+      "nome": "Custos e gestão",
+      "responsabilidade": "Orçamento, compromisso, custo incorrido por origem única, rateio, resultado por projeto; consome eventos das origens de custo",
+      "dependsOn": [
+        "kernel",
+        "plataforma",
+        "projetos",
+        "comercial",
+        "engenharia",
+        "suprimentos",
+        "estoque",
+        "recebimentos",
+        "producao",
+        "instalacao",
+        "documentos",
+        "posvenda"
+      ]
+    },
+    {
+      "id": "repasses",
+      "nome": "Repasses",
+      "responsabilidade": "Regras versionadas, beneficiários, base, simulação, confirmação com memória congelada, ajustes; gera títulos a pagar",
+      "dependsOn": ["kernel", "plataforma", "cadastros", "financeiro", "documentos", "custos"]
+    },
+    {
+      "id": "fiscal",
+      "nome": "Fiscal gerencial",
+      "responsabilidade": "Competências, receita classificada, parâmetros com vigência, histórico importado, simulação, confirmação do contador, fechamento",
+      "dependsOn": ["kernel", "plataforma", "documentos", "financeiro"]
+    },
+    {
+      "id": "analitico",
+      "nome": "Motor analítico e decisão",
+      "responsabilidade": "Indicadores, snapshots, execuções analíticas, modelos, achados, decisões, planos de ação, experimentos; consome fatos operacionais",
+      "dependsOn": ["kernel", "acesso", "plataforma", "semantica"]
+    },
+    {
+      "id": "integracao",
+      "nome": "Integração e importação",
+      "responsabilidade": "Arquivos importados, tarefas de extração, staging, divergências, decisões de conferência, aplicação idempotente por comandos públicos",
+      "dependsOn": ["kernel", "plataforma", "cadastros", "comercial", "projetos", "financeiro", "engenharia", "estoque", "documentos", "fiscal"]
+    },
+    {
+      "id": "consultas",
+      "nome": "Consultas integradas",
+      "responsabilidade": "Fachadas de leitura: visão do projeto, dashboards, relatórios, exportações, busca global; não possui dados de negócio",
+      "dependsOn": [
+        "kernel",
+        "acesso",
+        "plataforma",
+        "cadastros",
+        "comercial",
+        "projetos",
+        "financeiro",
+        "engenharia",
+        "estoque",
+        "suprimentos",
+        "producao",
+        "qualidade",
+        "instalacao",
+        "documentos",
+        "custos",
+        "repasses",
+        "fiscal",
+        "posvenda",
+        "analitico"
+      ]
+    }
+  ]
+}

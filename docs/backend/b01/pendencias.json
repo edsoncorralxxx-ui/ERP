@@ -1,0 +1,222 @@
+{
+  "versao": "B01-1",
+  "regra": "Cada regra de negócio sem informação suficiente referencia uma pendência. A pendência bloqueia apenas a parte dependente; estrutura e testes sintéticos podem avançar com a premissa declarada.",
+  "pendencias": [
+    {
+      "id": "PD-001",
+      "tema": "Geração de projetos por pedido",
+      "pergunta": "Um pedido gera um projeto, um projeto por equipamento ou agrupamento por escopo (balança/mecânica/elétrica)?",
+      "premissaB01": "Um projeto por pedido confirmado, com um equipamento por unidade de item do tipo equipamento",
+      "bloqueia": "Operação real de B05",
+      "responsavel": "Negócio (Edson)",
+      "adr": "ADR-010"
+    },
+    {
+      "id": "PD-002",
+      "tema": "Arredondamento e resíduos",
+      "pergunta": "Modo de arredondamento (meio-par ou meio-acima), momento (linha ou documento) e quem recebe o centavo residual em parcelas e rateios",
+      "premissaB01": "HALF_EVEN por linha; resíduo distribuído um centavo por vez a partir da primeira parcela",
+      "bloqueia": "Valores oficiais de B05/B06/B10",
+      "responsavel": "Financeiro + contador",
+      "adr": "ADR-006"
+    },
+    {
+      "id": "PD-003",
+      "tema": "Cancelamento de pedido confirmado",
+      "pergunta": "Tratamento de valores recebidos, títulos abertos, estoque reservado e execução iniciada ao cancelar",
+      "premissaB01": "Cancelamento bloqueado quando houver recebimento, reserva, consumo ou produção; sem efeitos, cancela títulos abertos e projetos planejados",
+      "bloqueia": "Cancelamento com efeitos em B05",
+      "responsavel": "Negócio + financeiro",
+      "adr": "ADR-010"
+    },
+    {
+      "id": "PD-004",
+      "tema": "Pagamento acima do saldo",
+      "pergunta": "Excedente é rejeitado ou vira crédito/adiantamento do parceiro?",
+      "premissaB01": "Rejeitar, salvo se o operador declarar crédito explícito com permissão financial_credit.create",
+      "bloqueia": "Crédito/adiantamento em B06",
+      "responsavel": "Financeiro",
+      "adr": "ADR-010"
+    },
+    {
+      "id": "PD-005",
+      "tema": "Estorno parcial",
+      "pergunta": "É necessário estornar parte de uma liquidação ou sempre a liquidação inteira?",
+      "premissaB01": "Estorno total por liquidação; corrigir parcialmente = estornar e lançar nova liquidação",
+      "bloqueia": "Estorno parcial",
+      "responsavel": "Financeiro",
+      "adr": "ADR-010"
+    },
+    {
+      "id": "PD-006",
+      "tema": "Estorno de liquidação conciliada",
+      "pergunta": "Permitir estorno direto de lançamento conciliado ou exigir desconciliação prévia?",
+      "premissaB01": "Exigir desconciliação explícita antes do estorno (erro SETTLEMENT_RECONCILED)",
+      "bloqueia": "Fluxo conciliação/estorno em B06",
+      "responsavel": "Financeiro",
+      "adr": "ADR-010"
+    },
+    {
+      "id": "PD-007",
+      "tema": "Precisão de quantidades e preços unitários",
+      "pergunta": "Escala decimal de quantidades, custos unitários e percentuais",
+      "premissaB01": "Quantidade escala 6; preço/custo unitário escala 6; percentual escala 6 (fração)",
+      "bloqueia": "DDL de B02",
+      "responsavel": "Desenvolvimento + engenharia",
+      "adr": "ADR-006"
+    },
+    {
+      "id": "PD-008",
+      "tema": "Autenticação",
+      "pergunta": "Mecanismo de identidade, expiração, revogação e administração de usuários",
+      "premissaB01": "Nenhuma; contratos usam ator autenticado abstrato",
+      "bloqueia": "B03",
+      "responsavel": "Negócio + infraestrutura",
+      "adr": "ADR-005"
+    },
+    {
+      "id": "PD-009",
+      "tema": "Perfis e permissões reais",
+      "pergunta": "Quem pode confirmar, aprovar, baixar, estornar e exportar; alçadas por valor e separação de funções",
+      "premissaB01": "Perfis sugeridos no documento 01, sem usuários reais",
+      "bloqueia": "Piloto B13",
+      "responsavel": "Negócio",
+      "adr": "ADR-005"
+    },
+    {
+      "id": "PD-010",
+      "tema": "Categorias financeiras e centros de resultado",
+      "pergunta": "Plano de categorias de receita/despesa e centros de resultado",
+      "premissaB01": "Categoria obrigatória por título, lista a cadastrar",
+      "bloqueia": "Relatórios gerenciais de B06/B10",
+      "responsavel": "Financeiro",
+      "adr": "ADR-010"
+    },
+    {
+      "id": "PD-011",
+      "tema": "Custo médio e retroatividade",
+      "pergunta": "Estoque negativo, lançamentos retroativos, devolução ao custo de origem e itens em processo",
+      "premissaB01": "Custo médio móvel; estoque disponível nunca negativo; retroativo bloqueado até definição",
+      "bloqueia": "B08",
+      "responsavel": "Financeiro + operação",
+      "adr": "ADR-009"
+    },
+    {
+      "id": "PD-012",
+      "tema": "Regras de repasse",
+      "pergunta": "Beneficiários, bases, percentuais, vigência, reserva interna e substituição por projeto",
+      "premissaB01": "Estrutura versionada sem valores; nomes e percentuais do histórico não são regras vigentes",
+      "bloqueia": "B10 operacional",
+      "responsavel": "Negócio + financeiro",
+      "adr": "ADR-011"
+    },
+    {
+      "id": "PD-013",
+      "tema": "Parâmetros fiscais e enquadramento",
+      "pergunta": "Enquadramento, anexos, faixas, vigência e regra de RBT12 validados com contador",
+      "premissaB01": "Simulação indisponível (NOT_CALCULABLE) sem parâmetros confirmados",
+      "bloqueia": "B10 fiscal",
+      "responsavel": "Contador + financeiro",
+      "adr": "ADR-011"
+    },
+    {
+      "id": "PD-014",
+      "tema": "Critérios de inspeção e aceite",
+      "pergunta": "Checklists, critérios de aprovação e evidências obrigatórias (POP-MP-RENDA-001 e desenhos ausentes)",
+      "premissaB01": "Checklist versionado genérico; nenhum critério inventado",
+      "bloqueia": "Liberação real em B09",
+      "responsavel": "Engenharia/operação",
+      "adr": "ADR-010"
+    },
+    {
+      "id": "PD-015",
+      "tema": "Início da garantia",
+      "pergunta": "Marco que inicia a garantia e seus termos por produto/contrato",
+      "premissaB01": "Garantia inicia no aceite registrado; termos cadastrados por contrato",
+      "bloqueia": "B09/B11",
+      "responsavel": "Negócio",
+      "adr": "ADR-010"
+    },
+    {
+      "id": "PD-016",
+      "tema": "Fórmula de necessidade líquida",
+      "pergunta": "Fórmula exata com exemplos: estoque elegível, reservas próprias/de terceiros, compras abertas e recebimentos pendentes ao longo do tempo",
+      "premissaB01": "Cálculo por data, alocando cada suprimento uma vez; compras em cotação não contam",
+      "bloqueia": "B08",
+      "responsavel": "Operação + desenvolvimento",
+      "adr": "ADR-009"
+    },
+    {
+      "id": "PD-017",
+      "tema": "Convenção de calendário do cronograma",
+      "pergunta": "Início/fim inclusivos, duração zero, defasagem e dias não úteis",
+      "premissaB01": "Dias corridos; término = início + duração − 1; marco com duração zero",
+      "bloqueia": "Recálculo em B07",
+      "responsavel": "Engenharia",
+      "adr": "ADR-010"
+    },
+    {
+      "id": "PD-018",
+      "tema": "Pesos da EAP e avanço",
+      "pergunta": "Critério de conclusão e peso por atividade para avanço agregado",
+      "premissaB01": "Avanço ponderado pelos pesos validados; soma 100%",
+      "bloqueia": "Indicador de avanço em B07",
+      "responsavel": "Engenharia",
+      "adr": "ADR-010"
+    },
+    {
+      "id": "PD-019",
+      "tema": "Data de corte e saldos iniciais",
+      "pergunta": "Data de corte, conjuntos migrados como histórico completo ou saldo de abertura",
+      "premissaB01": "Nenhuma carga definitiva antes da definição",
+      "bloqueia": "B12",
+      "responsavel": "Negócio + financeiro",
+      "adr": "ADR-013"
+    },
+    {
+      "id": "PD-020",
+      "tema": "Topologia e capacidade",
+      "pergunta": "Servidor local ou remoto, SO, usuários simultâneos, volumes e rede",
+      "premissaB01": "Servidor local na máquina do usuário (Mac), decidido pelo PO em 25/09/2026; usuários simultâneos e produção ainda a definir",
+      "bloqueia": "B13",
+      "responsavel": "Negócio + infraestrutura",
+      "adr": "ADR-007"
+    },
+    {
+      "id": "PD-021",
+      "tema": "RPO/RTO e retenção",
+      "pergunta": "Perda máxima tolerável, tempo de recuperação e retenção de dados, anexos e resultados analíticos",
+      "premissaB01": "Nenhuma",
+      "bloqueia": "B13",
+      "responsavel": "Negócio + operação",
+      "adr": "ADR-013"
+    },
+    {
+      "id": "PD-022",
+      "tema": "Classificação histórica versus atual",
+      "pergunta": "Após reclassificação, relatórios padrão usam a classificação vigente no fato ou a atual?",
+      "premissaB01": "Padrão: classificação vigente na data do fato; consulta pela atual explicitada",
+      "bloqueia": "Relatórios de B10",
+      "responsavel": "Negócio",
+      "adr": "ADR-012"
+    },
+    {
+      "id": "PD-023",
+      "tema": "Faturamento parcial e parcelas",
+      "pergunta": "Como um documento fiscal se associa a parcelas quando o valor não coincide com uma parcela",
+      "premissaB01": "Vínculo documento→parcelas com valor por vínculo; soma vinculada ≤ valor do documento e ≤ valor das parcelas",
+      "bloqueia": "B06",
+      "responsavel": "Financeiro",
+      "adr": "ADR-010"
+    },
+    {
+      "id": "PD-024",
+      "tema": "Fórmula de carteira e faturamento para indicadores",
+      "pergunta": "Base oficial de 'carteira' (confirmada por data de confirmação) e de 'faturamento' (documento emitido por competência) nos painéis",
+      "premissaB01": "Definições IND-001 a IND-004 deste B01",
+      "bloqueia": "Painéis oficiais de B05/B10",
+      "responsavel": "Negócio",
+      "adr": "ADR-012"
+    }
+  ]
+}

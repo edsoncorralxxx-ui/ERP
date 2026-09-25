@@ -1,0 +1,92 @@
+/*
+ * Ligação entre o design system (design-system/components/bundle.css) e o aplicativo React:
+ * só posicionamento e comportamento de janelas internas. Nenhuma cor, fonte ou sombra nova — apenas tokens.
+ */
+html, body, #root { height: 100%; margin: 0; }
+body { background: var(--ground); }
+
+/* Moldura ocupa a janela nativa inteira. */
+.rp-aplicativo { display: flex; flex-direction: column; height: 100%; border: 0; user-select: none; }
+.rp-aplicativo__corpo { flex: 1; min-height: 0; }
+.rp-aplicativo__area { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+
+/* Menus suspensos da barra de menus usam o componente Menu (MenuContexto).
+   Na Barra superior os menus ficam dentro de um div; repete-se a regra de .rp-menubar > span do bundle. */
+.rp-appbar .rp-menubar { z-index: 4; } /* o bundle põe barra de menus e de ferramentas no mesmo nível; o menu suspenso precisa ficar por cima */
+.rp-menubar > div > span { position: relative; padding: 3px 9px; line-height: 18px; cursor: pointer; }
+.rp-menu--suspenso { position: absolute; top: calc(100% + 2px); left: 0; z-index: 20; }
+.rp-menu-item[aria-disabled=true] { cursor: default; }
+.rp-menu-item[aria-disabled=true]:hover { background: none; }
+
+/* Gaveta em coluna própria (pedido do PO): vai da barra de ferramentas ao rodapé, e a boas-vindas e as
+   janelas ficam ao lado dela, sem sobreposição. O bundle a posiciona absoluta dentro de .rp-appwork. */
+.rp-appbody > .rp-drawer { position: relative; z-index: 1; align-self: stretch; }
+.rp-appbody > .rp-drawer .rp-drawer-inner { height: 100%; }
+
+/* Hover suave (pedido do PO): degradê não anima, então ele fica numa camada com transição de opacidade.
+   A linha continua chapada em nav por baixo, sem nenhum instante claro entre um estado e outro. */
+.rp-nav-item { position: relative; isolation: isolate; }
+.rp-nav-item, .rp-nav-item:hover, .rp-nav-item[aria-expanded=true], .rp-nav-group[data-open=true] > .rp-nav-item { background: var(--nav); }
+.rp-nav-item::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0;
+  background: linear-gradient(var(--nav-selected-top), var(--nav-selected) 55%); transition: opacity .2s ease; }
+.rp-nav-item:hover::before, .rp-nav-item[aria-expanded=true]::before, .rp-nav-group[data-open=true] > .rp-nav-item::before { opacity: 1; }
+.rp-nav-sub { transition: background-color .2s ease; }
+
+.rp-rail-tab { position: relative; isolation: isolate; transition: background-color .2s ease, color .2s ease; }
+.rp-rail-tab:not([aria-selected=true]):hover { background: var(--tab); }
+.rp-rail-tab[aria-selected=true] { background: var(--rail-selected); }
+.rp-rail-tab::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, var(--nav-selected-top), var(--rail-selected)); transition: opacity .2s ease; }
+.rp-rail-tab[aria-selected=true]::before { opacity: 1; }
+
+/* Hover amarelo em todos os componentes, exceto o menu lateral (pedido do PO). Amarelo = "você pode agir aqui". */
+.rp-btn, .rp-tool, .rp-campo-btn, .rp-pag button, .rp-tab, .rp-menubar > div > span, .rp-grid tbody tr td, .rp-cockpit-list div {
+  transition: background-color .18s ease, border-color .18s ease, outline-color .18s ease; }
+.rp-btn:hover:not(:disabled), .rp-campo-btn:hover, .rp-pag button:hover { background: var(--field-active); }
+.rp-tool:hover:not([disabled]) { background: var(--field-active); border-color: var(--gold-light); }
+.rp-menubar > div > span:hover, .rp-menubar > div > span[aria-expanded=true] { background: var(--field-active); outline: 1px solid var(--gold-light); }
+.rp-tab:not([aria-selected=true]):hover { background: var(--field-active); }
+.rp-grid tbody tr:hover td, .rp-grid tbody tr:hover td.rownum { background: var(--field-note); }
+.rp-grid tbody tr[aria-selected=true]:hover td { background: var(--field-active); }
+.rp-cockpit-list div:hover { background: var(--field-active); }
+.rp-rolagem::-webkit-scrollbar-thumb:hover { background: linear-gradient(90deg, var(--field-note), var(--gold-light)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .rp-btn, .rp-tool, .rp-tab, .rp-menubar > div > span, .rp-grid tbody tr td,
+  .rp-nav-item::before, .rp-rail-tab, .rp-rail-tab::before, .rp-nav-sub, .rp-drawer { transition: none; }
+}
+
+/* Gaveta: itens ainda não implementados. */
+.rp-nav-sub--indisponivel { opacity: .6; cursor: default; }
+.rp-nav-sub--indisponivel:hover { text-decoration: none; background: var(--nav-selected); } /* mantém o azul: fundo transparente mostrava a gaveta clara (piscar branco) */
+.rp-drawer-aviso { margin: 0; padding: var(--space-4) var(--space-5); color: var(--ink-muted); }
+
+/* Janela interna (MDI) sobre a área de trabalho. */
+.rp-janela-mdi { position: absolute; display: flex; flex-direction: column; min-width: 0; box-shadow: var(--shadow-window); }
+.rp-janela-mdi--max { box-shadow: none; }
+.rp-janela-mdi .rp-titlebar { flex: none; cursor: default; }
+.rp-janela-mdi .rp-titlebar { gap: var(--space-3); }
+.rp-janela-mdi__titulo { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.rp-janela-mdi__corpo { flex: 1; min-height: 0; overflow: auto; user-select: text; }
+.rp-janela-mdi .rp-window-foot { flex: none; }
+.rp-janela-mdi__alca { position: absolute; right: 0; bottom: 0; width: 12px; height: 12px; cursor: nwse-resize; }
+.rp-janela-mdi__cabecalho { display: flex; gap: var(--space-5); margin-bottom: var(--space-4); flex-wrap: wrap; }
+.rp-janela-mdi__cabecalho .rp-form { grid-template-columns: 110px 200px; }
+.rp-janela-mdi__form { grid-template-columns: 160px 14px minmax(160px, 1fr); }
+.rp-janela-mdi__grade { width: 100%; }
+.rp-janela-mdi__selo { margin-left: var(--space-2); }
+.rp-janela-mdi__aviso { display: flex; gap: var(--space-2); align-items: center; margin: 0; color: var(--ink-muted); }
+.rp-field--curto { max-width: 120px; }
+.rp-campo-erro { display: flex; gap: var(--space-2); align-items: center; color: var(--ink-danger); font-size: 12px; }
+.rp-campo-erro .rp-ico { width: 14px; height: 14px; }
+.rp-field[aria-invalid=true] { border-color: var(--status-error); }
+
+/* Caixa de mensagem modal: bloqueia o fundo sem escurecê-lo (sem cores fora dos tokens). */
+.rp-modal { position: fixed; inset: 0; z-index: 50; display: grid; place-content: center; }
+.rp-modal .rp-msgbox { width: 460px; max-width: calc(100vw - 32px); box-shadow: var(--shadow-window); }
+
+/* Rodapé fixo. */
+.rp-rodape { flex: none; }
+.rp-rodape .rp-sysbar-slot--grow { flex: 1; }
+.rp-rodape-marca { margin-left: auto; font-size: 14px; }
