@@ -70,6 +70,8 @@ public abstract class IntegrationTest {
             registry.add("spring.datasource.password", container::getPassword);
         }
         registry.add("spring.flyway.clean-disabled", () -> "false");
+        // Os testes chamam a entrega da outbox diretamente; o agendamento automático ficaria disputando os mesmos eventos.
+        registry.add("renda.outbox.poll-ms", () -> "86400000");
     }
 
     private static String env(String key, String fallback) {
