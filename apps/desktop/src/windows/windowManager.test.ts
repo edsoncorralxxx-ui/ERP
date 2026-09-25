@@ -34,6 +34,13 @@ describe('gerenciador de janelas', () => {
     expect(s.windows[0]).toMatchObject({ mode: 'normal', x: 100, y: 80, w: 600, h: 400 });
   });
 
+  it('janela aberta maximizada (cockpit) restaura para o tamanho pedido', () => {
+    let s = run({ ...(open() as Extract<WindowAction, { type: 'open' }>), maximized: true });
+    expect(s.windows[0].mode).toBe('maximized');
+    s = windowReducer(s, { type: 'toggleMaximize', id: 'w1' });
+    expect(s.windows[0]).toMatchObject({ mode: 'normal', w: 600, h: 400 });
+  });
+
   it('janela maximizada minimizada volta maximizada', () => {
     const s = run(open(), { type: 'toggleMaximize', id: 'w1' }, { type: 'minimize', id: 'w1' }, { type: 'focus', id: 'w1' });
     expect(s.windows[0].mode).toBe('maximized');

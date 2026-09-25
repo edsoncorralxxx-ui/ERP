@@ -1,10 +1,13 @@
-type Tool = { name: string; title: string; action?: () => void } | 'sep';
+type Tool = { name: string; title: string } | 'sep';
+
+/** Ferramentas que já têm ação, pelo nome do ícone; as demais ficam indisponíveis. */
+export type ToolActions = Partial<Record<string, () => void>>;
 
 /**
  * Barra de ferramentas na ordem clássica do design system. Ferramentas ainda não implementadas ficam
  * indisponíveis (cinza), como a barra original até um documento estar aberto.
  */
-export function Toolbar({ onHelp }: { onHelp: () => void }) {
+export function Toolbar({ actions }: { actions: ToolActions }) {
   const tools: Tool[] = [
     { name: 'visualizar', title: 'Visualizar impressão' },
     { name: 'imprimir', title: 'Imprimir' },
@@ -37,7 +40,7 @@ export function Toolbar({ onHelp }: { onHelp: () => void }) {
     { name: 'alerta', title: 'Alertas' },
     { name: 'calendario', title: 'Calendário' },
     'sep',
-    { name: 'ajuda', title: 'Ajuda — sobre o Renda+ ERP', action: onHelp },
+    { name: 'ajuda', title: 'Ajuda — sobre o Renda+ ERP' },
     'sep',
     { name: 'ia-assistente', title: 'Assistente de IA (futuro)' },
   ];
@@ -47,7 +50,7 @@ export function Toolbar({ onHelp }: { onHelp: () => void }) {
         t === 'sep' ? (
           <span key={`s${i}`} className="rp-tool-sep" />
         ) : (
-          <button key={t.name} type="button" className="rp-tool" title={t.title} aria-label={t.title} disabled={!t.action} onClick={t.action}>
+          <button key={t.name} type="button" className="rp-tool" title={t.title} aria-label={t.title} disabled={!actions[t.name]} onClick={actions[t.name]}>
             <i className={`rp-ico rp-ico-${t.name}`} />
           </button>
         ),

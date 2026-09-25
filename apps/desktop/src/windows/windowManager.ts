@@ -3,7 +3,7 @@
  * Funções puras para facilitar teste; o React só despacha ações.
  */
 
-export type WindowKind = 'company-profile' | 'server-status';
+export type WindowKind = 'company-profile' | 'server-status' | 'cockpit';
 export type WindowMode = 'normal' | 'minimized' | 'maximized';
 
 export type Rect = { x: number; y: number; w: number; h: number };
@@ -32,7 +32,7 @@ const CASCADE_STEP = 28;
 export const initialWindowState: WindowState = { windows: [], activeId: null, nextZ: 1, seq: 1 };
 
 export type WindowAction =
-  | { type: 'open'; kind: WindowKind; recordKey: string; title: string; size: { w: number; h: number }; bounds: Bounds }
+  | { type: 'open'; kind: WindowKind; recordKey: string; title: string; size: { w: number; h: number }; bounds: Bounds; maximized?: boolean }
   | { type: 'focus'; id: string }
   | { type: 'move'; id: string; x: number; y: number; bounds: Bounds }
   | { type: 'resize'; id: string; w: number; h: number; bounds: Bounds }
@@ -79,7 +79,8 @@ export function windowReducer(state: WindowState, action: WindowAction): WindowS
         recordKey: action.recordKey,
         title: action.title,
         z: state.nextZ,
-        mode: 'normal',
+        mode: action.maximized ? 'maximized' : 'normal',
+        restore: action.maximized ? rect : undefined,
         dirty: false,
       };
       return { windows: [...state.windows, win], activeId: win.id, nextZ: state.nextZ + 1, seq: state.seq + 1 };

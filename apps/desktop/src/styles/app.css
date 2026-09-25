@@ -18,10 +18,29 @@ body { background: var(--ground); }
 .rp-menu-item[aria-disabled=true] { cursor: default; }
 .rp-menu-item[aria-disabled=true]:hover { background: none; }
 
-/* Gaveta em coluna própria (pedido do PO): vai da barra de ferramentas ao rodapé, e a boas-vindas e as
-   janelas ficam ao lado dela, sem sobreposição. O bundle a posiciona absoluta dentro de .rp-appwork. */
-.rp-appbody > .rp-drawer { position: relative; z-index: 1; align-self: stretch; }
-.rp-appbody > .rp-drawer .rp-drawer-inner { height: 100%; }
+/* Gaveta em coluna própria (pedido do PO e protótipo Mock): começa um pouco abaixo do topo do trilho e desce até o
+   rodapé; a boas-vindas e as janelas ficam ao lado dela, sem sobreposição. Desliza na largura em 0,25 s. */
+.rp-appbody > .rp-drawer { position: relative; z-index: 1; align-self: stretch; margin-top: var(--space-3);
+  border: 0 solid var(--window-border); transition: width .25s ease, border-width .25s ease; }
+.rp-appbody > .rp-drawer[data-open=true] { width: 330px; border-width: 1px 1px 0 0; }
+.rp-appbody > .rp-drawer .rp-drawer-inner { width: 330px; height: 100%; display: flex; flex-direction: column; }
+.rp-appbody > .rp-drawer .rp-drawer-head { flex: none; background: var(--panel-head); }
+.rp-appbody > .rp-drawer .rp-drawer-view[data-active=true] { flex: 1; min-height: 0; height: auto; }
+.rp-gaveta .rp-nav-item { width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; font-weight: 600; text-align: left;
+  color: var(--on-dark); border-left: 0; border-right: 0; cursor: pointer; }
+.rp-gaveta .rp-nav-item:focus-visible { outline: 2px solid var(--field-active); outline-offset: -3px; }
+
+/* Submódulos do protótipo: faixa em nav-selected, 36px, rótulo branco; no hover o fundo volta ao nav,
+   o rótulo sublinha e o ícone avança 2px. */
+.rp-gaveta .rp-nav-subs { background: var(--nav-selected); }
+.rp-gaveta .rp-nav-group[data-open=true] > .rp-nav-subs { border-bottom: 1px solid var(--nav-deep); }
+.rp-gaveta .rp-nav-sub { height: 36px; box-sizing: border-box; padding: 0 12px 0 40px; display: flex; align-items: center; gap: 10px;
+  font-size: 13px; line-height: 18px; font-weight: 600; color: var(--on-dark); background: var(--nav-selected); cursor: pointer; }
+.rp-gaveta .rp-nav-sub .rp-ico { flex: none; transition: transform .15s ease; }
+.rp-gaveta .rp-nav-sub:not(.rp-nav-sub--indisponivel):hover { background: var(--nav); text-decoration: underline; }
+.rp-gaveta .rp-nav-sub:not(.rp-nav-sub--indisponivel):hover .rp-ico { transform: translateX(2px); }
+.rp-gaveta .rp-nav-sub:focus-visible { outline: 2px solid var(--field-active); outline-offset: -3px; text-decoration: underline; }
+.rp-gaveta .rp-nav--pastas .rp-nav-item { cursor: default; }
 
 /* Hover suave (pedido do PO): degradê não anima, então ele fica numa camada com transição de opacidade.
    A linha continua chapada em nav por baixo, sem nenhum instante claro entre um estado e outro. */
@@ -53,12 +72,12 @@ body { background: var(--ground); }
 
 @media (prefers-reduced-motion: reduce) {
   .rp-btn, .rp-tool, .rp-tab, .rp-menubar > div > span, .rp-grid tbody tr td,
-  .rp-nav-item::before, .rp-rail-tab, .rp-rail-tab::before, .rp-nav-sub, .rp-drawer { transition: none; }
+  .rp-nav-item::before, .rp-rail-tab, .rp-rail-tab::before, .rp-nav-sub, .rp-nav-sub .rp-ico, .rp-appbody > .rp-drawer { transition: none; }
 }
 
 /* Gaveta: itens ainda não implementados. */
-.rp-nav-sub--indisponivel { opacity: .6; cursor: default; }
-.rp-nav-sub--indisponivel:hover { text-decoration: none; background: var(--nav-selected); } /* mantém o azul: fundo transparente mostrava a gaveta clara (piscar branco) */
+.rp-gaveta .rp-nav-sub--indisponivel { opacity: .6; cursor: default; }
+.rp-gaveta .rp-nav-sub--indisponivel:hover { text-decoration: none; background: var(--nav-selected); } /* mantém o azul: fundo transparente mostrava a gaveta clara (piscar branco) */
 .rp-drawer-aviso { margin: 0; padding: var(--space-4) var(--space-5); color: var(--ink-muted); }
 
 /* Janela interna (MDI) sobre a área de trabalho. */
@@ -66,7 +85,8 @@ body { background: var(--ground); }
 .rp-janela-mdi--max { box-shadow: none; }
 .rp-janela-mdi .rp-titlebar { flex: none; cursor: default; }
 .rp-janela-mdi .rp-titlebar { gap: var(--space-3); }
-.rp-janela-mdi__titulo { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-janela-mdi__titulo { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font: inherit; font-size: 15px; line-height: 20px; font-weight: 400; color: var(--on-dark); }
 
 .rp-janela-mdi__corpo { flex: 1; min-height: 0; overflow: auto; user-select: text; }
 .rp-janela-mdi .rp-window-foot { flex: none; }
@@ -86,7 +106,86 @@ body { background: var(--ground); }
 .rp-modal { position: fixed; inset: 0; z-index: 50; display: grid; place-content: center; }
 .rp-modal .rp-msgbox { width: 460px; max-width: calc(100vw - 32px); box-shadow: var(--shadow-window); }
 
-/* Rodapé fixo. */
+/* Janelas minimizadas: botões com a barra de título, embaixo à esquerda da área de trabalho (protótipo Mock). */
+/* Fica atrás das janelas abertas (que começam no nível 1), como a faixa de minimizadas do cliente clássico. */
+.rp-minimizadas { position: absolute; left: var(--space-3); bottom: var(--space-2); z-index: 0; display: flex; gap: var(--space-1); }
+.rp-minimizada { height: 26px; min-width: 160px; max-width: 220px; padding: 0 10px; font: inherit; font-size: 12px; text-align: left;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; color: var(--on-dark);
+  background: linear-gradient(var(--titlebar), var(--titlebar-bottom)); border: 1px solid var(--window-border); border-radius: var(--radius-sm); }
+.rp-minimizada:hover { background: linear-gradient(var(--nav-selected-top), var(--nav-selected)); }
+
+/* Rodapé fixo (componente Rodapé): log recolhível acima da aba, compartimentos em duas linhas e a marca à direita. */
 .rp-rodape { flex: none; }
-.rp-rodape .rp-sysbar-slot--grow { flex: 1; }
-.rp-rodape-marca { margin-left: auto; font-size: 14px; }
+.rp-rodape .rp-status-tab { cursor: pointer; }
+.rp-rodape .rp-status-tab:hover, .rp-rodape .rp-status-tab[aria-expanded=true] { background: linear-gradient(var(--tab), var(--rail-selected)); }
+.rp-rodape .rp-winctl button:disabled { opacity: .5; cursor: default; }
+.rp-log { height: 140px; overflow: auto; margin: 0 10px; background: var(--surface-form); border: 1px solid var(--tab-border); border-bottom: 0; user-select: text; }
+.rp-log--max { height: 40vh; }
+.rp-log__grade { width: 100%; }
+.rp-log__tipo { display: inline-flex; align-items: center; gap: var(--space-2); }
+.rp-log__vazio { margin: 0; padding: var(--space-4); color: var(--ink-muted); }
+.rp-slot { display: flex; align-items: center; gap: var(--space-2); min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
+.rp-slot .rp-ico { width: 14px; height: 14px; flex: none; }
+.rp-slot--centro { justify-content: center; }
+.rp-slot { padding: 0 var(--space-2); box-sizing: border-box; }
+/* O bundle estiliza todo span dentro de .rp-slots como compartimento; o LED, o ícone e a marca não são compartimentos. */
+.rp-slots .rp-sysbar-led { flex: none; width: 8px; height: 8px; padding: 0; border: 0; box-shadow: none; background: var(--status-success); }
+.rp-slots .rp-sysbar-led--off { background: var(--status-error); }
+.rp-slots .rp-rodape-marca { grid-column: 5; grid-row: 1 / 3; align-self: center; justify-self: end; height: auto; padding: 0 var(--space-2);
+  background: none; border: 0; box-shadow: none; font-size: 20px; line-height: 24px; font-weight: 700; letter-spacing: -.5px; }
+.rp-slots .rp-rodape-marca b, .rp-slots .rp-rodape-marca i { font-size: inherit; }
+
+/* Tela de abertura (Janela de login): centralizada na área clara, 720px, ilustração à esquerda. */
+.rp-login { height: 100%; display: grid; place-content: center; background: var(--ground); }
+.rp-login__janela { width: 720px; max-width: calc(100vw - 32px); box-shadow: var(--shadow-window); overflow: hidden; }
+.rp-login__titulo { margin: 0; font: inherit; font-size: 15px; line-height: 20px; font-weight: 400; color: var(--on-dark); }
+.rp-login__corpo { display: flex; min-height: 300px; }
+.rp-login__ilustracao { width: 232px; flex: none; display: flex; background: var(--surface-panel); border-right: 1px solid var(--tab-border); }
+.rp-login__arte { display: block; width: 100%; height: 100%; }
+.rp-login__form { flex: 1; display: flex; flex-direction: column; gap: 28px; padding: 32px 36px 24px; background: var(--field); }
+.rp-login__marca { font-size: 40px; line-height: 44px; font-weight: 700; letter-spacing: -1px; }
+.rp-login__campos { grid-template-columns: 96px 16px 260px; }
+.rp-login__campos .rp-label, .rp-login__campos .rp-req { border-bottom: 1px solid var(--grid-row-alt); }
+.rp-login__lembrar { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; }
+.rp-login__nota { display: flex; align-items: center; gap: var(--space-2); margin: 0; font-size: 12px; color: var(--ink-muted); }
+.rp-login .rp-window-foot { justify-content: space-between; align-items: center; }
+.rp-login__obrigatorio { font-size: 12px; color: var(--ink-muted); }
+.rp-login__arte .a-fundo { fill: var(--surface-panel); }
+.rp-login__arte .a-janela { fill: var(--field); stroke: var(--grid-rule); }
+.rp-login__arte .a-caixilho { stroke: var(--grid-row-alt); stroke-width: 3; fill: none; }
+.rp-login__arte .a-mesa { fill: var(--grid-rule); }
+.rp-login__arte .a-tampo { fill: var(--surface-form); stroke: var(--field-border); }
+.rp-login__arte .a-moldura { fill: var(--window-border); }
+.rp-login__arte .a-tela { fill: var(--surface-form); }
+.rp-login__arte .a-titulo { fill: var(--titlebar); }
+.rp-login__arte .a-faixa { fill: var(--gold-light); }
+.rp-login__arte .a-menu { fill: var(--nav); }
+.rp-login__arte .a-menu-linhas { stroke: var(--nav-deep); fill: none; }
+.rp-login__arte .a-rotulo { fill: var(--ink-muted); }
+.rp-login__arte .a-campo-ativo { fill: var(--field-active); stroke: var(--field-border); stroke-width: .5; }
+.rp-login__arte .a-campo { fill: var(--field); stroke: var(--field-border); stroke-width: .5; }
+.rp-login__arte .a-grade { fill: var(--grid-row); stroke: var(--grid-rule); stroke-width: .5; }
+.rp-login__arte .a-grade-linhas { stroke: var(--grid-rule); stroke-width: .5; fill: none; }
+.rp-login__arte .a-botao { fill: var(--button); stroke: var(--button-border); stroke-width: .5; }
+.rp-login__arte .a-pe { fill: var(--field-border); }
+.rp-login__arte .a-base { fill: var(--window-border); }
+.rp-login__arte .a-teclado { fill: var(--field); stroke: var(--field-border); }
+.rp-login__arte .a-caneca { fill: var(--gold); }
+.rp-login__arte .a-alca { stroke: var(--gold); stroke-width: 2.5; fill: none; }
+.rp-login__arte .a-vaso { fill: var(--nav-selected); }
+.rp-login__arte .a-folhas { fill: var(--status-success); }
+
+/* Meu cockpit (componente Dashboard 3D) dentro da janela. */
+.rp-cockpit { display: flex; flex-direction: column; gap: var(--space-5); background: var(--surface-form); }
+.rp-cockpit__kpis { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.rp-cockpit .rp-kpi-head .rp-link { flex: none; }
+.rp-cockpit .rp-dash-row { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+.rp-cockpit__cartao { min-width: 0; display: flex; flex-direction: column; }
+.rp-cockpit__titulo-cartao { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-cockpit__acoes { margin-left: auto; display: flex; gap: 2px; font-weight: 400; }
+.rp-cockpit__acoes .rp-tool { width: 24px; height: 24px; }
+.rp-cockpit__acoes .rp-tool[aria-pressed=true] { background: var(--field-active); border-color: var(--gold-light); }
+.rp-cockpit__tabela { overflow: auto; margin: var(--space-2) var(--space-3); }
+.rp-cockpit__vazio { padding: var(--space-4); box-sizing: border-box; }
+.rp-grafico { position: relative; }
+.rp-chart-note .rp-link { vertical-align: middle; }
