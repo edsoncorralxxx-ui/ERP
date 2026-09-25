@@ -120,6 +120,8 @@ export function windowReducer(state: WindowState, action: WindowAction): WindowS
       return { ...state, windows, activeId: state.activeId === action.id ? topVisible(windows) : state.activeId };
     }
     case 'setDirty':
+      // Sem mudança, devolve o mesmo estado para não provocar nova renderização em cadeia.
+      if (!state.windows.some((w) => w.id === action.id && w.dirty !== action.dirty)) return state;
       return { ...state, windows: state.windows.map((w) => (w.id === action.id ? { ...w, dirty: action.dirty } : w)) };
     case 'cascade': {
       let z = state.nextZ;

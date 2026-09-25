@@ -61,6 +61,11 @@ describe('gerenciador de janelas', () => {
     expect(xs.size).toBe(3);
   });
 
+  it('marcar o mesmo estado de alteração não gera novo estado (evita laço de renderização)', () => {
+    const s = run(open('a'));
+    expect(windowReducer(s, { type: 'setDirty', id: 'w1', dirty: false })).toBe(s);
+  });
+
   it('marca alterações pendentes por janela', () => {
     const s = run(open('a'), open('b'), { type: 'setDirty', id: 'w1', dirty: true });
     expect(s.windows.map((w) => w.dirty)).toEqual([true, false]);

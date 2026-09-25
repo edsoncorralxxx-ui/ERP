@@ -1,0 +1,10 @@
+<!-- @dsCard group="Gráficos 3D" height=340 -->
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Área 3D</title>
+<style>body{margin:0;padding:16px;background:var(--surface-form)}</style></head>
+<body class="rp">
+<div class="rp-chart" style="width:620px"><div class="rp-chart-head"><i class="rp-ico rp-ico-ia-previsao"></i>Fluxo de caixa — 12 meses</div><div class="rp-chart-body" id="g"></div><div class="rp-chart-note">Valores em milhares de R$</div></div>
+<script>
+RendaERP.Area3D(document.getElementById("g"),{largura:596,altura:260,categorias:["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"],series:[{nome:"Saídas",valores:[80,95,90,110,100,120,115,130,125,140,135,150]},{nome:"Entradas",valores:[120,130,125,150,160,155,170,180,175,190,200,210]},{nome:"Saldo projetado",valores:[200,210,230,240,260,270,290,300,320,330,350,370]}]});
+</script>
+</body></html>

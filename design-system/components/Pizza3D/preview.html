@@ -1,0 +1,10 @@
+<!-- @dsCard group="Gráficos 3D" height=320 -->
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Pizza 3D</title>
+<style>body{margin:0;padding:16px;background:var(--surface-form)}</style></head>
+<body class="rp">
+<div class="rp-chart" style="width:480px"><div class="rp-chart-head"><i class="rp-ico rp-ico-oportunidades"></i>Vendas por região</div><div class="rp-chart-body" id="g"></div></div>
+<script>
+RendaERP.Pizza3D(document.getElementById("g"),{largura:456,altura:250,fatias:[{nome:"Sudeste",valor:46},{nome:"Sul",valor:22},{nome:"Nordeste",valor:15},{nome:"Centro-Oeste",valor:11},{nome:"Norte",valor:6}]});
+</script>
+</body></html>

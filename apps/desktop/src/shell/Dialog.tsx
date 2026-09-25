@@ -2,46 +2,67 @@ import { useEffect, useRef, type ReactNode } from 'react';
 
 export type DialogButton = { label: string; onClick: () => void; primary?: boolean };
 
-type Props = { title: string; children: ReactNode; buttons: DialogButton[]; onEscape: () => void };
+type Props = {
+  icon: 'aviso' | 'erro' | 'info' | 'sucesso';
+  label: string;
+  children: ReactNode;
+  buttons: DialogButton[];
+  onEscape: () => void;
+};
 
-/** Diálogo modal da janela de origem: prende o foco enquanto aberto e fecha com Esc. */
-export function Dialog({ title, children, buttons, onEscape }: Props) {
+/**
+ * Caixa de mensagem do design system: título com o nome do produto, ícone de 32px, fato e depois a pergunta,
+ * botões à direita com o padrão primeiro. Modal: prende o foco e fecha com Esc.
+ */
+export function Dialog({ icon, label, children, buttons, onEscape }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    ref.current?.querySelector<HTMLButtonElement>('button[data-primary="true"], button')?.focus();
+    ref.current?.querySelector<HTMLButtonElement>('button')?.focus();
     return () => previous?.focus();
   }, []);
+  const ordered = [...buttons.filter((b) => b.primary), ...buttons.filter((b) => !b.primary)];
   return (
-    <div className="rp-dialog__backdrop">
+    <div className="rp-modal">
       <div
         ref={ref}
-        className="rp-dialog"
+        className="rp-window rp-msgbox"
         role="alertdialog"
         aria-modal="true"
-        aria-label={title}
+        aria-label={label}
         onKeyDown={(e) => {
           if (e.key === 'Escape') {
             e.stopPropagation();
             onEscape();
           }
           if (e.key === 'Tab') {
-            const focusable = Array.from(ref.current?.querySelectorAll<HTMLButtonElement>('button') ?? []);
-            const i = focusable.indexOf(document.activeElement as HTMLButtonElement);
-            const next = e.shiftKey ? (i <= 0 ? focusable.length - 1 : i - 1) : (i + 1) % focusable.length;
-            focusable[next]?.focus();
+            const focusable = Array.from(ref.current?.querySelectorAll<HTMLElement>('button, [role=button]') ?? []);
+            const i = focusable.indexOf(document.activeElement as HTMLElement);
+            focusable[e.shiftKey ? (i <= 0 ? focusable.length - 1 : i - 1) : (i + 1) % focusable.length]?.focus();
             e.preventDefault();
           }
         }}
       >
-        <div className="rp-dialog__title">{title}</div>
-        <div className="rp-dialog__body">{children}</div>
-        <div className="rp-dialog__actions">
-          {buttons.map((b) => (
-            <button key={b.label} type="button" className={b.primary ? 'rp-button rp-button--primary' : 'rp-button'} data-primary={b.primary ? 'true' : undefined} onClick={b.onClick}>
-              {b.label}
-            </button>
-          ))}
+        <div className="rp-titlebar">
+          <span>Renda+ ERP</span>
+          <span className="rp-winbtns">
+            <span role="button" tabIndex={0} aria-label="Fechar" onClick={onEscape} onKeyDown={(e) => e.key === 'Enter' && onEscape()}>
+              ×
+            </span>
+          </span>
+        </div>
+        <div className="rp-window-body">
+          <i className={`rp-ico rp-ico-status-${icon}`} />
+          <div>{children}</div>
+        </div>
+        <div className="rp-window-foot">
+          <div className="rp-btn-row">
+            {ordered.map((b) => (
+              <button key={b.label} type="button" className={b.primary ? 'rp-btn rp-btn--default' : 'rp-btn'} onClick={b.onClick}>
+                {b.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

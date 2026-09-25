@@ -21,6 +21,8 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    // O design system fica na raiz do repositório (design-system/), fonte única dos tokens e componentes.
+    fs: { allow: ['../..'] },
     proxy: { '/api': 'http://localhost:8080' },
   },
   build: { outDir: 'dist', emptyOutDir: true },

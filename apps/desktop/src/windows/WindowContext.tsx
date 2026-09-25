@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react';
+import type { StatusMessage } from '../shell/StatusBar';
 
 /** Operações que uma janela oferece ao shell (barra de ferramentas, Cmd+S, fechar com alterações). */
 export type WindowCommands = {
@@ -10,7 +11,8 @@ export type WindowApi = {
   setDirty: (dirty: boolean) => void;
   setTitle?: (title: string) => void;
   registerCommands: (commands: WindowCommands) => void;
-  notify: (message: string) => void;
+  /** Mensagem na linha de status do aplicativo (padrão do design system para sucesso e erro). */
+  notify: (message: StatusMessage) => void;
   requestClose: () => void;
 };
 

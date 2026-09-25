@@ -1,0 +1,10 @@
+<!-- @dsCard group="Gráficos 3D" height=330 -->
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Rosca3D</title>
+<style>body{margin:0;padding:16px;background:var(--surface-form)}</style></head>
+<body class="rp">
+<div class="rp-chart" style="width:560px"><div class="rp-chart-head"><i class="rp-ico rp-ico-relatorios"></i>Receita por linha de negócio<div class="rp-select"><select class="rp-field"><option>Gráfico de rosca</option></select></div></div><div class="rp-chart-body" id="g"></div></div>
+<script>
+RendaERP.Rosca3D(document.getElementById("g"),{largura:536,altura:250,furo:.55,centro:{valor:"R$ 4,82 mi",titulo:"Receita total"},fatias:[{nome:"Indústria",valor:1840},{nome:"Serviços",valor:1220},{nome:"Revenda",valor:960},{nome:"Exportação",valor:800}]});
+</script>
+</body></html>

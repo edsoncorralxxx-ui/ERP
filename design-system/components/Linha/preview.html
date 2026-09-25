@@ -1,0 +1,10 @@
+<!-- @dsCard group="Gráficos" height=330 -->
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Linha</title>
+<style>body{margin:0;padding:16px;background:var(--surface-form)}</style></head>
+<body class="rp">
+<div class="rp-chart" style="width:620px"><div class="rp-chart-head"><i class="rp-ico rp-ico-estoque"></i>Estoque x consumo — 12 semanas<div class="rp-select"><select class="rp-field"><option>Gráfico de linhas</option></select></div></div><div class="rp-chart-body" id="g"></div></div>
+<script>
+RendaERP.Linha(document.getElementById("g"),{largura:596,altura:258,unidade:"un",categorias:["S1","S2","S3","S4","S5","S6","S7","S8","S9","S10","S11","S12"],series:[{nome:"Saldo em estoque",valores:[820,790,760,810,880,840,800,770,900,870,830,910]},{nome:"Consumo",valores:[210,240,260,190,220,250,280,300,240,260,270,230]}]});
+</script>
+</body></html>

@@ -1,104 +1,131 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { AppWindow } from '../windows/windowManager';
 
 type Props = {
   windows: AppWindow[];
   activeId: string | null;
+  canSave: boolean;
+  onSaveActive: () => void;
+  onCloseActive: () => void;
   onOpenCompany: () => void;
   onOpenStatus: () => void;
-  onCloseActive: () => void;
-  onSaveActive: () => void;
-  canSave: boolean;
   onCascade: () => void;
   onTile: () => void;
   onFocus: (id: string) => void;
-  onToggleSidebar: () => void;
+  onToggleDrawer: () => void;
+  onAppWindow: (action: 'minimize' | 'maximize' | 'close') => void;
 };
 
-type Item = { label: string; shortcut?: string; disabled?: boolean; checked?: boolean; action: () => void } | 'separator';
+type Item = { label: string; kbd?: string; disabled?: boolean; selected?: boolean; action?: () => void } | 'sep';
 
-/** Menus superiores: somente comandos implementados. */
+const PROXIMAS = [{ label: 'Disponível nas próximas sprints', disabled: true }] as Item[];
+
+/** Barra de menus do design system (ordem fixa, letra de acesso sublinhada) com os botões da janela do aplicativo. */
 export function MenuBar(p: Props) {
   const [open, setOpen] = useState<string | null>(null);
-  const ref = useRef<HTMLElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const close = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(null);
-    };
+    const outside = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(null);
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(null);
-    document.addEventListener('mousedown', close);
+    document.addEventListener('mousedown', outside);
     document.addEventListener('keydown', esc);
     return () => {
-      document.removeEventListener('mousedown', close);
+      document.removeEventListener('mousedown', outside);
       document.removeEventListener('keydown', esc);
     };
   }, []);
 
-  const menus: Record<string, Item[]> = {
-    Arquivo: [
-      { label: 'Salvar', shortcut: '⌘S', disabled: !p.canSave, action: p.onSaveActive },
-      { label: 'Fechar janela', disabled: !p.activeId, action: p.onCloseActive },
-    ],
-    Exibir: [{ label: 'Painel de módulos', action: p.onToggleSidebar }],
-    Módulos: [
-      { label: 'Dados da empresa', action: p.onOpenCompany },
-      { label: 'Status do servidor', action: p.onOpenStatus },
-    ],
-    Janelas: [
-      { label: 'Cascata', disabled: p.windows.length === 0, action: p.onCascade },
-      { label: 'Lado a lado', disabled: p.windows.length === 0, action: p.onTile },
-      ...(p.windows.length ? (['separator'] as Item[]) : []),
-      ...p.windows.map<Item>((w) => ({
-        label: `${w.title}${w.mode === 'minimized' ? ' (minimizada)' : ''}`,
-        checked: w.id === p.activeId,
-        action: () => p.onFocus(w.id),
-      })),
-    ],
-    Ajuda: [{ label: 'Sobre o Renda+ ERP', action: p.onOpenStatus }],
-  };
+  const menus: { id: string; label: ReactNode; items: Item[] }[] = [
+    {
+      id: 'arquivo',
+      label: (<><u>A</u>rquivo</>),
+      items: [
+        { label: 'Atualizar', kbd: '⌘S', disabled: !p.canSave, action: p.onSaveActive },
+        { label: 'Fechar janela', kbd: 'Esc', disabled: !p.activeId, action: p.onCloseActive },
+      ],
+    },
+    { id: 'editar', label: (<><u>E</u>ditar</>), items: PROXIMAS },
+    { id: 'exibir', label: (<>E<u>x</u>ibir</>), items: [{ label: 'Menu lateral', action: p.onToggleDrawer }] },
+    { id: 'dados', label: (<><u>D</u>ados</>), items: PROXIMAS },
+    { id: 'irpara', label: (<><u>I</u>r para</>), items: PROXIMAS },
+    {
+      id: 'modulos',
+      label: (<><u>M</u>ódulos</>),
+      items: [
+        { label: 'Dados da empresa', action: p.onOpenCompany },
+        { label: 'Status do servidor', action: p.onOpenStatus },
+      ],
+    },
+    { id: 'ferramentas', label: (<><u>F</u>erramentas</>), items: PROXIMAS },
+    {
+      id: 'janela',
+      label: (<><u>J</u>anela</>),
+      items: [
+        { label: 'Cascata', disabled: p.windows.length === 0, action: p.onCascade },
+        { label: 'Lado a lado', disabled: p.windows.length === 0, action: p.onTile },
+        ...(p.windows.length ? (['sep'] as Item[]) : []),
+        ...p.windows.map<Item>((w) => ({
+          label: w.mode === 'minimized' ? `${w.title} (minimizada)` : w.title,
+          selected: w.id === p.activeId,
+          action: () => p.onFocus(w.id),
+        })),
+      ],
+    },
+    { id: 'ajuda', label: (<>Aj<u>u</u>da</>), items: [{ label: 'Sobre o Renda+ ERP', action: p.onOpenStatus }] },
+  ];
 
   return (
-    <nav className="rp-menubar" ref={ref} aria-label="Menu principal">
-      {Object.entries(menus).map(([name, items]) => (
-        <div key={name} className="rp-menubar__menu">
-          <button
-            type="button"
-            className={`rp-menubar__button${open === name ? ' is-open' : ''}`}
+    <div className="rp-menubar" ref={ref}>
+      <div role="menubar" aria-label="Menu principal">
+        {menus.map((m) => (
+          <span
+            key={m.id}
+            role="menuitem"
+            tabIndex={0}
             aria-haspopup="menu"
-            aria-expanded={open === name}
-            onClick={() => setOpen(open === name ? null : name)}
-            onMouseEnter={() => open && setOpen(name)}
+            aria-expanded={open === m.id}
+            data-menu={m.id}
+            onClick={() => setOpen(open === m.id ? null : m.id)}
+            onMouseEnter={() => open && setOpen(m.id)}
+            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') && (e.preventDefault(), setOpen(m.id))}
           >
-            {name}
-          </button>
-          {open === name && (
-            <ul className="rp-menubar__list" role="menu">
-              {items.map((it, i) =>
-                it === 'separator' ? (
-                  <li key={`s${i}`} className="rp-menubar__sep" role="separator" />
-                ) : (
-                  <li key={it.label} role="none">
-                    <button
-                      type="button"
+            {m.label}
+            {open === m.id && (
+              <div className="rp-menu rp-menu--suspenso" role="menu" onClick={(e) => e.stopPropagation()}>
+                {m.items.map((it, i) =>
+                  it === 'sep' ? (
+                    <div key={`s${i}`} className="rp-menu-sep" role="separator" />
+                  ) : (
+                    <div
+                      key={it.label}
+                      className="rp-menu-item"
                       role="menuitem"
-                      disabled={it.disabled}
+                      tabIndex={it.disabled ? -1 : 0}
+                      aria-disabled={it.disabled || undefined}
+                      aria-selected={it.selected || undefined}
                       onClick={() => {
+                        if (it.disabled) return;
                         setOpen(null);
-                        it.action();
+                        it.action?.();
                       }}
+                      onKeyDown={(e) => e.key === 'Enter' && !it.disabled && (setOpen(null), it.action?.())}
                     >
-                      <span className="rp-menubar__check">{it.checked ? '✓' : ''}</span>
-                      <span>{it.label}</span>
-                      {it.shortcut && <span className="rp-menubar__shortcut">{it.shortcut}</span>}
-                    </button>
-                  </li>
-                ),
-              )}
-            </ul>
-          )}
-        </div>
-      ))}
-    </nav>
+                      {it.label}
+                      {it.kbd && <kbd>{it.kbd}</kbd>}
+                    </div>
+                  ),
+                )}
+              </div>
+            )}
+          </span>
+        ))}
+      </div>
+      <span className="rp-winctl">
+        <button type="button" aria-label="Minimizar" onClick={() => p.onAppWindow('minimize')}>&#8211;</button>
+        <button type="button" aria-label="Maximizar" onClick={() => p.onAppWindow('maximize')}>&#9633;</button>
+        <button type="button" aria-label="Fechar" onClick={() => p.onAppWindow('close')}>&#215;</button>
+      </span>
+    </div>
   );
 }

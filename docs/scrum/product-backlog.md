@@ -31,7 +31,7 @@ Decidido com o PO em 25/09/2026: cada sprint entrega uma **fatia vertical comple
 
 | Sprint | Fatia vertical | Resultado para o usuário | Épicos |
 |---|---|---|---|
-| 1 | Esqueleto do sistema: servidor, banco, app do Mac com janelas, primeira tela de ponta a ponta (dados da empresa) | Abrir o app, ver a conexão com o servidor e salvar dados reais | B02 |
+| 1 | Esqueleto do sistema: servidor, banco, app do Mac com janelas, primeira tela de ponta a ponta (dados da empresa) — **entregue para Review** | Abrir o app, ver a conexão com o servidor e salvar dados reais | B02 |
 | 2 | Login, permissões e auditoria + Clientes e unidades | Entrar, cadastrar clientes/unidades, ver histórico | B02, B03 |
 | 3 | Materiais e serviços, fornecedores, equipamentos | Cadastros básicos completos | B03 |
 | 4 | Proposta → pedido confirmado → projeto, equipamento e parcelas | Vender e ver projeto e parcelas gerados uma única vez | B05 |

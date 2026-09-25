@@ -1,4 +1,4 @@
-import { useRef, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { useRef, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import type { AppWindow } from './windowManager';
 
 type Props = {
@@ -13,7 +13,16 @@ type Props = {
   onClose: () => void;
 };
 
-/** Moldura de janela interna: barra de título arrastável, controles e alça de redimensionamento. */
+function WinButton({ label, text, onClick }: { label: string; text: string; onClick: () => void }) {
+  const key = (e: KeyboardEvent) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onClick());
+  return (
+    <span role="button" tabIndex={0} aria-label={label} title={label} onClick={onClick} onKeyDown={key}>
+      {text}
+    </span>
+  );
+}
+
+/** Janela do design system (barra de título azul, corpo claro), móvel e redimensionável dentro da área de trabalho. */
 export function WindowFrame({ win, active, children, onFocus, onMove, onResize, onMinimize, onToggleMaximize, onClose }: Props) {
   const drag = useRef<{ dx: number; dy: number } | null>(null);
   const size = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
@@ -22,22 +31,14 @@ export function WindowFrame({ win, active, children, onFocus, onMove, onResize, 
   const maximized = win.mode === 'maximized';
 
   const startDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (maximized || (e.target as HTMLElement).closest('button')) return;
+    if (maximized || (e.target as HTMLElement).closest('[role=button]')) return;
     drag.current = { dx: e.clientX - win.x, dy: e.clientY - win.y };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
-  const onDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (drag.current) onMove(e.clientX - drag.current.dx, e.clientY - drag.current.dy);
-  };
-  const endDrag = () => (drag.current = null);
-
   const startResize = (e: ReactPointerEvent<HTMLDivElement>) => {
     e.stopPropagation();
     size.current = { x: e.clientX, y: e.clientY, w: win.w, h: win.h };
     e.currentTarget.setPointerCapture(e.pointerId);
-  };
-  const onResizeMove = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (size.current) onResize(size.current.w + e.clientX - size.current.x, size.current.h + e.clientY - size.current.y);
   };
 
   const style = maximized
@@ -46,7 +47,7 @@ export function WindowFrame({ win, active, children, onFocus, onMove, onResize, 
 
   return (
     <section
-      className={`rp-window${active ? ' rp-window--active' : ''}${maximized ? ' rp-window--max' : ''}`}
+      className={`rp-window rp-janela-mdi${active ? '' : ' rp-window--inactive'}${maximized ? ' rp-janela-mdi--max' : ''}`}
       style={style}
       role="dialog"
       aria-label={win.title}
@@ -54,26 +55,27 @@ export function WindowFrame({ win, active, children, onFocus, onMove, onResize, 
       onPointerDown={onFocus}
       data-window-id={win.id}
     >
-      <div className="rp-window__title" onPointerDown={startDrag} onPointerMove={onDrag} onPointerUp={endDrag} onDoubleClick={onToggleMaximize}>
-        <span className="rp-window__text">
-          {win.title}
-          {win.dirty ? ' •' : ''}
-        </span>
-        <span className="rp-window__controls">
-          <button type="button" aria-label="Minimizar" title="Minimizar" onClick={onMinimize}>_</button>
-          <button type="button" aria-label={maximized ? 'Restaurar' : 'Maximizar'} title={maximized ? 'Restaurar' : 'Maximizar'} onClick={onToggleMaximize}>
-            {maximized ? '❐' : '□'}
-          </button>
-          <button type="button" aria-label="Fechar janela" title="Fechar" onClick={onClose}>×</button>
+      <div
+        className="rp-titlebar"
+        onPointerDown={startDrag}
+        onPointerMove={(e) => drag.current && onMove(e.clientX - drag.current.dx, e.clientY - drag.current.dy)}
+        onPointerUp={() => (drag.current = null)}
+        onDoubleClick={onToggleMaximize}
+      >
+        <span>{win.title}</span>
+        <span className="rp-winbtns">
+          <WinButton label="Minimizar" text="–" onClick={onMinimize} />
+          <WinButton label={maximized ? 'Restaurar' : 'Maximizar'} text={maximized ? '❐' : '□'} onClick={onToggleMaximize} />
+          <WinButton label="Fechar janela" text="×" onClick={onClose} />
         </span>
       </div>
-      <div className="rp-window__body">{children}</div>
+      {children}
       {!maximized && (
         <div
-          className="rp-window__resize"
+          className="rp-janela-mdi__alca"
           aria-hidden="true"
           onPointerDown={startResize}
-          onPointerMove={onResizeMove}
+          onPointerMove={(e) => size.current && onResize(size.current.w + e.clientX - size.current.x, size.current.h + e.clientY - size.current.y)}
           onPointerUp={() => (size.current = null)}
         />
       )}

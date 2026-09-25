@@ -22,3 +22,4 @@ Um ADR Proposto orienta o trabalho, mas não equivale a aprovação. A lista ori
 | [ADR-014](ADR-014-ia-externa.md) | IA generativa externa | Futuro — desativado |
 | [ADR-015](ADR-015-escrita-offline.md) | Escrita offline e sincronização | Fora da versão inicial |
 | [ADR-016](ADR-016-modulos-e-dependencias.md) | Módulos do backend e direção das dependências | Proposto — B01 |
+| [ADR-017](ADR-017-design-system-fonte-unica.md) | Design system Renda+ ERP como fonte única da interface | Aceito pelo PO em 25/09/2026 (Sprint 1) |

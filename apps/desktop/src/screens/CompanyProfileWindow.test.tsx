@@ -28,6 +28,14 @@ function renderWindow() {
 }
 
 describe('Dados da empresa', () => {
+  it('empresa não configurada abre em modo de adição (campos em amarelo-claro)', async () => {
+    setTransport(async () => ({ status: 200, headers: { etag: '"0"' }, body: JSON.stringify(profile('0')) }));
+    renderWindow();
+    const input = await screen.findByLabelText(/^Razão social$/);
+    expect(input.closest('.rp-form')).toHaveClass('rp-form--adicao');
+    expect(screen.getByRole('button', { name: 'Adicionar' })).toBeDisabled();
+  });
+
   it('salva com a versão lida e mostra a nova versão', async () => {
     const puts: TransportRequest[] = [];
     setTransport(async (req) => {
@@ -37,10 +45,10 @@ describe('Dados da empresa', () => {
     });
     const win = renderWindow();
     const user = userEvent.setup();
-    await user.type(await screen.findByLabelText(/Razão social/), 'Fourtech Demonstração');
+    await user.type(await screen.findByLabelText(/^Razão social$/), 'Fourtech Demonstração');
     expect(win.setDirty).toHaveBeenLastCalledWith(true);
-    await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    await screen.findByText(/Dados salvos \(versão 1\)/);
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
+    await waitFor(() => expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Dados da empresa adicionados com sucesso (versão 1)' }));
     expect(puts[0].headers?.['If-Match']).toBe('"0"');
     expect(JSON.parse(puts[0].body!).legalName).toBe('Fourtech Demonstração');
     expect(win.setDirty).toHaveBeenLastCalledWith(false);
@@ -54,13 +62,14 @@ describe('Dados da empresa', () => {
     );
     renderWindow();
     const user = userEvent.setup();
-    const input = await screen.findByLabelText(/Razão social/);
+    const input = await screen.findByLabelText(/^Razão social$/);
     await user.type(input, 'Minha edição');
-    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
     expect(await screen.findByRole('alertdialog', { name: /alterados por outra pessoa/ })).toHaveTextContent('versão atual 4');
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(expect.arrayContaining(['Recarregar', 'Continuar editando']));
     await user.click(screen.getByRole('button', { name: 'Continuar editando' }));
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
-    expect(screen.getByLabelText(/Razão social/)).toHaveValue('Minha edição');
+    expect(screen.getByLabelText(/^Razão social$/)).toHaveValue('Minha edição');
   });
 
   it('mostra os erros de validação junto de cada campo', async () => {
@@ -82,11 +91,11 @@ describe('Dados da empresa', () => {
     );
     renderWindow();
     const user = userEvent.setup();
-    await user.type(await screen.findByLabelText(/CNPJ/), '11.222.333/0001-82');
-    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    await user.type(await screen.findByLabelText(/^CNPJ$/), '11.222.333/0001-82');
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
     expect(await screen.findByText(/Informe a razão social/)).toBeInTheDocument();
     expect(screen.getByText(/Dígitos verificadores/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/CNPJ/)).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText(/^CNPJ$/)).toHaveAttribute('aria-invalid', 'true');
   });
 
   it('sem conexão mantém as alterações na janela', async () => {
@@ -96,12 +105,12 @@ describe('Dados da empresa', () => {
       if (req.method === 'GET') return { status: 200, headers: { etag: '"0"' }, body: JSON.stringify(profile('0')) };
       throw new Error('inesperado');
     });
-    renderWindow();
+    const win = renderWindow();
     const user = userEvent.setup();
-    await user.type(await screen.findByLabelText(/Razão social/), 'Rascunho');
+    await user.type(await screen.findByLabelText(/^Razão social$/), 'Rascunho');
     online = false;
-    await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/Sem conexão/));
-    expect(screen.getByLabelText(/Razão social/)).toHaveValue('Rascunho');
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
+    await waitFor(() => expect(win.notify).toHaveBeenCalledWith(expect.objectContaining({ tone: 'aviso', text: expect.stringContaining('Sem conexão') })));
+    expect(screen.getByLabelText(/^Razão social$/)).toHaveValue('Rascunho');
   });
 });

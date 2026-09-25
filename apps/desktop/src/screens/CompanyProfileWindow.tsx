@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { api, ApiError } from '../api/client';
 import type { CompanyProfile } from '../api/types';
 import { Dialog } from '../shell/Dialog';
@@ -62,27 +62,48 @@ const API_FIELD: Record<keyof Form, string> = {
 
 type Tab = 'geral' | 'endereco';
 
+const GERAL: [keyof Form, string, boolean][] = [
+  ['legalName', 'Razão social', true],
+  ['tradeName', 'Nome fantasia', false],
+  ['cnpj', 'CNPJ', false],
+  ['phone', 'Telefone', false],
+  ['email', 'E-mail', false],
+];
+const ENDERECO: [keyof Form, string, boolean][] = [
+  ['street', 'Logradouro', false],
+  ['number', 'Nº', false],
+  ['complement', 'Complemento', false],
+  ['district', 'Bairro', false],
+  ['city', 'Cidade', false],
+  ['state', 'UF', false],
+  ['postalCode', 'CEP', false],
+];
+
 /** Janela "Dados da empresa" (Configurações): primeira fatia de ponta a ponta da Sprint 1. */
 export function CompanyProfileWindow() {
   const win = useWindow();
+  // A API da janela muda de identidade quando o shell re-renderiza; os efeitos de dados não devem reexecutar por isso.
+  const winRef = useRef(win);
+  winRef.current = win;
   const [profile, setProfile] = useState<CompanyProfile | null>(null);
-  const [etag, setEtag] = useState<string>('');
+  const [etag, setEtag] = useState('');
   const [form, setForm] = useState<Form>(EMPTY);
   const [tab, setTab] = useState<Tab>('geral');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [banner, setBanner] = useState<{ tone: 'error' | 'ok' | 'warn'; text: string } | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [conflict, setConflict] = useState<string | null>(null);
 
   const original = useMemo(() => (profile ? toForm(profile) : EMPTY), [profile]);
   const dirty = useMemo(() => (Object.keys(form) as (keyof Form)[]).some((k) => form[k] !== original[k]), [form, original]);
+  const adding = profile !== null && !profile.configured;
 
   useEffect(() => win.setDirty(dirty), [dirty, win]);
 
   const load = useCallback(async () => {
     setLoading(true);
-    setBanner(null);
+    setLoadError(null);
     try {
       const r = await api.get<CompanyProfile>(PATH);
       setProfile(r.data);
@@ -91,7 +112,8 @@ export function CompanyProfileWindow() {
       setFieldErrors({});
     } catch (e) {
       const err = e as ApiError;
-      setBanner({ tone: 'error', text: err.isNetwork ? 'Sem conexão com o servidor. Tente novamente quando a conexão voltar.' : err.message });
+      setLoadError(err.isNetwork ? 'Sem conexão com o servidor. Tente de novo quando a conexão voltar.' : err.message);
+      winRef.current.notify({ tone: 'erro', text: `${err.message} (${err.code}) [${err.correlationId ?? '—'}]` });
     } finally {
       setLoading(false);
     }
@@ -108,168 +130,177 @@ export function CompanyProfileWindow() {
 
   const save = useCallback(async (): Promise<boolean> => {
     setSaving(true);
-    setBanner(null);
     try {
+      const wasConfigured = profile?.configured ?? false;
       const r = await api.put<CompanyProfile>(PATH, toRequest(formRef.current), etagRef.current);
       setProfile(r.data);
       setEtag(r.etag ?? `"${r.data.version}"`);
       setForm(toForm(r.data));
       setFieldErrors({});
-      setBanner({ tone: 'ok', text: `Dados salvos (versão ${r.data.version}).` });
-      win.notify('Dados da empresa salvos.');
+      winRef.current.notify({ tone: 'sucesso', text: `Dados da empresa ${wasConfigured ? 'atualizados' : 'adicionados'} com sucesso (versão ${r.data.version})` });
       return true;
     } catch (e) {
       const err = e as ApiError;
       if (err.isConflict) {
-        const current = err.details.find((d) => d.field === 'version')?.message.replace('atual=', '');
-        setConflict(current ?? '?');
+        setConflict(err.details.find((d) => d.field === 'version')?.message.replace('atual=', '') ?? '?');
+        winRef.current.notify({ tone: 'aviso', text: `Os dados foram alterados por outra pessoa; nada foi gravado (${err.code}) [${err.correlationId ?? '—'}]` });
       } else if (err.status === 422) {
         const map: Record<string, string> = {};
         err.details.forEach((d) => d.field && (map[d.field] = d.message));
         setFieldErrors(map);
-        const addressError = Object.keys(map).some((k) => k.startsWith('address.'));
-        const generalError = Object.keys(map).some((k) => !k.startsWith('address.'));
-        if (addressError && !generalError) setTab('endereco');
-        if (generalError) setTab('geral');
-        setBanner({ tone: 'error', text: err.message });
+        const onlyAddress = Object.keys(map).length > 0 && Object.keys(map).every((k) => k.startsWith('address.'));
+        setTab(onlyAddress ? 'endereco' : 'geral');
+        winRef.current.notify({ tone: 'erro', text: `${err.message} (${err.code}) [${err.correlationId ?? '—'}]` });
       } else if (err.isNetwork) {
-        setBanner({ tone: 'warn', text: 'Sem conexão com o servidor. Suas alterações continuam nesta janela; salve quando a conexão voltar.' });
+        winRef.current.notify({ tone: 'aviso', text: `Sem conexão com o servidor; suas alterações continuam na janela (${err.code})` });
       } else {
-        setBanner({ tone: 'error', text: `${err.message} (código de correlação ${err.correlationId ?? '—'})` });
+        winRef.current.notify({ tone: 'erro', text: `${err.message} (${err.code}) [${err.correlationId ?? '—'}]` });
       }
       return false;
     } finally {
       setSaving(false);
     }
-  }, [win]);
+  }, [profile]);
 
   useEffect(() => win.registerCommands({ save: dirty && !saving ? save : undefined }), [dirty, saving, save, win]);
 
-  const field = (key: keyof Form, label: string, opts: { required?: boolean; width?: 'sm' | 'md' | 'lg'; inputMode?: 'numeric' | 'email' | 'tel' } = {}) => {
-    const error = fieldErrors[API_FIELD[key]];
-    const id = `${win.windowId}-${key}`;
-    return (
-      <div className={`rp-field rp-field--${opts.width ?? 'md'}`}>
-        <label htmlFor={id}>
-          {label}
-          {opts.required && <span className="rp-field__req" aria-label="obrigatório"> *</span>}
-        </label>
-        <input
-          id={id}
-          value={form[key]}
-          inputMode={opts.inputMode}
-          aria-invalid={!!error}
-          aria-describedby={error ? `${id}-err` : undefined}
-          disabled={loading}
-          onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-        />
-        {error && (
-          <span id={`${id}-err`} className="rp-field__error">
-            ⚠ {error}
-          </span>
-        )}
-      </div>
-    );
+  // Letras de acesso (Alt), Enter no botão padrão e Esc para cancelar.
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (conflict !== null) return;
+    if (e.altKey) {
+      const k = e.key.toLowerCase();
+      if (k === 'g') setTab('geral');
+      else if (k === 'n') setTab('endereco');
+      else if (k === 'r') void load();
+      else return;
+      e.preventDefault();
+    } else if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT' && dirty && !saving) {
+      e.preventDefault();
+      void save();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      win.requestClose();
+    }
   };
 
+  const fields = (list: [keyof Form, string, boolean][]) => (
+    <div className={`rp-form rp-form--req rp-janela-mdi__form${adding ? ' rp-form--adicao' : ''}`}>
+      {list.map(([key, label, required]) => {
+        const error = fieldErrors[API_FIELD[key]];
+        const id = `${win.windowId}-${key}`;
+        return (
+          <Fragment key={key}>
+            <label className="rp-label" htmlFor={id}>{label}</label>
+            {required ? <span className="rp-req" aria-hidden="true">*</span> : <span />}
+            <input
+              id={id}
+              className={`rp-field${key === 'state' || key === 'postalCode' || key === 'number' ? ' rp-field--curto' : ''}`}
+              value={form[key]}
+              required={required}
+              aria-invalid={!!error}
+              aria-describedby={error ? `${id}-erro` : undefined}
+              disabled={loading}
+              onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+            />
+            {error && (
+              <>
+                <span />
+                <span />
+                <span id={`${id}-erro`} className="rp-campo-erro">
+                  <i className="rp-ico rp-ico-status-erro" /> {error}
+                </span>
+              </>
+            )}
+          </Fragment>
+        );
+      })}
+    </div>
+  );
+
+  const updated = profile?.updatedAt ? `${new Date(profile.updatedAt).toLocaleString('pt-BR')} por ${profile.updatedBy}` : '';
+
   return (
-    <div className="rp-form">
-      <header className="rp-form__header">
-        <div className="rp-form__header-left">
-          <div className="rp-form__label">Razão social</div>
-          <div className="rp-form__value">{profile?.legalName || 'Não informada'}</div>
-          <div className="rp-form__label">CNPJ</div>
-          <div className="rp-form__value">{profile?.cnpjFormatted || 'Não informado'}</div>
-        </div>
-        <div className="rp-form__header-right">
-          <div className="rp-form__label">Situação</div>
-          <div className="rp-form__value">{profile ? (profile.configured ? 'Configurada' : 'Não configurada') : '—'}</div>
-          <div className="rp-form__label">Versão</div>
-          <div className="rp-form__value">{profile?.version ?? '—'}</div>
-          <div className="rp-form__label">Atualizado em</div>
-          <div className="rp-form__value">
-            {profile?.updatedAt ? `${new Date(profile.updatedAt).toLocaleString('pt-BR')} por ${profile.updatedBy}` : '—'}
-          </div>
-        </div>
-      </header>
-
-      {banner && (
-        <div className={`rp-banner rp-banner--${banner.tone}`} role={banner.tone === 'ok' ? 'status' : 'alert'}>
-          {banner.text}
-        </div>
-      )}
-
-      <div className="rp-tabs" role="tablist">
-        <button type="button" role="tab" aria-selected={tab === 'geral'} className={tab === 'geral' ? 'is-active' : ''} onClick={() => setTab('geral')}>
-          Geral
-        </button>
-        <button type="button" role="tab" aria-selected={tab === 'endereco'} className={tab === 'endereco' ? 'is-active' : ''} onClick={() => setTab('endereco')}>
-          Endereço
-        </button>
-      </div>
-
-      <div className="rp-form__body" role="tabpanel">
-        {loading ? (
-          <p className="rp-muted">Carregando…</p>
-        ) : tab === 'geral' ? (
-          <div className="rp-grid">
-            {field('legalName', 'Razão social', { required: true, width: 'lg' })}
-            {field('tradeName', 'Nome fantasia', { width: 'lg' })}
-            {field('cnpj', 'CNPJ', { width: 'md' })}
-            {field('phone', 'Telefone', { width: 'md', inputMode: 'tel' })}
-            {field('email', 'E-mail', { width: 'lg', inputMode: 'email' })}
-          </div>
+    <>
+      <div className="rp-window-body rp-janela-mdi__corpo" onKeyDown={onKeyDown}>
+        {loadError ? (
+          <p className="rp-janela-mdi__aviso">
+            <i className="rp-ico rp-ico-status-erro" /> {loadError}
+          </p>
         ) : (
-          <div className="rp-grid">
-            {field('street', 'Logradouro', { width: 'lg' })}
-            {field('number', 'Número', { width: 'sm' })}
-            {field('complement', 'Complemento', { width: 'md' })}
-            {field('district', 'Bairro', { width: 'md' })}
-            {field('city', 'Cidade', { width: 'md' })}
-            {field('state', 'UF', { width: 'sm' })}
-            {field('postalCode', 'CEP', { width: 'sm', inputMode: 'numeric' })}
-          </div>
+          <>
+            <div className="rp-janela-mdi__cabecalho">
+              <div className="rp-form">
+                <span className="rp-label">Razão social</span>
+                <input className="rp-field rp-field--readonly" readOnly value={profile?.legalName ?? ''} aria-label="Razão social atual" />
+                <span className="rp-label">CNPJ</span>
+                <input className="rp-field rp-field--readonly" readOnly value={profile?.cnpjFormatted ?? ''} aria-label="CNPJ atual" />
+              </div>
+              <div className="rp-form">
+                <span className="rp-label">Situação</span>
+                <span>
+                  {profile && <span className={`rp-badge ${profile.configured ? 'rp-badge--aprovado' : 'rp-badge--pendente'}`}>{profile.configured ? 'Configurada' : 'Não configurada'}</span>}
+                  {dirty && <span className="rp-badge rp-badge--pendente rp-janela-mdi__selo">Alterações não salvas</span>}
+                </span>
+                <span className="rp-label">Versão</span>
+                <input className="rp-field rp-field--readonly rp-field--num" readOnly value={profile?.version ?? ''} aria-label="Versão" />
+                <span className="rp-label">Atualizado em</span>
+                <input className="rp-field rp-field--readonly" readOnly value={updated} aria-label="Atualizado em" />
+              </div>
+            </div>
+
+            <div className="rp-tabs" role="tablist">
+              <div className="rp-tab" role="tab" tabIndex={0} aria-selected={tab === 'geral'} onClick={() => setTab('geral')} onKeyDown={(e) => e.key === 'Enter' && setTab('geral')}>
+                <u>G</u>eral
+              </div>
+              <div className="rp-tab" role="tab" tabIndex={0} aria-selected={tab === 'endereco'} onClick={() => setTab('endereco')} onKeyDown={(e) => e.key === 'Enter' && setTab('endereco')}>
+                E<u>n</u>dereço
+              </div>
+            </div>
+            <div className="rp-tabpanel" role="tabpanel">
+              {loading ? <p className="rp-janela-mdi__aviso">Carregando</p> : fields(tab === 'geral' ? GERAL : ENDERECO)}
+            </div>
+          </>
         )}
       </div>
 
-      <footer className="rp-form__actions">
-        <div>
-          <button type="button" className="rp-button rp-button--primary" disabled={!dirty || saving || loading} onClick={() => void save()}>
-            {saving ? 'Salvando…' : 'Salvar'}
+      <div className="rp-window-foot">
+        <div className="rp-btn-row">
+          <button type="button" className="rp-btn rp-btn--default" disabled={!dirty || saving || loading} onClick={() => void save()}>
+            {adding ? 'Adicionar' : 'Atualizar'}
           </button>
-          <button type="button" className="rp-button" onClick={win.requestClose}>
-            Fechar
-          </button>
-        </div>
-        <div>
-          <button type="button" className="rp-button" disabled={loading || saving} onClick={() => void load()}>
-            Recarregar
+          <button type="button" className="rp-btn" onClick={win.requestClose}>
+            Cancelar
           </button>
         </div>
-      </footer>
+        <div className="rp-btn-row">
+          <button type="button" className="rp-btn" disabled={loading || saving} onClick={() => void load()}>
+            <u>R</u>ecarregar
+          </button>
+        </div>
+      </div>
 
       {conflict !== null && (
         <Dialog
-          title="Dados alterados por outra pessoa"
+          icon="aviso"
+          label="Dados alterados por outra pessoa"
           onEscape={() => setConflict(null)}
           buttons={[
-            { label: 'Continuar editando', onClick: () => setConflict(null) },
             {
-              label: 'Recarregar do servidor',
+              label: 'Recarregar',
               primary: true,
               onClick: () => {
                 setConflict(null);
                 void load();
               },
             },
+            { label: 'Continuar editando', onClick: () => setConflict(null) },
           ]}
         >
-          <p>
-            Estes dados foram alterados em outra janela ou estação (versão atual {conflict}). Suas alterações <strong>não</strong> foram gravadas.
-          </p>
-          <p>Recarregar descarta o que você digitou e mostra a versão do servidor.</p>
+          Os dados da empresa foram alterados em outra janela ou estação (versão atual {conflict}) e suas alterações não foram gravadas.
+          <br />
+          Deseja recarregar a versão do servidor? Isso descarta o que você digitou.
         </Dialog>
       )}
-    </div>
+    </>
   );
 }

@@ -96,10 +96,15 @@ O app procura o servidor em `http://localhost:8080` (pode ser alterado com `REND
 apps/desktop/      app do Mac (Electron + React + TypeScript)
 backend/java/      servidor (Spring Boot, módulos por pacote, migrações Flyway)
 infra/local/       banco via Docker (opcional)
+design-system/     design system Renda+ ERP (fonte única da interface)
 docs/              plano funcional, backend (B01–B16), ADRs, Scrum
 decisoes/          planilha das decisões pendentes
 tools/b01/         verificador da especificação
 ```
+
+## Design system
+
+Toda a interface segue `design-system/` (guia em `design-system/README.md`, tokens, componentes `rp-*` e ícones). Antes de criar uma tela, leia o guia e o `README.md` do componente. Não crie cores, fontes ou sombras fora dos tokens. Veja também `CLAUDE.md` e o ADR-017.
 
 ## Documentação
 
