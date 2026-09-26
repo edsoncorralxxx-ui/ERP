@@ -40,6 +40,7 @@ function servidor(extra: (req: TransportRequest) => TransportResponse | undefine
     if (!logado) return { status: 401, headers: {}, body: JSON.stringify({ code: 'UNAUTHENTICATED', message: 'Sessão expirada', details: [] }) };
     if (req.path === '/api/v1/company-profile') return ok(perfil, { etag: '"1"' });
     if (req.path.startsWith('/api/v1/customers')) return ok([]);
+    if (['/api/v1/suppliers', '/api/v1/items', '/api/v1/units-of-measure', '/api/v1/item-categories'].some((p) => req.path.startsWith(p))) return ok([]);
     return ok({});
   });
   return { chamadas, expirar: () => (logado = false) };
@@ -89,8 +90,11 @@ describe('moldura do aplicativo', () => {
     await user.click(within(gaveta).getByRole('button', { name: /Clientes e unidades/ }));
     expect(await screen.findByRole('dialog', { name: 'Clientes e unidades' })).toBeInTheDocument();
     expect(await screen.findByText('Nenhum cliente cadastrado ainda.')).toBeInTheDocument();
-    const futura = within(gaveta).getByText('Fornecedores').closest('[aria-disabled]');
+    const futura = within(gaveta).getByText('Auditoria').closest('[aria-disabled]');
     expect(futura).toHaveAttribute('aria-disabled', 'true');
+    await user.click(within(gaveta).getByRole('button', { name: /^Fornecedores/ }));
+    expect(await screen.findByRole('dialog', { name: 'Fornecedores' })).toBeInTheDocument();
+    expect(await screen.findByText('Nenhum fornecedor cadastrado ainda.')).toBeInTheDocument();
   });
 
   it('campo com limite em foco mostra o tamanho permitido no rodapé', async () => {

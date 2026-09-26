@@ -72,12 +72,18 @@ const WINDOWS: Record<string, WindowKind> = {
   'configuracoes:EMPRESA': 'company-profile',
   'configuracoes:ACESSO': 'users',
   'clientes:': 'customers',
+  'fornecedores:': 'suppliers',
+  'materiais:': 'items',
+  'materiais:CATALOGO': 'catalog',
 };
 
 /** Permissão de leitura que cada janela exige; sem ela o item aparece, mas não abre. */
 const NEEDS: Partial<Record<WindowKind, string>> = {
   users: 'user.admin',
   customers: 'partner.read',
+  suppliers: 'partner.read',
+  items: 'item.read',
+  catalog: 'item.read',
   'company-profile': 'company.read',
 };
 

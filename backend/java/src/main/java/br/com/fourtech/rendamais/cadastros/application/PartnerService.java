@@ -217,7 +217,8 @@ public class PartnerService {
             return new RuleViolationException("PARTNER_CNPJ_DUPLICATE", "Já existe um parceiro com este CNPJ.",
                     List.of(new FieldIssue("cnpj", "CNPJ já cadastrado.")));
         }
-        String who = other.code() + " — " + other.legalName();
+        // "C00001 — Aços Paraná Ltda." já termina em ponto: não repete o ponto no fim da frase.
+        String who = other.code() + " — " + other.legalName().replaceAll("\\.+$", "");
         if (!other.hasRole(role)) {
             Partner.Role has = other.roles().keySet().iterator().next();
             return new RuleViolationException("PARTNER_OTHER_ROLE",

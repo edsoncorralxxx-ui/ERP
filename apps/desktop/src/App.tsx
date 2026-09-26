@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { api, setUnauthorizedHandler } from './api/client';
 import type { CompanyProfile, SessionUser } from './api/types';
+import { CatalogWindow } from './screens/CatalogWindow';
 import { ChangePasswordWindow } from './screens/ChangePasswordWindow';
 import { CockpitWindow } from './screens/CockpitWindow';
 import { CompanyProfileWindow } from './screens/CompanyProfileWindow';
 import { CustomerWindow } from './screens/CustomerWindow';
 import { CustomersWindow } from './screens/CustomersWindow';
+import { ItemsWindow } from './screens/ItemsWindow';
+import { ItemWindow } from './screens/ItemWindow';
 import { ServerStatusWindow } from './screens/ServerStatusWindow';
+import { SuppliersWindow } from './screens/SuppliersWindow';
+import { SupplierWindow } from './screens/SupplierWindow';
 import { UsersWindow } from './screens/UsersWindow';
 import { Dialog } from './shell/Dialog';
 import { LoginScreen } from './shell/LoginScreen';
@@ -26,6 +31,11 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   cockpit: { title: 'Meu cockpit', size: { w: 1180, h: 720 } },
   customers: { title: 'Clientes e unidades', size: { w: 1100, h: 620 } },
   customer: { title: 'Cliente', size: { w: 980, h: 640 } },
+  suppliers: { title: 'Fornecedores', size: { w: 1100, h: 620 } },
+  supplier: { title: 'Fornecedor', size: { w: 980, h: 660 } },
+  items: { title: 'Materiais e serviços', size: { w: 1100, h: 620 } },
+  item: { title: 'Material ou serviço', size: { w: 900, h: 600 } },
+  catalog: { title: 'Unidades e categorias', size: { w: 920, h: 560 } },
   users: { title: 'Usuários e permissões', size: { w: 980, h: 560 } },
   password: { title: 'Alteração de senha', size: { w: 520, h: 330 } },
 };
@@ -287,6 +297,16 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                         <CustomersWindow />
                       ) : w.kind === 'customer' ? (
                         <CustomerWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'suppliers' ? (
+                        <SuppliersWindow />
+                      ) : w.kind === 'supplier' ? (
+                        <SupplierWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'items' ? (
+                        <ItemsWindow />
+                      ) : w.kind === 'item' ? (
+                        <ItemWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'catalog' ? (
+                        <CatalogWindow />
                       ) : w.kind === 'users' ? (
                         <UsersWindow />
                       ) : w.kind === 'password' ? (

@@ -2,7 +2,7 @@
 
 ERP industrial orientado a projetos para a Fourtech/Renda+. App macOS em Electron + React; servidor em Java (Spring Boot) + PostgreSQL; Python para processamento (a partir da sprint de importação).
 
-Situação: **Sprint 2 — login, permissões e clientes.** Funcionam de ponta a ponta (app → servidor → banco): entrar com usuário e senha, perfis Administrador e Consulta, *Clientes e unidades* (com contatos, histórico e inativação), *Usuários e permissões* e *Dados da empresa*, com controle de versão, auditoria e comando que não se duplica. Os demais módulos entram a cada sprint (`docs/scrum/product-backlog.md`).
+Situação: **Sprint 3 — fornecedores, materiais e serviços** (entregue para Review). Funcionam de ponta a ponta (app → servidor → banco): entrar com usuário e senha, perfis Administrador e Consulta, *Clientes e unidades* e *Fornecedores* (o mesmo parceiro com dois papéis, com contatos, histórico e inativação por papel), *Materiais e serviços* (código do sistema, unidade, categoria, conversões e custo de referência), *Unidades e categorias*, *Usuários e permissões* e *Dados da empresa*, com controle de versão, auditoria e comando que não se duplica. Os demais módulos entram a cada sprint (`docs/scrum/product-backlog.md`).
 
 ## Rodar no seu Mac
 
@@ -88,7 +88,7 @@ A janela do Renda+ ERP abre na tela de login: entre com o administrador criado n
 
 *Arquivo → Bloquear tela* pede a senha de novo sem fechar as janelas; *Arquivo → Trocar senha* troca a sua senha.
 
-**Esqueceu a senha do único administrador?** Peça a outro administrador para redefinir. Se não houver outro, no Terminal: `psql renda -c "delete from user_session; delete from app_user;"` e reinicie o servidor com as variáveis do passo 4 — isso apaga todos os usuários e sessões; clientes, empresa e auditoria continuam.
+**Esqueceu a senha do único administrador?** Peça a outro administrador para redefinir. Se não houver outro, no Terminal: `psql renda -c "delete from user_session; delete from app_user;"` e reinicie o servidor com as variáveis do passo 4 — isso apaga todos os usuários e sessões; clientes, fornecedores, itens, empresa e auditoria continuam.
 
 ### Problemas comuns
 

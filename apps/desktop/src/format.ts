@@ -26,3 +26,26 @@ export const dataHora = (v: Data, segundos = false): string => {
 
 /** `1.234` ou, com casas, `1.234,50` */
 export const numero = (n: number, casas = 0): string => n.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });
+
+/**
+ * Decimal digitado no padrão brasileiro ("1.234,5") para o texto com ponto que a API espera ("1234.5"). Vazio vira
+ * nulo; texto que não é número volta como veio, para o servidor apontar o erro no campo.
+ */
+export const decimalParaApi = (texto: string): string | null => {
+  const t = texto.trim();
+  if (t === '') return null;
+  // "1.234" sem vírgula é milhar (padrão brasileiro), não 1,234.
+  const soMilhar = !t.includes(',') && /^-?\d{1,3}(\.\d{3})+$/.test(t);
+  const semMilhar = t.includes(',') || soMilhar ? t.replace(/\./g, '').replace(',', '.') : t;
+  return /^-?\d+(\.\d+)?$/.test(semMilhar) ? semMilhar : t;
+};
+
+/** Decimal da API ("184.500000") no padrão brasileiro, com `minimo` casas e sem zeros sobrando ("184,50", "0,333333"). */
+export const decimalDaApi = (valor: string | null | undefined, minimo = 2): string => {
+  if (valor === null || valor === undefined || valor === '') return '';
+  const [inteiro, fracao = ''] = valor.replace(/^-/, '').split('.');
+  let casas = fracao.replace(/0+$/, '');
+  if (casas.length < minimo) casas = casas.padEnd(minimo, '0');
+  const milhar = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${valor.startsWith('-') ? '-' : ''}${milhar}${casas ? `,${casas}` : ''}`;
+};

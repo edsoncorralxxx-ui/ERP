@@ -8,7 +8,15 @@ describe('menu lateral', () => {
 
   it('todo item marcado como implementado abre uma janela (nenhum clique morto)', () => {
     const implementados = MENU.flatMap((m) => m.itens).filter((i) => i.implementado);
-    expect(implementados.map((i) => i.rotulo).sort()).toEqual(['Clientes e unidades', 'Dados da empresa', 'Status do servidor', 'Usuários e permissões']);
+    expect(implementados.map((i) => i.rotulo).sort()).toEqual([
+      'Clientes e unidades',
+      'Dados da empresa',
+      'Fornecedores',
+      'Materiais e serviços',
+      'Status do servidor',
+      'Unidades e categorias',
+      'Usuários e permissões',
+    ]);
     expect(implementados.every((i) => windowFor(i) !== undefined)).toBe(true);
   });
 

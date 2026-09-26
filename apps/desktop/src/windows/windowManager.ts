@@ -3,7 +3,19 @@
  * Funções puras para facilitar teste; o React só despacha ações.
  */
 
-export type WindowKind = 'company-profile' | 'server-status' | 'cockpit' | 'customers' | 'customer' | 'users' | 'password';
+export type WindowKind =
+  | 'company-profile'
+  | 'server-status'
+  | 'cockpit'
+  | 'customers'
+  | 'customer'
+  | 'suppliers'
+  | 'supplier'
+  | 'items'
+  | 'item'
+  | 'catalog'
+  | 'users'
+  | 'password';
 export type WindowMode = 'normal' | 'minimized' | 'maximized';
 
 export type Rect = { x: number; y: number; w: number; h: number };

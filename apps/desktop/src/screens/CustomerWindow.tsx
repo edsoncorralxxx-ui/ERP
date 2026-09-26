@@ -2,10 +2,13 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type Keybo
 import { api, ApiError } from '../api/client';
 import type { Customer, CustomerContact, CustomerUnit, HistoryEntry } from '../api/types';
 import { dataHora as formatarDataHora } from '../format';
-import { Dialog } from '../shell/Dialog';
 import { useSession } from '../shell/SessionContext';
 import { useWindow } from '../windows/WindowContext';
+import { DialogoConflito, DialogoInativar, DialogoOutroPapel } from './comum/Dialogos';
+import { GradeContatos } from './comum/GradeContatos';
+import { GradeHistorico } from './comum/GradeHistorico';
 import { CLIENTES_ALTERADOS } from './CustomersWindow';
+import { FORNECEDORES_ALTERADOS } from './SuppliersWindow';
 
 type Tab = 'geral' | 'unidades' | 'contatos' | 'historico';
 type Unit = { id: string | null; name: string; street: string; number: string; district: string; city: string; state: string; postalCode: string };
@@ -14,7 +17,6 @@ type Form = { legalName: string; tradeName: string; cnpj: string; group: string;
 
 const VAZIO: Form = { legalName: '', tradeName: '', cnpj: '', group: '', units: [], contacts: [] };
 const UNIDADE: Unit = { id: null, name: '', street: '', number: '', district: '', city: '', state: '', postalCode: '' };
-const CONTATO: Contact = { id: null, name: '', role: '', phone: '', email: '' };
 
 const s = (v: string | null | undefined) => v ?? '';
 const n = (v: string) => (v.trim() === '' ? null : v.trim());
@@ -49,11 +51,6 @@ function toRequest(f: Form) {
   };
 }
 
-const ROTULO: Record<string, string> = {
-  code: 'Código', legalName: 'Razão social', tradeName: 'Nome fantasia', cnpj: 'CNPJ', group: 'Grupo', status: 'Situação', units: 'Unidades', contacts: 'Contatos',
-};
-const ACAO: Record<string, string> = { PARTNER_REGISTERED: 'Cadastro', PARTNER_UPDATED: 'Alteração', PARTNER_DEACTIVATED: 'Inativação' };
-
 function novaChave(): string {
   return typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `k-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -78,7 +75,8 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
   const [gravando, setGravando] = useState(false);
   const [erros, setErros] = useState<Record<string, string>>({});
   const [conflito, setConflito] = useState<string | null>(null);
-  const [inativar, setInativar] = useState<{ motivo: string; erro: string | null } | null>(null);
+  const [inativar, setInativar] = useState(false);
+  const [outroPapel, setOutroPapel] = useState<{ mensagem: string; id: string; versao: string } | null>(null);
   const [historico, setHistorico] = useState<HistoryEntry[] | null>(null);
   const chave = useRef(novaChave());
 
@@ -127,7 +125,12 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
 
   const falha = useCallback((e: unknown) => {
     const x = e as ApiError;
-    if (x.isConflict) {
+    if (x.code === 'PARTNER_OTHER_ROLE') {
+      // CNPJ de um fornecedor: em vez de duplicar o parceiro, oferece torná-lo também cliente.
+      const d = (f: string) => x.details.find((i) => i.field === f)?.message ?? '';
+      setOutroPapel({ mensagem: x.message, id: d('partnerId'), versao: d('version') });
+      winRef.current.notify({ tone: 'aviso', text: `${x.message} (${x.code})` });
+    } else if (x.isConflict) {
       setConflito(x.details.find((d) => d.field === 'version')?.message.replace('atual=', '') ?? '?');
       winRef.current.notify({ tone: 'aviso', text: `O cliente foi alterado por outra pessoa; nada foi gravado (${x.code}) [${x.correlationId ?? '—'}]` });
     } else if (x.status === 422) {
@@ -170,23 +173,39 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
     }
   }, [cliente, etag, falha]);
 
-  const confirmarInativacao = async () => {
-    if (!cliente || !inativar) return;
-    if (!inativar.motivo.trim()) {
-      setInativar({ ...inativar, erro: 'Informe o motivo da inativação.' });
-      return;
-    }
+  const confirmarInativacao = async (motivo: string) => {
+    if (!cliente) return;
+    setInativar(false);
     try {
-      const r = await api.post<Customer>(`/api/v1/customers/${cliente.id}/deactivate`, { reason: inativar.motivo.trim() }, { 'If-Match': etag });
+      const r = await api.post<Customer>(`/api/v1/customers/${cliente.id}/deactivate`, { reason: motivo }, { 'If-Match': etag });
       setCliente(r.data);
       setEtag(r.etag ?? `"${r.data.version}"`);
       setForm(toForm(r.data));
       setHistorico(null);
-      setInativar(null);
       winRef.current.notify({ tone: 'sucesso', text: `Cliente ${r.data.code} inativado com sucesso` });
       window.dispatchEvent(new Event(CLIENTES_ALTERADOS));
     } catch (e) {
-      setInativar(null);
+      falha(e);
+    }
+  };
+
+  /** Dá o papel de cliente ao parceiro existente e abre a ficha dele nesta janela (o digitado aqui não é gravado). */
+  const tornarCliente = async () => {
+    if (!outroPapel) return;
+    const alvo = outroPapel;
+    setOutroPapel(null);
+    try {
+      const r = await api.post<Customer>(`/api/v1/customers/${alvo.id}/enable`, undefined, { 'If-Match': `"${alvo.versao}"` });
+      setCliente(r.data);
+      setId(r.data.id);
+      setEtag(r.etag ?? `"${r.data.version}"`);
+      setForm(toForm(r.data));
+      setErros({});
+      setHistorico(null);
+      winRef.current.notify({ tone: 'sucesso', text: `Parceiro ${r.data.code} agora também é cliente` });
+      window.dispatchEvent(new Event(CLIENTES_ALTERADOS));
+      window.dispatchEvent(new Event(FORNECEDORES_ALTERADOS));
+    } catch (e) {
       falha(e);
     }
   };
@@ -196,15 +215,14 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
 
   const set = (patch: Partial<Form>) => setForm((f) => ({ ...f, ...patch }));
   const setUnit = (i: number, patch: Partial<Unit>) => setForm((f) => ({ ...f, units: f.units.map((u, j) => (j === i ? { ...u, ...patch } : u)) }));
-  const setContact = (i: number, patch: Partial<Contact>) => setForm((f) => ({ ...f, contacts: f.contacts.map((c, j) => (j === i ? { ...c, ...patch } : c)) }));
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (conflito !== null || inativar !== null) return;
+    if (conflito !== null || inativar || outroPapel !== null) return;
     if (e.altKey) {
       const k = e.key.toLowerCase();
       const alvo: Record<string, Tab> = { g: 'geral', u: 'unidades', o: 'contatos', h: 'historico' };
       if (alvo[k] && (alvo[k] !== 'historico' || id)) setTab(alvo[k]);
-      else if (k === 'i' && cliente && !inativo && can('partner.deactivate')) setInativar({ motivo: '', erro: null });
+      else if (k === 'i' && cliente && !inativo && can('partner.deactivate')) setInativar(true);
       else return;
       e.preventDefault();
     } else if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT' && podeGravar) {
@@ -267,7 +285,7 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
   };
 
   // Tabela de edição: Ctrl+Insert adiciona uma linha e Ctrl+Delete remove a linha em foco.
-  const teclasDaTabela = (lista: 'units' | 'contacts', vazia: Unit | Contact) => (e: KeyboardEvent<HTMLTableElement>) => {
+  const teclasDaTabela = (lista: 'units', vazia: Unit) => (e: KeyboardEvent<HTMLTableElement>) => {
     if (somenteLeitura || !e.ctrlKey || (e.key !== 'Insert' && e.key !== 'Delete')) return;
     e.preventDefault();
     e.stopPropagation();
@@ -331,6 +349,15 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
                   </span>
                   {alterado && <span className="rp-badge rp-badge--pendente rp-janela-mdi__selo">Alterações não salvas</span>}
                 </span>
+                {cliente?.supplier && (
+                  <>
+                    <span className="rp-label rp-link-field">
+                      <span className="rp-link" role="link" tabIndex={0} aria-label="Abrir a ficha de fornecedor" title="Abrir a ficha de fornecedor" onClick={() => win.open('supplier', cliente.id)} onKeyDown={(e) => e.key === 'Enter' && win.open('supplier', cliente.id)} />
+                      Fornecedor
+                    </span>
+                    <input className="rp-field rp-field--readonly" readOnly value="Também é fornecedor ativo" aria-label="Fornecedor" />
+                  </>
+                )}
                 <span className="rp-label">Versão</span>
                 <input className="rp-field rp-field--readonly rp-field--num" readOnly value={cliente?.version ?? ''} aria-label="Versão" />
                 <span className="rp-label">Atualizado em</span>
@@ -436,95 +463,16 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
                   ))}
                 </div>
               ) : tab === 'contatos' ? (
-                <div className="rp-tabela">
-                  <div className="rp-tabela-acoes">
-                    <span className="rp-tabela-tit">Contatos do cliente</span>
-                  </div>
-                  <div className="rp-grid-rolagem rp-rolagem rp-ficha__grade">
-                    <table className={`rp-grid rp-grid--edicao${adicao && !somenteLeitura ? ' rp-form--adicao' : ''}`} onKeyDown={teclasDaTabela('contacts', CONTATO)}>
-                      <thead>
-                        <tr>
-                          <th className="rp-ficha__col-num">#</th>
-                          <th>
-                            Nome <span className="rp-req">*</span>
-                          </th>
-                          <th>Função</th>
-                          <th>Telefone</th>
-                          <th>E-mail</th>
-                          <th className="rp-ficha__col-x" aria-label="Remover" />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {form.contacts.map((c, i) => (
-                          <tr key={c.id ?? `n${i}`}>
-                            <td className="rownum">{i + 1}</td>
-                            {celula('contacts', i, 'name', c.name, (v) => setContact(i, { name: v }), 'Nome')}
-                            {celula('contacts', i, 'role', c.role, (v) => setContact(i, { role: v }), 'Função')}
-                            {celula('contacts', i, 'phone', c.phone, (v) => setContact(i, { phone: v }), 'Telefone')}
-                            {celula('contacts', i, 'email', c.email, (v) => setContact(i, { email: v }), 'E-mail')}
-                            <td
-                              className="rp-linha-x"
-                              role={somenteLeitura ? undefined : 'button'}
-                              tabIndex={somenteLeitura ? -1 : 0}
-                              title="Remover contato"
-                              aria-label={`Remover contato ${i + 1}`}
-                              onClick={() => !somenteLeitura && set({ contacts: form.contacts.filter((_, j) => j !== i) })}
-                              onKeyDown={(e) => e.key === 'Enter' && !somenteLeitura && set({ contacts: form.contacts.filter((_, j) => j !== i) })}
-                            >
-                              {somenteLeitura ? '' : '×'}
-                            </td>
-                          </tr>
-                        ))}
-                        {!somenteLeitura && linhaNova(form.contacts.length + 1, 5, 'Clique para adicionar um contato…', () => set({ contacts: [...form.contacts, { ...CONTATO }] }))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {errosDaLista('contacts', 'Contato').map((m) => (
-                    <p key={m} className="rp-campo-erro rp-ficha__erro">
-                      <i className="rp-ico rp-ico-status-erro" aria-hidden="true" /> {m}
-                    </p>
-                  ))}
-                </div>
+                <GradeContatos
+                  contatos={form.contacts}
+                  onChange={(contacts) => set({ contacts })}
+                  somenteLeitura={somenteLeitura}
+                  adicao={adicao}
+                  erros={erros}
+                  titulo="Contatos do cliente"
+                />
               ) : (
-                <div className="rp-grid-rolagem rp-rolagem rp-ficha__grade">
-                  {historico === null ? (
-                    <p className="rp-janela-mdi__aviso">Carregando</p>
-                  ) : (
-                    <table className="rp-grid rp-janela-mdi__grade" aria-label="Histórico do cliente">
-                      <thead>
-                        <tr>
-                          <th>Data e hora</th>
-                          <th>Usuário</th>
-                          <th>Operação</th>
-                          <th className="num">Versão</th>
-                          <th>Campo</th>
-                          <th>Antes</th>
-                          <th>Depois</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {historico.flatMap((h, i) => {
-                          const mudancas = Object.entries(h.changes);
-                          const linhas: [string, string, string][] = mudancas.length
-                            ? mudancas.map(([k, v]) => [ROTULO[k] ?? k, s(v.before), s(v.after)])
-                            : [['', '', '']];
-                          if (h.reason) linhas.push(['Motivo', '', h.reason]);
-                          return linhas.map(([campoH, antes, depois], j) => (
-                            <tr key={`${i}-${j}`}>
-                              <td>{j === 0 ? dataHora(h.occurredAt) : ''}</td>
-                              <td>{j === 0 ? h.actor : ''}</td>
-                              <td>{j === 0 ? ACAO[h.action] ?? h.action : ''}</td>
-                              <td className="num">{j === 0 ? h.version : ''}</td>
-                              <td>{campoH}</td>
-                              <td className="rp-ficha__antes">{antes}</td>
-                              <td>{depois}</td>
-                            </tr>
-                          ));
-                        })}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
+                <GradeHistorico historico={historico} rotulo="Histórico do cliente" />
               )}
             </div>
           </>
@@ -544,67 +492,37 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
         </div>
         <div className="rp-btn-row">
           {cliente && !inativo && can('partner.deactivate') && (
-            <button type="button" className="rp-btn" onClick={() => setInativar({ motivo: '', erro: null })}>
+            <button type="button" className="rp-btn" onClick={() => setInativar(true)}>
               <span><u>I</u>nativar</span>
             </button>
           )}
         </div>
       </div>
 
-      {inativar && (
-        <Dialog
-          icon="aviso"
-          label="Inativar cliente"
-          onEscape={() => setInativar(null)}
-          buttons={[
-            { label: 'Inativar', primary: true, onClick: () => void confirmarInativacao() },
-            { label: 'Cancelar', onClick: () => setInativar(null) },
-          ]}
-        >
-          O cliente {cliente?.code} deixa de aparecer na lista de ativos; o histórico é preservado.
-          <br />
-          <div className="rp-form rp-msgbox__form">
-            <label className="rp-label" htmlFor={fid('motivo')}>Motivo</label>
-            <input
-              id={fid('motivo')}
-              className="rp-field"
-              maxLength={500}
-              value={inativar.motivo}
-              aria-invalid={!!inativar.erro}
-              onChange={(e) => setInativar({ motivo: e.target.value, erro: null })}
-              onKeyDown={(e) => e.key === 'Enter' && void confirmarInativacao()}
-            />
-          </div>
-          {inativar.erro && (
-            <span className="rp-campo-erro">
-              <i className="rp-ico rp-ico-status-erro" aria-hidden="true" /> {inativar.erro}
-            </span>
-          )}
-        </Dialog>
+      {inativar && cliente && (
+        <DialogoInativar
+          rotulo="Inativar cliente"
+          texto={`O cliente ${cliente.code} deixa de aparecer na lista de ativos; o histórico é preservado${cliente.supplier ? ' e ele continua fornecedor' : ''}.`}
+          idCampo={fid('motivo')}
+          onConfirmar={(m) => void confirmarInativacao(m)}
+          onCancelar={() => setInativar(false)}
+        />
       )}
 
       {conflito !== null && (
-        <Dialog
-          icon="aviso"
-          label="Cliente alterado por outra pessoa"
-          onEscape={() => setConflito(null)}
-          buttons={[
-            {
-              label: 'Recarregar',
-              primary: true,
-              onClick: () => {
-                setConflito(null);
-                if (id) void carregar(id);
-              },
-            },
-            { label: 'Continuar editando', onClick: () => setConflito(null) },
-          ]}
-        >
-          O cliente foi alterado em outra janela ou estação (versão atual {conflito}) e suas alterações não foram gravadas.
-          <br />
-          Deseja recarregar a versão do servidor? Isso descarta o que você digitou.
-        </Dialog>
+        <DialogoConflito
+          rotulo="Cliente alterado por outra pessoa"
+          objeto="O cliente"
+          versao={conflito}
+          onRecarregar={() => {
+            setConflito(null);
+            if (id) void carregar(id);
+          }}
+          onContinuar={() => setConflito(null)}
+        />
       )}
+
+      {outroPapel && <DialogoOutroPapel mensagem={outroPapel.mensagem} papel="cliente" onSim={() => void tornarCliente()} onNao={() => setOutroPapel(null)} />}
     </>
   );
 }

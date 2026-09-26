@@ -14,7 +14,7 @@ const ADMIN: SessionUser = {
 const cliente = (version: string, over: Partial<Customer> = {}): Customer => ({
   id: 'c-1', code: 'C00001', legalName: 'Fecularia Vale Ltda.', tradeName: 'Vale', cnpj: null, cnpjFormatted: null, group: null,
   status: 'ATIVO', units: [{ id: 'u-9', name: 'Matriz', street: null, number: null, district: null, city: 'Assis', state: 'SP', postalCode: null }],
-  contacts: [], version, createdAt: '2026-09-25T12:00:00Z', createdBy: 'ana', updatedAt: '2026-09-25T12:00:00Z', updatedBy: 'ana', ...over,
+  supplier: false, contacts: [], version, createdAt: '2026-09-25T12:00:00Z', createdBy: 'ana', updatedAt: '2026-09-25T12:00:00Z', updatedBy: 'ana', ...over,
 });
 
 function abrir(recordKey: string, user: SessionUser = ADMIN) {

@@ -1,6 +1,6 @@
 # Sprint 3 — Fornecedores, materiais e serviços
 
-Situação: **Em execução** (25/09/2026). Planning aprovado pelo PO em 25/09/2026.
+Situação: **Entregue para Review** (25/09/2026). Planning aprovado pelo PO em 25/09/2026.
 
 ## Objetivo
 
@@ -42,3 +42,30 @@ Equipamentos (Sprint 4); itens fornecidos por fornecedor com prazo por item (`su
 3. Cadastrar um fornecedor com a categoria "Chapas"; tentar cadastrar como fornecedor o CNPJ de um cliente e aceitar torná-lo fornecedor.
 4. Inativar o papel de fornecedor desse parceiro e ver que ele continua cliente ativo.
 5. Entrar como Consulta: vê tudo, não altera nada.
+
+## Review — evidências
+
+| Item | Resultado | Evidência |
+|---|---|---|
+| S3-01 Papéis do parceiro | Pronto | Migração V5 (`partner_role`), clientes da Sprint 2 migrados com a situação que tinham (conferido num banco com dados da V4); `SupplierApiTest`: inativar o fornecedor deixa o cliente ativo e o parceiro continua `ATIVO` |
+| S3-02 Fornecedores no servidor | Pronto | `SupplierApiTest` (5 testes): código `F00001`, categorias, prazo e condições, auditoria e evento com o papel; mesma chave devolve o mesmo fornecedor; CNPJ de cliente → `PARTNER_OTHER_ROLE` com `partnerId` e versão, sem criar outro parceiro; `/enable` idempotente mantém o código `C`; a ficha do fornecedor não mexe nas unidades do cliente; Consulta lê e recebe 403 ao cadastrar |
+| S3-03 Unidades e categorias | Pronto | Lista inicial de 11 unidades (V6); `ItemApiTest`: código em maiúsculas e único, nome de categoria único sem diferenciar maiúsculas, versão (412), só `catalog.admin` altera, tudo auditado |
+| S3-04 Materiais e serviços | Pronto | `ItemApiTest` (5 testes): códigos `M00001`/`S00001`, custo e fator com 6 casas, serviço não controla estoque (também no banco), fator > 0, unidade repetida e da própria unidade recusadas, natureza fixa depois do cadastro, unidade inativada continua aceita no item que já a usa, histórico com "1 BR = 6,00 M", eventos `ItemRegistered/Updated/Deactivated` |
+| S3-05 Telas de fornecedores | Pronto | Lista e ficha (Geral com Lista de seleção das categorias, Contatos, Histórico); diálogo "Parceiro já cadastrado → torná-lo também fornecedor"; Reativar; seta para a ficha de cliente (`Sprint3Windows.test.tsx`) |
+| S3-06 Telas de materiais e serviços | Pronto | Lista (filtros de natureza e categoria) e ficha (natureza em rádios, estoque desabilitado para serviço, custo digitado como `1.234,5` vai como `1234.50`, conversões na Tabela de edição) |
+| S3-07 Janela Unidades e categorias | Pronto | Abas Unidades de medida e Categorias de item; Consulta só vê (`Sprint3Windows.test.tsx`) |
+| S3-08 Contratos | Pronto | `docs/backend/api/openapi.yaml` (20 rotas novas; `OpenApiContractTest` passa); permissões `item.*` e `catalog.admin` nos perfis; `menu.json` com Fornecedores, Materiais e serviços e Unidades e categorias implementados e Equipamentos na Sprint 4; evento `PartnerDeactivated` agora leva o papel; verificador B01 OK |
+
+Testes executados: servidor 66 (PostgreSQL 16 real; eram 56), app 47 (eram 42), typecheck e build do app e do Electron, verificador B01 + testes. Roteiro "Como verificar" executado no Chromium contra o servidor real, do banco vazio: categoria e unidade incluídas; material `M00001` com 1 BR = 6 M e serviço `S00001` (caixa de estoque desabilitada); cliente `C00001` cadastrado como fornecedor pelo diálogo, sem duplicar; fornecedor inativado e o parceiro continua na lista de clientes ativos; usuário Consulta sem botões de alteração.
+
+**Não verificado aqui:** o app dentro do Electron no macOS (ambiente Linux sem tela); o CI do GitHub roda no próximo push.
+
+**Limitação conhecida:** a busca das listas diferencia acentos ("acos" não acha "Aços"), como já acontecia nos clientes. Resolver pede a extensão `unaccent` do PostgreSQL — fica para decisão.
+
+**Fora do combinado, feito na Sprint:** a ficha do cliente ganhou o mesmo diálogo "tornar também cliente" (para CNPJ de um fornecedor) e a seta para a ficha de fornecedor; lista, histórico, contatos e diálogos das fichas passaram a componentes comuns (`apps/desktop/src/screens/comum/`).
+
+## Retrospectiva
+
+- Funcionou: o teste de contrato pegou na hora as rotas novas sem documentação; a migração foi conferida com dados reais da versão anterior antes de subir.
+- Melhorar: o roteiro no navegador ainda é um script solto na sessão; vale guardá-lo no repositório para rodar a cada sprint.
+- Ação: na Sprint 4, versionar o roteiro de ponta a ponta (Playwright) junto do app.

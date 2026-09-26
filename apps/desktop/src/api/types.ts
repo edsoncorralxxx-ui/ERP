@@ -66,6 +66,8 @@ export type Customer = {
   cnpjFormatted: string | null;
   group: string | null;
   status: 'ATIVO' | 'INATIVO';
+  /** Também é fornecedor ativo (cliente e fornecedor são papéis do mesmo parceiro). */
+  supplier: boolean;
   units: CustomerUnit[];
   contacts: CustomerContact[];
   version: string;
@@ -105,6 +107,96 @@ export type UserAccount = {
   active: boolean;
   locked: boolean;
   version: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export type Situacao = 'ATIVO' | 'INATIVO';
+
+export type CategoryRef = { id: string; name: string };
+
+export type Supplier = {
+  id: string;
+  code: string;
+  legalName: string;
+  tradeName: string | null;
+  cnpj: string | null;
+  cnpjFormatted: string | null;
+  group: string | null;
+  /** Situação do papel de fornecedor. */
+  status: Situacao;
+  /** Também é cliente ativo. */
+  customer: boolean;
+  leadTimeDays: number | null;
+  paymentTerms: string | null;
+  suppliedCategories: CategoryRef[];
+  contacts: CustomerContact[];
+  version: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export type SupplierSummary = {
+  id: string;
+  code: string;
+  legalName: string;
+  tradeName: string | null;
+  cnpjFormatted: string | null;
+  city: string | null;
+  state: string | null;
+  suppliedCategories: string | null;
+  leadTimeDays: number | null;
+  status: Situacao;
+  version: string;
+};
+
+export type Natureza = 'MATERIAL' | 'SERVICO';
+
+/** Decimais trafegam como texto com ponto ("184.500000"), sem ponto flutuante (ADR-006). */
+export type ItemConversion = { id: string | null; fromUom: string; factor: string };
+
+export type Item = {
+  id: string;
+  code: string;
+  description: string;
+  nature: Natureza;
+  uom: string;
+  category: CategoryRef;
+  stockControlled: boolean;
+  referenceCost: string | null;
+  status: Situacao;
+  conversions: ItemConversion[];
+  version: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export type ItemSummary = {
+  id: string;
+  code: string;
+  description: string;
+  nature: Natureza;
+  uom: string;
+  category: string;
+  stockControlled: boolean;
+  referenceCost: string | null;
+  status: Situacao;
+  version: string;
+};
+
+export type UnitOfMeasure = { code: string; name: string; status: Situacao; version: string; items: number; updatedAt: string | null; updatedBy: string | null };
+
+export type ItemCategory = {
+  id: string;
+  name: string;
+  status: Situacao;
+  version: string;
+  items: number;
+  suppliers: number;
   updatedAt: string | null;
   updatedBy: string | null;
 };

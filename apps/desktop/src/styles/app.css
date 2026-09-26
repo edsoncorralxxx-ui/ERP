@@ -248,3 +248,19 @@ body { background: var(--ground); }
 
 /* Dica de ferramenta: segue o ponteiro, logo abaixo e à direita dele. */
 .rp-dica-ferramenta { position: fixed; z-index: 70; pointer-events: none; }
+
+/* Ficha do fornecedor: formulário e, abaixo, o grupo das categorias fornecidas (Lista de seleção). */
+.rp-ficha__geral { display: flex; flex-direction: column; gap: var(--space-4); }
+.rp-ficha__categorias { margin: 0; min-width: 0; }
+.rp-lista-dupla__rotulo { margin-bottom: var(--space-1); color: var(--ink-muted); }
+.rp-lista-dupla__lista { height: 160px; user-select: none; } /* duplo clique move o item, não seleciona o texto */
+
+/* Natureza do item: rádios lado a lado na linha do formulário. */
+.rp-ficha__opcoes { display: flex; gap: var(--space-5); align-items: center; }
+
+/* Unidades e categorias: grade à esquerda, ficha à direita. */
+.rp-catalogo { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(300px, 1fr); gap: var(--space-5); }
+.rp-catalogo__lista { overflow: auto; min-height: 0; max-height: 360px; }
+.rp-catalogo__lista .rp-grid { width: 100%; }
+.rp-catalogo__ficha { margin: 0; min-width: 0; align-self: start; }
+.rp-catalogo__form { grid-template-columns: 90px 14px minmax(140px, 1fr); }

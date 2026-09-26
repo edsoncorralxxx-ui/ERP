@@ -6,7 +6,7 @@ Registro da execução real do roteiro B01–B16. Desde 25/09/2026 o trabalho se
 |---|---|---|---|---|
 | B01 — Fundação de domínio, semântica e OOP | Entregue para revisão | 2026-09-25 | `10-b01-fundacao.md`; `python3 tools/b01/verificar_b01.py` → OK; 12 testes do verificador passando | Revisão do usuário; aceite/ajuste de ADR-004, PD-002, PD-007 |
 | B02 — Base executável, contratos e persistência | Em execução (Sprints 1 e 2: kernel, plataforma, arquitetura, CI, recibo de comando, outbox, fatos operacionais, OpenAPI) | 2026-09-25 | `docs/scrum/sprints/sprint-01.md`, `sprint-02.md` | Worker Python (US-207) na sprint de importação |
-| B03 — Acesso, cadastros e metadados | Em execução (Sprint 2: sessões, perfis, permissões, clientes e unidades) | 2026-09-25 | `docs/scrum/sprints/sprint-02.md` | Sprint 3: fornecedores, materiais e serviços, equipamentos |
+| B03 — Acesso, cadastros e metadados | Em execução (Sprints 2 e 3: sessões, perfis, permissões, clientes, fornecedores, materiais e serviços, unidades e categorias) | 2026-09-25 | `docs/scrum/sprints/sprint-02.md`, `sprint-03.md` | Equipamentos com o pedido (Sprint 4); contas e categorias financeiras |
 | B04–B16 | Planejado | — | — | Conforme dependências do roteiro |
 
 ## Registro
@@ -32,3 +32,10 @@ Registro da execução real do roteiro B01–B16. Desde 25/09/2026 o trabalho se
 - Servidor: módulos `acesso` e `cadastros`; recibo de comando, outbox e fatos operacionais na `plataforma`; histórico lido da `auditoria`; migrações V2–V4; contrato `docs/backend/api/openapi.yaml`.
 - App: login real (token no processo principal), bloqueio e sessão expirada por cima das janelas, Clientes e unidades, Cliente, Usuários e permissões, Trocar senha.
 - Verificação: 56 testes no servidor, 37 no app, verificador B01; roteiro no navegador contra o servidor real.
+
+### 2026-09-25 — Sprint 3 (B03 parcial)
+
+- Planning: equipamentos passam para a Sprint 4; código de material/serviço gerado pelo sistema; unidades e categorias com lista inicial e manutenção pelo Administrador.
+- Servidor: papéis do parceiro (V5), fornecedores, unidades de medida, categorias, materiais e serviços com conversões (V6); permissões `item.*` e `catalog.admin`; OpenAPI.
+- App: Fornecedores, Materiais e serviços, Unidades e categorias; componentes comuns de lista e ficha.
+- Verificação: 66 testes no servidor, 47 no app, verificador B01; roteiro no navegador contra o servidor real.
