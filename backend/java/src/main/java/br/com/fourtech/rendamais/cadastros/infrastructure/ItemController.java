@@ -1,5 +1,6 @@
 package br.com.fourtech.rendamais.cadastros.infrastructure;
 
+import br.com.fourtech.rendamais.plataforma.web.HistoryEntry;
 import br.com.fourtech.rendamais.cadastros.application.ItemRepository;
 import br.com.fourtech.rendamais.cadastros.application.ItemService;
 import br.com.fourtech.rendamais.cadastros.domain.Item;
@@ -106,8 +107,8 @@ class ItemController {
     }
 
     @GetMapping("/{id}/history")
-    List<ApiSupport.HistoryEntry> history(@PathVariable UUID id) {
-        return service.history(id).stream().map(ApiSupport.HistoryEntry::of).toList();
+    List<HistoryEntry> history(@PathVariable UUID id) {
+        return service.history(id).stream().map(HistoryEntry::of).toList();
     }
 
     private static String plain(BigDecimal v) {

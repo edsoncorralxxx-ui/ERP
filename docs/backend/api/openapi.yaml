@@ -3,7 +3,7 @@ info:
   title: Renda+ ERP — API do servidor
   version: v1
   description: |
-    Contrato da API usada pelo app do Mac (Sprints 1 a 3).
+    Contrato da API usada pelo app do Mac (Sprints 1 a 4).
     Regras gerais:
     - Toda rota exige sessão (`Authorization: Bearer <token>`), exceto `GET /api/v1/status` e `POST /api/v1/session` (ADR-005).
       Sem sessão válida: 401 `UNAUTHENTICATED`. Perfil sem a permissão: 403 `FORBIDDEN` (a negativa fica na auditoria).
@@ -13,6 +13,11 @@ info:
     - Cliente e fornecedor são papéis do mesmo parceiro, cada um com a sua situação. Cadastrar num papel o CNPJ de um parceiro
       que ainda não o tem devolve 422 `PARTNER_OTHER_ROLE`, com `details` `partnerId` e `version` para chamar `.../{id}/enable`.
     - Valores decimais (custo de referência, fator de conversão) trafegam como texto com ponto, até 6 casas (ADR-006, PD-007).
+    - Valores em reais trafegam em centavos, como texto de inteiro (`"30207146"` = R$ 302.071,46); datas de negócio `AAAA-MM-DD`.
+    - Documentos comerciais (Sprint 4): a revisão emitida da proposta é imutável; o pedido só muda em rascunho. Confirmar o pedido
+      (`Idempotency-Key` + `If-Match`) cria o projeto, um equipamento por unidade das linhas de equipamento e um título a receber
+      por parcela, uma única vez; confirmar de novo devolve a mesma confirmação. Operação que a situação não permite: 409
+      `INVALID_STATE_TRANSITION`.
     - Erros sempre no formato `ApiError`, em português, com `correlationId` (cabeçalho `X-Correlation-Id` é aceito e devolvido).
 servers:
   - url: http://localhost:8080
@@ -26,6 +31,10 @@ tags:
   - name: Fornecedores
   - name: Materiais e serviços
   - name: Unidades e categorias
+  - name: Propostas
+  - name: Pedidos
+  - name: Projetos e equipamentos
+  - name: Contas a receber
 
 paths:
   /api/v1/status:
@@ -481,6 +490,289 @@ paths:
         '412': { $ref: '#/components/responses/Erro' }
         '422': { $ref: '#/components/responses/Erro' }
 
+  /api/v1/proposals:
+    get:
+      tags: [Propostas]
+      summary: Lista de propostas (proposal.read), com a revisão vigente
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Número, título ou cliente' }
+        - { name: status, in: query, required: false, schema: { type: string, enum: [ABERTA, GANHA, PERDIDA, TODOS] } }
+      responses:
+        '200': { description: Propostas, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ProposalSummary' } } } } }
+    post:
+      tags: [Propostas]
+      summary: Nova proposta com a revisão 1 em rascunho (proposal.create), idempotente; número PR00001
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ProposalRequest' } } }
+      responses:
+        '201': { description: Cadastrada, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Proposal' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/proposals/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Propostas]
+      summary: Proposta com todas as revisões e linhas (proposal.read)
+      responses:
+        '200': { description: Proposta, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Proposal' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Propostas]
+      summary: Altera a revisão em rascunho (proposal.update); revisão emitida devolve 409
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ProposalRequest' } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Proposal' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+        '428': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/proposals/{id}/issue:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Propostas]
+      summary: Emite a revisão em rascunho — IssueProposalRevision (proposal.issue); emitida fica imutável
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      responses:
+        '200': { description: Revisão emitida, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Proposal' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/proposals/{id}/revisions:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Propostas]
+      summary: Cria a próxima revisão em rascunho, copiada da última emitida (proposal.update); as anteriores ficam preservadas
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      responses:
+        '200': { description: Nova revisão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Proposal' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/proposals/{id}/outcome:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Propostas]
+      summary: Registra a perda com motivo — RecordProposalOutcome (proposal.update); o ganho é a conversão em pedido
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/OutcomeRequest' } } }
+      responses:
+        '200': { description: Proposta perdida, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Proposal' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/proposals/{id}/orders:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Propostas]
+      summary: Converte a revisão emitida em pedido em rascunho — ConvertProposalToOrder (sales_order.create), idempotente; a proposta fica ganha
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: false
+        content: { application/json: { schema: { $ref: '#/components/schemas/ConvertRequest' } } }
+      responses:
+        '201': { description: Pedido em rascunho, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SalesOrder' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/proposals/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Propostas]
+      summary: Histórico da proposta (proposal.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/sales-orders:
+    get:
+      tags: [Pedidos]
+      summary: Lista de pedidos (sales_order.read)
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Número, cliente ou unidade' }
+        - { name: status, in: query, required: false, schema: { type: string, enum: [DRAFT, CONFIRMED, IN_EXECUTION, COMPLETED, CANCELLED, TODOS] } }
+      responses:
+        '200': { description: Pedidos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/SalesOrderSummary' } } } } }
+    post:
+      tags: [Pedidos]
+      summary: Pedido em rascunho (sales_order.create), idempotente; número PV00001
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SalesOrderRequest' } } }
+      responses:
+        '201': { description: Cadastrado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SalesOrder' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/sales-orders/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Pedidos]
+      summary: Pedido com linhas, parcelas e, depois de confirmado, projeto, equipamentos e títulos (sales_order.read)
+      responses:
+        '200': { description: Pedido, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SalesOrder' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Pedidos]
+      summary: Altera o rascunho (sales_order.update); confirmado devolve 409 (mudança só por aditivo)
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SalesOrderRequest' } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SalesOrder' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+        '428': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/sales-orders/{id}/confirmations:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Pedidos]
+      summary: >-
+        Confirma — ConfirmSalesOrder (sales_order.confirm): projeto, equipamentos e um título por parcela numa transação, uma única
+        vez. Σ parcelas ≠ total: 422 ORDER_INVALID; cliente inativo ou unidade de outro cliente: 422 PARTNER_INACTIVE_OR_UNIT_MISMATCH
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses:
+        '200': { description: Pedido confirmado (ou a confirmação existente), headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SalesOrder' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/sales-orders/{id}/cancellations:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Pedidos]
+      summary: >-
+        Cancela com motivo — CancelSalesOrder (sales_order.cancel). Confirmado: cancela os títulos, encerra o projeto e cancela os
+        equipamentos; com recebimento ou execução iniciada, 422 CANCELLATION_BLOCKED_BY_EFFECTS (premissa PD-003)
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: false
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { description: Pedido cancelado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SalesOrder' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/sales-orders/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Pedidos]
+      summary: Histórico do pedido (sales_order.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/projects:
+    get:
+      tags: [Projetos e equipamentos]
+      summary: Carteira de projetos (project.read); encerrados só com includeClosed
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Código, nome, pedido ou cliente' }
+        - { name: stage, in: query, required: false, schema: { type: string, enum: [PLANEJADO, ENGENHARIA, SUPRIMENTOS, PRODUCAO, INSTALACAO, ACEITO, ENCERRADO] } }
+        - { name: includeClosed, in: query, required: false, schema: { type: boolean, default: false } }
+      responses:
+        '200': { description: Projetos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Project' } } } } }
+
+  /api/v1/projects/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Projetos e equipamentos]
+      summary: Detalhe do projeto (project.read)
+      responses:
+        '200': { description: Projeto, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Project' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/projects/{id}/equipment:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Projetos e equipamentos]
+      summary: Equipamentos do projeto (project.read)
+      responses:
+        '200': { description: Equipamentos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Equipment' } } } } }
+
+  /api/v1/projects/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Projetos e equipamentos]
+      summary: Histórico do projeto (project.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/equipment:
+    get:
+      tags: [Projetos e equipamentos]
+      summary: Lista de equipamentos (equipment.read); cancelados só com includeCancelled
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Código, modelo, série, projeto ou cliente' }
+        - { name: projectId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: includeCancelled, in: query, required: false, schema: { type: boolean, default: false } }
+      responses:
+        '200': { description: Equipamentos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Equipment' } } } } }
+
+  /api/v1/equipment/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Projetos e equipamentos]
+      summary: Ficha do equipamento (equipment.read)
+      responses:
+        '200': { description: Equipamento, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Equipment' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Projetos e equipamentos]
+      summary: Altera série e observações — UpdateEquipment (equipment.update); série única por modelo (422 EQUIPMENT_SERIAL_DUPLICATE)
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/EquipmentRequest' } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Equipment' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+        '428': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/equipment/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Projetos e equipamentos]
+      summary: Histórico do equipamento (equipment.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/receivables:
+    get:
+      tags: [Contas a receber]
+      summary: Títulos a receber (financial_title.read); cancelados só com includeCancelled. Recebimento e estorno entram na Sprint 5
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Código, origem ou cliente' }
+        - { name: projectId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: customerId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: includeCancelled, in: query, required: false, schema: { type: boolean, default: false } }
+      responses:
+        '200': { description: Títulos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Receivable' } } } } }
+
+  /api/v1/receivables/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Contas a receber]
+      summary: Título a receber (financial_title.read)
+      responses:
+        '200': { description: Título, content: { application/json: { schema: { $ref: '#/components/schemas/Receivable' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
 components:
   securitySchemes:
     sessao:
@@ -629,7 +921,13 @@ components:
       properties:
         occurredAt: { type: string, format: date-time }
         actor: { type: string }
-        action: { type: string, enum: [PARTNER_REGISTERED, PARTNER_UPDATED, PARTNER_DEACTIVATED, PARTNER_ROLE_ENABLED, ITEM_REGISTERED, ITEM_UPDATED, ITEM_DEACTIVATED] }
+        action:
+          type: string
+          description: >-
+            PARTNER_REGISTERED, PARTNER_UPDATED, PARTNER_DEACTIVATED, PARTNER_ROLE_ENABLED, ITEM_REGISTERED, ITEM_UPDATED,
+            ITEM_DEACTIVATED, PROPOSAL_DRAFTED, PROPOSAL_UPDATED, PROPOSAL_REVISION_ISSUED, PROPOSAL_REVISION_CREATED,
+            PROPOSAL_LOST, PROPOSAL_WON, SALES_ORDER_DRAFTED, SALES_ORDER_UPDATED, SALES_ORDER_CONFIRMED, SALES_ORDER_CANCELLED,
+            PROJECT_CREATED, PROJECT_CLOSED, EQUIPMENT_CREATED, EQUIPMENT_UPDATED, EQUIPMENT_CANCELLED
         version: { type: integer }
         reason: { type: [string, 'null'] }
         changes:
@@ -761,3 +1059,265 @@ components:
         suppliers: { type: integer, description: 'Fornecedores que a fornecem' }
         updatedAt: { type: [string, 'null'], format: date-time }
         updatedBy: { type: [string, 'null'] }
+    Cents:
+      type: string
+      pattern: '^\d{1,18}$'
+      description: Valor em centavos, texto de inteiro ("30207146" = R$ 302.071,46)
+    SalesLineRequest:
+      type: object
+      required: [kind, quantity, unitPrice]
+      properties:
+        id: { type: [string, 'null'], description: 'Id da linha existente; vazio numa linha nova' }
+        kind: { type: string, enum: [EQUIPAMENTO, MATERIAL, SERVICO] }
+        itemId: { type: [string, 'null'], format: uuid, description: 'Obrigatório para MATERIAL e SERVICO (mesma natureza); vazio para EQUIPAMENTO' }
+        description: { type: [string, 'null'], maxLength: 200, description: 'Modelo do equipamento; nos itens, a descrição do cadastro quando vazio' }
+        quantity: { type: string, example: '10.5', description: 'Até 6 casas; equipamento em unidades inteiras (1 a 100)' }
+        unitPrice: { type: string, example: '16.33', description: 'Preço unitário em reais, até 6 casas' }
+        discountCents: { type: [string, 'null'], example: '10000' }
+    SalesLine:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [EQUIPAMENTO, MATERIAL, SERVICO] }
+        itemId: { type: [string, 'null'], format: uuid }
+        itemCode: { type: [string, 'null'] }
+        description: { type: string }
+        quantity: { type: string }
+        uom: { type: string }
+        unitPrice: { type: string }
+        discountCents: { $ref: '#/components/schemas/Cents' }
+        grossCents: { $ref: '#/components/schemas/Cents' }
+        totalCents: { $ref: '#/components/schemas/Cents', description: 'round(quantidade × preço) − desconto, meio-par por linha (PD-002)' }
+    ProposalRequest:
+      type: object
+      required: [customerId, title, validUntil, lines]
+      properties:
+        customerId: { type: string, format: uuid }
+        unitId: { type: [string, 'null'], format: uuid }
+        title: { type: string, maxLength: 200 }
+        validUntil: { type: string, format: date }
+        paymentTerms: { type: [string, 'null'], maxLength: 500 }
+        lines: { type: array, items: { $ref: '#/components/schemas/SalesLineRequest' } }
+    ProposalRevision:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        revision: { type: integer }
+        status: { type: string, enum: [RASCUNHO, EMITIDA] }
+        validUntil: { type: string, format: date }
+        paymentTerms: { type: [string, 'null'] }
+        totalCents: { $ref: '#/components/schemas/Cents' }
+        issuedAt: { type: [string, 'null'], format: date-time }
+        issuedBy: { type: [string, 'null'] }
+        lines: { type: array, items: { $ref: '#/components/schemas/SalesLine' } }
+    Proposal:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: PR00001 }
+        customerId: { type: string, format: uuid }
+        customerCode: { type: string }
+        customerName: { type: string }
+        unitId: { type: [string, 'null'], format: uuid }
+        unitName: { type: [string, 'null'] }
+        title: { type: string }
+        status: { type: string, enum: [ABERTA, GANHA, PERDIDA] }
+        outcomeReason: { type: [string, 'null'] }
+        currentRevision: { type: integer }
+        revisions: { type: array, items: { $ref: '#/components/schemas/ProposalRevision' } }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    ProposalSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        customerCode: { type: string }
+        customerName: { type: string }
+        unitName: { type: [string, 'null'] }
+        title: { type: string }
+        status: { type: string, enum: [ABERTA, GANHA, PERDIDA] }
+        revision: { type: integer }
+        revisionStatus: { type: string, enum: [RASCUNHO, EMITIDA] }
+        validUntil: { type: string, format: date }
+        totalCents: { $ref: '#/components/schemas/Cents' }
+        version: { type: string }
+    OutcomeRequest:
+      type: object
+      required: [outcome, reason]
+      properties:
+        outcome: { type: string, enum: [PERDIDA] }
+        reason: { type: string, maxLength: 500 }
+    ConvertRequest:
+      type: object
+      properties:
+        unitId: { type: [string, 'null'], format: uuid, description: 'Obrigatória se a proposta não tem unidade' }
+        contractDate: { type: [string, 'null'], format: date, description: 'Hoje quando vazia' }
+    ReasonRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, maxLength: 500 }
+    Installment:
+      type: object
+      required: [dueDate, amountCents]
+      properties:
+        seq: { type: [integer, 'null'], description: 'Na resposta: sequência a partir de 1 (a ordem da lista)' }
+        dueDate: { type: string, format: date }
+        amountCents: { $ref: '#/components/schemas/Cents' }
+        milestone: { type: [string, 'null'], maxLength: 200 }
+    SalesOrderRequest:
+      type: object
+      required: [customerId, unitId, contractDate, lines]
+      properties:
+        customerId: { type: string, format: uuid }
+        unitId: { type: string, format: uuid }
+        contractDate: { type: string, format: date }
+        promisedDate: { type: [string, 'null'], format: date }
+        notes: { type: [string, 'null'], maxLength: 1000 }
+        lines: { type: array, items: { $ref: '#/components/schemas/SalesLineRequest' } }
+        installments: { type: array, items: { $ref: '#/components/schemas/Installment' }, description: 'Na confirmação, a soma precisa ser o total exato' }
+    SalesOrderSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        customerCode: { type: string }
+        customerName: { type: string }
+        unitName: { type: string }
+        proposalCode: { type: [string, 'null'] }
+        contractDate: { type: string, format: date }
+        totalCents: { $ref: '#/components/schemas/Cents' }
+        status: { type: string, enum: [DRAFT, CONFIRMED, IN_EXECUTION, COMPLETED, CANCELLED] }
+        version: { type: string }
+    SalesOrder:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: PV00001 }
+        customerId: { type: string, format: uuid }
+        customerCode: { type: string }
+        customerName: { type: string }
+        unitId: { type: string, format: uuid }
+        unitName: { type: string }
+        proposalId: { type: [string, 'null'], format: uuid }
+        proposalCode: { type: [string, 'null'] }
+        proposalRevision: { type: [integer, 'null'] }
+        contractDate: { type: string, format: date }
+        promisedDate: { type: [string, 'null'], format: date }
+        notes: { type: [string, 'null'] }
+        status: { type: string, enum: [DRAFT, CONFIRMED, IN_EXECUTION, COMPLETED, CANCELLED] }
+        totalCents: { $ref: '#/components/schemas/Cents' }
+        scheduledCents: { $ref: '#/components/schemas/Cents' }
+        lines: { type: array, items: { $ref: '#/components/schemas/SalesLine' } }
+        installments: { type: array, items: { $ref: '#/components/schemas/Installment' } }
+        confirmedAt: { type: [string, 'null'], format: date-time }
+        confirmedBy: { type: [string, 'null'] }
+        projectId: { type: [string, 'null'], format: uuid }
+        projectCode: { type: [string, 'null'] }
+        projectStage: { type: [string, 'null'] }
+        equipment:
+          type: array
+          items: { type: object, properties: { id: { type: string }, code: { type: string }, model: { type: string }, serialNumber: { type: [string, 'null'] }, status: { type: string } } }
+        titles:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              code: { type: string }
+              label: { type: string }
+              dueDate: { type: string, format: date }
+              competence: { type: string, example: '2026-10' }
+              originalCents: { $ref: '#/components/schemas/Cents' }
+              balanceCents: { $ref: '#/components/schemas/Cents' }
+              status: { type: string, enum: [OPEN, PARTIAL, SETTLED, RENEGOTIATED, CANCELLED] }
+        cancelledAt: { type: [string, 'null'], format: date-time }
+        cancelledBy: { type: [string, 'null'] }
+        cancelReason: { type: [string, 'null'] }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    Project:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: PJ00001 }
+        name: { type: string }
+        orderId: { type: string, format: uuid }
+        orderCode: { type: string }
+        customerId: { type: string, format: uuid }
+        customerCode: { type: string }
+        customerName: { type: string }
+        unitId: { type: string, format: uuid }
+        unitName: { type: string }
+        stage: { type: string, enum: [PLANEJADO, ENGENHARIA, SUPRIMENTOS, PRODUCAO, INSTALACAO, ACEITO, ENCERRADO] }
+        contractDelivery: { type: [string, 'null'], format: date }
+        contractCents: { $ref: '#/components/schemas/Cents' }
+        equipmentCount: { type: integer }
+        closedReason: { type: [string, 'null'] }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    EquipmentRequest:
+      type: object
+      properties:
+        serialNumber: { type: [string, 'null'], maxLength: 60 }
+        notes: { type: [string, 'null'], maxLength: 1000 }
+    Equipment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: EQ00001 }
+        model: { type: string }
+        itemId: { type: [string, 'null'], format: uuid }
+        projectId: { type: string, format: uuid }
+        projectCode: { type: string }
+        orderCode: { type: string }
+        customerId: { type: string, format: uuid }
+        customerCode: { type: string }
+        customerName: { type: string }
+        unitId: { type: string, format: uuid }
+        unitName: { type: string }
+        serialNumber: { type: [string, 'null'] }
+        notes: { type: [string, 'null'] }
+        status: { type: string, enum: [ATIVO, CANCELADO] }
+        acceptedOn: { type: [string, 'null'], format: date, description: 'Do aceite registrado (PD-015); vazio até a instalação' }
+        warrantyStart: { type: [string, 'null'], format: date }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    Receivable:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: CR00001 }
+        customerId: { type: string, format: uuid }
+        customerCode: { type: string }
+        customerName: { type: string }
+        originType: { type: string, example: SALES_ORDER_INSTALLMENT }
+        originId: { type: string }
+        origin: { type: string, example: 'Pedido PV00001 — parcela 1/3 — Sinal' }
+        projectId: { type: [string, 'null'], format: uuid }
+        category: { type: string, example: RECEITA_VENDA }
+        competence: { type: string, example: '2026-10', description: 'Premissa: mês do vencimento (PD-010/PD-024)' }
+        issueDate: { type: string, format: date }
+        dueDate: { type: string, format: date }
+        originalCents: { $ref: '#/components/schemas/Cents' }
+        receivedCents: { $ref: '#/components/schemas/Cents' }
+        balanceCents: { $ref: '#/components/schemas/Cents' }
+        status: { type: string, enum: [OPEN, PARTIAL, SETTLED, RENEGOTIATED, CANCELLED] }
+        overdue: { type: boolean, description: 'Condição por data e saldo, não situação' }
+        cancelReason: { type: [string, 'null'] }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }

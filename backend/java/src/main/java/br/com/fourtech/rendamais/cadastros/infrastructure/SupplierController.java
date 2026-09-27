@@ -1,5 +1,6 @@
 package br.com.fourtech.rendamais.cadastros.infrastructure;
 
+import br.com.fourtech.rendamais.plataforma.web.HistoryEntry;
 import br.com.fourtech.rendamais.cadastros.application.PartnerRepository;
 import br.com.fourtech.rendamais.cadastros.application.PartnerService;
 import br.com.fourtech.rendamais.cadastros.domain.Partner;
@@ -119,8 +120,8 @@ class SupplierController {
     }
 
     @GetMapping("/{id}/history")
-    List<ApiSupport.HistoryEntry> history(@PathVariable UUID id) {
-        return service.history(ROLE, id).stream().map(ApiSupport.HistoryEntry::of).toList();
+    List<HistoryEntry> history(@PathVariable UUID id) {
+        return service.history(ROLE, id).stream().map(HistoryEntry::of).toList();
     }
 
     private static ResponseEntity<SupplierResponse> respond(HttpStatus status, Partner p) {

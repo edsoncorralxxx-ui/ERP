@@ -14,8 +14,8 @@ import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Base dos testes de API dos cadastros da Sprint 3: banco limpo, chamada HTTP autenticada e leitura de campos. */
-abstract class CadastrosApiTest extends IntegrationTest {
+/** Base dos testes de API dos cadastros (Sprint 3) e do comercial (Sprint 4): banco limpo, chamada HTTP autenticada e leitura de campos. */
+public abstract class CadastrosApiTest extends IntegrationTest {
 
     @LocalServerPort
     int port;
@@ -30,6 +30,7 @@ abstract class CadastrosApiTest extends IntegrationTest {
         jdbc.sql("delete from event_consumption").update();
         jdbc.sql("delete from outbox_event").update();
         jdbc.sql("delete from command_receipt").update();
+        limpaDocumentos();
         jdbc.sql("delete from item").update();
         jdbc.sql("delete from partner").update();
         jdbc.sql("delete from item_category").update();

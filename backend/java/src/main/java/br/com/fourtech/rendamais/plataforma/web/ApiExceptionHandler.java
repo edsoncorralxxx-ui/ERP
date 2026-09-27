@@ -5,6 +5,7 @@ import br.com.fourtech.rendamais.acesso.api.UnauthenticatedException;
 import br.com.fourtech.rendamais.auditoria.api.AuditEntry;
 import br.com.fourtech.rendamais.auditoria.api.AuditTrail;
 import br.com.fourtech.rendamais.kernel.DomainException;
+import br.com.fourtech.rendamais.kernel.InvalidStateException;
 import br.com.fourtech.rendamais.kernel.NotFoundException;
 import br.com.fourtech.rendamais.kernel.RuleViolationException;
 import br.com.fourtech.rendamais.kernel.VersionConflictException;
@@ -59,6 +60,11 @@ class ApiExceptionHandler {
     @ExceptionHandler(VersionConflictException.class)
     ResponseEntity<ApiError> versionConflict(VersionConflictException e) {
         return error(HttpStatus.PRECONDITION_FAILED, e);
+    }
+
+    @ExceptionHandler(InvalidStateException.class)
+    ResponseEntity<ApiError> invalidState(InvalidStateException e) {
+        return error(HttpStatus.CONFLICT, e);
     }
 
     @ExceptionHandler(RuleViolationException.class)

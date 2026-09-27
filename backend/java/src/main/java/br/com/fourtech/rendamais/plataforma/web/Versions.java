@@ -5,6 +5,14 @@ public final class Versions {
 
     private Versions() { }
 
+    /** Versão lida pelo cliente; sem If-Match a alteração é recusada com 428. */
+    public static long required(String ifMatch) {
+        if (ifMatch == null || ifMatch.isBlank()) {
+            throw new PreconditionRequiredException();
+        }
+        return parse(ifMatch);
+    }
+
     public static long parse(String ifMatch) {
         String v = ifMatch.strip();
         if (v.startsWith("W/")) {

@@ -44,8 +44,8 @@
       "nome": "Vendas",
       "icone": "vendas",
       "itens": [
-        {"rotulo": "Oportunidades e propostas", "tela": "propostas", "fase": "Sprint 4 · B05"},
-        {"rotulo": "Pedidos e contratos", "tela": "pedidos", "fase": "Sprint 4 · B05"},
+        {"rotulo": "Oportunidades e propostas", "tela": "propostas", "fase": "Sprint 4 · B05", "implementado": true},
+        {"rotulo": "Pedidos e contratos", "tela": "pedidos", "fase": "Sprint 4 · B05", "implementado": true},
         {"rotulo": "Previsão de demanda", "recurso": "AN-005", "fase": "B14/B15"}
       ]
     },
@@ -86,8 +86,8 @@
       "nome": "Projetos",
       "icone": "projetos",
       "itens": [
-        {"rotulo": "Carteira de projetos", "tela": "carteira", "fase": "Sprint 4 · B05"},
-        {"rotulo": "Detalhe do projeto", "tela": "projeto", "fase": "Sprint 4 · B05"},
+        {"rotulo": "Carteira de projetos", "tela": "carteira", "fase": "Sprint 4 · B05", "implementado": true},
+        {"rotulo": "Detalhe do projeto", "tela": "projeto", "fase": "Sprint 4 · B05", "implementado": true},
         {"rotulo": "EAP e cronograma", "tela": "cronograma", "fase": "B07"}
       ]
     },
@@ -102,7 +102,7 @@
     {
       "nome": "Equipamentos",
       "icone": "equipamentos",
-      "itens": [{"rotulo": "Equipamentos", "tela": "equipamentos", "fase": "Sprint 4 · B05"}]
+      "itens": [{"rotulo": "Equipamentos", "tela": "equipamentos", "fase": "Sprint 4 · B05", "implementado": true}]
     },
     {
       "nome": "Renda+",

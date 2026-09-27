@@ -630,6 +630,21 @@
       "conceito": "PROJETO",
       "payload": ["projectId", "memberId", "role"],
       "consumidores": []
+    },
+    {
+      "type": "ProposalDrafted",
+      "produtor": "comercial",
+      "conceito": "PROPOSTA",
+      "payload": ["proposalId", "customerId", "revision"],
+      "consumidores": []
+    },
+    {"type": "ProposalUpdated", "produtor": "comercial", "conceito": "PROPOSTA", "payload": ["proposalId", "revision"], "consumidores": []},
+    {
+      "type": "SalesOrderUpdated",
+      "produtor": "comercial",
+      "conceito": "PEDIDO",
+      "payload": ["orderId", "changedFields"],
+      "consumidores": []
     }
   ]
 }

@@ -47,6 +47,15 @@ public abstract class IntegrationTest {
         throw new IllegalStateException("login de teste falhou: " + result);
     }
 
+    /** Apaga pedidos, propostas, projetos, equipamentos e títulos (Sprint 4), que referenciam parceiros e itens. */
+    protected void limpaDocumentos() {
+        jdbc.sql("delete from financial_title").update();
+        jdbc.sql("delete from equipment").update();
+        jdbc.sql("delete from project").update();
+        jdbc.sql("delete from sales_order").update();
+        jdbc.sql("delete from proposal").update();
+    }
+
     protected String adminToken() {
         return login(ADMIN, Profile.ADMINISTRADOR);
     }

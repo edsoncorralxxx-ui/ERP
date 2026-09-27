@@ -43,19 +43,19 @@
       "id": "projetos",
       "nome": "Projetos e equipamentos",
       "responsabilidade": "Projeto, responsáveis, marcos, modelo de equipamento, equipamento, composição montada",
-      "dependsOn": ["kernel", "plataforma", "cadastros"]
+      "dependsOn": ["kernel", "acesso", "auditoria", "plataforma", "cadastros"]
     },
     {
       "id": "financeiro",
       "nome": "Financeiro",
       "responsabilidade": "Títulos, ajustes, liquidações e alocações, estornos, créditos, contas, movimentos, transferências, extratos, conciliação, matriz de caixa",
-      "dependsOn": ["kernel", "plataforma", "cadastros"]
+      "dependsOn": ["kernel", "acesso", "auditoria", "plataforma", "cadastros"]
     },
     {
       "id": "comercial",
       "nome": "Comercial",
       "responsabilidade": "Leads, interações, oportunidades, propostas/revisões, pedidos, aditivos, plano de parcelas; provisiona projetos e títulos na confirmação",
-      "dependsOn": ["kernel", "plataforma", "cadastros", "projetos", "financeiro"]
+      "dependsOn": ["kernel", "acesso", "auditoria", "plataforma", "cadastros", "projetos", "financeiro"]
     },
     {
       "id": "engenharia",

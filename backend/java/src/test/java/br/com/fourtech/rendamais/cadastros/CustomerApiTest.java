@@ -58,6 +58,7 @@ class CustomerApiTest extends IntegrationTest {
         jdbc.sql("delete from event_consumption").update();
         jdbc.sql("delete from outbox_event").update();
         jdbc.sql("delete from command_receipt").update();
+        limpaDocumentos();
         jdbc.sql("delete from partner").update();
         jdbc.sql("delete from audit_event").update();
     }
