@@ -17,7 +17,7 @@ public record PartnerData(String legalName, String tradeName, String cnpj, Strin
 
     /** {@code id} vazio numa unidade ou contato novo; preenchido para manter a identidade dos existentes. */
     public record UnitData(String id, String name, String street, String number, String district, String city,
-                           String state, String postalCode) { }
+                           String state, String postalCode, String cnpj) { }
 
     public record ContactData(String id, String name, String role, String phone, String email) { }
 

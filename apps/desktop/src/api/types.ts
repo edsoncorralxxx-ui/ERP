@@ -47,6 +47,9 @@ export type LoginResponse = { expiresAt: string; idleTimeoutSeconds: number; use
 export type CustomerUnit = {
   id: string | null;
   name: string | null;
+  /** CNPJ da unidade (filial), só dígitos; opcional. */
+  cnpj?: string | null;
+  cnpjFormatted?: string | null;
   street: string | null;
   number: string | null;
   district: string | null;
@@ -154,6 +157,7 @@ export type SupplierSummary = {
 
 export type Natureza = 'MATERIAL' | 'SERVICO';
 
+/** MATERIAL é o produto (na tela: Produto); SERVICO, o serviço. */
 /** Decimais trafegam como texto com ponto ("184.500000"), sem ponto flutuante (ADR-006). */
 export type ItemConversion = { id: string | null; fromUom: string; factor: string };
 
@@ -166,6 +170,10 @@ export type Item = {
   category: CategoryRef;
   stockControlled: boolean;
   referenceCost: string | null;
+  /** NCM do produto, 8 dígitos. */
+  ncm: string | null;
+  /** Código do serviço na lista da LC 116 ("14.01"), o COD_LST do SPED. */
+  serviceCode: string | null;
   status: Situacao;
   conversions: ItemConversion[];
   version: string;
@@ -184,6 +192,8 @@ export type ItemSummary = {
   category: string;
   stockControlled: boolean;
   referenceCost: string | null;
+  ncm: string | null;
+  serviceCode: string | null;
   status: Situacao;
   version: string;
 };

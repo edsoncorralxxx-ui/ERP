@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -54,11 +55,13 @@ public final class Partner {
         }
     }
 
+    /** Unidade do parceiro; o CNPJ da unidade (filial ou outro estabelecimento) é opcional e nunca inventado. */
     public record Unit(UUID id, String name, String street, String number, String district, String city, String state,
-                       String postalCode) {
+                       String postalCode, Cnpj cnpj) {
         /** Texto legível com todos os campos preenchidos, usado no histórico. */
         String summary() {
             List<String> parts = new ArrayList<>();
+            if (cnpj != null) parts.add("CNPJ " + cnpj.formatted());
             if (street != null) parts.add(street + (number == null ? "" : ", " + number));
             if (district != null) parts.add(district);
             if (city != null || state != null) parts.add((city == null ? "" : city) + (state == null ? "" : "/" + state));
@@ -238,7 +241,7 @@ public final class Partner {
         List<PartnerData.ContactData> contactData = data.contacts() == null ? null : data.contacts();
         if (unitData == null) {
             unitData = knownUnits.stream().map(u -> new PartnerData.UnitData(u.id().toString(), u.name(), u.street(), u.number(),
-                    u.district(), u.city(), u.state(), u.postalCode())).toList();
+                    u.district(), u.city(), u.state(), u.postalCode(), u.cnpj() == null ? null : u.cnpj().value())).toList();
         }
         if (contactData == null) {
             contactData = knownContacts.stream().map(c -> new PartnerData.ContactData(c.id().toString(), c.name(), c.role(),
@@ -249,6 +252,7 @@ public final class Partner {
 
         Set<UUID> unitIds = knownUnits.stream().map(Unit::id).collect(Collectors.toSet());
         List<Unit> units = new ArrayList<>();
+        Set<String> unitCnpjs = new HashSet<>();
         for (int i = 0; i < unitData.size(); i++) {
             PartnerData.UnitData u = unitData.get(i);
             String f = "units[" + i + "].";
@@ -265,9 +269,21 @@ public final class Partner {
                 cep = cep.replaceAll("[.\\-\\s]", "");
                 if (!cep.matches("\\d{8}")) issues.add(new FieldIssue(f + "postalCode", "CEP deve ter 8 dígitos."));
             }
+            Cnpj unitCnpj = null;
+            String rawUnitCnpj = text(u.cnpj());
+            if (rawUnitCnpj != null) {
+                try {
+                    unitCnpj = Cnpj.of(rawUnitCnpj);
+                    if (!unitCnpjs.add(unitCnpj.value())) {
+                        issues.add(new FieldIssue(f + "cnpj", "CNPJ repetido em outra unidade deste cliente."));
+                    }
+                } catch (IllegalArgumentException e) {
+                    issues.add(new FieldIssue(f + "cnpj", e.getMessage() + "."));
+                }
+            }
             units.add(new Unit(keep(u.id(), unitIds), name, limit(text(u.street()), 200, f + "street", issues),
                     limit(text(u.number()), 20, f + "number", issues), limit(text(u.district()), 100, f + "district", issues),
-                    limit(text(u.city()), 100, f + "city", issues), state, cep));
+                    limit(text(u.city()), 100, f + "city", issues), state, cep, unitCnpj));
         }
 
         Set<UUID> contactIds = knownContacts.stream().map(Contact::id).collect(Collectors.toSet());

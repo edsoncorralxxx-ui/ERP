@@ -31,6 +31,9 @@ public interface PartnerRepository {
     /** Outro parceiro com o mesmo CNPJ, com qualquer papel. */
     Optional<UUID> findIdByCnpj(String cnpj, UUID exceptId);
 
+    /** Outro parceiro que tem uma unidade com este CNPJ. */
+    Optional<UUID> findIdByUnitCnpj(String cnpj, UUID exceptId);
+
     /** Busca por código, razão social, nome fantasia ou CNPJ entre os parceiros com o papel; {@code status} nulo traz todos. */
     List<Summary> list(String search, Partner.Role role, Partner.Status status, int limit);
 }

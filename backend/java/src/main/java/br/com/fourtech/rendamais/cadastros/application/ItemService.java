@@ -28,7 +28,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Casos de uso de materiais e serviços (formulário "materiais" do B01): cadastrar (idempotente, código M/S do sistema),
+ * Casos de uso de produtos e serviços (formulário "materiais" do B01): cadastrar (idempotente, código P/S do sistema),
  * editar com versão e inativar com motivo. Unidade e categoria precisam existir e estar ativas — as que o item já usa
  * continuam aceitas depois de inativadas.
  */
@@ -171,6 +171,6 @@ public class ItemService {
     }
 
     private static NotFoundException notFound() {
-        return new NotFoundException("Material ou serviço não encontrado.");
+        return new NotFoundException("Produto ou serviço não encontrado.");
     }
 }

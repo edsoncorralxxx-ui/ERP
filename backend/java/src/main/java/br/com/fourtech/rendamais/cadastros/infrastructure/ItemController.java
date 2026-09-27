@@ -26,7 +26,7 @@ import java.util.UUID;
 import static br.com.fourtech.rendamais.cadastros.infrastructure.ApiSupport.version;
 
 /**
- * API de materiais e serviços (S3-04). POST exige Idempotency-Key; PUT e inativação exigem If-Match. Custo de
+ * API de produtos e serviços (S3-04). POST exige Idempotency-Key; PUT e inativação exigem If-Match. Custo de
  * referência e fator de conversão trafegam como texto decimal com ponto ("184.500000"), sem ponto flutuante (ADR-006).
  */
 @RestController
@@ -42,9 +42,9 @@ class ItemController {
     record ConversionDto(String id, String fromUom, String factor) { }
 
     record ItemRequest(String description, String nature, String uom, String categoryId, Boolean stockControlled,
-                       String referenceCost, List<ConversionDto> conversions) {
+                       String referenceCost, String ncm, String serviceCode, List<ConversionDto> conversions) {
         ItemData toData() {
-            return new ItemData(description, nature, uom, categoryId, stockControlled, referenceCost,
+            return new ItemData(description, nature, uom, categoryId, stockControlled, referenceCost, ncm, serviceCode,
                     conversions == null ? List.of() : conversions.stream()
                             .map(c -> new ItemData.ConversionData(c.id(), c.fromUom(), c.factor())).toList());
         }
@@ -53,22 +53,24 @@ class ItemController {
     record CategoryDto(String id, String name) { }
 
     record ItemResponse(String id, String code, String description, String nature, String uom, CategoryDto category,
-                        boolean stockControlled, String referenceCost, String status, List<ConversionDto> conversions,
+                        boolean stockControlled, String referenceCost, String ncm, String serviceCode, String status,
+                        List<ConversionDto> conversions,
                         String version, Instant createdAt, String createdBy, Instant updatedAt, String updatedBy) {
         static ItemResponse of(Item i) {
             return new ItemResponse(i.id().toString(), i.code(), i.description(), i.nature().name(), i.uom(),
                     new CategoryDto(i.category().id().toString(), i.category().name()), i.stockControlled(),
-                    plain(i.referenceCost()), i.status().name(),
+                    plain(i.referenceCost()), i.ncm(), i.serviceCode(), i.status().name(),
                     i.conversions().stream().map(c -> new ConversionDto(c.id().toString(), c.fromUom(), plain(c.factor()))).toList(),
                     Long.toString(i.version()), i.createdAt(), i.createdBy(), i.updatedAt(), i.updatedBy());
         }
     }
 
     record ItemSummary(String id, String code, String description, String nature, String uom, String category,
-                       boolean stockControlled, String referenceCost, String status, String version) {
+                       boolean stockControlled, String referenceCost, String ncm, String serviceCode, String status, String version) {
         static ItemSummary of(ItemRepository.Summary s) {
             return new ItemSummary(s.id().toString(), s.code(), s.description(), s.nature().name(), s.uom(), s.category(),
-                    s.stockControlled(), plain(s.referenceCost()), s.status().name(), Long.toString(s.version()));
+                    s.stockControlled(), plain(s.referenceCost()), s.ncm(), s.serviceCode(), s.status().name(),
+                    Long.toString(s.version()));
         }
     }
 

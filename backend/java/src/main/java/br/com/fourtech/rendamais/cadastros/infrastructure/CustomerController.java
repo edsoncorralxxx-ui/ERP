@@ -39,8 +39,9 @@ class CustomerController {
         this.service = service;
     }
 
+    /** {@code cnpj} só dígitos (ou com máscara) na entrada; na saída, só dígitos e {@code cnpjFormatted} com máscara. */
     record UnitDto(String id, String name, String street, String number, String district, String city, String state,
-                   String postalCode) { }
+                   String postalCode, String cnpj, String cnpjFormatted) { }
 
     record ContactDto(String id, String name, String role, String phone, String email) { }
 
@@ -49,7 +50,7 @@ class CustomerController {
         PartnerData toData() {
             return new PartnerData(legalName, tradeName, cnpj, group,
                     units == null ? null : units.stream().map(u -> new PartnerData.UnitData(u.id(), u.name(), u.street(),
-                            u.number(), u.district(), u.city(), u.state(), u.postalCode())).toList(),
+                            u.number(), u.district(), u.city(), u.state(), u.postalCode(), u.cnpj())).toList(),
                     contacts == null ? null : contacts.stream().map(c -> new PartnerData.ContactData(c.id(), c.name(),
                             c.role(), c.phone(), c.email())).toList());
         }
@@ -63,7 +64,8 @@ class CustomerController {
                     p.cnpj() == null ? null : p.cnpj().value(), p.cnpj() == null ? null : p.cnpj().formatted(), p.group(),
                     p.status(ROLE).name(), p.status(Partner.Role.FORNECEDOR) == Partner.Status.ATIVO,
                     p.units().stream().map(u -> new UnitDto(u.id().toString(), u.name(), u.street(), u.number(), u.district(),
-                            u.city(), u.state(), u.postalCode())).toList(),
+                            u.city(), u.state(), u.postalCode(), u.cnpj() == null ? null : u.cnpj().value(),
+                            u.cnpj() == null ? null : u.cnpj().formatted())).toList(),
                     p.contacts().stream().map(c -> new ContactDto(c.id().toString(), c.name(), c.role(), c.phone(), c.email()))
                             .toList(),
                     Long.toString(p.version()), p.createdAt(), p.createdBy(), p.updatedAt(), p.updatedBy());

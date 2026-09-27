@@ -20,7 +20,7 @@ class JdbcItemRepository implements ItemRepository {
 
     private static final String SELECT = """
             select i.id, i.code, i.description, i.nature, i.uom_code, i.category_id, c.name as category_name, i.stock_controlled,
-                   i.reference_cost, i.status, i.version, i.created_at, i.created_by, i.updated_at, i.updated_by
+                   i.reference_cost, i.ncm, i.service_code, i.status, i.version, i.created_at, i.created_by, i.updated_at, i.updated_by
               from item i join item_category c on c.id = i.category_id
             """;
 
@@ -35,20 +35,21 @@ class JdbcItemRepository implements ItemRepository {
         boolean material = nature == Item.Nature.MATERIAL;
         long n = jdbc.sql(material ? "select nextval('material_code_seq')" : "select nextval('service_code_seq')")
                 .query(Long.class).single();
-        return String.format(material ? "M%05d" : "S%05d", n);
+        return String.format(material ? "P%05d" : "S%05d", n);
     }
 
     @Override
     public void insert(Item i) {
         jdbc.sql("""
-                insert into item (id, code, description, nature, uom_code, category_id, stock_controlled, reference_cost, status,
-                                  version, created_at, created_by, updated_at, updated_by)
-                values (:id, :code, :description, :nature, :uom, :category, :stock, :cost, :status, :version, :createdAt,
-                        :createdBy, :updatedAt, :updatedBy)
+                insert into item (id, code, description, nature, uom_code, category_id, stock_controlled, reference_cost, ncm,
+                                  service_code, status, version, created_at, created_by, updated_at, updated_by)
+                values (:id, :code, :description, :nature, :uom, :category, :stock, :cost, :ncm, :serviceCode, :status, :version,
+                        :createdAt, :createdBy, :updatedAt, :updatedBy)
                 """)
                 .param("id", i.id()).param("code", i.code()).param("description", i.description())
                 .param("nature", i.nature().name()).param("uom", i.uom()).param("category", i.category().id())
-                .param("stock", i.stockControlled()).param("cost", i.referenceCost()).param("status", i.status().name())
+                .param("stock", i.stockControlled()).param("cost", i.referenceCost()).param("ncm", i.ncm())
+                .param("serviceCode", i.serviceCode()).param("status", i.status().name())
                 .param("version", i.version()).param("createdAt", ts(i.createdAt())).param("createdBy", i.createdBy())
                 .param("updatedAt", ts(i.updatedAt())).param("updatedBy", i.updatedBy())
                 .update();
@@ -59,11 +60,12 @@ class JdbcItemRepository implements ItemRepository {
     public boolean update(Item i, long expectedVersion) {
         int rows = jdbc.sql("""
                 update item set description = :description, uom_code = :uom, category_id = :category, stock_controlled = :stock,
-                       reference_cost = :cost, status = :status, version = :version, updated_at = :updatedAt, updated_by = :updatedBy
+                       reference_cost = :cost, ncm = :ncm, service_code = :serviceCode, status = :status, version = :version, updated_at = :updatedAt, updated_by = :updatedBy
                  where id = :id and version = :expected
                 """)
                 .param("description", i.description()).param("uom", i.uom()).param("category", i.category().id())
-                .param("stock", i.stockControlled()).param("cost", i.referenceCost()).param("status", i.status().name())
+                .param("stock", i.stockControlled()).param("cost", i.referenceCost()).param("ncm", i.ncm())
+                .param("serviceCode", i.serviceCode()).param("status", i.status().name())
                 .param("version", i.version()).param("updatedAt", ts(i.updatedAt())).param("updatedBy", i.updatedBy())
                 .param("id", i.id()).param("expected", expectedVersion)
                 .update();
@@ -101,8 +103,8 @@ class JdbcItemRepository implements ItemRepository {
             return new Item(rs.getObject("id", UUID.class), rs.getString("code"), rs.getString("description"),
                     Item.Nature.valueOf(rs.getString("nature")), rs.getString("uom_code"),
                     new Partner.Category(rs.getObject("category_id", UUID.class), rs.getString("category_name")),
-                    rs.getBoolean("stock_controlled"), rs.getBigDecimal("reference_cost"),
-                    Partner.Status.valueOf(rs.getString("status")), conversions, rs.getLong("version"), instant(rs, "created_at"),
+                    rs.getBoolean("stock_controlled"), rs.getBigDecimal("reference_cost"), rs.getString("ncm"),
+                    rs.getString("service_code"), Partner.Status.valueOf(rs.getString("status")), conversions, rs.getLong("version"), instant(rs, "created_at"),
                     rs.getString("created_by"), instant(rs, "updated_at"), rs.getString("updated_by"));
         }).optional();
     }
@@ -116,7 +118,9 @@ class JdbcItemRepository implements ItemRepository {
                    and (cast(:category as uuid) is null or i.category_id = cast(:category as uuid))
                    and (cast(:term as varchar) is null
                         or i.code ilike '%' || cast(:term as varchar) || '%'
-                        or i.description ilike '%' || cast(:term as varchar) || '%')
+                        or i.description ilike '%' || cast(:term as varchar) || '%'
+                        or i.ncm like replace(cast(:term as varchar), '.', '') || '%'
+                        or i.service_code like cast(:term as varchar) || '%')
                  order by i.code limit :limit
                 """)
                 .param("status", status == null ? null : status.name()).param("nature", nature == null ? null : nature.name())
@@ -128,7 +132,8 @@ class JdbcItemRepository implements ItemRepository {
         BigDecimal cost = rs.getBigDecimal("reference_cost");
         return new Summary(rs.getObject("id", UUID.class), rs.getString("code"), rs.getString("description"),
                 Item.Nature.valueOf(rs.getString("nature")), rs.getString("uom_code"), rs.getString("category_name"),
-                rs.getBoolean("stock_controlled"), cost, Partner.Status.valueOf(rs.getString("status")), rs.getLong("version"));
+                rs.getBoolean("stock_controlled"), cost, rs.getString("ncm"), rs.getString("service_code"),
+                Partner.Status.valueOf(rs.getString("status")), rs.getLong("version"));
     }
 
     private static Instant instant(ResultSet rs, String col) throws SQLException {

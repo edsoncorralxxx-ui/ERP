@@ -18,11 +18,13 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * Material ou serviço (formulário "materiais" do B01): item comprável, estocável ou executável com unidade de medida.
- * O código é do sistema e começa pela natureza (M ou S), por isso a natureza não muda depois do cadastro. Imutável:
+ * Produto ou serviço (formulário "materiais" do B01): item comprável, estocável ou executável com unidade de medida.
+ * O código é do sistema e começa pela natureza (P ou S), por isso a natureza não muda depois do cadastro. Imutável:
  * cada operação valida e devolve uma nova versão.
  */
 public final class Item {
@@ -48,6 +50,8 @@ public final class Item {
     private final Partner.Category category;
     private final boolean stockControlled;
     private final BigDecimal referenceCost;
+    private final String ncm;
+    private final String serviceCode;
     private final Partner.Status status;
     private final List<Conversion> conversions;
     private final long version;
@@ -57,7 +61,8 @@ public final class Item {
     private final String updatedBy;
 
     public Item(UUID id, String code, String description, Nature nature, String uom, Partner.Category category,
-                boolean stockControlled, BigDecimal referenceCost, Partner.Status status, List<Conversion> conversions,
+                boolean stockControlled, BigDecimal referenceCost, String ncm, String serviceCode, Partner.Status status,
+                List<Conversion> conversions,
                 long version, Instant createdAt, String createdBy, Instant updatedAt, String updatedBy) {
         this.id = Objects.requireNonNull(id);
         this.code = Objects.requireNonNull(code);
@@ -67,6 +72,8 @@ public final class Item {
         this.category = Objects.requireNonNull(category);
         this.stockControlled = stockControlled;
         this.referenceCost = referenceCost;
+        this.ncm = ncm;
+        this.serviceCode = serviceCode;
         this.status = Objects.requireNonNull(status);
         this.conversions = List.copyOf(conversions);
         this.version = version;
@@ -93,18 +100,20 @@ public final class Item {
     public static Item register(String code, ItemData data, Lookups lookups, Instant now, String actor) {
         Valid v = validate(data, null, List.of(), lookups);
         return new Item(UUID.randomUUID(), code, v.description, v.nature, v.uom, v.category, v.stockControlled, v.referenceCost,
-                Partner.Status.ATIVO, v.conversions, 1, now, actor, now, actor);
+                v.ncm, v.serviceCode, Partner.Status.ATIVO, v.conversions, 1, now, actor, now, actor);
     }
 
     public Item update(ItemData data, Lookups lookups, Instant now, String actor) {
         Valid v = validate(data, nature, conversions, lookups);
-        return new Item(id, code, v.description, nature, v.uom, v.category, v.stockControlled, v.referenceCost, status,
+        return new Item(id, code, v.description, nature, v.uom, v.category, v.stockControlled, v.referenceCost, v.ncm,
+                v.serviceCode, status,
                 v.conversions, version + 1, createdAt, createdBy, now, actor);
     }
 
     /** Inativa preservando o histórico; item referenciado nunca é apagado. */
     public Item deactivate(Instant now, String actor) {
-        return new Item(id, code, description, nature, uom, category, stockControlled, referenceCost, Partner.Status.INATIVO,
+        return new Item(id, code, description, nature, uom, category, stockControlled, referenceCost, ncm, serviceCode,
+                Partner.Status.INATIVO,
                 conversions, version + 1, createdAt, createdBy, now, actor);
     }
 
@@ -127,6 +136,8 @@ public final class Item {
         m.put("category", category.name().isEmpty() ? null : category.name());
         m.put("stockControlled", description.isEmpty() ? null : stockControlled ? "Sim" : "Não");
         m.put("referenceCost", referenceCost == null ? null : brazilian(referenceCost));
+        m.put("ncm", ncm == null ? null : formattedNcm(ncm));
+        m.put("serviceCode", serviceCode);
         m.put("status", description.isEmpty() ? null : status.name());
         m.put("conversions", conversions.isEmpty() ? null
                 : conversions.stream().map(c -> c.summary(uom)).collect(Collectors.joining("; ")));
@@ -135,12 +146,12 @@ public final class Item {
 
     /** Item vazio, para listar no cadastro os campos preenchidos como mudanças a partir do nada. */
     public Item emptyLike() {
-        return new Item(id, code, "", nature, "", new Partner.Category(category.id(), ""), false, null, status, List.of(), 0,
+        return new Item(id, code, "", nature, "", new Partner.Category(category.id(), ""), false, null, null, null, status, List.of(), 0,
                 null, null, null, null);
     }
 
     private record Valid(String description, Nature nature, String uom, Partner.Category category, boolean stockControlled,
-                         BigDecimal referenceCost, List<Conversion> conversions) { }
+                         BigDecimal referenceCost, String ncm, String serviceCode, List<Conversion> conversions) { }
 
     private static Valid validate(ItemData data, Nature fixed, List<Conversion> known, Lookups lookups) {
         List<FieldIssue> issues = new ArrayList<>();
@@ -151,7 +162,7 @@ public final class Item {
         Nature nature = nature(data.nature(), issues);
         if (fixed != null && nature != null && nature != fixed) {
             issues.add(new FieldIssue("nature", "A natureza não muda depois do cadastro: o código " +
-                    (fixed == Nature.MATERIAL ? "M" : "S") + " depende dela. Inative e cadastre de novo."));
+                    (fixed == Nature.MATERIAL ? "P" : "S") + " depende dela. Inative e cadastre de novo."));
             nature = fixed;
         }
 
@@ -175,6 +186,25 @@ public final class Item {
 
         BigDecimal cost = decimal(data.referenceCost(), "referenceCost", "Custo de referência", issues);
         if (cost != null && cost.signum() < 0) issues.add(new FieldIssue("referenceCost", "Custo de referência não pode ser negativo."));
+
+        // NCM (8 dígitos) é de produto; o código do serviço (item da lista da LC 116, o COD_LST do SPED) é de serviço.
+        String ncm = text(data.ncm());
+        if (ncm != null) {
+            ncm = ncm.replaceAll("[.\\s-]", "");
+            if (nature == Nature.SERVICO) issues.add(new FieldIssue("ncm", "NCM é só de produto; serviço usa o código da LC 116."));
+            else if (!ncm.matches("\\d{8}")) issues.add(new FieldIssue("ncm", "NCM deve ter 8 dígitos (0000.00.00)."));
+        }
+        String serviceCode = text(data.serviceCode());
+        if (serviceCode != null) {
+            Matcher m = Pattern.compile("(\\d{1,2})\\.?(\\d{2})").matcher(serviceCode);
+            if (nature == Nature.MATERIAL) {
+                issues.add(new FieldIssue("serviceCode", "Código de serviço é só de serviço; produto usa o NCM."));
+            } else if (!m.matches()) {
+                issues.add(new FieldIssue("serviceCode", "Código do serviço no formato da lista da LC 116, como 14.01."));
+            } else {
+                serviceCode = String.format("%02d.%s", Integer.parseInt(m.group(1)), m.group(2));
+            }
+        }
 
         List<ItemData.ConversionData> convData = data.conversions() == null ? List.of() : data.conversions();
         if (convData.size() > MAX_CONVERSIONS) {
@@ -200,13 +230,13 @@ public final class Item {
             conversions.add(new Conversion(keep(c.id(), knownIds), from == null ? "" : from, factor == null ? BigDecimal.ONE : factor));
         }
         invalid(issues);
-        return new Valid(description, nature, uom, category, stock, cost, conversions);
+        return new Valid(description, nature, uom, category, stock, cost, ncm, serviceCode, conversions);
     }
 
     private static Nature nature(String raw, List<FieldIssue> issues) {
         String t = text(raw);
         if (t == null) {
-            issues.add(new FieldIssue("nature", "Informe se é material ou serviço."));
+            issues.add(new FieldIssue("nature", "Informe se é produto ou serviço."));
             return null;
         }
         try {
@@ -244,6 +274,11 @@ public final class Item {
         return x.toPlainString().replace('.', ',');
     }
 
+    /** 84798999 → 8479.89.99 */
+    static String formattedNcm(String ncm) {
+        return ncm.substring(0, 4) + "." + ncm.substring(4, 6) + "." + ncm.substring(6);
+    }
+
     private static String uom(String raw) {
         String t = text(raw);
         return t == null ? null : t.toUpperCase(Locale.ROOT);
@@ -279,6 +314,8 @@ public final class Item {
     public Partner.Category category() { return category; }
     public boolean stockControlled() { return stockControlled; }
     public BigDecimal referenceCost() { return referenceCost; }
+    public String ncm() { return ncm; }
+    public String serviceCode() { return serviceCode; }
     public Partner.Status status() { return status; }
     public List<Conversion> conversions() { return conversions; }
     public long version() { return version; }

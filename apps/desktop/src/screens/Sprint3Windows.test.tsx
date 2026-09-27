@@ -73,7 +73,7 @@ describe('Fornecedor', () => {
   });
 });
 
-describe('Material ou serviço', () => {
+describe('Produto ou serviço', () => {
   it('serviço não controla estoque e os decimais vão com ponto para a API', async () => {
     const posts: TransportRequest[] = [];
     setTransport(async (req) => {
@@ -83,8 +83,8 @@ describe('Material ou serviço', () => {
         posts.push(req);
         const body = JSON.parse(req.body!);
         const item: Item = {
-          id: 'i-1', code: body.nature === 'MATERIAL' ? 'M00001' : 'S00001', description: body.description, nature: body.nature, uom: body.uom,
-          category: { id: 'cat-1', name: 'Chapas' }, stockControlled: body.stockControlled, referenceCost: '1234.500000', status: 'ATIVO',
+          id: 'i-1', code: body.nature === 'MATERIAL' ? 'P00001' : 'S00001', description: body.description, nature: body.nature, uom: body.uom,
+          category: { id: 'cat-1', name: 'Chapas' }, stockControlled: body.stockControlled, referenceCost: '1234.500000', ncm: body.ncm?.replace(/\D/g, '') ?? null, serviceCode: body.serviceCode, status: 'ATIVO',
           conversions: [{ id: 'c-1', fromUom: 'BR', factor: '6.000000' }], version: '1', createdAt: '2026-09-25T12:00:00Z', createdBy: 'ana', updatedAt: null, updatedBy: null,
         };
         return resposta(201, item, { etag: '"1"' });
@@ -98,20 +98,26 @@ describe('Material ou serviço', () => {
     await user.type(descricao, 'Perfil L 40x40');
     await user.click(screen.getByRole('radio', { name: 'Serviço' }));
     expect(screen.getByRole('checkbox', { name: 'Controla estoque' })).toBeDisabled();
-    await user.click(screen.getByRole('radio', { name: 'Material' }));
+    // Serviço tem o código da LC 116; produto tem o NCM.
+    expect(screen.getByLabelText('Cód. serviço (LC 116)')).toBeInTheDocument();
+    expect(screen.queryByLabelText('NCM')).toBeNull();
+    await user.click(screen.getByRole('radio', { name: 'Produto' }));
     expect(screen.getByRole('checkbox', { name: 'Controla estoque' })).toBeChecked();
     await escolher(user, screen.getByLabelText('Unidade de medida'), 'M — Metro');
     await escolher(user, screen.getByLabelText('Categoria'), 'Chapas');
     await user.type(screen.getByLabelText('Custo de referência (R$)'), '1.234,5');
+    await user.type(screen.getByLabelText('NCM'), '72161000');
+    await user.tab();
+    expect(screen.getByLabelText('NCM')).toHaveValue('7216.10.00');
     await user.click(screen.getByRole('tab', { name: /Conversões/ }));
     await user.click(screen.getByRole('button', { name: /adicionar uma conversão/ }));
     await escolher(user, screen.getByLabelText('Unidade de compra da linha 1'), 'BR — Barra');
     await user.type(screen.getByLabelText('Fator da linha 1'), '6');
     expect(screen.getByText('1 BR = 6 M')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Adicionar' }));
-    await waitFor(() => expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Material M00001 adicionado com sucesso' }));
+    await waitFor(() => expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Produto P00001 adicionado com sucesso' }));
     const body = JSON.parse(posts[0].body!);
-    expect(body).toMatchObject({ nature: 'MATERIAL', uom: 'M', categoryId: 'cat-1', stockControlled: true, referenceCost: '1234.50', conversions: [{ fromUom: 'BR', factor: '6' }] });
+    expect(body).toMatchObject({ nature: 'MATERIAL', uom: 'M', categoryId: 'cat-1', stockControlled: true, referenceCost: '1234.50', ncm: '7216.10.00', serviceCode: null, conversions: [{ fromUom: 'BR', factor: '6' }] });
     expect(posts[0].headers?.['Idempotency-Key']).toBeTruthy();
     await user.click(screen.getByRole('tab', { name: /Geral/ }));
     expect(screen.getByLabelText('Custo de referência (R$)')).toHaveValue('1.234,50');

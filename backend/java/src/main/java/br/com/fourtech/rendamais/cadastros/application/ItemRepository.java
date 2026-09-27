@@ -8,13 +8,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Porta de persistência dos materiais e serviços. */
+/** Porta de persistência dos produtos e serviços. */
 public interface ItemRepository {
 
     record Summary(UUID id, String code, String description, Item.Nature nature, String uom, String category,
-                   boolean stockControlled, BigDecimal referenceCost, Partner.Status status, long version) { }
+                   boolean stockControlled, BigDecimal referenceCost, String ncm, String serviceCode, Partner.Status status,
+                   long version) { }
 
-    /** Próximo código pela natureza: M00001 (material) ou S00001 (serviço). */
+    /** Próximo código pela natureza: P00001 (produto) ou S00001 (serviço). */
     String nextCode(Item.Nature nature);
 
     void insert(Item item);
@@ -25,6 +26,6 @@ public interface ItemRepository {
 
     Optional<Item> findByIdForUpdate(UUID id);
 
-    /** Busca por código ou descrição; {@code nature}, {@code categoryId} e {@code status} nulos não filtram. */
+    /** Busca por código, descrição, NCM ou código de serviço; {@code nature}, {@code categoryId} e {@code status} nulos não filtram. */
     List<Summary> list(String search, Item.Nature nature, UUID categoryId, Partner.Status status, int limit);
 }

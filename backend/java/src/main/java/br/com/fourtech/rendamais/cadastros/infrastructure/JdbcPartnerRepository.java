@@ -94,12 +94,13 @@ class JdbcPartnerRepository implements PartnerRepository {
         int i = 0;
         for (Partner.Unit u : p.units()) {
             jdbc.sql("""
-                    insert into partner_unit (id, partner_id, position, name, street, number, district, city, state, postal_code)
-                    values (:id, :partner, :pos, :name, :street, :number, :district, :city, :state, :cep)
+                    insert into partner_unit (id, partner_id, position, name, street, number, district, city, state, postal_code, cnpj)
+                    values (:id, :partner, :pos, :name, :street, :number, :district, :city, :state, :cep, :cnpj)
                     """)
                     .param("id", u.id()).param("partner", p.id()).param("pos", i++).param("name", u.name())
                     .param("street", u.street()).param("number", u.number()).param("district", u.district())
                     .param("city", u.city()).param("state", u.state()).param("cep", u.postalCode())
+                    .param("cnpj", u.cnpj() == null ? null : u.cnpj().value())
                     .update();
         }
         i = 0;
@@ -139,11 +140,12 @@ class JdbcPartnerRepository implements PartnerRepository {
                 rs.getString("created_by"), instant(rs, "updated_at"), rs.getString("updated_by"))).optional();
         return head.map(h -> {
             List<Partner.Unit> units = jdbc.sql("""
-                    select id, name, street, number, district, city, state, postal_code from partner_unit
+                    select id, name, street, number, district, city, state, postal_code, cnpj from partner_unit
                      where partner_id = :id order by position
                     """).param("id", id).query((rs, n) -> new Partner.Unit(rs.getObject("id", UUID.class), rs.getString("name"),
                     rs.getString("street"), rs.getString("number"), rs.getString("district"), rs.getString("city"),
-                    rs.getString("state"), rs.getString("postal_code"))).list();
+                    rs.getString("state"), rs.getString("postal_code"),
+                    rs.getString("cnpj") == null ? null : new Cnpj(rs.getString("cnpj")))).list();
             List<Partner.Contact> contacts = jdbc.sql("""
                     select id, name, role, phone, email from partner_contact where partner_id = :id order by position
                     """).param("id", id).query((rs, n) -> new Partner.Contact(rs.getObject("id", UUID.class),
@@ -167,6 +169,12 @@ class JdbcPartnerRepository implements PartnerRepository {
     public Optional<UUID> findIdByCnpj(String cnpj, UUID exceptId) {
         return jdbc.sql("select id from partner where cnpj = :cnpj and id <> :id").param("cnpj", cnpj).param("id", exceptId)
                 .query(UUID.class).optional();
+    }
+
+    @Override
+    public Optional<UUID> findIdByUnitCnpj(String cnpj, UUID exceptId) {
+        return jdbc.sql("select partner_id from partner_unit where cnpj = :cnpj and partner_id <> :id limit 1")
+                .param("cnpj", cnpj).param("id", exceptId).query(UUID.class).optional();
     }
 
     @Override

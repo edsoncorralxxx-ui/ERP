@@ -31,7 +31,7 @@ export function useUnidades(customerId: string): { id: string; name: string }[] 
   return unidades;
 }
 
-/** Materiais e serviços (ativos e inativos, para mostrar o que as linhas já usam). */
+/** Produtos e serviços (ativos e inativos, para mostrar o que as linhas já usam). */
 export function useItens(): ItemSummary[] {
   const [itens, setItens] = useState<ItemSummary[]>([]);
   useEffect(() => {

@@ -95,7 +95,7 @@ describe('Proposta', () => {
     await user.click(screen.getByRole('button', { name: /adicionar uma linha/ }));
     await user.clear(screen.getByLabelText('Quantidade da linha 1'));
     await user.type(screen.getByLabelText('Quantidade da linha 1'), '10,5');
-    await escolher(user, screen.getByLabelText('Tipo da linha 1'), 'Material');
+    await escolher(user, screen.getByLabelText('Tipo da linha 1'), 'Produto');
     await escolher(user, screen.getByLabelText('Item da linha 1'), 'M00001 — Perfil L 40x40');
     await user.type(screen.getByLabelText('Preço unitário da linha 1'), '16,33');
     expect(screen.getByLabelText('Total da linha 1')).toHaveTextContent('171,46');
