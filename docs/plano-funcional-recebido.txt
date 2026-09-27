@@ -1,0 +1,137 @@
+# ERP Renda+ — plano funcional e de desenvolvimento
+
+## 1. Direção definida
+
+Criar um **sistema novo para a Fourtech**, abrangendo Renda+, mecânica e elétrica, com:
+
+- Aplicativo instalado no **Mac**, funcionando **offline em um único computador**.
+- Comercial, projetos, produção, compras, estoque, financeiro, impostos gerenciais e assistência técnica integrados.
+- Importação assistida do histórico dos PDFs.
+- Repasses configuráveis por atividade ou projeto.
+- Registro e conferência de documentos fiscais; emissão e transmissão permanecem externas.
+- **Desenho visual sob sua responsabilidade.** Este plano define informações, ações e relações entre as telas.
+
+O elemento central será o **projeto**, ligado ao cliente, à unidade industrial e aos equipamentos. A partir dele será possível consultar venda, fabricação, materiais, fornecedores, instalação, custos, recebimentos e assistência.
+
+## 2. O que os documentos estabelecem
+
+Foram estudados **14 PDFs, com 39 páginas**. As orientações escritas nas planilhas serão tratadas como documentação do processo atual, sujeita às decisões deste planejamento.
+
+- **Comercial:** a base contém 32 registros, cuja soma confere com R$ 5.681.662,94. Há clientes com várias unidades, equipamentos em diferentes estágios e uma lista de prospecção com classificação por estrelas. Os cabeçalhos de período estão desatualizados em relação a algumas linhas. Fontes: :codex-file-citation{path="/Users/edsondearaujocorral/Downloads/Vendas_Renda+ TOTAL - BASE.pdf" purpose="source"} :codex-file-citation{path="/Users/edsondearaujocorral/Downloads/Vendas_Renda+ TOTAL - DASHBOARD.pdf" purpose="source"} :codex-file-citation{path="/Users/edsondearaujocorral/Downloads/Vendas_Renda+ TOTAL - Cópia de LISTA DE FECULARIAS.pdf" purpose="source"}
+
+- **Projetos e custos:** existem cronogramas de fabricação, entrega e instalação, com dependências e custos por categoria. A BOM apresenta total de R$ 69.398,51, mas suas linhas somam R$ 72.398,51; a diferença corresponde à pintura. Também há nomes de etapas divergentes entre Gantt e detalhamento. Fontes: :codex-file-citation{path="/Users/edsondearaujocorral/Downloads/CRONOGRAMA_MODELO - Cronograma (Gantt)-2.pdf" purpose="source"} :codex-file-citation{path="/Users/edsondearaujocorral/Downloads/CRONOGRAMA_MODELO - Detalhamento-2.pdf" purpose="source"} :codex-file-citation{path="/Users/edsondearaujocorral/Downloads/CRONOGRAMA_MODELO - Custos (BOM)-2.pdf" purpose="source"}
+
+- **Produção e suprimentos:** a EAP relaciona atividades, componentes, fornecedores, predecessoras, pesos e inspeções. Os prazos de compra são estimativas; existem diferenças de datas entre documentos, inclusive atividades anteriores à disponibilidade prevista do material. Fontes: :codex-file-citation{path="/Users/edsondearaujocorral/Downloads/EAP_Mecanica_Renda_Mais_Fourtech - Cronograma.pdf" purpose="source"} :codex-file-citation{path="/Users/edsondearaujocorral/Downloads/EAP_Mecanica_Renda_Mais_Fourtech - EAP Mecânica.pdf" purpose="source"} :codex-file-citation{path="/Users/edsondearaujocorral/Downloads/EAP_Mecanica_Renda_Mais_Fourtech - Suprimentos.pdf" purpose="source"}
+
+- **Financeiro:** o fluxo reúne parcelas de clientes, custos, impostos, repasses e reserva de caixa. A apresentação “recebidos ou a receber” não comprova individualmente a liquidação; o ERP precisará separar previsto, devido e realizado. Fonte: :codex-file-citation{path="/Users/edsondearaujocorral/Downloads/GESTAO_FLUXO_DE_CAIXA -  Fluxo de Caixa Total-2.pdf" purpose="source"}
+
+- **Impostos:** existem classificação produto/serviço, parâmetros, lançamentos, apuração e painel. Há `#REF!` no painel e um lançamento de janeiro/2027 com ano 2026. O cálculo histórico inclui o mês corrente no RBT12; será preservado como informação da origem, separado da nova simulação. Fontes: :codex-file-citation{path="/Users/edsondearaujocorral/Downloads/GESTAO_IMPOSTOS - Parâmetros SN-2.pdf" purpose="source"} :codex-file-citation{path="/Users/edsondearaujocorral/Downloads/GESTAO_IMPOSTOS - Painel.pdf" purpose="source"} :codex-file-citation{path="/Users/edsondearaujocorral/Downloads/GESTAO_IMPOSTOS - Lançamentos Mensais-2.pdf" purpose="source"} :codex-file-citation{path="/Users/edsondearaujocorral/Downloads/GESTAO_IMPOSTOS - Apuração Mensal.pdf" purpose="source"}
+
+## 3. Informações e ações de cada tela
+
+Listagens terão pesquisa, ordenação, filtros pertinentes e exportação. Registros terão identificador, situação, observações, anexos e histórico de alterações. Indicadores permitirão abrir os registros que compõem seus valores.
+
+| Tela | Informações principais | Ações |
+|---|---|---|
+| **Visão geral** | Carteira vendida, faturamento registrado, recebimentos, pagamentos, caixa, projetos atrasados, materiais faltantes e chamados pendentes | Filtrar período e área; abrir pendências |
+| **Clientes e unidades** | Razão social, nome comercial, CNPJ quando disponível, grupo, unidades, cidade/UF, endereço, contatos e equipamentos | Cadastrar, editar e relacionar unidades; revisar possíveis duplicidades |
+| **Prospecção** | Empresa/unidade, possui Renda+, classificação de 1–5 estrelas, contato, interesse, etapa, última interação e próxima ação | Registrar contato; agendar acompanhamento; abrir oportunidade |
+| **Oportunidades e propostas** | Produtos, serviços, quantidades, preços, descontos, custos estimados, margem, validade, prazo e condições de pagamento | Versionar proposta; exportar PDF; registrar ganho/perda; converter em pedido |
+| **Pedidos e contratos** | Cliente/unidade, itens contratados, valor, data, prazo prometido, parcelas, documentos e aditivos | Confirmar pedido; gerar projetos e títulos; registrar alteração ou cancelamento |
+| **Carteira de projetos** | Código, cliente/unidade, equipamentos, responsável, datas, situação, progresso e custo previsto/realizado | Criar a partir do pedido; filtrar por estágio; abrir projeto |
+| **Detalhe do projeto** | Resumo comercial, equipamentos, etapas, materiais, compras, custos, parcelas, documentos e pendências | Acessar todos os registros vinculados; registrar decisões |
+| **Equipamentos** | Identificador interno, série quando existente, modelo, revisão, cliente/unidade, projeto, entrega, aceite e garantia | Consultar histórico completo; anexar documentação; abrir chamado |
+| **Materiais e serviços** | Código, descrição, categoria, unidade de medida, especificação, fornecedores, custo de referência e controle de estoque | Cadastrar itens; atualizar referências; inativar |
+| **BOM — composição de custos** | Modelo/revisão, componentes, quantidades, unidades, custos unitários, serviços, categorias e etapas associadas | Criar revisão; copiar para projeto; comparar custo estimado e realizado |
+| **EAP e cronograma** | Atividade, entregável, responsável, duração, predecessoras, datas previstas/reais, peso, avanço e caminho crítico | Aplicar modelo; recalcular; registrar avanço; salvar linha de base; exportar Gantt |
+| **Ordens de produção** | Projeto/equipamento, roteiro, componentes reservados, executor próprio/terceiro, início, término e situação | Liberar produção; registrar consumo, horas, execução parcial e conclusão |
+| **Inspeções e qualidade** | Etapa, checklist, resultado, responsável, fotos, não conformidades e retrabalho | Aprovar/reprovar; abrir correção; liberar próxima etapa |
+| **Fornecedores** | Identificação, contatos, categorias fornecidas, prazos, condições comerciais e histórico | Cadastrar; consultar compras, entregas e materiais sob sua guarda |
+| **Necessidades e cotações** | Demanda por projeto, quantidade necessária, disponível, reservada, faltante e data de necessidade | Gerar solicitações; registrar propostas de fornecedores; comparar preço e prazo |
+| **Pedidos de compra** | Fornecedor, itens/serviços, quantidades, preços, frete, projeto, entrega prevista e pagamento | Aprovar pedido; registrar alterações; gerar programação financeira |
+| **Recebimentos e terceiros** | Pedido, entregue/pendente, local, conferência, documento, remessas, retornos e perdas | Receber parcialmente; devolver; movimentar materiais para/de terceiros |
+| **Estoque e inventário** | Saldo físico, reservado e disponível por item/local/projeto; custo médio e movimentações | Reservar; consumir; transferir; devolver; ajustar inventário com motivo |
+| **Instalação e entrega** | Agenda, equipe/prestador, local, despesas, etapas mecânicas/elétricas, testes, pendências e aceite | Programar instalação; registrar execução; emitir relatório; confirmar entrega |
+| **Documentos e faturamento** | Cliente/fornecedor, projeto, número do documento, emissão, competência, produto/serviço, valor e anexos | Registrar faturamento parcial; vincular documentos aos títulos existentes |
+| **Contas a receber** | Pedido/projeto, cliente, parcela, vencimento, valor original, ajustes, recebido e saldo | Parcelar; registrar recebimento parcial; renegociar; estornar |
+| **Contas a pagar** | Fornecedor/beneficiário, compra/projeto, categoria, competência, vencimento, pago e saldo | Registrar obrigação; programar pagamento; baixar parcialmente; estornar |
+| **Contas e conciliação** | Contas bancárias/caixa, saldo inicial, movimentações, extrato e correspondências | Importar OFX/CSV; conciliar; transferir entre contas; tratar diferenças |
+| **Fluxo de caixa** | Saldo inicial, entradas/saídas, saldo final, realizado e projetado por mês | Filtrar conta, projeto e categoria; investigar composição; exportar |
+| **Custos e resultado** | Receita contratada e faturada, materiais, serviços, horas, despesas, impostos, margem e desvios | Comparar orçamento/realizado; detalhar resultado por equipamento, projeto e área |
+| **Repasses** | Beneficiário, vigência, base de cálculo, percentual/valor, reserva, previsto, aprovado, pago e saldo | Simular; aprovar distribuição; gerar títulos; registrar ajustes |
+| **Impostos gerenciais** | Receitas por competência/tipo, RBT12, parâmetros vigentes, simulação, valor do contador, diferença e vencimento | Conferir; anexar apuração externa; confirmar obrigação; fechar competência |
+| **Assistência técnica** | Equipamento, chamado, sintoma, prioridade, garantia, técnico, peças, horas, despesas e solução | Abrir ordem de serviço; consumir peças; registrar atendimento e encerramento |
+| **Manutenção preventiva** | Equipamento, plano, periodicidade, última execução, próxima data e checklist | Programar manutenção; gerar ordem de serviço; registrar execução |
+| **Relatórios** | Carteira por cliente/UF/status, concentração, atrasos, compras, estoque, resultado, caixa, repasses e assistência | Filtrar; detalhar; exportar PDF, CSV e Excel |
+| **Importação e conferência** | Arquivo/página/linha de origem, registro proposto, correspondências, divergências e totais | Corrigir mapeamento; aprovar registros; importar lote sem duplicação |
+| **Configurações e manutenção** | Empresa, operador, categorias, centros de resultado, calendários, parâmetros, modelos, auditoria e backups | Versionar parâmetros; consultar alterações; criar e restaurar backup |
+
+## 4. Regras de integração e base técnica
+
+**Relações e movimentações**
+
+- Um cliente pode ter várias unidades; um pedido pode conter vários equipamentos e serviços. Cada equipamento terá identidade própria.
+- Confirmar um pedido gera projetos e parcelas uma única vez. Registrar uma nota posteriormente vincula o faturamento às parcelas existentes.
+- Separar datas de contratação, competência, vencimento, pagamento, entrega e aceite.
+- Compras terão valores previstos, comprometidos e realizados separados. Recebimento e pagamento não serão tratados como o mesmo evento.
+- Custos de materiais entram no projeto pelo consumo; serviços, pela execução confirmada. O pagamento liquida a obrigação sem contabilizar novamente o custo.
+- Estoque próprio em terceiros continua identificado como propriedade da Fourtech. Transferências não alteram o saldo consolidado.
+- Impedir estoque disponível negativo e reservas superiores ao disponível. Ajustes e perdas exigem motivo.
+- Correções de movimentos confirmados usarão estorno ou ajuste rastreável.
+
+**Cronogramas, custos e repasses**
+
+- Modelos de EAP e BOM terão revisão. Cada projeto manterá a versão utilizada.
+- Adotar dias corridos inicialmente, com calendário configurável por projeto.
+- Suportar dependências término–início e início–início, com defasagem explícita. Bloquear ciclos e sinalizar datas incompatíveis.
+- Distinguir datas contratuais, planejamento recalculado e execução real.
+- Usar custo médio móvel por item para estoque; despesas compartilhadas terão rateio explícito entre projetos.
+- Repasses terão regras versionadas por área, com substituição explícita por projeto. Bases disponíveis: faturamento, recebimento ou resultado gerencial.
+- A confirmação congelará a memória de cálculo e gerará títulos apenas uma vez. Valores já pagos serão considerados nos ajustes.
+- Reserva interna de caixa será apresentada separadamente dos pagamentos a beneficiários.
+
+**Fiscal e migração**
+
+- Manter separados valor histórico da planilha, simulação gerencial e valor confirmado pelo contador.
+- Na simulação, usar os 12 meses anteriores ao período para RBT12, conforme o [manual do PGDAS-D](https://www8.receita.fazenda.gov.br/SimplesNacional/Arquivos/manual/MANUAL_PGDAS-D_2018_V4.pdf). Histórico insuficiente ou enquadramento não configurado exigirá informação validada, sem preencher meses desconhecidos com zero.
+- Parâmetros fiscais terão vigência e confirmação. A primeira versão não calculará automaticamente situações especiais fora do modelo configurado.
+- Fechamentos preservarão a memória dos valores; reabertura exigirá motivo.
+- Importar dados dos PDFs para uma área de conferência, preservando os arquivos e sua procedência.
+- Totais e dashboards serão usados para reconciliação, sem gerar movimentos adicionais.
+- Não deduzir pagamento pela posição da coluna, nem estoque físico a partir de custos agregados. Datas incompletas, duplicidades e divergências permanecerão pendentes até classificação.
+
+**Arquitetura**
+
+- Projeto novo e isolado do Fourtech Gestão existente.
+- Java com JavaFX, módulos de domínio independentes da interface e banco SQLite local. SQLite atende ao armazenamento de aplicações desktop; JavaFX permite distribuição com runtime incorporado. [SQLite](https://www.sqlite.org/whentouse.html), [JavaFX](https://openjfx.io/openjfx-docs/modular).
+- Aplicativo `.app` para o Mac Apple Silicon atual, sem necessidade de iniciar servidor ou instalar banco separadamente.
+- Operações por serviços internos tipados; sem API pública de rede nesta versão.
+- Valores monetários calculados com precisão decimal e armazenados em centavos; quantidades e custos unitários conservarão precisão adicional.
+- Banco, anexos e backups em pasta própria de dados do aplicativo. Backup consistente diário ao abrir, antes de migrações e sob demanda, com exportação para destino escolhido.
+- Atualização do aplicativo preservará dados e aplicará migrações versionadas. Restauração validará integridade antes de substituir a base.
+- Interface funcional inicial, sem definir identidade visual ou composição gráfica definitiva.
+
+## 5. Entregas e critérios de aceitação
+
+Todas as áreas fazem parte do escopo. A implementação seguirá esta ordem para permitir uso e validação progressivos:
+
+1. **Fundação:** cadastros, estrutura de projetos/equipamentos, persistência, anexos, auditoria, backup e área de importação.
+2. **Comercial e financeiro:** prospecção, propostas, pedidos, parcelas, faturamento, contas, caixa, conciliação e resultado.
+3. **Operação industrial:** BOM, EAP/Gantt, compras, estoque, terceiros, produção, qualidade e instalação.
+4. **Gestão completa:** repasses, conferência fiscal, assistência, preventivas, relatórios e conclusão da migração.
+5. **Homologação:** instalação no Mac, conferência do histórico e execução de um projeto completo.
+
+A aceitação exigirá:
+
+- Executar todo o fluxo offline: proposta → pedido → fabricação → instalação → recebimento → assistência.
+- Reconciliar os 32 registros comerciais com R$ 5.681.662,94 antes de eventuais correções aprovadas.
+- Detectar a diferença de R$ 3.000,00 na BOM e as inconsistências conhecidas de datas e cronogramas.
+- Reimportar o mesmo lote e repetir comandos sem duplicar pedidos, títulos, custos ou repasses.
+- Validar recebimentos e pagamentos parciais, estornos, transferências e renegociações.
+- Validar reservas, consumo, devoluções e materiais em terceiros.
+- Recalcular dependências e avanço sem alterar a linha de base aprovada.
+- Demonstrar que parcelamento, faturamento e pagamento não duplicam receita ou custo.
+- Restaurar um backup em ambiente separado, recuperando banco, anexos e histórico.
+- Entregar telas com as informações especificadas, deixando o tratamento visual independente.
+
+Premissas finais: um CNPJ, um operador por vez, português brasileiro e reais. Folha de pagamento, contabilidade oficial, emissão fiscal, integrações bancárias online e sincronização entre computadores ficam fora desta versão.

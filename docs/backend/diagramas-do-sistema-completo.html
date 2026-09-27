@@ -1,0 +1,2266 @@
+<title>Mapa do sistema Renda+</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --fundo: #f4f6fa;
+    --superficie: #ffffff;
+    --superficie-2: #eef3f7;
+    --tinta: #1f2026;
+    --tinta-suave: #5a6272;
+    --regra: #d3dbe7;
+    --azul: #4867b1;
+    --azul-fundo: #e6ecf7;
+    --ouro: #b07d12;
+    --ouro-fundo: #fcf0ae;
+    --ok: #23713f;
+    --ok-fundo: #e3f1e7;
+    --fonte: "IBM Plex Sans", "Segoe UI", Tahoma, system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --fundo: #12151c; --superficie: #1a1f29; --superficie-2: #212835; --tinta: #e6e9ef; --tinta-suave: #9aa4b5;
+      --regra: #2e3747; --azul: #8fa9e6; --azul-fundo: #1f2a44; --ouro: #f0c35a; --ouro-fundo: #3a3218; --ok: #6fcf8f; --ok-fundo: #173222;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --fundo: #12151c; --superficie: #1a1f29; --superficie-2: #212835; --tinta: #e6e9ef; --tinta-suave: #9aa4b5;
+    --regra: #2e3747; --azul: #8fa9e6; --azul-fundo: #1f2a44; --ouro: #f0c35a; --ouro-fundo: #3a3218; --ok: #6fcf8f; --ok-fundo: #173222;
+    color-scheme: dark;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--fundo); color: var(--tinta); font-family: var(--fonte); font-size: 15px; line-height: 1.55; }
+  .pagina { max-width: 1320px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 72px; display: grid; gap: 28px; }
+  header { display: grid; gap: 12px; }
+  .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--azul); font-weight: 600; }
+  h1 { margin: 0; font-size: clamp(28px, 4vw, 40px); line-height: 1.1; letter-spacing: -.01em; text-wrap: balance; }
+  h1 b { color: var(--ouro); font-weight: 700; }
+  header p { margin: 0; max-width: 72ch; color: var(--tinta-suave); }
+  .numeros { display: flex; flex-wrap: wrap; gap: 10px 28px; font-variant-numeric: tabular-nums; }
+  .numeros div { display: grid; }
+  .numeros strong { font-size: 24px; line-height: 1.2; }
+  .numeros span { font-size: 13px; color: var(--tinta-suave); }
+  code { font-family: var(--mono); font-size: .9em; background: var(--superficie-2); padding: 1px 4px; border-radius: 3px; overflow-wrap: anywhere; }
+
+  .layout { display: grid; gap: 28px; grid-template-columns: minmax(0, 1fr); }
+  nav.indice { background: var(--superficie); border: 1px solid var(--regra); border-radius: 6px; padding: 14px 16px; font-size: 13.5px; }
+  nav.indice summary { cursor: pointer; font-weight: 600; }
+  nav.indice ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  nav.indice > details > ul { margin-top: 10px; gap: 12px; }
+  nav.indice ul ul { margin-top: 4px; padding-left: 10px; border-left: 1px solid var(--regra); }
+  nav.indice a { display: block; color: var(--tinta); text-decoration: none; padding: 3px 8px; border-radius: 3px; transition: background-color .18s ease; }
+  nav.indice a:hover, nav.indice a:focus-visible { background: var(--ouro-fundo); outline: none; }
+  nav.indice a.nav-parte { font-weight: 600; color: var(--azul); }
+  nav.indice code { background: none; padding: 0; font-size: .92em; }
+
+  main { display: grid; gap: 22px; min-width: 0; }
+  h2.parte { margin: 18px 0 0; padding-top: 14px; border-top: 2px solid var(--azul); font-size: 24px; line-height: 1.25; text-wrap: balance; scroll-margin-top: 16px; }
+  h2.parte:first-child { margin-top: 0; }
+  section.bloco { display: grid; gap: 12px; scroll-margin-top: 16px; }
+  h3 { margin: 0; font-size: 18px; line-height: 1.3; text-wrap: balance; }
+  section.bloco p, main > p { margin: 0; max-width: 78ch; color: var(--tinta-suave); }
+  section.bloco p strong { color: var(--tinta); }
+  .diagrama { background: var(--superficie); border: 1px solid var(--regra); border-radius: 6px; padding: 16px; overflow-x: auto; }
+  .diagrama pre.mermaid { margin: 0; min-width: 680px; display: flex; justify-content: center; }
+
+  .tabela { overflow-x: auto; background: var(--superficie); border: 1px solid var(--regra); border-radius: 6px; }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 13.5px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 12px; border-bottom: 1px solid var(--regra); }
+  th { background: var(--superficie-2); font-weight: 600; font-size: 12.5px; letter-spacing: .02em; }
+  tr:last-child td { border-bottom: 0; }
+  tbody tr { transition: background-color .18s ease; }
+  tbody tr:hover { background: var(--ouro-fundo); }
+
+  .selo { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .selo::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .selo--uso { background: var(--ok-fundo); color: var(--ok); }
+  .selo--plan { background: var(--azul-fundo); color: var(--azul); }
+
+  @media (min-width: 1000px) {
+    .layout { grid-template-columns: 250px minmax(0, 1fr); align-items: start; }
+    nav.indice { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); max-height: calc(100vh - 32px); overflow-y: auto; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } nav.indice a, tbody tr { transition: none; } }
+</style>
+
+<div class="pagina">
+  <header>
+    <div class="eyebrow">Renda+ ERP · servidor Java / Spring Boot</div>
+    <h1>Sistema completo <b>Renda+</b></h1>
+    <p>Situação em 25/09/2026. Este documento cobre <strong>todo o Renda+ ERP</strong>, incluindo o que ainda não foi implementado: a visão do sistema, os 24 módulos do backend e, para cada módulo, as classes e o fluxo principal. Os detalhes do que já existe estão em <code>17-diagramas-de-classes-e-padroes.md</code> e <code>18-diagramas-de-atividades-e-sequencias.md</code>.</p><p>Cada módulo informa a sua situação: <strong>Implementado</strong> (código existente), <strong>Especificado no B01</strong> (regras e agregados definidos em <code>12-b01-modelo-de-dominio.md</code> e <code>13-b01-especificacao-de-comandos.md</code>) ou <strong>Proposta de desenho</strong> (derivada do plano do backend, do modelo de dados <code>16-modelo-de-dados.md</code> e do catálogo de eventos; será revista na sprint que implementar o módulo). Nomes de classes e tabelas seguem o modelo de dados.</p>
+    <div class="numeros">
+      <div><strong>53</strong><span>diagramas</span></div><div><strong>24</strong><span>módulos</span></div><div><strong>24</strong><span>de classes</span></div><div><strong>29</strong><span>de fluxo e estados</span></div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="indice" aria-label="Índice">
+      <details open>
+        <summary>Índice</summary>
+        <ul><li><a href="#s-parte-1" class="nav-parte">Parte 1 — Visão do sistema</a><ul><li><a href="#s-1-contexto-quem-usa-o-renda-e-com-o-que-ele-se-comunica">1. Contexto: quem usa o Renda+ e com o que ele se comunica</a></li><li><a href="#s-2-conteineres-as-partes-que-rodam">2. Contêineres: as partes que rodam</a></li><li><a href="#s-3-implantacao">3. Implantação</a></li><li><a href="#s-4-modulos-e-dependencias">4. Módulos e dependências</a></li><li><a href="#s-5-fluxo-de-valor-de-ponta-a-ponta">5. Fluxo de valor de ponta a ponta</a></li><li><a href="#s-6-mapa-de-eventos-entre-modulos">6. Mapa de eventos entre módulos</a></li></ul></li><li><a href="#s-parte-2" class="nav-parte">Parte 2 — Módulos</a><ul><li><a href="#s-7-nucleo-compartilhado-kernel">7. Núcleo compartilhado (<code>kernel</code>)</a></li><li><a href="#s-8-acesso-e-identidade-acesso">8. Acesso e identidade (<code>acesso</code>)</a></li><li><a href="#s-9-auditoria-auditoria">9. Auditoria (<code>auditoria</code>)</a></li><li><a href="#s-10-plataforma-tecnica-plataforma">10. Plataforma técnica (<code>plataforma</code>)</a></li><li><a href="#s-11-catalogo-semantico-semantica">11. Catálogo semântico (<code>semantica</code>)</a></li><li><a href="#s-12-cadastros-cadastros">12. Cadastros (<code>cadastros</code>)</a></li><li><a href="#s-13-projetos-e-equipamentos-projetos">13. Projetos e equipamentos (<code>projetos</code>)</a></li><li><a href="#s-14-comercial-comercial">14. Comercial (<code>comercial</code>)</a></li><li><a href="#s-15-financeiro-financeiro">15. Financeiro (<code>financeiro</code>)</a></li><li><a href="#s-16-documentos-e-anexos-documentos">16. Documentos e anexos (<code>documentos</code>)</a></li><li><a href="#s-17-engenharia-e-planejamento-engenharia">17. Engenharia e planejamento (<code>engenharia</code>)</a></li><li><a href="#s-18-suprimentos-suprimentos">18. Suprimentos (<code>suprimentos</code>)</a></li><li><a href="#s-19-recebimentos-recebimentos">19. Recebimentos (<code>recebimentos</code>)</a></li><li><a href="#s-20-estoque-estoque">20. Estoque (<code>estoque</code>)</a></li><li><a href="#s-21-qualidade-qualidade">21. Qualidade (<code>qualidade</code>)</a></li><li><a href="#s-22-producao-producao">22. Produção (<code>producao</code>)</a></li><li><a href="#s-23-instalacao-e-entrega-instalacao">23. Instalação e entrega (<code>instalacao</code>)</a></li><li><a href="#s-24-pos-venda-posvenda">24. Pós-venda (<code>posvenda</code>)</a></li><li><a href="#s-25-custos-e-resultado-custos">25. Custos e resultado (<code>custos</code>)</a></li><li><a href="#s-26-repasses-repasses">26. Repasses (<code>repasses</code>)</a></li><li><a href="#s-27-fiscal-gerencial-fiscal">27. Fiscal gerencial (<code>fiscal</code>)</a></li><li><a href="#s-28-motor-de-dados-analise-e-decisao-analitico">28. Motor de dados, análise e decisão (<code>analitico</code>)</a></li><li><a href="#s-29-integracao-e-importacao-integracao">29. Integração e importação (<code>integracao</code>)</a></li><li><a href="#s-30-consultas-integradas-consultas">30. Consultas integradas (<code>consultas</code>)</a></li></ul></li></ul>
+      </details>
+    </nav>
+    <main>
+      <h2 class="parte" id="s-parte-1">Parte 1 — Visão do sistema</h2>
+<section class="bloco" id="s-1-contexto-quem-usa-o-renda-e-com-o-que-ele-se-comunica"><h3>1. Contexto: quem usa o Renda+ e com o que ele se comunica</h3>
+<p>O Renda+ não troca dados automaticamente com sistemas de terceiros na versão inicial. Extratos, notas e planilhas entram por arquivo, com conferência humana. A IA externa fica desligada até o ADR-014 ser decidido.</p>
+<div class="diagrama"><pre class="mermaid">
+flowchart LR
+    subgraph PESSOAS["Pessoas da Fourtech"]
+        DIR["Direção"]
+        COM["Comercial"]
+        ENG["Engenharia e planejamento"]
+        SUP["Suprimentos e estoque"]
+        PRO["Produção e qualidade"]
+        INS["Instalação e assistência"]
+        FIN["Financeiro"]
+        ADM["Administrador"]
+    end
+    ERP[["Renda+ ERP&lt;br/&gt;app do Mac + servidor"]]
+    CONT["Contador&lt;br/&gt;(externo)"]
+    BAN["Banco&lt;br/&gt;extratos OFX/CSV"]
+    ARQ["Planilhas e PDFs&lt;br/&gt;históricos e notas"]
+    IA["Provedor de IA&lt;br/&gt;(futuro, desligado)"]
+    DIR -- "painéis, central de problemas, decisões" --&gt; ERP
+    COM -- "leads, propostas, pedidos" --&gt; ERP
+    ENG -- "BOM, EAP, cronograma" --&gt; ERP
+    SUP -- "MRP, cotações, compras, estoque" --&gt; ERP
+    PRO -- "ordens, apontamentos, inspeções" --&gt; ERP
+    INS -- "instalação, aceite, chamados, preventivas" --&gt; ERP
+    FIN -- "receber, pagar, conciliar, caixa" --&gt; ERP
+    ADM -- "usuários, perfis, parâmetros, backup" --&gt; ERP
+    ERP -- "simulação e relatório fiscal" --&gt; CONT
+    CONT -- "valor confirmado do período" --&gt; ERP
+    BAN -- "arquivo de extrato" --&gt; ERP
+    ARQ -- "importação com conferência" --&gt; ERP
+    ERP -. "somente com ADR-014 aceito" .-&gt; IA
+</pre></div>
+</section>
+<section class="bloco" id="s-2-conteineres-as-partes-que-rodam"><h3>2. Contêineres: as partes que rodam</h3>
+<div class="diagrama"><pre class="mermaid">
+flowchart TB
+    subgraph MAC["Mac do usuário"]
+        APP["App Renda+ ERP&lt;br/&gt;Electron + React + TypeScript&lt;br/&gt;(sem regra de negócio)"]
+    end
+    subgraph SRV["Servidor (Mac local, ADR-004)"]
+        API["Servidor Java 21 · Spring Boot 4.1&lt;br/&gt;monólito modular, 24 módulos&lt;br/&gt;API REST /api/v1"]
+        PY["Worker Python&lt;br/&gt;extração, normalização, análises&lt;br/&gt;(B04 em diante)"]
+        DB[("PostgreSQL 16&lt;br/&gt;dados de negócio, auditoria,&lt;br/&gt;recibos, outbox, fatos")]
+        FS[("Arquivos privados&lt;br/&gt;originais importados e anexos")]
+    end
+    BK[("Cópia de segurança&lt;br/&gt;destino pendente PD-021")]
+    APP -- "HTTPS na rede (ADR-007)&lt;br/&gt;HTTP em 127.0.0.1 na Sprint 1–2" --&gt; API
+    API -- "JDBC + Flyway" --&gt; DB
+    API --&gt; FS
+    PY -- "API interna: reivindicar,&lt;br/&gt;renovar lease, concluir" --&gt; API
+    PY -- "lê só o recorte autorizado" --&gt; FS
+    DB -. backup .-&gt; BK
+    FS -. backup .-&gt; BK
+</pre></div>
+</section>
+<section class="bloco" id="s-3-implantacao"><h3>3. Implantação</h3>
+<div class="diagrama"><pre class="mermaid">
+flowchart LR
+    subgraph REDE["Rede local da Fourtech"]
+        subgraph M1["Mac servidor"]
+            J["Servidor Java (Spring Boot)&lt;br/&gt;porta 8080"]
+            P[("PostgreSQL 16&lt;br/&gt;porta 5432, só local")]
+            W["worker Python (B04)"]
+            D["/dados/renda/arquivos"]
+        end
+        subgraph M2["Mac do usuário 1"]
+            A1["Renda+ ERP.app"]
+        end
+        subgraph M3["Mac do usuário N"]
+            A2["Renda+ ERP.app"]
+        end
+    end
+    A1 -- "RENDA_SERVER_URL&lt;br/&gt;TLS obrigatório fora da máquina" --&gt; J
+    A2 --&gt; J
+    J --&gt; P
+    J --&gt; D
+    W --&gt; J
+</pre></div>
+<p>A quantidade de usuários simultâneos (PD-020, ADR-007) e o destino do backup (PD-021) ainda são pendências. Até lá, o servidor escuta só em <code>127.0.0.1</code>; abrir para a rede exige <code>RENDA_SERVER_ADDRESS=0.0.0.0</code> e TLS.</p>
+</section>
+<section class="bloco" id="s-4-modulos-e-dependencias"><h3>4. Módulos e dependências</h3>
+<p>Os 24 módulos de <code>b01/modulos.json</code>. Cada seta aponta para um módulo do qual o de origem depende. As dependências indiretas foram omitidas para o desenho ficar legível: por exemplo, <code>comercial</code> também depende de <code>cadastros</code>, através de <code>projetos</code>. O <code>ArchitectureTest</code> confere todas no build.</p>
+<div class="diagrama"><pre class="mermaid">
+flowchart BT
+    kernel["kernel ✓"]
+    acesso["acesso ✓"] --&gt; kernel
+    auditoria["auditoria ✓"] --&gt; acesso
+    plataforma["plataforma ✓"] --&gt; auditoria
+    cadastros["cadastros ✓ parcial"] --&gt; plataforma
+    semantica["semantica"] --&gt; plataforma
+    analitico["analitico"] --&gt; semantica
+    financeiro["financeiro"] --&gt; cadastros
+    projetos["projetos"] --&gt; cadastros
+    comercial["comercial"] --&gt; financeiro
+    comercial --&gt; projetos
+    documentos["documentos"] --&gt; financeiro
+    documentos --&gt; projetos
+    engenharia["engenharia"] --&gt; projetos
+    estoque["estoque"] --&gt; projetos
+    qualidade["qualidade"] --&gt; projetos
+    fiscal["fiscal"] --&gt; documentos
+    instalacao["instalacao"] --&gt; financeiro
+    instalacao --&gt; qualidade
+    posvenda["posvenda"] --&gt; estoque
+    posvenda --&gt; qualidade
+    producao["producao"] --&gt; engenharia
+    producao --&gt; estoque
+    producao --&gt; qualidade
+    suprimentos["suprimentos"] --&gt; engenharia
+    suprimentos --&gt; estoque
+    suprimentos --&gt; financeiro
+    integracao["integracao"] --&gt; comercial
+    integracao --&gt; engenharia
+    integracao --&gt; estoque
+    integracao --&gt; fiscal
+    recebimentos["recebimentos"] --&gt; suprimentos
+    custos["custos"] --&gt; comercial
+    custos --&gt; documentos
+    custos --&gt; instalacao
+    custos --&gt; posvenda
+    custos --&gt; producao
+    custos --&gt; recebimentos
+    repasses["repasses"] --&gt; custos
+    consultas["consultas"] --&gt; analitico
+    consultas --&gt; fiscal
+    consultas --&gt; repasses
+</pre></div>
+<p>✓ = já tem código (Sprints 1 e 2).</p>
+</section>
+<section class="bloco" id="s-5-fluxo-de-valor-de-ponta-a-ponta"><h3>5. Fluxo de valor de ponta a ponta</h3>
+<p>O caminho de um equipamento vendido, do primeiro contato à assistência técnica, com o dinheiro correndo em paralelo. Cada raia é uma área da empresa.</p>
+<div class="diagrama"><pre class="mermaid">
+flowchart LR
+    subgraph C["Comercial"]
+        C1["Lead e interações"] --&gt; C2["Oportunidade"] --&gt; C3["Proposta com revisões"] --&gt; C4["Pedido confirmado"]
+    end
+    subgraph E["Engenharia"]
+        E1["BOM da revisão aplicada"] --&gt; E2["EAP e cronograma&lt;br/&gt;linha de base"]
+    end
+    subgraph S["Suprimentos e estoque"]
+        S1["MRP: necessidade líquida"] --&gt; S2["Cotação e pedido de compra"] --&gt; S3["Recebimento conferido"] --&gt; S4["Estoque: reserva e consumo"]
+    end
+    subgraph P["Produção e qualidade"]
+        P1["Ordem de produção"] --&gt; P2["Apontamentos"] --&gt; P3["Inspeção"]
+    end
+    subgraph I["Instalação e pós-venda"]
+        I1["Instalação"] --&gt; I2["Aceite do cliente&lt;br/&gt;início da garantia"] --&gt; I3["Chamados e preventivas"]
+    end
+    subgraph F["Financeiro e gestão"]
+        F1["Parcelas a receber"] --&gt; F2["Nota vinculada à parcela"] --&gt; F3["Baixa e conciliação"] --&gt; F4["Fluxo de caixa"]
+        F5["Contas a pagar"] --&gt; F3
+        G1["Custo por projeto"] --&gt; G2["Resultado"] --&gt; G3["Repasses"]
+        G4["Impostos gerenciais"]
+        G5["Indicadores e central de problemas"]
+    end
+    C4 --&gt; E1
+    C4 --&gt; F1
+    E2 --&gt; S1
+    S2 --&gt; F5
+    S4 --&gt; P1
+    P3 --&gt; I1
+    S4 --&gt; G1
+    P2 --&gt; G1
+    I1 --&gt; G1
+    I3 --&gt; G1
+    F2 --&gt; G4
+    G2 --&gt; G5
+    F4 --&gt; G5
+</pre></div>
+</section>
+<section class="bloco" id="s-6-mapa-de-eventos-entre-modulos"><h3>6. Mapa de eventos entre módulos</h3>
+<p>Linha cheia: chamada direta dentro da mesma transação, usada quando a operação não pode ficar pela metade. Linha tracejada: evento pelo outbox, entregue depois do commit. Todos os eventos também alimentam o motor analítico (<code>analitico</code>) e as consultas (<code>consultas</code>), omitidos aqui.</p>
+<div class="diagrama"><pre class="mermaid">
+flowchart LR
+    comercial -- "confirmar pedido cria" --&gt; projetos
+    comercial -- "confirmar pedido cria parcelas" --&gt; financeiro
+    suprimentos -- "pedido aprovado programa a pagar" --&gt; financeiro
+    recebimentos -- "entrada no estoque" --&gt; estoque
+    producao -- "consumo de material" --&gt; estoque
+    producao -- "liberação exige inspeção" --&gt; qualidade
+    posvenda -- "peças" --&gt; estoque
+    repasses -- "confirmação gera títulos a pagar" --&gt; financeiro
+    comercial -. "SalesOrderConfirmed&lt;br/&gt;Amended · Cancelled" .-&gt; custos
+    engenharia -. ProjectBomApplied .-&gt; custos
+    suprimentos -. "PurchaseApproved&lt;br/&gt;RemainderCancelled" .-&gt; custos
+    recebimentos -. "GoodsReceived · ServiceAccepted&lt;br/&gt;GoodsReturnedToSupplier" .-&gt; custos
+    estoque -. "MaterialConsumed · Returned&lt;br/&gt;StockAdjusted · InventoryCountPosted" .-&gt; custos
+    producao -. ProductionReported .-&gt; custos
+    instalacao -. ExpenseRecognized .-&gt; custos
+    posvenda -. ServiceOrderExecuted .-&gt; custos
+    custos -. CostEntryRecorded .-&gt; repasses
+    financeiro -. "SettlementPosted · Reversed" .-&gt; repasses
+    documentos -. DocumentRegistered .-&gt; repasses
+    documentos -. "DocumentRegistered&lt;br/&gt;DocumentClassified" .-&gt; fiscal
+</pre></div>
+</section>
+<h2 class="parte" id="s-parte-2">Parte 2 — Módulos</h2>
+<section class="bloco" id="s-7-nucleo-compartilhado-kernel"><h3>7. Núcleo compartilhado (<code>kernel</code>)</h3>
+<p><strong>Situação:</strong> Implementado em parte (Sprint 1); os demais Value Objects estão especificados no B01. Java puro, sem framework. Detalhe do que existe: documento 17, diagrama 2.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class Money {
+        &lt;&lt;implementado&gt;&gt;
+        centavos inteiros + moeda
+    }
+    class Quantity {
+        &lt;&lt;implementado&gt;&gt;
+        decimal com escala 6 + unidade
+    }
+    class Cnpj {
+        &lt;&lt;implementado&gt;&gt;
+    }
+    class UnitOfMeasure {
+        &lt;&lt;implementado&gt;&gt;
+    }
+    class Rate {
+        &lt;&lt;value object&gt;&gt;
+        +BigDecimal fraction
+        escala 6, 0,300000 = 30%
+    }
+    class DateRange {
+        &lt;&lt;value object&gt;&gt;
+        +LocalDate start
+        +LocalDate end
+        início ≤ fim
+    }
+    class CompetencePeriod {
+        &lt;&lt;value object&gt;&gt;
+        +int year
+        +int month
+        sem fuso horário
+    }
+    class BusinessDate {
+        &lt;&lt;value object&gt;&gt;
+        data de negócio, distinta de instante
+    }
+    class EntityRef {
+        &lt;&lt;value object&gt;&gt;
+        +String type
+        +String id
+        referência a outro módulo sem dependência
+    }
+    class AggregateVersion {
+        &lt;&lt;value object&gt;&gt;
+        +long value
+        ETag / If-Match
+    }
+    class IdempotencyKey {
+        &lt;&lt;value object&gt;&gt;
+        +String value
+    }
+    class Reason {
+        &lt;&lt;value object&gt;&gt;
+        +String text
+        obrigatório em cancelamento, estorno e ajuste
+    }
+    Money ..&gt; Rate : times
+    DateRange ..&gt; BusinessDate
+</pre></div>
+</section>
+<section class="bloco" id="s-8-acesso-e-identidade-acesso"><h3>8. Acesso e identidade (<code>acesso</code>)</h3>
+<p><strong>Situação:</strong> Implementado na Sprint 2 com dois perfis fixos (documento 17, diagrama 7). O desenho completo abaixo é <strong>proposta</strong>: perfis configuráveis, permissão por ação <strong>e por objeto</strong> (por exemplo, só os projetos em que a pessoa é responsável) e alçadas por valor, que continuam pendentes (PD-009) até o piloto.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class Company {
+        +UUID id
+        +String name
+    }
+    class User {
+        &lt;&lt;implementado&gt;&gt;
+        +username, displayName, active
+        +failedLogin(), successfulLogin()
+    }
+    class Role {
+        &lt;&lt;proposta&gt;&gt;
+        +UUID id
+        +String name
+        +Set~Permission~ permissions
+    }
+    class Permission {
+        +String code
+        +String description
+        ex.: sales_order.confirm
+    }
+    class Session {
+        &lt;&lt;implementado&gt;&gt;
+        +UUID id
+        +tokenHash
+        +expiresAt
+        +revokedAt
+    }
+    class ObjectScope {
+        &lt;&lt;proposta&gt;&gt;
+        +String permission
+        +EntityRef scope
+        ex.: projetos em que é responsável
+    }
+    class ApprovalLimit {
+        &lt;&lt;proposta · PD-009&gt;&gt;
+        +String permission
+        +Money maxAmount
+    }
+    class Authorizer {
+        &lt;&lt;proposta · interface&gt;&gt;
+        +require(user, permission, EntityRef)
+        +limitFor(user, permission) Money
+    }
+    Company "1" *-- "0..*" User
+    User "0..*" --&gt; "1..*" Role
+    Role "1" --&gt; "1..*" Permission
+    User "1" *-- "0..*" Session
+    Role "1" *-- "0..*" ObjectScope
+    Role "1" *-- "0..*" ApprovalLimit
+    Authorizer ..&gt; Role
+    Authorizer ..&gt; ObjectScope
+    Authorizer ..&gt; ApprovalLimit
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+flowchart TD
+    A((Comando com usuário autenticado)) --&gt; P{"Algum perfil do usuário&lt;br/&gt;tem a permissão da ação?"}
+    P -- não --&gt; N["403 ACCESS_DENIED&lt;br/&gt;auditado"] --&gt; Z(((Fim)))
+    P -- sim --&gt; O{"A permissão tem&lt;br/&gt;escopo por objeto?"}
+    O -- não --&gt; V
+    O -- sim --&gt; OB{"O registro está&lt;br/&gt;no escopo do usuário?"}
+    OB -- não --&gt; NF["404: fora do escopo&lt;br/&gt;(não revela que existe)"] --&gt; Z
+    OB -- sim --&gt; V{"A ação tem valor e&lt;br/&gt;há alçada definida?"}
+    V -- não --&gt; OK["Autorizado"] --&gt; Z
+    V -- sim --&gt; AL{"Valor ≤ alçada?"}
+    AL -- sim --&gt; OK
+    AL -- não --&gt; AP["Fica pendente de aprovação&lt;br/&gt;de quem tem alçada"] --&gt; Z
+</pre></div>
+</section>
+<section class="bloco" id="s-9-auditoria-auditoria"><h3>9. Auditoria (<code>auditoria</code>)</h3>
+<p><strong>Situação:</strong> Implementada (Sprints 1 e 2); a tela *Auditoria* em Administração é proposta para a próxima etapa de B03. Toda operação confirmada grava quem, quando, o quê (antes → depois), motivo e código de correlação, na mesma transação.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class AuditTrail {
+        &lt;&lt;interface · implementado&gt;&gt;
+        +record(AuditEntry)
+    }
+    class AuditQuery {
+        &lt;&lt;interface · implementado&gt;&gt;
+        +history(entityType, entityId) List~AuditRecord~
+    }
+    class AuditSearch {
+        &lt;&lt;proposta · interface&gt;&gt;
+        +search(AuditFilter, Page) Page~AuditRecord~
+    }
+    class AuditFilter {
+        &lt;&lt;proposta&gt;&gt;
+        +DateRange period
+        +String actor
+        +String action
+        +String entityType
+        +String correlationId
+    }
+    class AuditEntry {
+        &lt;&lt;record · implementado&gt;&gt;
+        actor, action, entity, version, reason, changes, correlationId
+    }
+    class JdbcAuditTrail {
+        &lt;&lt;adaptador · implementado&gt;&gt;
+    }
+    AuditTrail &lt;|.. JdbcAuditTrail
+    AuditQuery &lt;|.. JdbcAuditTrail
+    AuditSearch ..&gt; AuditFilter
+    AuditTrail ..&gt; AuditEntry
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant U as Administrador
+    participant W as Tela Auditoria (proposta)
+    participant S as AuditSearch
+    participant DB as audit_event
+    U-&gt;&gt;W: filtra por período, usuário ou ação
+    W-&gt;&gt;S: GET /api/v1/audit?de=01/10/2026&amp;ate=31/10/2026&amp;acao=ACCESS_DENIED
+    S-&gt;&gt;S: require(audit.read)
+    S-&gt;&gt;DB: consulta paginada por (entity_type, entity_id, occurred_at)
+    DB--&gt;&gt;S: registros
+    S--&gt;&gt;W: página com antes → depois e correlationId
+    U-&gt;&gt;W: abre um registro
+    W-&gt;&gt;U: diferenças campo a campo e link para o registro de origem
+</pre></div>
+</section>
+<section class="bloco" id="s-10-plataforma-tecnica-plataforma"><h3>10. Plataforma técnica (<code>plataforma</code>)</h3>
+<p><strong>Situação:</strong> Implementados dados da empresa, sessão, recibos de comando, outbox e fatos (Sprints 1 e 2). Especificados para B02–B04: tarefas duráveis, arquivos privados e configurações. Backup é B13.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class CompanyProfile {
+        &lt;&lt;implementado&gt;&gt;
+    }
+    class CommandReceipts {
+        &lt;&lt;implementado&gt;&gt;
+    }
+    class Outbox {
+        &lt;&lt;implementado&gt;&gt;
+    }
+    class OutboxDispatcher {
+        &lt;&lt;implementado&gt;&gt;
+    }
+    class ProcessingJob {
+        &lt;&lt;aggregate root · especificado&gt;&gt;
+        +UUID id
+        +String type
+        +JobState state
+        +int inputSchemaVersion
+        +String processorVersion
+        +Map parameters
+        +int attempts
+        +Instant leaseUntil
+        +String leaseToken
+        +long generation
+        +int progress
+        +String error
+        +claim(workerId, now) Lease
+        +renew(token, now)
+        +complete(token, result)
+        +fail(token, error)
+        +requestCancel()
+    }
+    class JobState {
+        &lt;&lt;enumeration&gt;&gt;
+        QUEUED
+        RUNNING
+        SUCCEEDED
+        RETRY_WAIT
+        FAILED
+        CANCEL_REQUESTED
+        CANCELLED
+    }
+    class ProcessingAttempt {
+        +long generation
+        +Instant startedAt
+        +Instant finishedAt
+        +String outcome
+    }
+    class StoredFile {
+        &lt;&lt;entity · especificado&gt;&gt;
+        +UUID id
+        +String sha256
+        +String mediaType
+        +long sizeBytes
+        +String storageKey
+    }
+    class FileStorage {
+        &lt;&lt;interface · porta&gt;&gt;
+        +store(stream) StoredFile
+        +open(StoredFile) InputStream
+    }
+    class Setting {
+        &lt;&lt;entity&gt;&gt;
+        +String key
+        +String value
+        +Instant validFrom
+    }
+    class BackupRun {
+        &lt;&lt;proposta · B13&gt;&gt;
+        +Instant startedAt
+        +String target
+        +String checksum
+        +state
+    }
+    ProcessingJob --&gt; JobState
+    ProcessingJob "1" *-- "0..*" ProcessingAttempt
+    FileStorage ..&gt; StoredFile
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+stateDiagram-v2
+    [*] --&gt; QUEUED
+    QUEUED --&gt; RUNNING : worker reivindica (geração + 1)
+    RUNNING --&gt; SUCCEEDED : concluir com token vigente
+    RUNNING --&gt; RETRY_WAIT : falha temporária ou lease expirado
+    RETRY_WAIT --&gt; QUEUED : após espera, dentro do limite
+    RETRY_WAIT --&gt; FAILED : tentativas esgotadas
+    RUNNING --&gt; FAILED : erro definitivo
+    QUEUED --&gt; CANCEL_REQUESTED : usuário cancela
+    RUNNING --&gt; CANCEL_REQUESTED : usuário cancela
+    CANCEL_REQUESTED --&gt; CANCELLED : worker confirma ou lease expira
+    SUCCEEDED --&gt; [*]
+    FAILED --&gt; [*]
+    CANCELLED --&gt; [*]
+</pre></div>
+</section>
+<section class="bloco" id="s-11-catalogo-semantico-semantica"><h3>11. Catálogo semântico (<code>semantica</code>)</h3>
+<p><strong>Situação:</strong> Especificado no B01 como dados (<code>b01/conceitos.json</code>, <code>b01/formularios.json</code>); as classes abaixo são proposta para B03. O catálogo define o significado de cada conceito e cada formulário; a classificação separa o que foi <strong>sugerido</strong> do que foi <strong>confirmado</strong>.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class BusinessConcept {
+        &lt;&lt;entity&gt;&gt;
+        +String id
+        +String term
+        +String ownerModule
+        +String meaning
+        +String unit
+        +String granularity
+        +List~String~ synonyms
+        +List~String~ notConfusedWith
+    }
+    class FormDefinition {
+        &lt;&lt;imutável por versão&gt;&gt;
+        +String id
+        +int version
+        +List~FieldSpec~ fields
+        +List~ValidationSpec~ validations
+        +Set~String~ permissions
+    }
+    class FieldSpec {
+        +String name
+        +String conceptId
+        +String type
+        +String unit
+        +boolean required
+    }
+    class ClassificationRuleRevision {
+        &lt;&lt;imutável por revisão&gt;&gt;
+        +String scope
+        +int revision
+        +Instant validFrom
+        +Condition condition
+        +String className
+    }
+    class ClassificationAssignment {
+        +EntityRef subject
+        +String className
+        +AssignmentKind kind
+        +UserId confirmedBy
+    }
+    class AssignmentKind {
+        &lt;&lt;enumeration&gt;&gt;
+        SUGGESTED
+        CONFIRMED
+        REJECTED
+    }
+    FormDefinition "1" *-- "1..*" FieldSpec
+    FieldSpec --&gt; BusinessConcept
+    ClassificationAssignment --&gt; ClassificationRuleRevision
+    ClassificationAssignment --&gt; AssignmentKind
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+flowchart TD
+    A((Registro novo ou importado)) --&gt; R["Aplica as regras de classificação&lt;br/&gt;vigentes na data do registro"]
+    R --&gt; M{"Alguma regra&lt;br/&gt;se aplica?"}
+    M -- não --&gt; UN["Classe desconhecida&lt;br/&gt;(nunca vira zero nem 'outros')"] --&gt; Z(((Fim)))
+    M -- sim --&gt; SG["Grava sugestão SUGGESTED&lt;br/&gt;com a revisão da regra"]
+    SG --&gt; RV{"Usuário revisa"}
+    RV -- confirma --&gt; CF["CONFIRMED: passa a contar&lt;br/&gt;nos fatos e indicadores"] --&gt; Z
+    RV -- rejeita --&gt; RJ["REJECTED com motivo"] --&gt; Z
+    RV -- troca a classe --&gt; CF
+</pre></div>
+</section>
+<section class="bloco" id="s-12-cadastros-cadastros"><h3>12. Cadastros (<code>cadastros</code>)</h3>
+<p><strong>Situação:</strong> Clientes, unidades e contatos implementados na Sprint 2 (documento 17, diagrama 8). Fornecedores, itens, unidades de medida e conversões são a Sprint 3. Nomes alternativos vindos de importação entram em B04. Um parceiro tem um só cadastro, e ser cliente ou fornecedor é um <strong>papel</strong> dele.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class Partner {
+        &lt;&lt;aggregate root · implementado&gt;&gt;
+        +code, legalName, tradeName, cnpj, status
+        +addRole(PartnerRole)
+    }
+    class PartnerRole {
+        &lt;&lt;enumeration&gt;&gt;
+        CLIENTE
+        FORNECEDOR
+        PRESTADOR
+        BENEFICIARIO_REPASSE
+    }
+    class Unit {
+        &lt;&lt;implementado&gt;&gt;
+    }
+    class Contact {
+        &lt;&lt;implementado&gt;&gt;
+    }
+    class ExternalAlias {
+        &lt;&lt;B04&gt;&gt;
+        +String alias
+        +String source
+        preserva o nome da origem
+    }
+    class Item {
+        &lt;&lt;aggregate root · Sprint 3&gt;&gt;
+        +String code
+        +String description
+        +ItemNature nature
+        +UnitOfMeasure uom
+        +boolean stockControlled
+        +Money referenceCost
+        +deactivate(Reason)
+    }
+    class ItemNature {
+        &lt;&lt;enumeration&gt;&gt;
+        MATERIAL
+        SERVICO
+        EQUIPAMENTO
+        COMPONENTE
+    }
+    class ItemCategory {
+        +String name
+    }
+    class UnitConversion {
+        &lt;&lt;kernel&gt;&gt;
+        1 from = factor to, por item
+    }
+    class SupplierItem {
+        &lt;&lt;Sprint 3&gt;&gt;
+        +PartnerRef supplier
+        +ItemRef item
+        +int leadTimeDays
+        +String supplierCode
+    }
+    class ItemService {
+        &lt;&lt;application service · Sprint 3&gt;&gt;
+        +register(key, ItemData) Item
+        +update(id, version, ItemData) Item
+    }
+    class SupplierService {
+        &lt;&lt;application service · Sprint 3&gt;&gt;
+        +register(key, PartnerData) Partner
+        +linkItem(supplier, item, leadTime)
+    }
+    Partner "1" *-- "1..*" PartnerRole
+    Partner "1" *-- "0..*" Unit
+    Partner "1" *-- "0..*" Contact
+    Partner "1" *-- "0..*" ExternalAlias
+    Item --&gt; ItemNature
+    Item --&gt; ItemCategory
+    Item "1" *-- "0..*" UnitConversion
+    SupplierItem --&gt; Partner
+    SupplierItem --&gt; Item
+    ItemService ..&gt; Item
+    SupplierService ..&gt; Partner
+    SupplierService ..&gt; SupplierItem
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+flowchart TD
+    A((Cadastrar fornecedor)) --&gt; C{"CNPJ informado?"}
+    C -- não --&gt; NV["Cadastra sem CNPJ&lt;br/&gt;(não inventa identificador)"] --&gt; RL
+    C -- sim --&gt; EX{"Já existe parceiro&lt;br/&gt;com esse CNPJ?"}
+    EX -- não --&gt; NV2["Cria o parceiro"] --&gt; RL["Atribui o papel FORNECEDOR"]
+    EX -- "sim, é cliente" --&gt; AD["Acrescenta o papel FORNECEDOR&lt;br/&gt;ao cadastro existente"] --&gt; AU
+    EX -- "sim, já é fornecedor" --&gt; MS["422 com o código&lt;br/&gt;do cadastro existente"] --&gt; Z(((Fim)))
+    RL --&gt; AU["Auditoria + PartnerRegistered&lt;br/&gt;ou PartnerUpdated"]
+    AU --&gt; IT{"Vincular itens?"}
+    IT -- sim --&gt; SI["SupplierItem com prazo&lt;br/&gt;de entrega em dias"] --&gt; Z
+    IT -- não --&gt; Z
+</pre></div>
+</section>
+<section class="bloco" id="s-13-projetos-e-equipamentos-projetos"><h3>13. Projetos e equipamentos (<code>projetos</code>)</h3>
+<p><strong>Situação:</strong> Especificado no B01 (confirmação de pedido cria projeto e equipamentos, PD-001); detalhes de estágios e marcos são proposta. Sprint 4. O projeto é o vínculo central de execução, custo e resultado. Cada máquina é um <code>Equipment</code> com identidade e número de série próprios.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class Project {
+        &lt;&lt;aggregate root&gt;&gt;
+        +ProjectId id
+        +String code
+        +SalesOrderRef order
+        +PartnerRef customer
+        +UnitRef unit
+        +Set~ProjectStage~ stages
+        +BusinessDate contractDelivery
+        +AggregateVersion version
+        +assignResponsible(UserId, role)
+        +changeStage(ProjectStage, Reason)
+        +close(Reason)
+    }
+    class ProjectStage {
+        &lt;&lt;enumeration · proposta&gt;&gt;
+        PLANEJADO
+        ENGENHARIA
+        SUPRIMENTOS
+        PRODUCAO
+        INSTALACAO
+        POS_VENDA
+        ENCERRADO
+    }
+    class ProjectMember {
+        +UserId user
+        +String role
+    }
+    class ProjectMilestone {
+        +String name
+        +BusinessDate plannedOn
+        +BusinessDate doneOn
+    }
+    class EquipmentModel {
+        +String name
+    }
+    class Equipment {
+        &lt;&lt;aggregate root&gt;&gt;
+        +EquipmentId id
+        +String code
+        +EquipmentModel model
+        +ProjectRef project
+        +UnitRef installedAt
+        +String serialNumber
+        +BusinessDate acceptedOn
+        +BusinessDate warrantyStart
+        +recordAcceptance(InstallationAccepted)
+        +recordComponent(ItemRef, Quantity)
+    }
+    class EquipmentComponent {
+        +ItemRef item
+        +Quantity quantity
+        composição realmente montada
+    }
+    class ProjectProvisioning {
+        &lt;&lt;interface pública&gt;&gt;
+        +createFor(OrderConfirmed) ProjectIds
+    }
+    class ProjectQueryApi {
+        &lt;&lt;interface pública&gt;&gt;
+        +get(ProjectId) ProjectView
+    }
+    Project --&gt; ProjectStage
+    Project "1" *-- "0..*" ProjectMember
+    Project "1" *-- "0..*" ProjectMilestone
+    Project "1" --&gt; "1..*" Equipment
+    Equipment --&gt; EquipmentModel
+    Equipment "1" *-- "0..*" EquipmentComponent
+    ProjectProvisioning ..&gt; Project : cria
+    ProjectProvisioning ..&gt; Equipment : cria N por linha
+    note for Equipment "Garantia começa no aceite real, nunca na data prevista"
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+stateDiagram-v2
+    direction LR
+    [*] --&gt; Criado : pedido confirmado
+    Criado --&gt; EmProducao : ordem de produção liberada
+    EmProducao --&gt; Inspecionado : inspeção aprovada
+    Inspecionado --&gt; EmInstalacao : instalação agendada
+    EmInstalacao --&gt; Aceito : aceite do cliente
+    Aceito --&gt; EmGarantia : garantia inicia no aceite
+    EmGarantia --&gt; ForaDaGarantia : prazo encerrado
+    Criado --&gt; Cancelado : pedido cancelado sem efeitos
+    ForaDaGarantia --&gt; [*]
+    Cancelado --&gt; [*]
+</pre></div>
+<p>Estados do equipamento: proposta de desenho, derivada dos eventos <code>ProductionOrderReleased</code>, <code>InspectionApproved</code>, <code>InstallationScheduled</code> e <code>InstallationAccepted</code>.</p>
+</section>
+<section class="bloco" id="s-14-comercial-comercial"><h3>14. Comercial (<code>comercial</code>)</h3>
+<p><strong>Situação:</strong> <code>SalesOrder</code> especificado no B01 (documento 17, diagramas 10 a 12). Prospecção, oportunidade e proposta são proposta de desenho para a Sprint 4. Uma revisão de proposta emitida não muda mais; o pedido guarda qual revisão foi contratada.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class Lead {
+        &lt;&lt;aggregate root&gt;&gt;
+        +String companyName
+        +PartnerRef partner
+        +int rating
+        +LeadStage stage
+        +recordInteraction(Interaction)
+        +convert() Opportunity
+    }
+    class Interaction {
+        +Instant occurredAt
+        +String channel
+        +String summary
+        +BusinessDate nextAction
+    }
+    class Opportunity {
+        &lt;&lt;aggregate root&gt;&gt;
+        +PartnerRef customer
+        +OpportunityStage stage
+        +Money estimated
+        +changeStage(OpportunityStage, Reason)
+        +recordOutcome(won, Reason)
+    }
+    class OpportunityStage {
+        &lt;&lt;enumeration · proposta&gt;&gt;
+        QUALIFICACAO
+        PROPOSTA
+        NEGOCIACAO
+        GANHA
+        PERDIDA
+    }
+    class Proposal {
+        &lt;&lt;aggregate root&gt;&gt;
+        +String number
+        +newRevision() ProposalRevision
+    }
+    class ProposalRevision {
+        &lt;&lt;imutável depois de emitida&gt;&gt;
+        +int revision
+        +BusinessDate validUntil
+        +Money total
+        +Money estimatedCost
+        +RevisionStatus status
+        +issue()
+    }
+    class ProposalLine {
+        +ItemRef item
+        +Quantity quantity
+        +Money unitPrice
+        +Money discount
+    }
+    class SalesOrder {
+        &lt;&lt;especificado · doc 17&gt;&gt;
+        confirm, amend, cancel
+    }
+    class SalesOrderFactory {
+        &lt;&lt;factory&gt;&gt;
+        +fromRevision(ProposalRevision) SalesOrder
+    }
+    Lead "1" *-- "0..*" Interaction
+    Lead ..&gt; Opportunity : convert
+    Opportunity --&gt; OpportunityStage
+    Opportunity "1" --&gt; "0..*" Proposal
+    Proposal "1" *-- "1..*" ProposalRevision
+    ProposalRevision "1" *-- "1..*" ProposalLine
+    SalesOrderFactory ..&gt; ProposalRevision
+    SalesOrderFactory ..&gt; SalesOrder : cria em DRAFT
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+flowchart TD
+    A((Contato recebido)) --&gt; L["Registra o lead&lt;br/&gt;e as interações"]
+    L --&gt; Q{"Tem potencial?"}
+    Q -- não --&gt; AR["Arquiva com motivo"] --&gt; Z(((Fim)))
+    Q -- sim --&gt; O["Abre oportunidade"]
+    O --&gt; P["Monta a proposta&lt;br/&gt;(itens, preços, custo estimado)"]
+    P --&gt; E["Emite a revisão&lt;br/&gt;(fica imutável)"]
+    E --&gt; N{"Cliente responde"}
+    N -- "pede mudança" --&gt; R["Nova revisão&lt;br/&gt;(a anterior é preservada)"] --&gt; E
+    N -- recusa --&gt; PE["Oportunidade PERDIDA&lt;br/&gt;com motivo"] --&gt; Z
+    N -- aceita --&gt; G["Oportunidade GANHA"]
+    G --&gt; PD["Pedido em DRAFT a partir&lt;br/&gt;da revisão aceita"]
+    PD --&gt; PL["Plano de parcelas&lt;br/&gt;(soma = total)"]
+    PL --&gt; CF["Confirmar pedido&lt;br/&gt;(documento 18, atividade 15)"] --&gt; Z
+</pre></div>
+</section>
+<section class="bloco" id="s-15-financeiro-financeiro"><h3>15. Financeiro (<code>financeiro</code>)</h3>
+<p><strong>Situação:</strong> Título, baixa e estorno especificados no B01 (documento 17, diagrama 13; documento 18, atividades 18 a 20). Contas, transferências, extrato, conciliação e matriz de caixa são proposta de desenho para a Sprint 8+. Transferência entre contas próprias nunca vira receita nem despesa.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class FinancialTitle {
+        &lt;&lt;especificado · doc 17&gt;&gt;
+        balance(), applyAllocation(), adjust()
+    }
+    class Settlement {
+        &lt;&lt;especificado · doc 17&gt;&gt;
+        allocations, reverse()
+    }
+    class BankAccount {
+        &lt;&lt;aggregate root&gt;&gt;
+        +String name
+        +String bank
+        +Money opening
+        +BusinessDate openingOn
+        +boolean active
+        +balanceOn(BusinessDate) Money
+    }
+    class CashMovement {
+        &lt;&lt;imutável&gt;&gt;
+        +AccountId account
+        +BusinessDate effectiveDate
+        +Money amount
+        +SettlementId settlement
+        +TransferId transfer
+        +CashMovementId reverses
+    }
+    class InternalTransfer {
+        &lt;&lt;aggregate root&gt;&gt;
+        +AccountId from
+        +AccountId to
+        +Money amount
+        +post() dois movimentos que somam zero
+    }
+    class CustomerSupplierCredit {
+        +PartnerRef partner
+        +Money balance
+        excedente explícito de baixa (PD-004)
+    }
+    class StatementBatch {
+        +AccountId account
+        +StoredFile file
+        +int entries
+    }
+    class StatementEntry {
+        +BusinessDate postedOn
+        +Money amount
+        +String description
+        +String dedupKey
+    }
+    class ReconciliationGroup {
+        &lt;&lt;aggregate root&gt;&gt;
+        +AccountId account
+        +Money difference
+        +Instant undoneAt
+        +undo(Reason)
+    }
+    class ReconciliationLink {
+        +StatementEntryId entry
+        +CashMovementId movement
+    }
+    class StatementParser {
+        &lt;&lt;interface · adapter&gt;&gt;
+        +parse(StoredFile) List~StatementEntry~
+    }
+    class OfxParser
+    class CsvParser
+    class CashMatrixQuery {
+        &lt;&lt;consulta&gt;&gt;
+        +matrix(period, accounts) CashMatrix
+        realizado e previsto separados
+    }
+    Settlement "1" --&gt; "1" CashMovement
+    BankAccount "1" --&gt; "0..*" CashMovement
+    InternalTransfer ..&gt; CashMovement : cria saída e entrada
+    Settlement ..&gt; CustomerSupplierCredit
+    StatementBatch "1" *-- "1..*" StatementEntry
+    ReconciliationGroup "1" *-- "1..*" ReconciliationLink
+    ReconciliationLink --&gt; StatementEntry
+    ReconciliationLink --&gt; CashMovement
+    StatementParser &lt;|.. OfxParser
+    StatementParser &lt;|.. CsvParser
+    CashMatrixQuery ..&gt; CashMovement : realizado
+    CashMatrixQuery ..&gt; FinancialTitle : previsto (saldos em aberto)
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+flowchart TD
+    A((Importar extrato)) --&gt; H["Guarda o arquivo&lt;br/&gt;e calcula o hash"]
+    H --&gt; DUP{"Arquivo já&lt;br/&gt;importado?"}
+    DUP -- sim --&gt; MS["Mostra a importação existente"] --&gt; Z(((Fim)))
+    DUP -- não --&gt; PR["Lê as linhas (OFX ou CSV)"]
+    PR --&gt; DK["Para cada linha, chave de&lt;br/&gt;deduplicação: conta, data, valor, documento"]
+    DK --&gt; RP{"Linha já existe&lt;br/&gt;de outro arquivo?"}
+    RP -- sim --&gt; IG["Ignora a repetição"] --&gt; SU
+    RP -- não --&gt; NV["Grava a linha do extrato"] --&gt; SU["Sugere pares com movimentos&lt;br/&gt;de caixa (valor e data próximos)"]
+    SU --&gt; RV{"Usuário confere"}
+    RV -- confirma --&gt; GR["Grupo de conciliação&lt;br/&gt;(diferença explícita, se houver)"]
+    RV -- "não há movimento" --&gt; NM["Registra a baixa, a tarifa&lt;br/&gt;ou a transferência que falta"] --&gt; SU
+    GR --&gt; OK["Linha conciliada&lt;br/&gt;(estorno da baixa passa a exigir&lt;br/&gt;desconciliar antes, PD-006)"] --&gt; Z
+</pre></div>
+</section>
+<section class="bloco" id="s-16-documentos-e-anexos-documentos"><h3>16. Documentos e anexos (<code>documentos</code>)</h3>
+<p><strong>Situação:</strong> Proposta de desenho para a Sprint 6 (B06). Notas e demais documentos recebidos ou emitidos são <strong>vinculados</strong> aos títulos que já existem; o documento não cria uma segunda cobrança. Anexos ligam arquivos a qualquer registro.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class BusinessDocument {
+        &lt;&lt;aggregate root&gt;&gt;
+        +String number
+        +Direction direction
+        +DocumentKind kind
+        +PartnerRef partner
+        +BusinessDate issueDate
+        +CompetencePeriod competence
+        +Money total
+        +linkToTitles(List~TitleLink~)
+        +classify(ClassificationRef)
+    }
+    class DocumentKind {
+        &lt;&lt;enumeration · proposta&gt;&gt;
+        NFE_PRODUTO
+        NFSE_SERVICO
+        RECIBO
+        CONTRATO
+        OUTRO
+    }
+    class DocumentLine {
+        +String kind
+        +ItemRef item
+        +Money amount
+    }
+    class DocumentTitleLink {
+        +TitleId title
+        +Money amount
+    }
+    class Attachment {
+        +StoredFile file
+        +String name
+    }
+    class AttachmentLink {
+        +String ownerType
+        +String ownerId
+    }
+    BusinessDocument --&gt; DocumentKind
+    BusinessDocument "1" *-- "1..*" DocumentLine
+    BusinessDocument "1" *-- "0..*" DocumentTitleLink
+    Attachment "1" *-- "1..*" AttachmentLink
+    BusinessDocument "1" --&gt; "0..*" Attachment
+    note for DocumentTitleLink "Σ vínculos ≤ total do documento e ≤ saldo de cada título"
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant U as Financeiro
+    participant D as DocumentService
+    participant T as TitleQueryApi (financeiro)
+    participant O as Outbox
+    participant F as fiscal e repasses
+    U-&gt;&gt;D: registra a nota 1234 de R$ 50.000,00
+    D-&gt;&gt;D: número, emitente e data únicos? senão 422 com o existente
+    U-&gt;&gt;D: vincula à parcela 2 do pedido
+    D-&gt;&gt;T: saldo e direção do título
+    T--&gt;&gt;D: título a receber, R$ 50.000,00
+    D-&gt;&gt;D: soma dos vínculos ≤ total e ≤ saldo
+    D-&gt;&gt;O: DocumentRegistered + DocumentLinkedToTitles
+    Note over D,T: nenhum título novo é criado
+    O--&gt;&gt;F: fiscal classifica a receita da competência
+</pre></div>
+</section>
+<section class="bloco" id="s-17-engenharia-e-planejamento-engenharia"><h3>17. Engenharia e planejamento (<code>engenharia</code>)</h3>
+<p><strong>Situação:</strong> Invariantes especificadas no B01 (revisão aprovada imutável; cronograma sem ciclos; linha de base preservada). As classes são proposta de desenho para B07. A contagem de dias (PD-017) e os pesos da EAP (PD-018) estão pendentes, por isso o calendário é uma estratégia trocável.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class BomTemplate {
+        &lt;&lt;aggregate root&gt;&gt;
+        +EquipmentModel model
+        +String name
+        +newRevision() BomRevision
+    }
+    class BomRevision {
+        &lt;&lt;imutável depois de aprovada&gt;&gt;
+        +int revision
+        +BomStatus status
+        +approve(UserId)
+        +total() Money
+    }
+    class BomStatus {
+        &lt;&lt;enumeration&gt;&gt;
+        RASCUNHO
+        APROVADA
+        SUBSTITUIDA
+    }
+    class BomLine {
+        +ItemRef item
+        +Quantity quantity
+        +Money referenceCost
+    }
+    class ProjectBomRevision {
+        +ProjectRef project
+        +EquipmentRef equipment
+        +BomRevision revision
+        a máquina guarda a revisão que usou
+    }
+    class ProjectSchedule {
+        &lt;&lt;aggregate root&gt;&gt;
+        +ProjectRef project
+        +List~ProjectActivity~ activities
+        +addDependency(pred, succ, type, lag)
+        +recalculate(CalendarPolicy) ScheduleResult
+        +approveBaseline() ScheduleBaseline
+    }
+    class ProjectActivity {
+        +String wbsCode
+        +int durationDays
+        +Rate weight
+        +Rate progress
+    }
+    class ActivityDependency {
+        +ActivityRef predecessor
+        +ActivityRef successor
+        +DependencyType type
+        +int lagDays
+    }
+    class DependencyType {
+        &lt;&lt;enumeration&gt;&gt;
+        FS
+        SS
+        FF
+        SF
+    }
+    class CalendarPolicy {
+        &lt;&lt;interface · strategy&gt;&gt;
+        +addWorkingDays(start, days) BusinessDate
+    }
+    class WorkCalendar {
+        +String name
+        +Set~DayOfWeek~ workingDays
+        +Set~LocalDate~ holidays
+    }
+    class ScheduleBaseline {
+        &lt;&lt;imutável&gt;&gt;
+        +Instant approvedAt
+        +List~BaselineActivity~ activities
+    }
+    class ProgressEntry {
+        +Rate progress
+        +BusinessDate recordedOn
+    }
+    BomTemplate "1" *-- "1..*" BomRevision
+    BomRevision --&gt; BomStatus
+    BomRevision "1" *-- "1..*" BomLine
+    ProjectBomRevision --&gt; BomRevision
+    ProjectSchedule "1" *-- "1..*" ProjectActivity
+    ProjectSchedule "1" *-- "0..*" ActivityDependency
+    ActivityDependency --&gt; DependencyType
+    CalendarPolicy &lt;|.. WorkCalendar
+    ProjectSchedule ..&gt; CalendarPolicy
+    ProjectSchedule "1" --&gt; "0..*" ScheduleBaseline
+    ProjectActivity "1" *-- "0..*" ProgressEntry
+    note for BomRevision "Soma das linhas ≠ total impresso vira alerta (caso R$ 3.000,00), não correção automática"
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+flowchart TD
+    A((Recalcular cronograma)) --&gt; G["Monta o grafo de atividades&lt;br/&gt;e dependências"]
+    G --&gt; CY{"Há ciclo?"}
+    CY -- sim --&gt; E["422 com o ciclo encontrado&lt;br/&gt;(A → B → A)"] --&gt; Z(((Fim)))
+    CY -- não --&gt; TO["Ordena as atividades&lt;br/&gt;(ordem topológica)"]
+    TO --&gt; FW["Passagem para frente:&lt;br/&gt;início e fim mais cedo pelo calendário"]
+    FW --&gt; BW["Passagem para trás:&lt;br/&gt;início e fim mais tarde"]
+    BW --&gt; FL["Folga = mais tarde − mais cedo"]
+    FL --&gt; CR["Caminho crítico = folga zero"]
+    CR --&gt; AV["Avanço do projeto =&lt;br/&gt;Σ peso × progresso (PD-018)"]
+    AV --&gt; BL{"Existe linha de base?"}
+    BL -- sim --&gt; CP["Compara com a linha de base&lt;br/&gt;(ela não é alterada)"] --&gt; OK
+    BL -- não --&gt; OK["Grava o resultado&lt;br/&gt;ScheduleRecalculated"] --&gt; Z
+</pre></div>
+</section>
+<section class="bloco" id="s-18-suprimentos-suprimentos"><h3>18. Suprimentos (<code>suprimentos</code>)</h3>
+<p><strong>Situação:</strong> Proposta de desenho para B08. A fórmula da necessidade líquida (MRP) e o tratamento de lançamentos retroativos dependem de PD-016 e PD-011. Aprovar a compra registra o compromisso de custo e programa a obrigação a pagar; o pagamento em si é outro passo.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class MrpRun {
+        &lt;&lt;domain service&gt;&gt;
+        +calculate(ProjectRef, cutoff) List~MaterialRequirement~
+    }
+    class MaterialRequirement {
+        +ProjectRef project
+        +ItemRef item
+        +BusinessDate neededOn
+        +Quantity gross
+        +Quantity available
+        +Quantity onOrder
+        +Quantity net
+    }
+    class PurchaseRequest {
+        &lt;&lt;aggregate root&gt;&gt;
+        +RequirementRef requirement
+        +RequestStatus status
+    }
+    class Quotation {
+        +PartnerRef supplier
+        +BusinessDate validUntil
+        +List~QuotationLine~ lines
+    }
+    class QuotationLine {
+        +ItemRef item
+        +Money unitPrice
+        +int leadTimeDays
+    }
+    class PurchaseOrder {
+        &lt;&lt;aggregate root&gt;&gt;
+        +String code
+        +PartnerRef supplier
+        +PoStatus status
+        +Money total
+        +List~PurchaseOrderLine~ lines
+        +PaymentTerms terms
+        +submit()
+        +approve(UserId) PurchaseApproved
+        +cancelRemainder(Reason)
+    }
+    class PurchaseOrderLine {
+        +ItemRef item
+        +ProjectRef project
+        +Quantity quantity
+        +Quantity received
+        +Money unitPrice
+        +BusinessDate deliveryOn
+    }
+    class PoStatus {
+        &lt;&lt;enumeration&gt;&gt;
+        RASCUNHO
+        AGUARDANDO_APROVACAO
+        APROVADO
+        PARCIAL
+        CONCLUIDO
+        CANCELADO
+    }
+    class ApprovalPolicy {
+        &lt;&lt;interface · policy&gt;&gt;
+        +requiredApprovers(PurchaseOrder) List~Role~
+    }
+    class PayableScheduling {
+        &lt;&lt;interface · financeiro&gt;&gt;
+        +schedule(PurchaseApproved)
+    }
+    MrpRun ..&gt; MaterialRequirement
+    PurchaseRequest --&gt; MaterialRequirement
+    PurchaseRequest "1" --&gt; "0..*" Quotation
+    Quotation "1" *-- "1..*" QuotationLine
+    PurchaseOrder "1" *-- "1..*" PurchaseOrderLine
+    PurchaseOrder --&gt; PoStatus
+    PurchaseOrder ..&gt; ApprovalPolicy
+    PurchaseOrder ..&gt; PayableScheduling : na aprovação
+    note for PurchaseOrder "Σ condições de pagamento = total"
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+flowchart TD
+    A((Rodar MRP do projeto)) --&gt; B["Lê a BOM aplicada a cada&lt;br/&gt;equipamento (revisão do projeto)"]
+    B --&gt; BR["Necessidade bruta por item e data&lt;br/&gt;= quantidade da BOM × equipamentos"]
+    BR --&gt; CV["Converte para a unidade&lt;br/&gt;de estoque do item"]
+    CV --&gt; DS["Desconta o disponível&lt;br/&gt;(físico − reservado) no local"]
+    DS --&gt; OC["Desconta compras em aberto&lt;br/&gt;com entrega antes da data"]
+    OC --&gt; NL{"Necessidade&lt;br/&gt;líquida &gt; 0?"}
+    NL -- não --&gt; RS["Sugere reservar o estoque"] --&gt; Z(((Fim)))
+    NL -- sim --&gt; LT["Data de pedido = necessidade&lt;br/&gt;− prazo do fornecedor"]
+    LT --&gt; SR["Gera solicitação de compra"]
+    SR --&gt; CT["Cotações com fornecedores"]
+    CT --&gt; PO["Pedido de compra"]
+    PO --&gt; AP{"Aprovado&lt;br/&gt;conforme alçada?"}
+    AP -- não --&gt; AJ["Volta para ajuste"] --&gt; PO
+    AP -- sim --&gt; EV["PurchaseApproved: compromisso de custo&lt;br/&gt;e obrigação a pagar programada"] --&gt; Z
+</pre></div>
+<p>A fórmula acima é a premissa de trabalho; a regra final depende de PD-016.</p>
+</section>
+<section class="bloco" id="s-19-recebimentos-recebimentos"><h3>19. Recebimentos (<code>recebimentos</code>)</h3>
+<p><strong>Situação:</strong> Proposta de desenho para B08. O recebimento pode ser parcial. Cada linha conferida gera a entrada no estoque na mesma transação; o custo só entra no projeto no consumo, uma única vez.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class GoodsReceipt {
+        &lt;&lt;aggregate root&gt;&gt;
+        +PurchaseOrderRef order
+        +BusinessDate receivedOn
+        +List~GoodsReceiptLine~ lines
+        +post() GoodsReceived
+    }
+    class GoodsReceiptLine {
+        +PurchaseOrderLineRef orderLine
+        +Quantity quantity
+        +Quantity rejected
+        +LocationRef location
+    }
+    class ServiceAcceptance {
+        &lt;&lt;aggregate root&gt;&gt;
+        +PurchaseOrderLineRef orderLine
+        +ProjectRef project
+        +Money amount
+        +accept(UserId) ServiceAccepted
+    }
+    class SupplierReturn {
+        +GoodsReceiptLineRef line
+        +Quantity quantity
+        +Reason reason
+    }
+    class StockEntryApi {
+        &lt;&lt;interface · estoque&gt;&gt;
+        +receive(item, location, qty, unitCost, origin)
+    }
+    GoodsReceipt "1" *-- "1..*" GoodsReceiptLine
+    GoodsReceiptLine "1" --&gt; "0..*" SupplierReturn
+    GoodsReceipt ..&gt; StockEntryApi : na mesma transação
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant U as Almoxarifado
+    participant R as GoodsReceiptService
+    participant PO as PurchaseOrder
+    participant E as StockEntryApi (estoque)
+    participant O as Outbox
+    U-&gt;&gt;R: recebe 6 de 10 unidades do pedido PC-0042
+    R-&gt;&gt;PO: trava a linha e confere o saldo a receber
+    PO--&gt;&gt;R: faltam 10
+    R-&gt;&gt;R: 6 ≤ 10, senão 422
+    R-&gt;&gt;E: receive(item, local, 6, custo unitário, origem)
+    E--&gt;&gt;R: movimento de entrada + custo médio atualizado
+    R-&gt;&gt;PO: received = 6, status PARCIAL
+    R-&gt;&gt;O: GoodsReceived
+    R--&gt;&gt;U: 200: ainda faltam 4
+</pre></div>
+</section>
+<section class="bloco" id="s-20-estoque-estoque"><h3>20. Estoque (<code>estoque</code>)</h3>
+<p><strong>Situação:</strong> Invariante especificada no B01 (reservado ≤ físico, mesmo sob concorrência); o restante é proposta de desenho para B08. A posição é por item, local <strong>e propriedade</strong>: material de terceiros no nosso local, ou nosso material com terceiros, fica separado.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class StockLocation {
+        +String name
+        +PartnerRef holder
+        local em terceiro quando holder ≠ Fourtech
+    }
+    class StockPosition {
+        &lt;&lt;aggregate root&gt;&gt;
+        +ItemRef item
+        +LocationRef location
+        +Ownership ownership
+        +Quantity physical
+        +Quantity reserved
+        +Money averageCost
+        +available() Quantity
+        +reserve(qty, project) Reservation
+        +release(Reservation)
+        +consume(Reservation, qty) Money
+        +receive(qty, unitCost)
+    }
+    class Ownership {
+        &lt;&lt;enumeration&gt;&gt;
+        PROPRIO
+        DE_TERCEIRO
+    }
+    class StockReservation {
+        +ProjectRef project
+        +Quantity quantity
+    }
+    class StockMovement {
+        &lt;&lt;imutável&gt;&gt;
+        +MovementKind kind
+        +Quantity quantity
+        +Money amount
+        +ProjectRef project
+        +MovementId reverses
+    }
+    class MovementKind {
+        &lt;&lt;enumeration&gt;&gt;
+        ENTRADA
+        CONSUMO
+        DEVOLUCAO
+        TRANSFERENCIA
+        AJUSTE
+        REMESSA_TERCEIRO
+        RETORNO_TERCEIRO
+    }
+    class InventoryCount {
+        &lt;&lt;aggregate root&gt;&gt;
+        +LocationRef location
+        +BusinessDate countedOn
+        +post() ajustes com motivo
+    }
+    class ThirdPartyDispatch {
+        +PartnerRef partner
+        +BusinessDate dispatchedOn
+        +Quantity losses
+    }
+    class CostingPolicy {
+        &lt;&lt;interface · strategy · PD-011&gt;&gt;
+        +newAverage(position, qty, unitCost) Money
+    }
+    StockPosition --&gt; Ownership
+    StockPosition "1" *-- "0..*" StockReservation
+    StockPosition "1" --&gt; "0..*" StockMovement
+    StockMovement --&gt; MovementKind
+    StockPosition ..&gt; CostingPolicy
+    InventoryCount ..&gt; StockMovement : AJUSTE
+    ThirdPartyDispatch ..&gt; StockMovement
+    note for StockPosition "reservado ≤ físico; disponível = físico − reservado ≥ 0"
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant A as Projeto A
+    participant B as Projeto B
+    participant S as StockService
+    participant P as StockPosition (físico 10)
+    A-&gt;&gt;S: reservar 8
+    B-&gt;&gt;S: reservar 8
+    S-&gt;&gt;P: A: trava a posição
+    S-&gt;&gt;P: B: espera a trava
+    S-&gt;&gt;P: A: reserve(8)
+    P--&gt;&gt;S: A: reservado 8, disponível 2
+    S--&gt;&gt;A: 200 StockReserved
+    S-&gt;&gt;P: B: obtém a trava
+    S-&gt;&gt;P: B: reserve(8)
+    P--&gt;&gt;S: B: recusa, disponível 2
+    S--&gt;&gt;B: 422 com disponível 2
+</pre></div>
+</section>
+<section class="bloco" id="s-21-qualidade-qualidade"><h3>21. Qualidade (<code>qualidade</code>)</h3>
+<p><strong>Situação:</strong> Inspeção e não conformidade especificadas no B01 (documento 17, diagrama 16; documento 18, atividade 25). Os critérios reais de inspeção dependem de PD-014. O checklist é versionado: cada inspeção guarda a revisão usada.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class Checklist {
+        &lt;&lt;aggregate root&gt;&gt;
+        +String name
+        +String appliesTo
+        +newRevision() ChecklistRevision
+    }
+    class ChecklistRevision {
+        &lt;&lt;imutável&gt;&gt;
+        +int revision
+        +List~Criterion~ criteria
+    }
+    class Criterion {
+        +String description
+        +boolean mandatory
+        +TechnicalLimit limit
+        +boolean evidenceRequired
+    }
+    class Inspection {
+        &lt;&lt;especificado · doc 17&gt;&gt;
+        approve(), reject()
+    }
+    class Nonconformity {
+        &lt;&lt;aggregate root&gt;&gt;
+        +InspectionRef inspection
+        +Severity severity
+        +NcStatus status
+        +String rootCause
+        +planAction(ActionPlan)
+        +close(Evidence)
+    }
+    class NcStatus {
+        &lt;&lt;enumeration · proposta&gt;&gt;
+        ABERTA
+        EM_TRATAMENTO
+        VERIFICACAO
+        ENCERRADA
+    }
+    class ReworkOrder {
+        +NonconformityRef nonconformity
+        +ProductionOrderRef productionOrder
+    }
+    class InspectionQueryApi {
+        &lt;&lt;interface pública&gt;&gt;
+        +releaseStatus(EntityRef) ReleaseStatus
+    }
+    Checklist "1" *-- "1..*" ChecklistRevision
+    ChecklistRevision "1" *-- "1..*" Criterion
+    Inspection --&gt; ChecklistRevision
+    Inspection "1" --&gt; "0..*" Nonconformity
+    Nonconformity --&gt; NcStatus
+    Nonconformity "1" --&gt; "0..*" ReworkOrder
+    InspectionQueryApi ..&gt; Inspection
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+stateDiagram-v2
+    direction LR
+    [*] --&gt; ABERTA : inspeção reprovada
+    ABERTA --&gt; EM_TRATAMENTO : causa e ação definidas
+    EM_TRATAMENTO --&gt; VERIFICACAO : retrabalho concluído
+    VERIFICACAO --&gt; EM_TRATAMENTO : nova inspeção reprovada
+    VERIFICACAO --&gt; ENCERRADA : nova inspeção aprovada
+    ENCERRADA --&gt; [*]
+</pre></div>
+</section>
+<section class="bloco" id="s-22-producao-producao"><h3>22. Produção (<code>producao</code>)</h3>
+<p><strong>Situação:</strong> Invariante especificada no B01 (liberar exige a revisão da BOM e condições); o restante é proposta de desenho para B09. Tempos, esperas e perdas são gravados para as análises de capacidade de B14–B15.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class ProductionOrder {
+        &lt;&lt;aggregate root&gt;&gt;
+        +ProjectRef project
+        +EquipmentRef equipment
+        +BomRevisionRef bomRevision
+        +ProductionStatus status
+        +List~RoutingOperation~ operations
+        +release(ReleasePolicy)
+        +report(ProductionEntry)
+        +complete()
+    }
+    class ProductionStatus {
+        &lt;&lt;enumeration&gt;&gt;
+        PLANEJADA
+        LIBERADA
+        EM_EXECUCAO
+        PAUSADA
+        CONCLUIDA
+        CANCELADA
+    }
+    class RoutingOperation {
+        +int seq
+        +String name
+        +String workCenter
+        +int plannedMinutes
+    }
+    class ProductionEntry {
+        +Quantity done
+        +Quantity losses
+        +int waitMinutes
+    }
+    class LaborEntry {
+        +UserId worker
+        +BigDecimal hours
+        +Money rate
+    }
+    class ReleasePolicy {
+        &lt;&lt;interface · specification&gt;&gt;
+        +check(ProductionOrder) List~Violation~
+    }
+    class BomRevisionApproved {
+        &lt;&lt;specification&gt;&gt;
+    }
+    class MaterialsReserved {
+        &lt;&lt;specification&gt;&gt;
+    }
+    class PriorInspectionOk {
+        &lt;&lt;specification&gt;&gt;
+    }
+    ProductionOrder --&gt; ProductionStatus
+    ProductionOrder "1" *-- "1..*" RoutingOperation
+    RoutingOperation "1" *-- "0..*" ProductionEntry
+    RoutingOperation "1" *-- "0..*" LaborEntry
+    ProductionOrder ..&gt; ReleasePolicy
+    ReleasePolicy &lt;|.. BomRevisionApproved
+    ReleasePolicy &lt;|.. MaterialsReserved
+    ReleasePolicy &lt;|.. PriorInspectionOk
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+flowchart TD
+    A((Liberar ordem de produção)) --&gt; R{"Revisão da BOM&lt;br/&gt;aprovada e aplicada?"}
+    R -- não --&gt; E1["422: sem revisão válida"] --&gt; Z(((Fim)))
+    R -- sim --&gt; M{"Materiais reservados&lt;br/&gt;para o projeto?"}
+    M -- não --&gt; E2["422 com os itens faltantes&lt;br/&gt;(ligação com o MRP)"] --&gt; Z
+    M -- sim --&gt; I{"Há inspeção prévia&lt;br/&gt;exigida e pendente?"}
+    I -- sim --&gt; E3["422: inspeção pendente"] --&gt; Z
+    I -- não --&gt; LB["LIBERADA:&lt;br/&gt;ProductionOrderReleased"]
+    LB --&gt; EX["Operadores apontam produção,&lt;br/&gt;horas, esperas e perdas"]
+    EX --&gt; CS["Consome o material reservado&lt;br/&gt;(custo entra no projeto uma vez)"]
+    CS --&gt; FM{"Todas as operações&lt;br/&gt;concluídas?"}
+    FM -- não --&gt; EX
+    FM -- sim --&gt; IN["Solicita inspeção final"]
+    IN --&gt; OK{"Aprovada?"}
+    OK -- não --&gt; RT["Não conformidade e retrabalho"] --&gt; EX
+    OK -- sim --&gt; CO["CONCLUIDA:&lt;br/&gt;ProductionOrderCompleted"] --&gt; Z
+</pre></div>
+</section>
+<section class="bloco" id="s-23-instalacao-e-entrega-instalacao"><h3>23. Instalação e entrega (<code>instalacao</code>)</h3>
+<p><strong>Situação:</strong> Proposta de desenho para B09. A garantia começa no <strong>aceite real</strong> do cliente (PD-015), nunca na data prevista. Pendências do aceite ficam registradas com prazo.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class Installation {
+        &lt;&lt;aggregate root&gt;&gt;
+        +EquipmentRef equipment
+        +BusinessDate plannedStart
+        +InstallationStatus status
+        +List~UserId~ team
+        +schedule(DateRange, team)
+        +recordEntry(InstallationEntry)
+        +recordExpense(InstallationExpense)
+        +recordAcceptance(AcceptanceRecord)
+    }
+    class InstallationStatus {
+        &lt;&lt;enumeration&gt;&gt;
+        AGENDADA
+        EM_EXECUCAO
+        EM_TESTES
+        ACEITA
+        ACEITA_COM_PENDENCIAS
+    }
+    class InstallationEntry {
+        +BusinessDate workedOn
+        +BigDecimal hours
+        +String notes
+    }
+    class InstallationExpense {
+        +String category
+        +Money amount
+        +DocumentRef receipt
+    }
+    class AcceptanceRecord {
+        +BusinessDate acceptedOn
+        +String signedBy
+        +List~Evidence~ evidence
+    }
+    class AcceptanceIssue {
+        +String description
+        +BusinessDate dueOn
+        +boolean resolved
+    }
+    Installation --&gt; InstallationStatus
+    Installation "1" *-- "0..*" InstallationEntry
+    Installation "1" *-- "0..*" InstallationExpense
+    Installation "1" *-- "0..1" AcceptanceRecord
+    AcceptanceRecord "1" *-- "0..*" AcceptanceIssue
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant T as Técnico
+    participant I as InstallationService
+    participant E as Equipment (projetos)
+    participant O as Outbox
+    participant C as custos
+    participant PV as posvenda
+    T-&gt;&gt;I: registra horas e despesas da instalação
+    I-&gt;&gt;O: ExpenseRecognized (cada despesa)
+    O--&gt;&gt;C: CostEntry com origem única
+    T-&gt;&gt;I: registra o aceite em 20/11/2026 com assinatura
+    I-&gt;&gt;E: recordAcceptance(20/11/2026)
+    E-&gt;&gt;E: warrantyStart = 20/11/2026
+    I-&gt;&gt;O: InstallationAccepted
+    O--&gt;&gt;PV: cria o termo de garantia e o plano preventivo
+</pre></div>
+</section>
+<section class="bloco" id="s-24-pos-venda-posvenda"><h3>24. Pós-venda (<code>posvenda</code>)</h3>
+<p><strong>Situação:</strong> Invariante especificada no B01 (uma ocorrência preventiva por plano, revisão, equipamento e data; documento 18, atividade 26); o restante é proposta de desenho para B11. Todo chamado aponta para um equipamento, preservando o histórico da máquina.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class ServiceTicket {
+        &lt;&lt;aggregate root&gt;&gt;
+        +EquipmentRef equipment
+        +Priority priority
+        +WarrantyStatus warranty
+        +TicketStatus status
+        +diagnose(String)
+        +openOrder() ServiceOrder
+        +close(Reason)
+    }
+    class WarrantyStatus {
+        &lt;&lt;enumeration&gt;&gt;
+        EM_GARANTIA
+        FORA_DA_GARANTIA
+        EM_ANALISE
+    }
+    class ServiceOrder {
+        &lt;&lt;aggregate root&gt;&gt;
+        +TicketRef ticket
+        +OccurrenceRef occurrence
+        +OsStatus status
+        +execute(ServiceEntry)
+    }
+    class ServiceEntry {
+        +BigDecimal hours
+        +List~PartUsed~ parts
+        +Money expenses
+    }
+    class WarrantyTerm {
+        +EquipmentRef equipment
+        +int months
+        +String coverage
+        +BusinessDate start
+        +coversOn(BusinessDate) boolean
+    }
+    class PreventivePlan {
+        &lt;&lt;aggregate root&gt;&gt;
+        +EquipmentRef equipment
+        +int revision
+        +int periodicityDays
+        +generate(until) List~PreventiveOccurrence~
+    }
+    class PreventiveOccurrence {
+        +BusinessDate scheduledOn
+        unique(plano, revisão, equipamento, data)
+    }
+    class FailureRecord {
+        &lt;&lt;proposta · B14/B15&gt;&gt;
+        +EquipmentRef equipment
+        +String mode
+        +Instant occurredAt
+        +BigDecimal operatingHours
+    }
+    ServiceTicket --&gt; WarrantyStatus
+    ServiceTicket "1" --&gt; "0..*" ServiceOrder
+    ServiceOrder "1" *-- "0..*" ServiceEntry
+    WarrantyTerm ..&gt; ServiceTicket : define cobertura
+    PreventivePlan "1" *-- "0..*" PreventiveOccurrence
+    PreventiveOccurrence "1" --&gt; "0..1" ServiceOrder
+    ServiceTicket ..&gt; FailureRecord : alimenta MTBF
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+flowchart TD
+    A((Cliente abre chamado)) --&gt; EQ["Identifica o equipamento&lt;br/&gt;(série ou código)"]
+    EQ --&gt; GA{"Garantia cobre&lt;br/&gt;na data de hoje?"}
+    GA -- sim --&gt; EG["EM_GARANTIA:&lt;br/&gt;sem cobrança ao cliente"]
+    GA -- não --&gt; FG["FORA_DA_GARANTIA:&lt;br/&gt;orçamento ao cliente"]
+    GA -- "caso duvidoso" --&gt; AN["EM_ANALISE"] --&gt; GA
+    EG --&gt; DG["Diagnóstico"]
+    FG --&gt; DG
+    DG --&gt; OS["Ordem de serviço"]
+    OS --&gt; EX["Execução: horas, peças&lt;br/&gt;do estoque, despesas"]
+    EX --&gt; CT["ServiceOrderExecuted:&lt;br/&gt;custo registrado uma vez"]
+    CT --&gt; FR["Registra a falha&lt;br/&gt;(modo, horas de operação)"]
+    FR --&gt; FC["Fecha o chamado&lt;br/&gt;com a solução"] --&gt; Z(((Fim)))
+</pre></div>
+</section>
+<section class="bloco" id="s-25-custos-e-resultado-custos"><h3>25. Custos e resultado (<code>custos</code>)</h3>
+<p><strong>Situação:</strong> Invariante especificada no B01 (um custo por origem: <code>unique(sourceType, sourceId)</code>); o restante é proposta de desenho para B08–B10. O módulo não lança custo por conta própria: ele <strong>consome eventos</strong> das origens (consumo, apontamento, despesa, serviço) e aplica cada um uma única vez.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class ProjectBudget {
+        &lt;&lt;aggregate root · imutável por revisão&gt;&gt;
+        +ProjectRef project
+        +int revision
+        +Instant approvedAt
+        +List~BudgetLine~ lines
+    }
+    class BudgetLine {
+        +CostCategory category
+        +Money amount
+    }
+    class CostCommitment {
+        +ProjectRef project
+        +PurchaseOrderLineRef source
+        +Money amount
+        compromisso: comprado, ainda não consumido
+    }
+    class CostEntry {
+        &lt;&lt;imutável&gt;&gt;
+        +ProjectRef project
+        +EquipmentRef equipment
+        +CostCategory category
+        +Money amount
+        +String sourceType
+        +String sourceId
+        +CostEntryId reverses
+    }
+    class CostCategory {
+        &lt;&lt;enumeration · proposta&gt;&gt;
+        MATERIAL
+        MAO_DE_OBRA
+        SERVICO_TERCEIRO
+        INSTALACAO
+        ASSISTENCIA
+        RATEIO
+    }
+    class AllocationRule {
+        +String name
+        +AllocationBasis basis
+    }
+    class AllocationEntry {
+        +CostEntryRef cost
+        +ProjectRef project
+        +Money amount
+    }
+    class CostEventConsumer {
+        &lt;&lt;EventConsumer&gt;&gt;
+        MaterialConsumed, ProductionReported,
+        ExpenseRecognized, ServiceOrderExecuted...
+    }
+    class ProjectResultQuery {
+        &lt;&lt;consulta&gt;&gt;
+        +result(ProjectRef) receita, custo, margem
+    }
+    ProjectBudget "1" *-- "1..*" BudgetLine
+    BudgetLine --&gt; CostCategory
+    CostEntry --&gt; CostCategory
+    CostEventConsumer ..&gt; CostEntry : cria, uma vez por origem
+    AllocationRule "1" --&gt; "0..*" AllocationEntry
+    AllocationEntry --&gt; CostEntry
+    ProjectResultQuery ..&gt; CostEntry
+    ProjectResultQuery ..&gt; ProjectBudget
+    note for CostEntry "O pagamento ao fornecedor não repete o custo"
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant ES as estoque
+    participant O as Outbox
+    participant C as CostEventConsumer
+    participant DB as cost_entry
+    ES-&gt;&gt;O: MaterialConsumed (projeto P-0007, R$ 12.400,00)
+    O-&gt;&gt;C: entrega
+    C-&gt;&gt;DB: insert (origem = MaterialConsumed:id) on conflict do nothing
+    alt primeira vez
+        DB--&gt;&gt;C: custo registrado
+        C-&gt;&gt;O: CostEntryRecorded
+    else entregue de novo
+        DB--&gt;&gt;C: já existe: nada muda
+    end
+    ES-&gt;&gt;O: MaterialReturned (R$ 1.200,00)
+    O-&gt;&gt;C: entrega
+    C-&gt;&gt;DB: custo negativo que referencia o original
+</pre></div>
+</section>
+<section class="bloco" id="s-26-repasses-repasses"><h3>26. Repasses (<code>repasses</code>)</h3>
+<p><strong>Situação:</strong> Invariantes especificadas no B01 (confirmação congela a memória de cálculo; títulos gerados uma vez; documento 18, atividade 27). Regras reais de repasse dependem de PD-012. Proposta de desenho para B10.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class DistributionRule {
+        &lt;&lt;aggregate root&gt;&gt;
+        +String name
+        +String scope
+        +revise(DistributionBasis, rates, validFrom) DistributionRuleRevision
+    }
+    class DistributionRuleRevision {
+        &lt;&lt;imutável&gt;&gt;
+        +int revision
+        +DistributionBasis basis
+        +Map~PartnerRef, Rate~ rates
+        +BusinessDate validFrom
+    }
+    class DistributionBasis {
+        &lt;&lt;interface · strategy · PD-012&gt;&gt;
+        +base(period, scope) Money
+    }
+    class OnReceived {
+        base = recebido no período
+    }
+    class OnInvoiced {
+        base = faturado no período
+    }
+    class OnMargin {
+        base = margem do projeto
+    }
+    class DistributionRun {
+        &lt;&lt;aggregate root&gt;&gt;
+        +RevisionRef revision
+        +CompetencePeriod competence
+        +RunStatus status
+        +Money base
+        +String calculationMemory
+        +simulate()
+        +confirm(UserId) DistributionConfirmed
+        +adjust(Money, Reason)
+    }
+    class DistributionLine {
+        +PartnerRef beneficiary
+        +Rate rate
+        +Money amount
+        +TitleId payable
+    }
+    class DistributionAdjustment {
+        +Money delta
+        +Reason reason
+    }
+    DistributionRule "1" *-- "1..*" DistributionRuleRevision
+    DistributionRuleRevision --&gt; DistributionBasis
+    DistributionBasis &lt;|.. OnReceived
+    DistributionBasis &lt;|.. OnInvoiced
+    DistributionBasis &lt;|.. OnMargin
+    DistributionRun --&gt; DistributionRuleRevision
+    DistributionRun "1" *-- "1..*" DistributionLine
+    DistributionRun "1" *-- "0..*" DistributionAdjustment
+    note for DistributionRun "Σ linhas = base × taxas, rateio exato pelo AllocationPolicy"
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant U as Direção
+    participant R as DistributionService
+    participant B as DistributionBasis
+    participant TP as TitleProvisioning (financeiro)
+    participant PL as Recibo, auditoria e outbox
+    U-&gt;&gt;R: simular repasse de 10/2026
+    R-&gt;&gt;B: base(10/2026)
+    B--&gt;&gt;R: R$ 185.000,00
+    R--&gt;&gt;U: linhas por beneficiário (simulação, nada gravado em títulos)
+    U-&gt;&gt;R: confirmar
+    Note over R,PL: uma única transação
+    R-&gt;&gt;R: já confirmado? devolve a confirmação existente
+    R-&gt;&gt;R: congela a memória de cálculo
+    R-&gt;&gt;TP: um título a pagar por beneficiário
+    R-&gt;&gt;PL: DistributionConfirmed
+    R--&gt;&gt;U: 200 com os títulos gerados
+</pre></div>
+</section>
+<section class="bloco" id="s-27-fiscal-gerencial-fiscal"><h3>27. Fiscal gerencial (<code>fiscal</code>)</h3>
+<p><strong>Situação:</strong> Invariante especificada no B01 (histórico, simulação e valor do contador ficam separados; reabertura com motivo). Os parâmetros fiscais só valem depois de validados com o contador (PD-013). Sprint 7 (B10).</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class TaxPeriod {
+        &lt;&lt;aggregate root&gt;&gt;
+        +CompetencePeriod competence
+        +TaxPeriodStatus status
+        +simulate(TaxParameterRevision) TaxSimulation
+        +recordAccountantAmount(Money)
+        +close()
+        +reopen(Reason)
+    }
+    class TaxPeriodStatus {
+        &lt;&lt;enumeration&gt;&gt;
+        ABERTO
+        SIMULADO
+        CONFIRMADO_PELO_CONTADOR
+        FECHADO
+        REABERTO
+    }
+    class FiscalRevenue {
+        +DocumentLineRef source
+        +String kind
+        +Money amount
+    }
+    class TaxParameterRevision {
+        &lt;&lt;imutável&gt;&gt;
+        +String regime
+        +BusinessDate validFrom
+        +Map parameters
+        +String confirmedBy
+    }
+    class ImportedTaxHistory {
+        +StoredFile source
+        +Money amount
+        histórico da planilha, só leitura
+    }
+    class TaxSimulation {
+        +ParameterRevisionRef parameters
+        +Money result
+        +String memory
+    }
+    class AccountantConfirmation {
+        +Money amount
+        +TitleId payable
+    }
+    class TaxCalculator {
+        &lt;&lt;interface · strategy&gt;&gt;
+        +calculate(revenues, parameters) TaxSimulation
+    }
+    TaxPeriod --&gt; TaxPeriodStatus
+    TaxPeriod "1" *-- "0..*" FiscalRevenue
+    TaxPeriod "1" *-- "0..*" ImportedTaxHistory
+    TaxPeriod "1" *-- "0..*" TaxSimulation
+    TaxPeriod "1" *-- "0..1" AccountantConfirmation
+    TaxSimulation --&gt; TaxParameterRevision
+    TaxPeriod ..&gt; TaxCalculator
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+stateDiagram-v2
+    [*] --&gt; ABERTO : competência começa
+    ABERTO --&gt; SIMULADO : simulação com parâmetros vigentes
+    SIMULADO --&gt; SIMULADO : nova simulação (a anterior fica)
+    SIMULADO --&gt; CONFIRMADO_PELO_CONTADOR : valor informado pelo contador
+    CONFIRMADO_PELO_CONTADOR --&gt; FECHADO : título a pagar gerado
+    FECHADO --&gt; REABERTO : reabertura com motivo
+    REABERTO --&gt; SIMULADO
+    FECHADO --&gt; [*]
+</pre></div>
+</section>
+<section class="bloco" id="s-28-motor-de-dados-analise-e-decisao-analitico"><h3>28. Motor de dados, análise e decisão (<code>analitico</code>)</h3>
+<p><strong>Situação:</strong> Indicadores, execuções e achados especificados no B01 (documento 17, diagramas 14 e 15; documento 18, atividades 23 e 24). Os fatos operacionais já são gravados desde a Sprint 2. Modelos, planos de ação e experimentos são proposta de desenho para B10, B14 e B15.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class IndicatorDefinition {
+        &lt;&lt;especificado&gt;&gt;
+    }
+    class AnalysisRun {
+        &lt;&lt;especificado&gt;&gt;
+    }
+    class Finding {
+        &lt;&lt;aggregate root&gt;&gt;
+        +RunRef run
+        +EntityRef subject
+        +Impact impact
+        +Urgency urgency
+        +FindingStatus status
+        +List~Evidence~ evidence
+    }
+    class FindingStatus {
+        &lt;&lt;enumeration&gt;&gt;
+        NOVO
+        EM_ANALISE
+        ACEITO
+        REJEITADO
+        ADIADO
+        RESOLVIDO
+    }
+    class Decision {
+        +FindingRef finding
+        +Choice choice
+        +UserId decidedBy
+        +String justification
+        aceitar não executa pagamento sozinho
+    }
+    class ActionPlan {
+        +DecisionRef decision
+        +UserId owner
+        +BusinessDate dueOn
+        +List~ActionTask~ tasks
+    }
+    class ActionTask {
+        +String description
+        +TaskStatus status
+    }
+    class DecisionEvaluation {
+        +expected
+        +observed
+        esperado × observado
+    }
+    class ModelVersion {
+        &lt;&lt;aggregate root&gt;&gt;
+        +AnalysisDefinitionRef definition
+        +ModelState state
+        +BusinessDate trainedUntil
+        +validate(ValidationPolicy) ModelValidation
+        +suspend(Reason)
+    }
+    class ModelState {
+        &lt;&lt;enumeration&gt;&gt;
+        DADOS_INSUFICIENTES
+        EXPERIMENTAL
+        VALIDADO
+        SUSPENSO
+    }
+    class ValidationPolicy {
+        &lt;&lt;interface · policy&gt;&gt;
+        +beatsBaseline(metrics) boolean
+    }
+    class ModelMonitoring {
+        +Instant observedAt
+        +drift
+    }
+    class Experiment {
+        +String hypothesis
+        +status
+        +List~Assignment~ groups
+        +List~Measurement~ measurements
+    }
+    AnalysisRun "1" --&gt; "0..*" Finding
+    Finding --&gt; FindingStatus
+    Finding "1" --&gt; "0..*" Decision
+    Decision "1" --&gt; "0..1" ActionPlan
+    ActionPlan "1" *-- "1..*" ActionTask
+    Decision "1" --&gt; "0..*" DecisionEvaluation
+    ModelVersion --&gt; ModelState
+    ModelVersion ..&gt; ValidationPolicy
+    ModelVersion "1" *-- "0..*" ModelMonitoring
+    IndicatorDefinition ..&gt; AnalysisRun : alimenta
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+stateDiagram-v2
+    [*] --&gt; DADOS_INSUFICIENTES
+    DADOS_INSUFICIENTES --&gt; EXPERIMENTAL : histórico mínimo atingido
+    EXPERIMENTAL --&gt; VALIDADO : supera o método de referência no teste fora da amostra
+    EXPERIMENTAL --&gt; EXPERIMENTAL : não supera, continua em teste
+    VALIDADO --&gt; SUSPENSO : desvio detectado no monitoramento
+    SUSPENSO --&gt; EXPERIMENTAL : revalidação
+    note right of SUSPENSO : execuções antigas preservadas;&lt;br/&gt;volta ao método de referência
+</pre></div>
+</section>
+<section class="bloco" id="s-29-integracao-e-importacao-integracao"><h3>29. Integração e importação (<code>integracao</code>)</h3>
+<p><strong>Situação:</strong> Especificado no B01 como fluxo (documento 18, atividade 22); as classes são proposta de desenho para B04 e B12. A importação nunca grava direto nas tabelas de negócio: ela aplica pelos <strong>mesmos comandos</strong> que as telas usam, com permissão, validação e idempotência.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class ImportFile {
+        &lt;&lt;aggregate root&gt;&gt;
+        +StoredFile file
+        +SourceType sourceType
+        +JobRef job
+        +ImportStatus status
+    }
+    class SourceType {
+        &lt;&lt;enumeration · proposta&gt;&gt;
+        PLANILHA_BASE_COMERCIAL
+        BOM_PDF
+        EXTRATO_OFX
+        EXTRATO_CSV
+        NOTA_XML
+        HISTORICO_FISCAL
+    }
+    class Extractor {
+        &lt;&lt;interface · adapter · Python&gt;&gt;
+        +extract(StoredFile) List~CandidateRecord~
+    }
+    class Pipeline {
+        &lt;&lt;pipeline&gt;&gt;
+        extrair → normalizar → qualidade → conferência
+    }
+    class StagingRecord {
+        +int page
+        +int line
+        +String originalText
+        +Map proposed
+    }
+    class StagingIssue {
+        &lt;&lt;DataQualityIssue&gt;&gt;
+        +IssueKind kind
+        +Severity severity
+    }
+    class ReviewDecision {
+        +DecisionKind decision
+        +Map corrected
+        +UserId by
+        +Reason reason
+    }
+    class ImportApplication {
+        +EntityRef created
+        +CommandReceiptRef command
+        idempotente pela origem
+    }
+    class ExportJob {
+        +String queryId
+        +String format
+        +StoredFile file
+    }
+    ImportFile --&gt; SourceType
+    ImportFile ..&gt; Pipeline
+    Pipeline ..&gt; Extractor
+    ImportFile "1" *-- "0..*" StagingRecord
+    StagingRecord "1" *-- "0..*" StagingIssue
+    StagingRecord "1" --&gt; "0..1" ReviewDecision
+    StagingRecord "1" --&gt; "0..1" ImportApplication
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant U as Usuário
+    participant I as ImportService
+    participant W as Worker Python
+    participant R as Conferência
+    participant CMD as Comando público (ex.: CustomerService)
+    U-&gt;&gt;I: envia BASE comercial.xlsx
+    I-&gt;&gt;I: hash, guarda o original, cria a tarefa
+    W-&gt;&gt;I: reivindica, extrai 136 linhas
+    I-&gt;&gt;I: valida o esquema do resultado
+    I-&gt;&gt;R: 32 linhas da BASE (R$ 5.681.662,94) e 104 de prospecção, separadas
+    U-&gt;&gt;R: confere, corrige e aprova linha a linha
+    R-&gt;&gt;CMD: aplica cada linha aprovada com chave = origem (arquivo, página, linha)
+    CMD--&gt;&gt;R: registro criado ou o já existente
+    R--&gt;&gt;U: relatório: aplicadas, rejeitadas e diferenças
+</pre></div>
+</section>
+<section class="bloco" id="s-30-consultas-integradas-consultas"><h3>30. Consultas integradas (<code>consultas</code>)</h3>
+<p><strong>Situação:</strong> Proposta de desenho para a Sprint 4 em diante. O módulo <strong>não tem dados próprios</strong>: ele monta telas que juntam vários módulos (fachadas de leitura) e nunca altera nada. Consultas gerenciais mostram a data da última atualização; decisões de pagamento sempre usam o estado transacional.</p>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    class ProjectOverviewQuery {
+        &lt;&lt;facade&gt;&gt;
+        +overview(ProjectId) ProjectOverview
+    }
+    class DashboardQuery {
+        &lt;&lt;facade&gt;&gt;
+        +panel(PanelKind, filters) Panel
+    }
+    class PanelKind {
+        &lt;&lt;enumeration&gt;&gt;
+        VISAO_GERAL
+        VENDAS
+        FINANCEIRO
+        INDUSTRIAL
+        IMPOSTOS
+    }
+    class ReportQuery {
+        &lt;&lt;facade&gt;&gt;
+        +run(ReportId, params) ReportResult
+    }
+    class GlobalSearch {
+        &lt;&lt;facade&gt;&gt;
+        +search(text) List~SearchHit~
+    }
+    class ExportRequest {
+        +ReportId report
+        +String format
+    }
+    class ProjectQueryApi {
+        &lt;&lt;projetos&gt;&gt;
+    }
+    class TitleQueryApi {
+        &lt;&lt;financeiro&gt;&gt;
+    }
+    class CostQueryApi {
+        &lt;&lt;custos&gt;&gt;
+    }
+    class ScheduleQueryApi {
+        &lt;&lt;engenharia&gt;&gt;
+    }
+    class IndicatorQueryApi {
+        &lt;&lt;analitico&gt;&gt;
+    }
+    ProjectOverviewQuery ..&gt; ProjectQueryApi
+    ProjectOverviewQuery ..&gt; TitleQueryApi
+    ProjectOverviewQuery ..&gt; CostQueryApi
+    ProjectOverviewQuery ..&gt; ScheduleQueryApi
+    DashboardQuery --&gt; PanelKind
+    DashboardQuery ..&gt; IndicatorQueryApi
+    ReportQuery ..&gt; IndicatorQueryApi
+    ReportQuery ..&gt; ExportRequest
+</pre></div>
+<div class="diagrama"><pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant U as Usuário
+    participant Q as ProjectOverviewQuery
+    participant P as projetos
+    participant F as financeiro
+    participant C as custos
+    participant E as engenharia
+    U-&gt;&gt;Q: abre o Detalhe do projeto P-0007
+    Q-&gt;&gt;Q: permissão de leitura do projeto
+    par leituras independentes
+        Q-&gt;&gt;P: projeto, equipamentos e marcos
+        Q-&gt;&gt;F: parcelas, recebido e em aberto
+        Q-&gt;&gt;C: orçado, comprometido e incorrido
+        Q-&gt;&gt;E: cronograma, avanço e caminho crítico
+    end
+    Q--&gt;&gt;U: visão única com a data de atualização de cada bloco
+</pre></div>
+</section>
+    </main>
+  </div>
+</div>

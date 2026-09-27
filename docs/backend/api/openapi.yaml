@@ -1,0 +1,1323 @@
+openapi: 3.1.0
+info:
+  title: Renda+ ERP — API do servidor
+  version: v1
+  description: |
+    Contrato da API usada pelo app do Mac (Sprints 1 a 4).
+    Regras gerais:
+    - Toda rota exige sessão (`Authorization: Bearer <token>`), exceto `GET /api/v1/status` e `POST /api/v1/session` (ADR-005).
+      Sem sessão válida: 401 `UNAUTHENTICATED`. Perfil sem a permissão: 403 `FORBIDDEN` (a negativa fica na auditoria).
+    - Edição exige `If-Match` com a versão lida (ETag); versão desatualizada: 412 `VERSION_MISMATCH`; sem cabeçalho: 428.
+    - Cadastro exige `Idempotency-Key` (8 a 100 caracteres); repetir com a mesma chave devolve o mesmo registro;
+      mesma chave com outro conteúdo: 422 `IDEMPOTENCY_KEY_REUSED`.
+    - Cliente e fornecedor são papéis do mesmo parceiro, cada um com a sua situação. Cadastrar num papel o CNPJ de um parceiro
+      que ainda não o tem devolve 422 `PARTNER_OTHER_ROLE`, com `details` `partnerId` e `version` para chamar `.../{id}/enable`.
+    - Valores decimais (custo de referência, fator de conversão) trafegam como texto com ponto, até 6 casas (ADR-006, PD-007).
+    - Valores em reais trafegam em centavos, como texto de inteiro (`"30207146"` = R$ 302.071,46); datas de negócio `AAAA-MM-DD`.
+    - Documentos comerciais (Sprint 4): a revisão emitida da proposta é imutável; o pedido só muda em rascunho. Confirmar o pedido
+      (`Idempotency-Key` + `If-Match`) cria o projeto, um equipamento por unidade das linhas de equipamento e um título a receber
+      por parcela, uma única vez; confirmar de novo devolve a mesma confirmação. Operação que a situação não permite: 409
+      `INVALID_STATE_TRANSITION`.
+    - Erros sempre no formato `ApiError`, em português, com `correlationId` (cabeçalho `X-Correlation-Id` é aceito e devolvido).
+servers:
+  - url: http://localhost:8080
+security:
+  - sessao: []
+tags:
+  - name: Plataforma
+  - name: Sessão
+  - name: Usuários
+  - name: Clientes
+  - name: Fornecedores
+  - name: Materiais e serviços
+  - name: Unidades e categorias
+  - name: Propostas
+  - name: Pedidos
+  - name: Projetos e equipamentos
+  - name: Contas a receber
+
+paths:
+  /api/v1/status:
+    get:
+      tags: [Plataforma]
+      summary: Estado do servidor e do banco (sem sessão)
+      security: []
+      responses:
+        '200':
+          description: Estado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [UP, DEGRADED] }
+                  apiVersion: { type: string, example: v1 }
+                  serverVersion: { type: string }
+                  database: { type: string, enum: [UP, DOWN] }
+                  serverTime: { type: string, format: date-time }
+
+  /api/v1/company-profile:
+    get:
+      tags: [Plataforma]
+      summary: Dados da empresa (company.read)
+      responses:
+        '200': { description: Dados, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/CompanyProfile' } } } }
+        '401': { $ref: '#/components/responses/Erro' }
+        '403': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Plataforma]
+      summary: Atualiza os dados da empresa (company.update)
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CompanyProfileRequest' } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/CompanyProfile' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+        '428': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/session:
+    post:
+      tags: [Sessão]
+      summary: Entrar (sem sessão)
+      description: |
+        Senha errada e usuário inexistente recebem a mesma resposta (401 `INVALID_CREDENTIALS`). Cinco senhas erradas seguidas
+        bloqueiam o usuário por 15 minutos (401 `ACCOUNT_LOCKED`). O token volta só aqui; o app o guarda no processo principal.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string, format: password }
+      responses:
+        '200':
+          description: Sessão aberta (expira após 8 h sem uso ou 12 h no total)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string, description: 'Token opaco de 256 bits; o servidor guarda só o hash SHA-256' }
+                  expiresAt: { type: string, format: date-time }
+                  idleTimeoutSeconds: { type: integer, example: 28800 }
+                  user: { $ref: '#/components/schemas/SessionUser' }
+        '401': { $ref: '#/components/responses/Erro' }
+    get:
+      tags: [Sessão]
+      summary: Quem sou e o que meu perfil permite
+      responses:
+        '200': { description: Usuário da sessão, content: { application/json: { schema: { $ref: '#/components/schemas/SessionUser' } } } }
+        '401': { $ref: '#/components/responses/Erro' }
+    delete:
+      tags: [Sessão]
+      summary: Sair ou bloquear a tela (a sessão deixa de valer na hora)
+      parameters:
+        - { name: reason, in: query, required: false, schema: { type: string, enum: [SAIR, BLOQUEIO], default: SAIR } }
+      responses:
+        '204': { description: Sessão encerrada }
+
+  /api/v1/session/password:
+    post:
+      tags: [Sessão]
+      summary: Trocar a própria senha (encerra todas as sessões do usuário)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string, format: password }
+                newPassword: { type: string, format: password, minLength: 10, maxLength: 128 }
+      responses:
+        '204': { description: Senha alterada }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/users:
+    get:
+      tags: [Usuários]
+      summary: Lista de usuários (user.admin)
+      responses:
+        '200': { description: Usuários, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/UserAccount' } } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+    post:
+      tags: [Usuários]
+      summary: Cria usuário (user.admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, displayName, profile, password]
+              properties:
+                username: { type: string, pattern: '^[a-z0-9._-]{3,60}$', description: 'Convertido para minúsculas' }
+                displayName: { type: string, maxLength: 120 }
+                profile: { $ref: '#/components/schemas/Profile' }
+                password: { type: string, format: password, minLength: 10, maxLength: 128 }
+      responses:
+        '201': { description: Criado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/UserAccount' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/users/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Usuários]
+      summary: Um usuário (user.admin)
+      responses:
+        '200': { description: Usuário, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/UserAccount' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Usuários]
+      summary: Altera nome, perfil e situação (user.admin)
+      description: Mudar o perfil ou desativar encerra as sessões do usuário. Sempre resta pelo menos um administrador ativo, e ninguém retira o próprio acesso de administrador.
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName: { type: string }
+                profile: { $ref: '#/components/schemas/Profile' }
+                active: { type: boolean }
+      responses:
+        '200': { description: Nova versão, content: { application/json: { schema: { $ref: '#/components/schemas/UserAccount' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/users/{id}/password:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Usuários]
+      summary: Redefine a senha (user.admin); libera o bloqueio e encerra as sessões do usuário
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [password], properties: { password: { type: string, format: password, minLength: 10 } } } } }
+      responses:
+        '200': { description: Senha redefinida, content: { application/json: { schema: { $ref: '#/components/schemas/UserAccount' } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/customers:
+    get:
+      tags: [Clientes]
+      summary: Lista de clientes (partner.read)
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Código, razão social, nome fantasia ou parte do CNPJ' }
+        - { name: status, in: query, required: false, schema: { type: string, enum: [ATIVO, INATIVO, TODOS], default: ATIVO } }
+      responses:
+        '200': { description: Clientes, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/CustomerSummary' } } } } }
+    post:
+      tags: [Clientes]
+      summary: Cadastra cliente — RegisterPartner (partner.create), idempotente
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CustomerRequest' } } }
+      responses:
+        '201': { description: Cadastrado (ou o mesmo cliente, se a chave já foi usada), headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Customer' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/customers/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Clientes]
+      summary: Ficha do cliente (partner.read)
+      responses:
+        '200': { description: Cliente, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Customer' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Clientes]
+      summary: Edita — UpdatePartner (partner.update)
+      description: Unidades e contatos enviados com `id` conhecido mantêm a identidade; os ausentes são removidos.
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CustomerRequest' } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Customer' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+        '428': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/customers/{id}/deactivate:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Clientes]
+      summary: Inativa — DeactivatePartner (partner.deactivate), idempotente; preserva o histórico
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string, maxLength: 500 } } } } }
+      responses:
+        '200': { description: Cliente inativo, content: { application/json: { schema: { $ref: '#/components/schemas/Customer' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/customers/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Clientes]
+      summary: Histórico do parceiro lido da auditoria (partner.read), do mais recente ao mais antigo
+      responses:
+        '200': { description: Registros, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/customers/{id}/enable:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Clientes]
+      summary: Torna cliente um parceiro já cadastrado (ou reativa o papel) — partner.update, idempotente
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      responses:
+        '200': { description: Parceiro com o papel de cliente ativo, content: { application/json: { schema: { $ref: '#/components/schemas/Customer' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/suppliers:
+    get:
+      tags: [Fornecedores]
+      summary: Lista de fornecedores (partner.read); a situação é a do papel de fornecedor
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Código, razão social, nome fantasia ou parte do CNPJ' }
+        - { name: status, in: query, required: false, schema: { type: string, enum: [ATIVO, INATIVO, TODOS], default: ATIVO } }
+      responses:
+        '200': { description: Fornecedores, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/SupplierSummary' } } } } }
+    post:
+      tags: [Fornecedores]
+      summary: Cadastra fornecedor — RegisterPartner (partner.create), idempotente; código F00001
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SupplierRequest' } } }
+      responses:
+        '201': { description: Cadastrado (ou o mesmo fornecedor, se a chave já foi usada), headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Supplier' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/suppliers/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Fornecedores]
+      summary: Ficha do fornecedor (partner.read); 404 se o parceiro não é fornecedor
+      responses:
+        '200': { description: Fornecedor, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Supplier' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Fornecedores]
+      summary: Edita — UpdatePartner (partner.update)
+      description: Não mexe nas unidades do parceiro. Categorias inativas que o fornecedor já tinha continuam aceitas.
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SupplierRequest' } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Supplier' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+        '428': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/suppliers/{id}/deactivate:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Fornecedores]
+      summary: Inativa o papel de fornecedor — DeactivatePartner (partner.deactivate), idempotente; o papel de cliente não muda
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string, maxLength: 500 } } } } }
+      responses:
+        '200': { description: Fornecedor inativo, content: { application/json: { schema: { $ref: '#/components/schemas/Supplier' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/suppliers/{id}/enable:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Fornecedores]
+      summary: Torna fornecedor um parceiro já cadastrado (ou reativa o papel) — partner.update, idempotente
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      responses:
+        '200': { description: Parceiro com o papel de fornecedor ativo, content: { application/json: { schema: { $ref: '#/components/schemas/Supplier' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/suppliers/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Fornecedores]
+      summary: Histórico do parceiro lido da auditoria (partner.read)
+      responses:
+        '200': { description: Registros, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/items:
+    get:
+      tags: [Materiais e serviços]
+      summary: Lista de materiais e serviços (item.read)
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Código ou descrição' }
+        - { name: nature, in: query, required: false, schema: { type: string, enum: [MATERIAL, SERVICO] } }
+        - { name: categoryId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: status, in: query, required: false, schema: { type: string, enum: [ATIVO, INATIVO, TODOS], default: ATIVO } }
+      responses:
+        '200': { description: Itens, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ItemSummary' } } } } }
+    post:
+      tags: [Materiais e serviços]
+      summary: Cadastra — RegisterItem (item.create), idempotente; código M00001 (material) ou S00001 (serviço)
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ItemRequest' } } }
+      responses:
+        '201': { description: Cadastrado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Item' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/items/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Materiais e serviços]
+      summary: Ficha do item (item.read)
+      responses:
+        '200': { description: Item, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Item' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Materiais e serviços]
+      summary: Edita — UpdateItem (item.update); a natureza não muda depois do cadastro
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ItemRequest' } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Item' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+        '428': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/items/{id}/deactivate:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Materiais e serviços]
+      summary: Inativa — DeactivateItem (item.deactivate), idempotente; preserva o histórico
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string, maxLength: 500 } } } } }
+      responses:
+        '200': { description: Item inativo, content: { application/json: { schema: { $ref: '#/components/schemas/Item' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/items/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Materiais e serviços]
+      summary: Histórico do item lido da auditoria (item.read)
+      responses:
+        '200': { description: Registros, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/units-of-measure:
+    get:
+      tags: [Unidades e categorias]
+      summary: Unidades de medida, ativas e inativas (item.read)
+      responses:
+        '200': { description: Unidades, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/UnitOfMeasure' } } } } }
+    post:
+      tags: [Unidades e categorias]
+      summary: Inclui unidade (catalog.admin); código de 1 a 10 letras ou algarismos, guardado em maiúsculas
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [code, name], properties: { code: { type: string, maxLength: 10 }, name: { type: string, maxLength: 60 } } } } }
+      responses:
+        '201': { description: Incluída, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/UnitOfMeasure' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/units-of-measure/{code}:
+    parameters: [{ name: code, in: path, required: true, schema: { type: string } }]
+    put:
+      tags: [Unidades e categorias]
+      summary: Renomeia ou inativa (catalog.admin); o código não muda
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [name, status], properties: { name: { type: string, maxLength: 60 }, status: { type: string, enum: [ATIVO, INATIVO] } } } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/UnitOfMeasure' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/item-categories:
+    get:
+      tags: [Unidades e categorias]
+      summary: Categorias de item, ativas e inativas (item.read)
+      responses:
+        '200': { description: Categorias, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ItemCategory' } } } } }
+    post:
+      tags: [Unidades e categorias]
+      summary: Inclui categoria (catalog.admin); nome único sem diferenciar maiúsculas
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [name], properties: { name: { type: string, maxLength: 100 } } } } }
+      responses:
+        '201': { description: Incluída, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/ItemCategory' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/item-categories/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    put:
+      tags: [Unidades e categorias]
+      summary: Renomeia ou inativa (catalog.admin)
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [name, status], properties: { name: { type: string, maxLength: 100 }, status: { type: string, enum: [ATIVO, INATIVO] } } } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/ItemCategory' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/proposals:
+    get:
+      tags: [Propostas]
+      summary: Lista de propostas (proposal.read), com a revisão vigente
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Número, título ou cliente' }
+        - { name: status, in: query, required: false, schema: { type: string, enum: [ABERTA, GANHA, PERDIDA, TODOS] } }
+      responses:
+        '200': { description: Propostas, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ProposalSummary' } } } } }
+    post:
+      tags: [Propostas]
+      summary: Nova proposta com a revisão 1 em rascunho (proposal.create), idempotente; número PR00001
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ProposalRequest' } } }
+      responses:
+        '201': { description: Cadastrada, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Proposal' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/proposals/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Propostas]
+      summary: Proposta com todas as revisões e linhas (proposal.read)
+      responses:
+        '200': { description: Proposta, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Proposal' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Propostas]
+      summary: Altera a revisão em rascunho (proposal.update); revisão emitida devolve 409
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ProposalRequest' } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Proposal' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+        '428': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/proposals/{id}/issue:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Propostas]
+      summary: Emite a revisão em rascunho — IssueProposalRevision (proposal.issue); emitida fica imutável
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      responses:
+        '200': { description: Revisão emitida, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Proposal' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/proposals/{id}/revisions:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Propostas]
+      summary: Cria a próxima revisão em rascunho, copiada da última emitida (proposal.update); as anteriores ficam preservadas
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      responses:
+        '200': { description: Nova revisão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Proposal' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/proposals/{id}/outcome:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Propostas]
+      summary: Registra a perda com motivo — RecordProposalOutcome (proposal.update); o ganho é a conversão em pedido
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/OutcomeRequest' } } }
+      responses:
+        '200': { description: Proposta perdida, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Proposal' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/proposals/{id}/orders:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Propostas]
+      summary: Converte a revisão emitida em pedido em rascunho — ConvertProposalToOrder (sales_order.create), idempotente; a proposta fica ganha
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: false
+        content: { application/json: { schema: { $ref: '#/components/schemas/ConvertRequest' } } }
+      responses:
+        '201': { description: Pedido em rascunho, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SalesOrder' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/proposals/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Propostas]
+      summary: Histórico da proposta (proposal.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/sales-orders:
+    get:
+      tags: [Pedidos]
+      summary: Lista de pedidos (sales_order.read)
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Número, cliente ou unidade' }
+        - { name: status, in: query, required: false, schema: { type: string, enum: [DRAFT, CONFIRMED, IN_EXECUTION, COMPLETED, CANCELLED, TODOS] } }
+      responses:
+        '200': { description: Pedidos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/SalesOrderSummary' } } } } }
+    post:
+      tags: [Pedidos]
+      summary: Pedido em rascunho (sales_order.create), idempotente; número PV00001
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SalesOrderRequest' } } }
+      responses:
+        '201': { description: Cadastrado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SalesOrder' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/sales-orders/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Pedidos]
+      summary: Pedido com linhas, parcelas e, depois de confirmado, projeto, equipamentos e títulos (sales_order.read)
+      responses:
+        '200': { description: Pedido, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SalesOrder' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Pedidos]
+      summary: Altera o rascunho (sales_order.update); confirmado devolve 409 (mudança só por aditivo)
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SalesOrderRequest' } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SalesOrder' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+        '428': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/sales-orders/{id}/confirmations:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Pedidos]
+      summary: >-
+        Confirma — ConfirmSalesOrder (sales_order.confirm): projeto, equipamentos e um título por parcela numa transação, uma única
+        vez. Σ parcelas ≠ total: 422 ORDER_INVALID; cliente inativo ou unidade de outro cliente: 422 PARTNER_INACTIVE_OR_UNIT_MISMATCH
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses:
+        '200': { description: Pedido confirmado (ou a confirmação existente), headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SalesOrder' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/sales-orders/{id}/cancellations:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Pedidos]
+      summary: >-
+        Cancela com motivo — CancelSalesOrder (sales_order.cancel). Confirmado: cancela os títulos, encerra o projeto e cancela os
+        equipamentos; com recebimento ou execução iniciada, 422 CANCELLATION_BLOCKED_BY_EFFECTS (premissa PD-003)
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: false
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { description: Pedido cancelado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SalesOrder' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/sales-orders/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Pedidos]
+      summary: Histórico do pedido (sales_order.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/projects:
+    get:
+      tags: [Projetos e equipamentos]
+      summary: Carteira de projetos (project.read); encerrados só com includeClosed
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Código, nome, pedido ou cliente' }
+        - { name: stage, in: query, required: false, schema: { type: string, enum: [PLANEJADO, ENGENHARIA, SUPRIMENTOS, PRODUCAO, INSTALACAO, ACEITO, ENCERRADO] } }
+        - { name: includeClosed, in: query, required: false, schema: { type: boolean, default: false } }
+      responses:
+        '200': { description: Projetos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Project' } } } } }
+
+  /api/v1/projects/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Projetos e equipamentos]
+      summary: Detalhe do projeto (project.read)
+      responses:
+        '200': { description: Projeto, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Project' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/projects/{id}/equipment:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Projetos e equipamentos]
+      summary: Equipamentos do projeto (project.read)
+      responses:
+        '200': { description: Equipamentos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Equipment' } } } } }
+
+  /api/v1/projects/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Projetos e equipamentos]
+      summary: Histórico do projeto (project.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/equipment:
+    get:
+      tags: [Projetos e equipamentos]
+      summary: Lista de equipamentos (equipment.read); cancelados só com includeCancelled
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Código, modelo, série, projeto ou cliente' }
+        - { name: projectId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: includeCancelled, in: query, required: false, schema: { type: boolean, default: false } }
+      responses:
+        '200': { description: Equipamentos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Equipment' } } } } }
+
+  /api/v1/equipment/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Projetos e equipamentos]
+      summary: Ficha do equipamento (equipment.read)
+      responses:
+        '200': { description: Equipamento, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Equipment' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Projetos e equipamentos]
+      summary: Altera série e observações — UpdateEquipment (equipment.update); série única por modelo (422 EQUIPMENT_SERIAL_DUPLICATE)
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/EquipmentRequest' } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Equipment' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+        '428': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/equipment/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Projetos e equipamentos]
+      summary: Histórico do equipamento (equipment.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/receivables:
+    get:
+      tags: [Contas a receber]
+      summary: Títulos a receber (financial_title.read); cancelados só com includeCancelled. Recebimento e estorno entram na Sprint 5
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Código, origem ou cliente' }
+        - { name: projectId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: customerId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: includeCancelled, in: query, required: false, schema: { type: boolean, default: false } }
+      responses:
+        '200': { description: Títulos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Receivable' } } } } }
+
+  /api/v1/receivables/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Contas a receber]
+      summary: Título a receber (financial_title.read)
+      responses:
+        '200': { description: Título, content: { application/json: { schema: { $ref: '#/components/schemas/Receivable' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+components:
+  securitySchemes:
+    sessao:
+      type: http
+      scheme: bearer
+      description: Token opaco devolvido por POST /api/v1/session
+  headers:
+    ETag:
+      description: Versão do registro entre aspas, para usar no If-Match
+      schema: { type: string, example: '"3"' }
+  parameters:
+    Id:
+      { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    IfMatch:
+      { name: If-Match, in: header, required: true, schema: { type: string, example: '"3"' }, description: 'Versão lida (ETag)' }
+    IdempotencyKey:
+      { name: Idempotency-Key, in: header, required: true, schema: { type: string, pattern: '^[A-Za-z0-9_-]{8,100}$' } }
+  responses:
+    Erro:
+      description: Erro padronizado
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+  schemas:
+    ApiError:
+      type: object
+      properties:
+        code: { type: string, example: VERSION_MISMATCH }
+        message: { type: string }
+        details: { type: array, items: { type: object, properties: { field: { type: [string, 'null'] }, message: { type: string } } } }
+        correlationId: { type: string }
+        retryable: { type: boolean }
+    Profile:
+      type: string
+      enum: [ADMINISTRADOR, CONSULTA]
+    SessionUser:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        displayName: { type: string }
+        profile: { $ref: '#/components/schemas/Profile' }
+        profileLabel: { type: string, example: Administrador }
+        permissions: { type: array, items: { type: string }, example: [company.read, partner.read] }
+    UserAccount:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        displayName: { type: string }
+        profile: { $ref: '#/components/schemas/Profile' }
+        active: { type: boolean }
+        locked: { type: boolean }
+        version: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    Address:
+      type: object
+      properties:
+        street: { type: [string, 'null'] }
+        number: { type: [string, 'null'] }
+        complement: { type: [string, 'null'] }
+        district: { type: [string, 'null'] }
+        city: { type: [string, 'null'] }
+        state: { type: [string, 'null'], description: UF }
+        postalCode: { type: [string, 'null'], description: '8 dígitos' }
+    CompanyProfileRequest:
+      type: object
+      properties:
+        legalName: { type: string }
+        tradeName: { type: [string, 'null'] }
+        cnpj: { type: [string, 'null'] }
+        address: { $ref: '#/components/schemas/Address' }
+        phone: { type: [string, 'null'] }
+        email: { type: [string, 'null'] }
+    CompanyProfile:
+      allOf:
+        - $ref: '#/components/schemas/CompanyProfileRequest'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            cnpjFormatted: { type: [string, 'null'] }
+            configured: { type: boolean }
+            version: { type: string }
+            updatedAt: { type: [string, 'null'], format: date-time }
+            updatedBy: { type: [string, 'null'] }
+    Unit:
+      type: object
+      required: [name]
+      properties:
+        id: { type: [string, 'null'], format: uuid }
+        name: { type: string, maxLength: 120 }
+        street: { type: [string, 'null'] }
+        number: { type: [string, 'null'] }
+        district: { type: [string, 'null'] }
+        city: { type: [string, 'null'] }
+        state: { type: [string, 'null'] }
+        postalCode: { type: [string, 'null'] }
+    Contact:
+      type: object
+      required: [name]
+      properties:
+        id: { type: [string, 'null'], format: uuid }
+        name: { type: string, maxLength: 120 }
+        role: { type: [string, 'null'] }
+        phone: { type: [string, 'null'] }
+        email: { type: [string, 'null'] }
+    CustomerRequest:
+      type: object
+      required: [legalName]
+      properties:
+        legalName: { type: string, maxLength: 200 }
+        tradeName: { type: [string, 'null'], maxLength: 200 }
+        cnpj: { type: [string, 'null'], description: 'Com ou sem máscara; válido e único quando informado' }
+        group: { type: [string, 'null'], maxLength: 100 }
+        units: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/Unit' } }
+        contacts: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/Contact' } }
+    Customer:
+      allOf:
+        - $ref: '#/components/schemas/CustomerRequest'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string, example: C00001 }
+            cnpjFormatted: { type: [string, 'null'] }
+            status: { type: string, enum: [ATIVO, INATIVO], description: 'Situação do papel de cliente' }
+            supplier: { type: boolean, description: 'Também é fornecedor ativo' }
+            version: { type: string }
+            createdAt: { type: string, format: date-time }
+            createdBy: { type: string }
+            updatedAt: { type: [string, 'null'], format: date-time }
+            updatedBy: { type: [string, 'null'] }
+    CustomerSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        legalName: { type: string }
+        tradeName: { type: [string, 'null'] }
+        cnpjFormatted: { type: [string, 'null'] }
+        city: { type: [string, 'null'], description: 'Cidade da primeira unidade' }
+        state: { type: [string, 'null'] }
+        units: { type: integer }
+        status: { type: string, enum: [ATIVO, INATIVO] }
+        version: { type: string }
+    HistoryEntry:
+      type: object
+      properties:
+        occurredAt: { type: string, format: date-time }
+        actor: { type: string }
+        action:
+          type: string
+          description: >-
+            PARTNER_REGISTERED, PARTNER_UPDATED, PARTNER_DEACTIVATED, PARTNER_ROLE_ENABLED, ITEM_REGISTERED, ITEM_UPDATED,
+            ITEM_DEACTIVATED, PROPOSAL_DRAFTED, PROPOSAL_UPDATED, PROPOSAL_REVISION_ISSUED, PROPOSAL_REVISION_CREATED,
+            PROPOSAL_LOST, PROPOSAL_WON, SALES_ORDER_DRAFTED, SALES_ORDER_UPDATED, SALES_ORDER_CONFIRMED, SALES_ORDER_CANCELLED,
+            PROJECT_CREATED, PROJECT_CLOSED, EQUIPMENT_CREATED, EQUIPMENT_UPDATED, EQUIPMENT_CANCELLED
+        version: { type: integer }
+        reason: { type: [string, 'null'] }
+        changes:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              before: { type: [string, 'null'] }
+              after: { type: [string, 'null'] }
+    CategoryRef:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+    SupplierRequest:
+      type: object
+      required: [legalName]
+      properties:
+        legalName: { type: string, maxLength: 200 }
+        tradeName: { type: [string, 'null'], maxLength: 200 }
+        cnpj: { type: [string, 'null'], description: 'Com ou sem máscara; válido e único quando informado' }
+        group: { type: [string, 'null'], maxLength: 100 }
+        leadTimeDays: { type: [integer, 'null'], minimum: 0, maximum: 365, description: 'Prazo de referência de entrega' }
+        paymentTerms: { type: [string, 'null'], maxLength: 200 }
+        suppliedCategoryIds: { type: array, maxItems: 50, items: { type: string, format: uuid } }
+        contacts: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/Contact' } }
+    Supplier:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: F00001, description: 'Código do parceiro; um cliente que vira fornecedor mantém o código C' }
+        legalName: { type: string }
+        tradeName: { type: [string, 'null'] }
+        cnpj: { type: [string, 'null'] }
+        cnpjFormatted: { type: [string, 'null'] }
+        group: { type: [string, 'null'] }
+        status: { type: string, enum: [ATIVO, INATIVO], description: 'Situação do papel de fornecedor' }
+        customer: { type: boolean, description: 'Também é cliente ativo' }
+        leadTimeDays: { type: [integer, 'null'] }
+        paymentTerms: { type: [string, 'null'] }
+        suppliedCategories: { type: array, items: { $ref: '#/components/schemas/CategoryRef' } }
+        contacts: { type: array, items: { $ref: '#/components/schemas/Contact' } }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    SupplierSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        legalName: { type: string }
+        tradeName: { type: [string, 'null'] }
+        cnpjFormatted: { type: [string, 'null'] }
+        city: { type: [string, 'null'] }
+        state: { type: [string, 'null'] }
+        suppliedCategories: { type: [string, 'null'], description: 'Nomes separados por vírgula' }
+        leadTimeDays: { type: [integer, 'null'] }
+        status: { type: string, enum: [ATIVO, INATIVO] }
+        version: { type: string }
+    Conversion:
+      type: object
+      required: [fromUom, factor]
+      properties:
+        id: { type: [string, 'null'], format: uuid }
+        fromUom: { type: string, description: 'Unidade de compra' }
+        factor: { type: string, example: '6', description: '1 fromUom = factor unidades do item; maior que zero, até 6 casas' }
+    ItemRequest:
+      type: object
+      required: [description, nature, uom, categoryId, stockControlled]
+      properties:
+        description: { type: string, maxLength: 200 }
+        nature: { type: string, enum: [MATERIAL, SERVICO] }
+        uom: { type: string, description: 'Código de unidade ativa' }
+        categoryId: { type: string, format: uuid }
+        stockControlled: { type: boolean, description: 'Serviço nunca controla estoque' }
+        referenceCost: { type: [string, 'null'], example: '184.50', description: 'BRL por unidade do item; maior ou igual a zero, até 6 casas' }
+        conversions: { type: array, maxItems: 20, items: { $ref: '#/components/schemas/Conversion' } }
+    Item:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: M00001 }
+        description: { type: string }
+        nature: { type: string, enum: [MATERIAL, SERVICO] }
+        uom: { type: string }
+        category: { $ref: '#/components/schemas/CategoryRef' }
+        stockControlled: { type: boolean }
+        referenceCost: { type: [string, 'null'], example: '184.500000' }
+        status: { type: string, enum: [ATIVO, INATIVO] }
+        conversions: { type: array, items: { $ref: '#/components/schemas/Conversion' } }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    ItemSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        description: { type: string }
+        nature: { type: string, enum: [MATERIAL, SERVICO] }
+        uom: { type: string }
+        category: { type: string }
+        stockControlled: { type: boolean }
+        referenceCost: { type: [string, 'null'] }
+        status: { type: string, enum: [ATIVO, INATIVO] }
+        version: { type: string }
+    UnitOfMeasure:
+      type: object
+      properties:
+        code: { type: string, example: KG }
+        name: { type: string }
+        status: { type: string, enum: [ATIVO, INATIVO] }
+        version: { type: string }
+        items: { type: integer, description: 'Itens que usam a unidade' }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    ItemCategory:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        status: { type: string, enum: [ATIVO, INATIVO] }
+        version: { type: string }
+        items: { type: integer }
+        suppliers: { type: integer, description: 'Fornecedores que a fornecem' }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    Cents:
+      type: string
+      pattern: '^\d{1,18}$'
+      description: Valor em centavos, texto de inteiro ("30207146" = R$ 302.071,46)
+    SalesLineRequest:
+      type: object
+      required: [kind, quantity, unitPrice]
+      properties:
+        id: { type: [string, 'null'], description: 'Id da linha existente; vazio numa linha nova' }
+        kind: { type: string, enum: [EQUIPAMENTO, MATERIAL, SERVICO] }
+        itemId: { type: [string, 'null'], format: uuid, description: 'Obrigatório para MATERIAL e SERVICO (mesma natureza); vazio para EQUIPAMENTO' }
+        description: { type: [string, 'null'], maxLength: 200, description: 'Modelo do equipamento; nos itens, a descrição do cadastro quando vazio' }
+        quantity: { type: string, example: '10.5', description: 'Até 6 casas; equipamento em unidades inteiras (1 a 100)' }
+        unitPrice: { type: string, example: '16.33', description: 'Preço unitário em reais, até 6 casas' }
+        discountCents: { type: [string, 'null'], example: '10000' }
+    SalesLine:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [EQUIPAMENTO, MATERIAL, SERVICO] }
+        itemId: { type: [string, 'null'], format: uuid }
+        itemCode: { type: [string, 'null'] }
+        description: { type: string }
+        quantity: { type: string }
+        uom: { type: string }
+        unitPrice: { type: string }
+        discountCents: { $ref: '#/components/schemas/Cents' }
+        grossCents: { $ref: '#/components/schemas/Cents' }
+        totalCents: { $ref: '#/components/schemas/Cents', description: 'round(quantidade × preço) − desconto, meio-par por linha (PD-002)' }
+    ProposalRequest:
+      type: object
+      required: [customerId, title, validUntil, lines]
+      properties:
+        customerId: { type: string, format: uuid }
+        unitId: { type: [string, 'null'], format: uuid }
+        title: { type: string, maxLength: 200 }
+        validUntil: { type: string, format: date }
+        paymentTerms: { type: [string, 'null'], maxLength: 500 }
+        lines: { type: array, items: { $ref: '#/components/schemas/SalesLineRequest' } }
+    ProposalRevision:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        revision: { type: integer }
+        status: { type: string, enum: [RASCUNHO, EMITIDA] }
+        validUntil: { type: string, format: date }
+        paymentTerms: { type: [string, 'null'] }
+        totalCents: { $ref: '#/components/schemas/Cents' }
+        issuedAt: { type: [string, 'null'], format: date-time }
+        issuedBy: { type: [string, 'null'] }
+        lines: { type: array, items: { $ref: '#/components/schemas/SalesLine' } }
+    Proposal:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: PR00001 }
+        customerId: { type: string, format: uuid }
+        customerCode: { type: string }
+        customerName: { type: string }
+        unitId: { type: [string, 'null'], format: uuid }
+        unitName: { type: [string, 'null'] }
+        title: { type: string }
+        status: { type: string, enum: [ABERTA, GANHA, PERDIDA] }
+        outcomeReason: { type: [string, 'null'] }
+        currentRevision: { type: integer }
+        revisions: { type: array, items: { $ref: '#/components/schemas/ProposalRevision' } }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    ProposalSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        customerCode: { type: string }
+        customerName: { type: string }
+        unitName: { type: [string, 'null'] }
+        title: { type: string }
+        status: { type: string, enum: [ABERTA, GANHA, PERDIDA] }
+        revision: { type: integer }
+        revisionStatus: { type: string, enum: [RASCUNHO, EMITIDA] }
+        validUntil: { type: string, format: date }
+        totalCents: { $ref: '#/components/schemas/Cents' }
+        version: { type: string }
+    OutcomeRequest:
+      type: object
+      required: [outcome, reason]
+      properties:
+        outcome: { type: string, enum: [PERDIDA] }
+        reason: { type: string, maxLength: 500 }
+    ConvertRequest:
+      type: object
+      properties:
+        unitId: { type: [string, 'null'], format: uuid, description: 'Obrigatória se a proposta não tem unidade' }
+        contractDate: { type: [string, 'null'], format: date, description: 'Hoje quando vazia' }
+    ReasonRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, maxLength: 500 }
+    Installment:
+      type: object
+      required: [dueDate, amountCents]
+      properties:
+        seq: { type: [integer, 'null'], description: 'Na resposta: sequência a partir de 1 (a ordem da lista)' }
+        dueDate: { type: string, format: date }
+        amountCents: { $ref: '#/components/schemas/Cents' }
+        milestone: { type: [string, 'null'], maxLength: 200 }
+    SalesOrderRequest:
+      type: object
+      required: [customerId, unitId, contractDate, lines]
+      properties:
+        customerId: { type: string, format: uuid }
+        unitId: { type: string, format: uuid }
+        contractDate: { type: string, format: date }
+        promisedDate: { type: [string, 'null'], format: date }
+        notes: { type: [string, 'null'], maxLength: 1000 }
+        lines: { type: array, items: { $ref: '#/components/schemas/SalesLineRequest' } }
+        installments: { type: array, items: { $ref: '#/components/schemas/Installment' }, description: 'Na confirmação, a soma precisa ser o total exato' }
+    SalesOrderSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        customerCode: { type: string }
+        customerName: { type: string }
+        unitName: { type: string }
+        proposalCode: { type: [string, 'null'] }
+        contractDate: { type: string, format: date }
+        totalCents: { $ref: '#/components/schemas/Cents' }
+        status: { type: string, enum: [DRAFT, CONFIRMED, IN_EXECUTION, COMPLETED, CANCELLED] }
+        version: { type: string }
+    SalesOrder:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: PV00001 }
+        customerId: { type: string, format: uuid }
+        customerCode: { type: string }
+        customerName: { type: string }
+        unitId: { type: string, format: uuid }
+        unitName: { type: string }
+        proposalId: { type: [string, 'null'], format: uuid }
+        proposalCode: { type: [string, 'null'] }
+        proposalRevision: { type: [integer, 'null'] }
+        contractDate: { type: string, format: date }
+        promisedDate: { type: [string, 'null'], format: date }
+        notes: { type: [string, 'null'] }
+        status: { type: string, enum: [DRAFT, CONFIRMED, IN_EXECUTION, COMPLETED, CANCELLED] }
+        totalCents: { $ref: '#/components/schemas/Cents' }
+        scheduledCents: { $ref: '#/components/schemas/Cents' }
+        lines: { type: array, items: { $ref: '#/components/schemas/SalesLine' } }
+        installments: { type: array, items: { $ref: '#/components/schemas/Installment' } }
+        confirmedAt: { type: [string, 'null'], format: date-time }
+        confirmedBy: { type: [string, 'null'] }
+        projectId: { type: [string, 'null'], format: uuid }
+        projectCode: { type: [string, 'null'] }
+        projectStage: { type: [string, 'null'] }
+        equipment:
+          type: array
+          items: { type: object, properties: { id: { type: string }, code: { type: string }, model: { type: string }, serialNumber: { type: [string, 'null'] }, status: { type: string } } }
+        titles:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              code: { type: string }
+              label: { type: string }
+              dueDate: { type: string, format: date }
+              competence: { type: string, example: '2026-10' }
+              originalCents: { $ref: '#/components/schemas/Cents' }
+              balanceCents: { $ref: '#/components/schemas/Cents' }
+              status: { type: string, enum: [OPEN, PARTIAL, SETTLED, RENEGOTIATED, CANCELLED] }
+        cancelledAt: { type: [string, 'null'], format: date-time }
+        cancelledBy: { type: [string, 'null'] }
+        cancelReason: { type: [string, 'null'] }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    Project:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: PJ00001 }
+        name: { type: string }
+        orderId: { type: string, format: uuid }
+        orderCode: { type: string }
+        customerId: { type: string, format: uuid }
+        customerCode: { type: string }
+        customerName: { type: string }
+        unitId: { type: string, format: uuid }
+        unitName: { type: string }
+        stage: { type: string, enum: [PLANEJADO, ENGENHARIA, SUPRIMENTOS, PRODUCAO, INSTALACAO, ACEITO, ENCERRADO] }
+        contractDelivery: { type: [string, 'null'], format: date }
+        contractCents: { $ref: '#/components/schemas/Cents' }
+        equipmentCount: { type: integer }
+        closedReason: { type: [string, 'null'] }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    EquipmentRequest:
+      type: object
+      properties:
+        serialNumber: { type: [string, 'null'], maxLength: 60 }
+        notes: { type: [string, 'null'], maxLength: 1000 }
+    Equipment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: EQ00001 }
+        model: { type: string }
+        itemId: { type: [string, 'null'], format: uuid }
+        projectId: { type: string, format: uuid }
+        projectCode: { type: string }
+        orderCode: { type: string }
+        customerId: { type: string, format: uuid }
+        customerCode: { type: string }
+        customerName: { type: string }
+        unitId: { type: string, format: uuid }
+        unitName: { type: string }
+        serialNumber: { type: [string, 'null'] }
+        notes: { type: [string, 'null'] }
+        status: { type: string, enum: [ATIVO, CANCELADO] }
+        acceptedOn: { type: [string, 'null'], format: date, description: 'Do aceite registrado (PD-015); vazio até a instalação' }
+        warrantyStart: { type: [string, 'null'], format: date }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    Receivable:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: CR00001 }
+        customerId: { type: string, format: uuid }
+        customerCode: { type: string }
+        customerName: { type: string }
+        originType: { type: string, example: SALES_ORDER_INSTALLMENT }
+        originId: { type: string }
+        origin: { type: string, example: 'Pedido PV00001 — parcela 1/3 — Sinal' }
+        projectId: { type: [string, 'null'], format: uuid }
+        category: { type: string, example: RECEITA_VENDA }
+        competence: { type: string, example: '2026-10', description: 'Premissa: mês do vencimento (PD-010/PD-024)' }
+        issueDate: { type: string, format: date }
+        dueDate: { type: string, format: date }
+        originalCents: { $ref: '#/components/schemas/Cents' }
+        receivedCents: { $ref: '#/components/schemas/Cents' }
+        balanceCents: { $ref: '#/components/schemas/Cents' }
+        status: { type: string, enum: [OPEN, PARTIAL, SETTLED, RENEGOTIATED, CANCELLED] }
+        overdue: { type: boolean, description: 'Condição por data e saldo, não situação' }
+        cancelReason: { type: [string, 'null'] }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
