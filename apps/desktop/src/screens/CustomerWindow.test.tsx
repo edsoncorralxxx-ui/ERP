@@ -51,6 +51,7 @@ describe('Cliente', () => {
     await user.click(screen.getByRole('tab', { name: /Unidades/ }));
     await user.click(screen.getByRole('button', { name: /adicionar uma unidade/ }));
     await user.type(screen.getByLabelText('Nome da linha 1'), 'Matriz');
+    await user.type(screen.getByLabelText('CNPJ da linha 1'), '11.222.333/0002-62');
     await user.click(screen.getByRole('button', { name: 'Adicionar' }));
     await waitFor(() => expect(win.notify).toHaveBeenCalledWith(expect.objectContaining({ tone: 'aviso', text: expect.stringContaining('Sem conexão') })));
     await user.click(screen.getByRole('button', { name: 'Adicionar' }));
@@ -58,7 +59,7 @@ describe('Cliente', () => {
     expect(posts).toHaveLength(2);
     expect(posts[0].headers?.['Idempotency-Key']).toBeTruthy();
     expect(posts[1].headers?.['Idempotency-Key']).toBe(posts[0].headers?.['Idempotency-Key']);
-    expect(JSON.parse(posts[0].body!).units[0]).toMatchObject({ id: null, name: 'Matriz' });
+    expect(JSON.parse(posts[0].body!).units[0]).toMatchObject({ id: null, name: 'Matriz', cnpj: '11.222.333/0002-62' });
     expect(screen.getByLabelText('Código')).toHaveValue('C00001');
   });
 

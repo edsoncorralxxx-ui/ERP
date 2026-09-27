@@ -202,10 +202,33 @@ public class PartnerService {
     }
 
     private void checkUniqueCnpj(Partner p, Partner.Role role) {
-        if (p.cnpj() == null) return;
-        repository.findIdByCnpj(p.cnpj().value(), p.id()).flatMap(repository::findById).ifPresent(other -> {
-            throw duplicateCnpj(other, role);
-        });
+        if (p.cnpj() != null) {
+            repository.findIdByCnpj(p.cnpj().value(), p.id()).flatMap(repository::findById).ifPresent(other -> {
+                throw duplicateCnpj(other, role);
+            });
+            repository.findIdByUnitCnpj(p.cnpj().value(), p.id()).flatMap(repository::findById).ifPresent(other -> {
+                throw new RuleViolationException("PARTNER_CNPJ_DUPLICATE", "Este CNPJ é de uma unidade de " + who(other) + ".",
+                        List.of(new FieldIssue("cnpj", "CNPJ de uma unidade de " + who(other) + ".")));
+            });
+        }
+        // CNPJ de unidade não pode ser de outro parceiro nem de unidade de outro parceiro.
+        List<Partner.Unit> units = p.units();
+        for (int i = 0; i < units.size(); i++) {
+            if (units.get(i).cnpj() == null) continue;
+            String cnpj = units.get(i).cnpj().value();
+            var other = repository.findIdByCnpj(cnpj, p.id()).or(() -> repository.findIdByUnitCnpj(cnpj, p.id()))
+                    .flatMap(repository::findById);
+            if (other.isPresent()) {
+                throw new RuleViolationException("PARTNER_CNPJ_DUPLICATE",
+                        "O CNPJ da unidade " + units.get(i).name() + " já está cadastrado em " + who(other.get()) + ".",
+                        List.of(new FieldIssue("units[" + i + "].cnpj", "CNPJ já cadastrado em " + who(other.get()) + ".")));
+            }
+        }
+    }
+
+    /** "C00001 — Aços Paraná Ltda." sem repetir o ponto no fim da frase. */
+    private static String who(Partner p) {
+        return p.code() + " — " + p.legalName().replaceAll("\\.+$", "");
     }
 
     /**

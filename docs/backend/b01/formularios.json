@@ -59,7 +59,7 @@
         {
           "nome": "unidades",
           "tipo": "lista",
-          "itens": "UNIDADE_CLIENTE (nome, cidade, UF, endereço)",
+          "itens": "UNIDADE_CLIENTE (nome, CNPJ da unidade, cidade, UF, endereço)",
           "obrigatorio": false,
           "origem": "usuario"
         },
@@ -77,7 +77,8 @@
       "validacoes": [
         {"regra": "CNPJ, quando informado, é válido e único por empresa; ausente não é inventado"},
         {"regra": "Não unir parceiros apenas por similaridade de nome; possível duplicidade vira revisão"},
-        {"regra": "Inativação preserva histórico; parceiro referenciado não é apagado"}
+        {"regra": "Inativação preserva histórico; parceiro referenciado não é apagado"},
+        {"regra": "CNPJ da unidade opcional, válido e único entre os parceiros (não pode ser de outro parceiro nem de unidade de outro)"}
       ],
       "comandos": [
         {"nome": "RegisterPartner", "permissao": "partner.create", "idempotente": true, "eventos": ["PartnerRegistered"]},
@@ -121,7 +122,7 @@
     {
       "id": "materiais",
       "versao": 1,
-      "nome": "Materiais e serviços",
+      "nome": "Produtos e serviços",
       "tipo": "cadastro",
       "modulo": "cadastros",
       "conceito": "ITEM",
@@ -140,13 +141,16 @@
           "itens": "unidade de compra → unidade do item com fator",
           "obrigatorio": false,
           "origem": "usuario"
-        }
+        },
+        {"nome": "ncm", "tipo": "texto", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "codigoServicoLc116", "tipo": "texto", "obrigatorio": false, "origem": "usuario"}
       ],
       "classificacoes": ["categoria", "natureza"],
       "validacoes": [
         {"regra": "Serviço não controla estoque físico"},
         {"regra": "Conversão de unidade exige fator explícito maior que zero"},
-        {"regra": "Precisão de quantidades e custos unitários", "pendencia": "PD-007"}
+        {"regra": "Precisão de quantidades e custos unitários", "pendencia": "PD-007"},
+        {"regra": "NCM (8 dígitos) só em produto; código de serviço da lista da LC 116 (NN.NN, COD_LST do SPED) só em serviço"}
       ],
       "comandos": [
         {"nome": "RegisterItem", "permissao": "item.create", "idempotente": true, "eventos": ["ItemRegistered"]},

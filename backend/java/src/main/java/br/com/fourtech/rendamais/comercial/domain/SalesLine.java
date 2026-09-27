@@ -15,7 +15,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Linha comercial de proposta ou pedido: equipamento (modelo descrito na linha, sem item de cadastro), material ou
+ * Linha comercial de proposta ou pedido: equipamento (modelo descrito na linha, sem item de cadastro), produto ou
  * serviço (item do cadastro com a mesma natureza). Total da linha = round(quantidade × preço) − desconto, arredondado
  * por linha pela política vigente (INV-SO-2, premissa PD-002: HALF_EVEN).
  */
@@ -57,13 +57,13 @@ public record SalesLine(UUID id, Kind kind, UUID itemId, String itemCode, String
                 if (itemId != null) issues.add(new FieldIssue(f + "itemId", "Equipamento é descrito pelo modelo, sem item do cadastro."));
             } else if (kind != null) {
                 if (itemId == null) {
-                    issues.add(new FieldIssue(f + "itemId", "Escolha o " + (kind == Kind.MATERIAL ? "material" : "serviço") + "."));
+                    issues.add(new FieldIssue(f + "itemId", "Escolha o " + (kind == Kind.MATERIAL ? "produto" : "serviço") + "."));
                 } else {
                     item = uuid(itemId).flatMap(items).orElse(null);
                     if (item == null) {
                         issues.add(new FieldIssue(f + "itemId", "Item não encontrado."));
                     } else if (!item.nature().equals(kind.name())) {
-                        issues.add(new FieldIssue(f + "itemId", "O item " + item.code() + " não é " + (kind == Kind.MATERIAL ? "material" : "serviço") + "."));
+                        issues.add(new FieldIssue(f + "itemId", "O item " + item.code() + " não é " + (kind == Kind.MATERIAL ? "produto" : "serviço") + "."));
                         item = null;
                     } else if (!item.active() && !knownItems.contains(item.id())) {
                         issues.add(new FieldIssue(f + "itemId", "O item " + item.code() + " está inativo."));

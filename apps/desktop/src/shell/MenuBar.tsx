@@ -63,7 +63,7 @@ export function MenuBar(p: Props) {
         'sep',
         { label: 'Clientes e unidades', action: () => p.onOpen('customers') },
         { label: 'Fornecedores', action: () => p.onOpen('suppliers') },
-        { label: 'Materiais e serviços', action: () => p.onOpen('items') },
+        { label: 'Produtos e serviços', action: () => p.onOpen('items') },
         { label: 'Unidades e categorias', action: () => p.onOpen('catalog') },
         'sep',
         { label: 'Oportunidades e propostas', action: () => p.onOpen('proposals') },

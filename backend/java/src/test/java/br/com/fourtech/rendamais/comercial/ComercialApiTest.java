@@ -241,7 +241,7 @@ class ComercialApiTest extends CadastrosApiTest {
                  "installments":[{"dueDate":"2026-09-01","amountCents":"0"}]}
                 """.formatted(outroCliente, unidadeDoOutro, servico, servico, material));
         assertThat(linhas.statusCode()).isEqualTo(422);
-        assertThat(linhas.body()).contains("unidades inteiras", "não é material", "desconto não pode passar",
+        assertThat(linhas.body()).contains("unidades inteiras", "não é produto", "desconto não pode passar",
                 "\"field\":\"lines[3].quantity\"", "\"field\":\"lines[3].unitPrice\"", "Vencimento anterior", "\"field\":\"installments[0].amountCents\"");
     }
 

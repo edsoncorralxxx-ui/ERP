@@ -11,12 +11,12 @@ import { CLIENTES_ALTERADOS } from './CustomersWindow';
 import { FORNECEDORES_ALTERADOS } from './SuppliersWindow';
 
 type Tab = 'geral' | 'unidades' | 'contatos' | 'historico';
-type Unit = { id: string | null; name: string; street: string; number: string; district: string; city: string; state: string; postalCode: string };
+type Unit = { id: string | null; name: string; cnpj: string; street: string; number: string; district: string; city: string; state: string; postalCode: string };
 type Contact = { id: string | null; name: string; role: string; phone: string; email: string };
 type Form = { legalName: string; tradeName: string; cnpj: string; group: string; units: Unit[]; contacts: Contact[] };
 
 const VAZIO: Form = { legalName: '', tradeName: '', cnpj: '', group: '', units: [], contacts: [] };
-const UNIDADE: Unit = { id: null, name: '', street: '', number: '', district: '', city: '', state: '', postalCode: '' };
+const UNIDADE: Unit = { id: null, name: '', cnpj: '', street: '', number: '', district: '', city: '', state: '', postalCode: '' };
 
 const s = (v: string | null | undefined) => v ?? '';
 const n = (v: string) => (v.trim() === '' ? null : v.trim());
@@ -34,7 +34,7 @@ function toForm(c: Customer): Form {
     cnpj: s(c.cnpjFormatted ?? c.cnpj),
     group: s(c.group),
     units: c.units.map((u: CustomerUnit) => ({
-      id: u.id, name: s(u.name), street: s(u.street), number: s(u.number), district: s(u.district), city: s(u.city), state: s(u.state), postalCode: cep(u.postalCode),
+      id: u.id, name: s(u.name), cnpj: s(u.cnpjFormatted ?? u.cnpj), street: s(u.street), number: s(u.number), district: s(u.district), city: s(u.city), state: s(u.state), postalCode: cep(u.postalCode),
     })),
     contacts: c.contacts.map((x: CustomerContact) => ({ id: x.id, name: s(x.name), role: s(x.role), phone: s(x.phone), email: s(x.email) })),
   };
@@ -46,7 +46,7 @@ function toRequest(f: Form) {
     tradeName: n(f.tradeName),
     cnpj: n(f.cnpj),
     group: n(f.group),
-    units: f.units.map((u) => ({ id: u.id, name: n(u.name), street: n(u.street), number: n(u.number), district: n(u.district), city: n(u.city), state: n(u.state), postalCode: n(u.postalCode) })),
+    units: f.units.map((u) => ({ id: u.id, name: n(u.name), cnpj: n(u.cnpj), street: n(u.street), number: n(u.number), district: n(u.district), city: n(u.city), state: n(u.state), postalCode: n(u.postalCode) })),
     contacts: f.contacts.map((c) => ({ id: c.id, name: n(c.name), role: n(c.role), phone: n(c.phone), email: n(c.email) })),
   };
 }
@@ -419,6 +419,7 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
                           <th>
                             Nome <span className="rp-req">*</span>
                           </th>
+                          <th className="rp-clientes__col-cnpj">CNPJ da unidade</th>
                           <th>Logradouro</th>
                           <th className="rp-ficha__col-curta">Nº</th>
                           <th>Bairro</th>
@@ -433,6 +434,7 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
                           <tr key={u.id ?? `n${i}`}>
                             <td className="rownum">{i + 1}</td>
                             {celula('units', i, 'name', u.name, (v) => setUnit(i, { name: v }), 'Nome')}
+                            {celula('units', i, 'cnpj', u.cnpj, (v) => setUnit(i, { cnpj: v }), 'CNPJ')}
                             {celula('units', i, 'street', u.street, (v) => setUnit(i, { street: v }), 'Logradouro')}
                             {celula('units', i, 'number', u.number, (v) => setUnit(i, { number: v }), 'Número')}
                             {celula('units', i, 'district', u.district, (v) => setUnit(i, { district: v }), 'Bairro')}
@@ -452,7 +454,7 @@ export function CustomerWindow({ recordKey }: { recordKey: string }) {
                             </td>
                           </tr>
                         ))}
-                        {!somenteLeitura && linhaNova(form.units.length + 1, 8, 'Clique para adicionar uma unidade…', () => set({ units: [...form.units, { ...UNIDADE }] }))}
+                        {!somenteLeitura && linhaNova(form.units.length + 1, 9, 'Clique para adicionar uma unidade…', () => set({ units: [...form.units, { ...UNIDADE }] }))}
                       </tbody>
                     </table>
                   </div>

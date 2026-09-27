@@ -172,6 +172,38 @@ class CustomerApiTest extends IntegrationTest {
     }
 
     @Test
+    void unidadeTemCnpjProprioValidadoEUnicoEntreParceiros() throws Exception {
+        // Matriz com o CNPJ do cliente e filial com o CNPJ dela (mesma raiz): aceitos, com máscara na resposta e no histórico.
+        HttpResponse<String> ok = cadastra("cad-ucnpj-0001", """
+                {"legalName":"Fecularia Vale Ltda.","cnpj":"11.222.333/0001-81",
+                 "units":[{"name":"Matriz","cnpj":"11222333000181"},{"name":"Filial Assis","cnpj":"11.222.333/0002-62"}]}
+                """);
+        assertThat(ok.statusCode()).as(ok.body()).isEqualTo(201);
+        assertThat(ok.body()).contains("\"cnpj\":\"11222333000262\"", "\"cnpjFormatted\":\"11.222.333/0002-62\"");
+        assertThat(jdbc.sql("select changes::text from audit_event where action = 'PARTNER_REGISTERED'").query(String.class).single())
+                .contains("CNPJ 11.222.333/0002-62");
+
+        // Dígito errado e CNPJ repetido entre as unidades do mesmo cliente.
+        HttpResponse<String> invalido = cadastra("cad-ucnpj-0002", """
+                {"legalName":"Outro Ltda.","units":[{"name":"A","cnpj":"11.444.777/0001-62"},
+                 {"name":"B","cnpj":"11444777000242"},{"name":"C","cnpj":"11444777000242"}]}
+                """);
+        assertThat(invalido.statusCode()).isEqualTo(422);
+        assertThat(invalido.body()).contains("\"field\":\"units[0].cnpj\"", "\"field\":\"units[2].cnpj\"", "repetido");
+
+        // CNPJ de unidade que já é de outro parceiro (principal ou unidade) é recusado apontando o dono.
+        String codigo = campo(ok.body(), "code");
+        HttpResponse<String> deOutro = cadastra("cad-ucnpj-0003",
+                "{\"legalName\":\"Terceiro Ltda.\",\"units\":[{\"name\":\"X\",\"cnpj\":\"11222333000262\"}]}");
+        assertThat(deOutro.statusCode()).isEqualTo(422);
+        assertThat(deOutro.body()).contains("PARTNER_CNPJ_DUPLICATE", "\"field\":\"units[0].cnpj\"", codigo);
+        HttpResponse<String> principal = cadastra("cad-ucnpj-0004", "{\"legalName\":\"Quarto Ltda.\",\"cnpj\":\"11222333000262\"}");
+        assertThat(principal.statusCode()).isEqualTo(422);
+        assertThat(principal.body()).contains("PARTNER_CNPJ_DUPLICATE", "unidade de " + codigo);
+        assertThat(conta("select count(*) from partner")).isEqualTo(1);
+    }
+
+    @Test
     void edicaoComVersaoMantemIdsDasUnidadesEDesatualizadaNaoGrava() throws Exception {
         HttpResponse<String> criado = cadastra("cad-edicao-00001", CLIENTE);
         String id = campo(criado.body(), "id");

@@ -11,9 +11,15 @@ import { ITENS_ALTERADOS } from './ItemsWindow';
 
 type Tab = 'geral' | 'conversoes' | 'historico';
 type Conversao = { id: string | null; fromUom: string; factor: string };
-type Form = { description: string; nature: Natureza; uom: string; categoryId: string; stockControlled: boolean; referenceCost: string; conversions: Conversao[] };
+type Form = { description: string; nature: Natureza; uom: string; categoryId: string; stockControlled: boolean; referenceCost: string; ncm: string; serviceCode: string; conversions: Conversao[] };
 
-const VAZIO: Form = { description: '', nature: 'MATERIAL', uom: 'UN', categoryId: '', stockControlled: true, referenceCost: '', conversions: [] };
+const VAZIO: Form = { description: '', nature: 'MATERIAL', uom: 'UN', categoryId: '', stockControlled: true, referenceCost: '', ncm: '', serviceCode: '', conversions: [] };
+
+/** 84239029 → 8423.90.29; o que não tem 8 dígitos fica como foi digitado. */
+const ncmFormatado = (v: string) => {
+  const d = v.replace(/\D/g, '');
+  return d.length === 8 ? `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6)}` : v;
+};
 const CONVERSAO: Conversao = { id: null, fromUom: '', factor: '' };
 
 function toForm(i: Item): Form {
@@ -24,6 +30,8 @@ function toForm(i: Item): Form {
     categoryId: i.category.id,
     stockControlled: i.stockControlled,
     referenceCost: decimalDaApi(i.referenceCost),
+    ncm: i.ncm ? ncmFormatado(i.ncm) : '',
+    serviceCode: i.serviceCode ?? '',
     conversions: i.conversions.map((c) => ({ id: c.id, fromUom: c.fromUom, factor: decimalDaApi(c.factor, 0) })),
   };
 }
@@ -36,6 +44,8 @@ function toRequest(f: Form) {
     categoryId: f.categoryId || null,
     stockControlled: f.nature === 'SERVICO' ? false : f.stockControlled,
     referenceCost: decimalParaApi(f.referenceCost),
+    ncm: f.nature === 'MATERIAL' ? f.ncm.trim() || null : null,
+    serviceCode: f.nature === 'SERVICO' ? f.serviceCode.trim() || null : null,
     conversions: f.conversions.map((c) => ({ id: c.id, fromUom: c.fromUom || null, factor: decimalParaApi(c.factor) })),
   };
 }
@@ -45,7 +55,7 @@ function novaChave(): string {
 }
 
 /**
- * Ficha de material ou serviço (formulário "materiais" do B01): cabeçalho com código do sistema, descrição e natureza;
+ * Ficha de produto ou serviço (formulário "materiais" do B01): cabeçalho com código do sistema, descrição e natureza;
  * abas Geral (unidade, categoria, estoque, custo de referência), Conversões (1 unidade de compra = fator unidades do
  * item) e Histórico. A natureza fica fixa depois do cadastro, porque o código (M ou S) depende dela.
  */
@@ -152,7 +162,7 @@ export function ItemWindow({ recordKey }: { recordKey: string }) {
       const r = item ? await api.put<Item>(`/api/v1/items/${item.id}`, body, etag) : await api.post<Item>('/api/v1/items', body, { 'Idempotency-Key': chave.current });
       aplicar(r.data, r.etag);
       chave.current = novaChave();
-      winRef.current.notify({ tone: 'sucesso', text: `${r.data.nature === 'MATERIAL' ? 'Material' : 'Serviço'} ${r.data.code} ${item ? 'atualizado' : 'adicionado'} com sucesso` });
+      winRef.current.notify({ tone: 'sucesso', text: `${r.data.nature === 'MATERIAL' ? 'Produto' : 'Serviço'} ${r.data.code} ${item ? 'atualizado' : 'adicionado'} com sucesso` });
       window.dispatchEvent(new Event(ITENS_ALTERADOS));
       return true;
     } catch (e) {
@@ -282,7 +292,7 @@ export function ItemWindow({ recordKey }: { recordKey: string }) {
                         disabled={!adicao || somenteLeitura}
                         onChange={() => set({ nature: nat, stockControlled: nat === 'MATERIAL' })}
                       />{' '}
-                      {nat === 'MATERIAL' ? 'Material' : 'Serviço'}
+                      {nat === 'MATERIAL' ? 'Produto' : 'Serviço'}
                     </label>
                   ))}
                 </span>
@@ -375,6 +385,44 @@ export function ItemWindow({ recordKey }: { recordKey: string }) {
                     }}
                   />
                   {erroDe('referenceCost')}
+                  {form.nature === 'MATERIAL' ? (
+                    <>
+                      <label className="rp-label" htmlFor={fid('ncm')}>NCM</label>
+                      <span />
+                      <input
+                        id={fid('ncm')}
+                        className={`${classeCampo} rp-field--curto`}
+                        value={form.ncm}
+                        maxLength={10}
+                        inputMode="numeric"
+                        placeholder="0000.00.00"
+                        readOnly={somenteLeitura}
+                        aria-invalid={!!erros.ncm}
+                        title="Nomenclatura Comum do Mercosul, 8 dígitos"
+                        onChange={(e) => set({ ncm: e.target.value })}
+                        onBlur={() => set({ ncm: ncmFormatado(form.ncm) })}
+                      />
+                      {erroDe('ncm')}
+                    </>
+                  ) : (
+                    <>
+                      <label className="rp-label" htmlFor={fid('lc116')}>Cód. serviço (LC 116)</label>
+                      <span />
+                      <input
+                        id={fid('lc116')}
+                        className={`${classeCampo} rp-field--curto`}
+                        value={form.serviceCode}
+                        maxLength={5}
+                        inputMode="decimal"
+                        placeholder="00.00"
+                        readOnly={somenteLeitura}
+                        aria-invalid={!!erros.serviceCode}
+                        title="Item da lista de serviços da LC 116/2003 (COD_LST do SPED), por exemplo 14.01"
+                        onChange={(e) => set({ serviceCode: e.target.value })}
+                      />
+                      {erroDe('serviceCode')}
+                    </>
+                  )}
                   <span className="rp-label">Estoque</span>
                   <span />
                   <label className="rp-choice" title={form.nature === 'SERVICO' ? 'Serviço não controla estoque físico' : undefined}>

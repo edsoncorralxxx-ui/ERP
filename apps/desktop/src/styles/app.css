@@ -307,3 +307,6 @@ body { background: var(--ground); }
 /* Parcelas do pedido. */
 .rp-parcelas__data { width: 150px; }
 .rp-parcelas__diferenca { color: var(--ink-danger); }
+
+/* Unidades do cliente: coluna do CNPJ da unidade. */
+.rp-clientes__col-cnpj { width: 150px; }

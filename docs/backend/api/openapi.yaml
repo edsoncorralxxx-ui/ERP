@@ -29,7 +29,7 @@ tags:
   - name: Usuários
   - name: Clientes
   - name: Fornecedores
-  - name: Materiais e serviços
+  - name: Produtos e serviços
   - name: Unidades e categorias
   - name: Propostas
   - name: Pedidos
@@ -362,7 +362,7 @@ paths:
 
   /api/v1/items:
     get:
-      tags: [Materiais e serviços]
+      tags: [Produtos e serviços]
       summary: Lista de materiais e serviços (item.read)
       parameters:
         - { name: search, in: query, required: false, schema: { type: string }, description: 'Código ou descrição' }
@@ -372,8 +372,8 @@ paths:
       responses:
         '200': { description: Itens, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ItemSummary' } } } } }
     post:
-      tags: [Materiais e serviços]
-      summary: Cadastra — RegisterItem (item.create), idempotente; código M00001 (material) ou S00001 (serviço)
+      tags: [Produtos e serviços]
+      summary: Cadastra — RegisterItem (item.create), idempotente; código P00001 (produto) ou S00001 (serviço)
       parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody:
         required: true
@@ -386,13 +386,13 @@ paths:
   /api/v1/items/{id}:
     parameters: [{ $ref: '#/components/parameters/Id' }]
     get:
-      tags: [Materiais e serviços]
+      tags: [Produtos e serviços]
       summary: Ficha do item (item.read)
       responses:
         '200': { description: Item, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Item' } } } }
         '404': { $ref: '#/components/responses/Erro' }
     put:
-      tags: [Materiais e serviços]
+      tags: [Produtos e serviços]
       summary: Edita — UpdateItem (item.update); a natureza não muda depois do cadastro
       parameters: [{ $ref: '#/components/parameters/IfMatch' }]
       requestBody:
@@ -407,7 +407,7 @@ paths:
   /api/v1/items/{id}/deactivate:
     parameters: [{ $ref: '#/components/parameters/Id' }]
     post:
-      tags: [Materiais e serviços]
+      tags: [Produtos e serviços]
       summary: Inativa — DeactivateItem (item.deactivate), idempotente; preserva o histórico
       parameters: [{ $ref: '#/components/parameters/IfMatch' }]
       requestBody:
@@ -421,7 +421,7 @@ paths:
   /api/v1/items/{id}/history:
     parameters: [{ $ref: '#/components/parameters/Id' }]
     get:
-      tags: [Materiais e serviços]
+      tags: [Produtos e serviços]
       summary: Histórico do item lido da auditoria (item.read)
       responses:
         '200': { description: Registros, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
@@ -869,6 +869,8 @@ components:
         city: { type: [string, 'null'] }
         state: { type: [string, 'null'] }
         postalCode: { type: [string, 'null'] }
+        cnpj: { type: [string, 'null'], description: 'CNPJ da unidade (filial ou outro estabelecimento), opcional; na entrada aceita máscara, na saída só dígitos. Único entre os parceiros' }
+        cnpjFormatted: { type: [string, 'null'], readOnly: true, example: '11.222.333/0002-62' }
     Contact:
       type: object
       required: [name]
@@ -1001,23 +1003,27 @@ components:
       required: [description, nature, uom, categoryId, stockControlled]
       properties:
         description: { type: string, maxLength: 200 }
-        nature: { type: string, enum: [MATERIAL, SERVICO] }
+        nature: { type: string, enum: [MATERIAL, SERVICO], description: 'MATERIAL = produto (na tela: Produto)' }
         uom: { type: string, description: 'Código de unidade ativa' }
         categoryId: { type: string, format: uuid }
         stockControlled: { type: boolean, description: 'Serviço nunca controla estoque' }
         referenceCost: { type: [string, 'null'], example: '184.50', description: 'BRL por unidade do item; maior ou igual a zero, até 6 casas' }
+        ncm: { type: [string, 'null'], example: '84239029', description: 'Só produto (nature MATERIAL): 8 dígitos; aceita 8423.90.29 na entrada' }
+        serviceCode: { type: [string, 'null'], example: '14.01', description: 'Só serviço: item da lista da LC 116/2003 (COD_LST do registro 0200 do SPED); aceita 1401 na entrada' }
         conversions: { type: array, maxItems: 20, items: { $ref: '#/components/schemas/Conversion' } }
     Item:
       type: object
       properties:
         id: { type: string, format: uuid }
-        code: { type: string, example: M00001 }
+        code: { type: string, example: P00001 }
         description: { type: string }
         nature: { type: string, enum: [MATERIAL, SERVICO] }
         uom: { type: string }
         category: { $ref: '#/components/schemas/CategoryRef' }
         stockControlled: { type: boolean }
         referenceCost: { type: [string, 'null'], example: '184.500000' }
+        ncm: { type: [string, 'null'], example: '84239029', description: 'Só produto (nature MATERIAL): 8 dígitos; aceita 8423.90.29 na entrada' }
+        serviceCode: { type: [string, 'null'], example: '14.01', description: 'Só serviço: item da lista da LC 116/2003 (COD_LST do registro 0200 do SPED); aceita 1401 na entrada' }
         status: { type: string, enum: [ATIVO, INATIVO] }
         conversions: { type: array, items: { $ref: '#/components/schemas/Conversion' } }
         version: { type: string }
@@ -1036,6 +1042,8 @@ components:
         category: { type: string }
         stockControlled: { type: boolean }
         referenceCost: { type: [string, 'null'] }
+        ncm: { type: [string, 'null'] }
+        serviceCode: { type: [string, 'null'] }
         status: { type: string, enum: [ATIVO, INATIVO] }
         version: { type: string }
     UnitOfMeasure:

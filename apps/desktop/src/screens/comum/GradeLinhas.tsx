@@ -8,7 +8,7 @@ export type LinhaForm = { id: string | null; kind: TipoLinha; itemId: string; de
 
 export const LINHA_NOVA: LinhaForm = { id: null, kind: 'EQUIPAMENTO', itemId: '', description: '', quantity: '1', unitPrice: '', discount: '' };
 
-export const TIPO: Record<TipoLinha, string> = { EQUIPAMENTO: 'Equipamento', MATERIAL: 'Material', SERVICO: 'Serviço' };
+export const TIPO: Record<TipoLinha, string> = { EQUIPAMENTO: 'Equipamento', MATERIAL: 'Produto', SERVICO: 'Serviço' };
 
 export const linhaDaApi = (l: SalesLine): LinhaForm => ({
   id: l.id,
@@ -42,7 +42,7 @@ export const totalDasLinhas = (linhas: LinhaForm[]): bigint =>
   linhas.reduce((t, l) => t + (totalDaLinha(l) ?? 0n), 0n);
 
 /**
- * Tabela de edição das linhas de proposta e pedido (componente Tabela de edição): tipo, item do cadastro (material ou
+ * Tabela de edição das linhas de proposta e pedido (componente Tabela de edição): tipo, item do cadastro (produto ou
  * serviço da mesma natureza) ou modelo do equipamento, quantidade, preço, desconto e total calculado; a última linha
  * vazia cria um item; Ctrl+Insert adiciona e Ctrl+Delete remove a linha em foco; o rodapé repete o total.
  */

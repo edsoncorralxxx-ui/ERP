@@ -47,7 +47,7 @@ class ItemApiTest extends CadastrosApiTest {
         post("/api/v1/units-of-measure", null, "{\"code\":\"BR\",\"name\":\"Barra\"}");
         HttpResponse<String> r = post("/api/v1/items", "item-cad-00001", material(chapas));
         assertThat(r.statusCode()).as(r.body()).isEqualTo(201);
-        assertThat(campo(r.body(), "code")).matches("M\\d{5}");
+        assertThat(campo(r.body(), "code")).matches("P\\d{5}");
         assertThat(r.body()).contains("\"uom\":\"M\"", "\"referenceCost\":\"16.033333\"", "\"fromUom\":\"BR\"", "\"factor\":\"6.000000\"",
                 "\"name\":\"Perfis\"", "\"stockControlled\":true");
         assertThat(jdbc.sql("select changes::text from audit_event where action = 'ITEM_REGISTERED'").query(String.class).single())
@@ -102,6 +102,35 @@ class ItemApiTest extends CadastrosApiTest {
                 "\"referenceCost\":{\"before\":\"16,033333\",\"after\":\"17,50\"}", "ITEM_REGISTERED");
         assertThat(jdbc.sql("select event_type from outbox_event order by occurred_at").query(String.class).list())
                 .containsExactly("ItemRegistered", "ItemUpdated", "ItemDeactivated");
+    }
+
+    @Test
+    void produtoTemNcmEServicoTemCodigoDaLc116() throws Exception {
+        String cat = categoria("Perfis");
+        HttpResponse<String> produto = post("/api/v1/items", "item-fis-00001", """
+                {"description":"Célula de carga","nature":"MATERIAL","uom":"UN","categoryId":"%s","stockControlled":true,"ncm":"8423.90.29"}
+                """.formatted(cat));
+        assertThat(produto.statusCode()).as(produto.body()).isEqualTo(201);
+        assertThat(produto.body()).contains("\"ncm\":\"84239029\"", "\"serviceCode\":null");
+        assertThat(campo(produto.body(), "code")).matches("P\\d{5}");
+        HttpResponse<String> servico = post("/api/v1/items", "item-fis-00002", """
+                {"description":"Manutenção de balanças","nature":"SERVICO","uom":"H","categoryId":"%s","stockControlled":false,"serviceCode":"1401"}
+                """.formatted(cat));
+        assertThat(servico.statusCode()).as(servico.body()).isEqualTo(201);
+        assertThat(servico.body()).contains("\"serviceCode\":\"14.01\"", "\"ncm\":null");
+        assertThat(get("/api/v1/items?search=8423").body()).contains("Célula de carga").doesNotContain("Manutenção");
+        assertThat(jdbc.sql("select changes::text from audit_event where action = 'ITEM_REGISTERED' and entity_id = :id")
+                .param("id", campo(produto.body(), "id")).query(String.class).single()).contains("8423.90.29");
+
+        // NCM só em produto, código de serviço só em serviço, formatos conferidos.
+        HttpResponse<String> errado = post("/api/v1/items", "item-fis-00003", """
+                {"description":"Instalação","nature":"SERVICO","uom":"H","categoryId":"%s","stockControlled":false,"ncm":"84239029","serviceCode":"14"}
+                """.formatted(cat));
+        assertThat(errado.body()).contains("\"field\":\"ncm\"", "NCM é só de produto", "\"field\":\"serviceCode\"");
+        HttpResponse<String> errado2 = post("/api/v1/items", "item-fis-00004", """
+                {"description":"Perfil","nature":"MATERIAL","uom":"M","categoryId":"%s","stockControlled":true,"ncm":"7216","serviceCode":"14.01"}
+                """.formatted(cat));
+        assertThat(errado2.body()).contains("8 dígitos", "Código de serviço é só de serviço");
     }
 
     @Test

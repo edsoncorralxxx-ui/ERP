@@ -6,7 +6,7 @@ const ROTULO: Record<string, string> = {
   customerStatus: 'Situação como cliente', supplierStatus: 'Situação como fornecedor', units: 'Unidades', contacts: 'Contatos',
   leadTimeDays: 'Prazo de referência (dias)', paymentTerms: 'Condições de pagamento', suppliedCategories: 'Categorias fornecidas',
   description: 'Descrição', nature: 'Natureza', uom: 'Unidade de medida', category: 'Categoria', stockControlled: 'Controla estoque',
-  referenceCost: 'Custo de referência', conversions: 'Conversões',
+  referenceCost: 'Custo de referência', conversions: 'Conversões', ncm: 'NCM', serviceCode: 'Cód. serviço (LC 116)',
   title: 'Título', unit: 'Unidade', revision: 'Revisão', revisionStatus: 'Situação da revisão', validUntil: 'Validade',
   lines: 'Linhas', totalCents: 'Total', contractDate: 'Contratação', promisedDate: 'Prazo prometido', notes: 'Observações',
   installments: 'Parcelas', proposal: 'Proposta', order: 'Pedido', project: 'Projeto', equipment: 'Equipamentos', titles: 'Parcelas a receber',
@@ -23,7 +23,7 @@ const ACAO: Record<string, string> = {
   EQUIPMENT_CANCELLED: 'Cancelamento',
 };
 const VALOR: Record<string, string> = {
-  ATIVO: 'Ativo', INATIVO: 'Inativo', MATERIAL: 'Material', SERVICO: 'Serviço', ABERTA: 'Aberta', GANHA: 'Ganha', PERDIDA: 'Perdida',
+  ATIVO: 'Ativo', INATIVO: 'Inativo', MATERIAL: 'Produto', SERVICO: 'Serviço', ABERTA: 'Aberta', GANHA: 'Ganha', PERDIDA: 'Perdida',
   RASCUNHO: 'Rascunho', EMITIDA: 'Emitida', DRAFT: 'Rascunho', CONFIRMED: 'Confirmado', CANCELLED: 'Cancelado', PLANEJADO: 'Planejado',
   ENCERRADO: 'Encerrado', CANCELADO: 'Cancelado', OPEN: 'Em aberto',
 };

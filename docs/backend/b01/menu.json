@@ -26,7 +26,7 @@
       "itens": [
         {"rotulo": "Clientes e unidades", "tela": "clientes", "implementado": true, "fase": "Sprint 2 · B03"},
         {"rotulo": "Fornecedores", "tela": "fornecedores", "fase": "Sprint 3 · B03", "implementado": true},
-        {"rotulo": "Materiais e serviços", "tela": "materiais", "fase": "Sprint 3 · B03", "implementado": true},
+        {"rotulo": "Produtos e serviços", "tela": "materiais", "fase": "Sprint 3 · B03", "implementado": true},
         {"rotulo": "Unidades e categorias", "tela": "materiais", "secao": "CATALOGO", "implementado": true, "fase": "Sprint 3 · B03"}
       ]
     },

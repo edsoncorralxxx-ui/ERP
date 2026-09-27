@@ -89,3 +89,14 @@ Testes executados: servidor **74** (PostgreSQL 16 real; eram 66), app **58** (er
 - Funcionou: o teste de arquitetura gerado do `modulos.json` manteve o comercial falando com projetos e financeiro só pelas APIs públicas; o teste concorrente provou a confirmação única antes da tela existir; o roteiro Playwright versionado achou um caso real (Esc com o foco fora da janela recolhia a gaveta em vez de fechar a janela).
 - Melhorar: pedidos de interface chegaram no meio da sprint; entraram porque eram pequenos e transversais, mas convém reuni-los no refinamento.
 - Ação: na Sprint 5, rodar o roteiro Playwright também no CI (hoje roda local, com o servidor de pé).
+
+## Ajustes pedidos pelo PO depois da entrega (27/09/2026)
+
+| Pedido | O que foi feito | Evidência |
+|---|---|---|
+| CNPJ nas unidades do cliente | Coluna **CNPJ da unidade** na aba Unidades (opcional; a unidade matriz pode repetir o CNPJ do próprio cliente). Validado pelo dígito, sem repetir entre as unidades do cliente e **único entre os parceiros**: não pode ser o CNPJ de outro parceiro nem de uma unidade de outro — e o CNPJ principal de um parceiro também não pode ser de unidade de outro. Aparece no histórico com máscara | `CustomerApiTest.unidadeTemCnpjProprioValidadoEUnicoEntreParceiros`; `CustomerWindow.test.tsx` |
+| NCM nos materiais | Campo **NCM** (8 dígitos, mostrado como `0000.00.00`) só em produto; busca da lista também por NCM | `ItemApiTest.produtoTemNcmEServicoTemCodigoDaLc116`; `Sprint3Windows.test.tsx` |
+| "Código SPED" nos serviços | No SPED, o código do serviço (COD_LST do registro 0200) é o **item da lista da LC 116/2003**, no formato `NN.NN` (ex.: `14.01`, manutenção de máquinas). Campo **Cód. serviço (LC 116)** só em serviço; `1401` é aceito e gravado como `14.01` | mesmo teste |
+| "Materiais" → "Produtos" | Verificado: na NF-e, no SPED (registro 0200, "produtos e serviços") e nos ERPs brasileiros, o cadastro que reúne matéria-prima, peça comprada e produto acabado chama-se **Produtos**. A tela passou a **Produtos e serviços**, a natureza a **Produto** e o código a **P00001** (os já cadastrados foram convertidos de `M…` para `P…` pela migração V8; o histórico continua mostrando o código da época). Na API a natureza continua `MATERIAL`, para não quebrar o contrato | Migração V8 conferida num banco com dados (M00001…M00007 → P00001…P00007); roteiro Playwright |
+
+Testes: servidor 76, app 58, roteiro Playwright contra o servidor real, verificador B01.

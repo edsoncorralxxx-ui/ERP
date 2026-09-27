@@ -61,7 +61,7 @@ test('proposta vira pedido confirmado com projeto, equipamentos e parcelas uma �
   await proposta.getByLabel('Quantidade da linha 1').fill('2');
   await proposta.getByLabel('Preço unitário da linha 1').fill('150.000,00');
   await proposta.getByRole('button', { name: /adicionar uma linha/ }).click();
-  await escolher(page, proposta.getByRole('combobox', { name: 'Tipo da linha 2' }), 'Material');
+  await escolher(page, proposta.getByRole('combobox', { name: 'Tipo da linha 2' }), 'Produto');
   await escolher(page, proposta.getByRole('combobox', { name: 'Item da linha 2' }), new RegExp(`Perfil L ${SUFIXO}`));
   await proposta.getByLabel('Quantidade da linha 2').fill('10,5');
   await proposta.getByLabel('Preço unitário da linha 2').fill('16,33');
