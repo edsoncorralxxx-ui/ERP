@@ -2,17 +2,26 @@ import { useState } from 'react';
 import { Dialog } from '../../shell/Dialog';
 
 /** Inativar com motivo obrigatório (Caixa de mensagem com um campo). */
-export function DialogoInativar({ rotulo, texto, idCampo, onConfirmar, onCancelar }: {
+export function DialogoInativar(p: { rotulo: string; texto: string; idCampo: string; onConfirmar: (motivo: string) => void; onCancelar: () => void }) {
+  return <DialogoMotivo {...p} botao="Inativar" falta="Informe o motivo da inativação." />;
+}
+
+/** Operação que exige motivo (cancelar pedido, registrar perda): Caixa de mensagem com o campo Motivo. */
+export function DialogoMotivo({ rotulo, texto, idCampo, botao, falta, voltar = 'Cancelar', onConfirmar, onCancelar }: {
   rotulo: string;
   texto: string;
   idCampo: string;
+  botao: string;
+  falta: string;
+  /** Rótulo do botão que desiste; "Voltar" quando o próprio botão principal já é um cancelamento. */
+  voltar?: string;
   onConfirmar: (motivo: string) => void;
   onCancelar: () => void;
 }) {
   const [motivo, setMotivo] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const confirmar = () => {
-    if (!motivo.trim()) setErro('Informe o motivo da inativação.');
+    if (!motivo.trim()) setErro(falta);
     else onConfirmar(motivo.trim());
   };
   return (
@@ -21,8 +30,8 @@ export function DialogoInativar({ rotulo, texto, idCampo, onConfirmar, onCancela
       label={rotulo}
       onEscape={onCancelar}
       buttons={[
-        { label: 'Inativar', primary: true, onClick: confirmar },
-        { label: 'Cancelar', onClick: onCancelar },
+        { label: botao, primary: true, onClick: confirmar },
+        { label: voltar, onClick: onCancelar },
       ]}
     >
       {texto}

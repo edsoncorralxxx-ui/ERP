@@ -75,6 +75,11 @@ const WINDOWS: Record<string, WindowKind> = {
   'fornecedores:': 'suppliers',
   'materiais:': 'items',
   'materiais:CATALOGO': 'catalog',
+  'propostas:': 'proposals',
+  'pedidos:': 'orders',
+  'carteira:': 'projects',
+  'projeto:': 'projects',
+  'equipamentos:': 'equipments',
 };
 
 /** Permissão de leitura que cada janela exige; sem ela o item aparece, mas não abre. */
@@ -84,6 +89,10 @@ const NEEDS: Partial<Record<WindowKind, string>> = {
   suppliers: 'partner.read',
   items: 'item.read',
   catalog: 'item.read',
+  proposals: 'proposal.read',
+  orders: 'sales_order.read',
+  projects: 'project.read',
+  equipments: 'equipment.read',
   'company-profile': 'company.read',
 };
 

@@ -30,5 +30,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    // O roteiro de ponta a ponta (e2e/) roda no Playwright, não no Vitest.
+    include: ['src/**/*.test.{ts,tsx}'],
   },
 });

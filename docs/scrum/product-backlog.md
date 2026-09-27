@@ -10,7 +10,7 @@ Ordenado por prioridade. Épicos correspondem às fases do roteiro (`../backend/
 | 2 | Base executável (servidor, worker, banco, CI) | B02 | Próximo |
 | 3 | Acesso, cadastros e metadados | B03 | Backlog |
 | 4 | Arquivos, importação e conferência | B04 | Backlog |
-| 5 | Comercial e primeiro fluxo transacional | B05 | Backlog |
+| 5 | Comercial e primeiro fluxo transacional | B05 | Em execução (Sprint 4) |
 | 6 | Financeiro, conciliação e caixa | B06 | Backlog |
 | 7 | Engenharia e planejamento | B07 | Backlog |
 | 8 | Suprimentos, estoque e terceiros | B08 | Backlog |
@@ -34,8 +34,8 @@ Decidido com o PO em 25/09/2026: cada sprint entrega uma **fatia vertical comple
 | 1 | Esqueleto do sistema: servidor, banco, app do Mac com janelas, primeira tela de ponta a ponta (dados da empresa) — **entregue para Review** | Abrir o app, ver a conexão com o servidor e salvar dados reais | B02 |
 | 2 | Login, permissões e auditoria + Clientes e unidades — **entregue para Review** | Entrar, cadastrar clientes/unidades, ver histórico | B02, B03 |
 | 3 | Fornecedores, materiais e serviços, unidades e categorias — **entregue para Review** (equipamentos passaram para a Sprint 4, decisão do PO em 25/09/2026) | Cadastros básicos completos | B03 |
-| 4 | Proposta → pedido confirmado → projeto, equipamento e parcelas; tela de Equipamentos | Vender e ver projeto, equipamentos e parcelas gerados uma única vez | B05 |
-| 5 | Contas a receber: baixa parcial e estorno | Registrar e estornar recebimentos | B05, B06 |
+| 4 | Proposta → pedido confirmado → projeto, equipamento e parcelas; tela de Equipamentos — **entregue para Review** (premissas PD-001, PD-002 e PD-003 a confirmar) | Vender e ver projeto, equipamentos e parcelas gerados uma única vez | B05 |
+| 5 | Contas a receber (tela e títulos da Sprint 4): baixa parcial e estorno; roteiro Playwright no CI | Registrar e estornar recebimentos | B05, B06 |
 | 6 | Documentos e faturamento vinculados às parcelas | Registrar notas sem duplicar cobrança | B06 |
 | 7 | Fiscal gerencial: histórico, simulação e conferência do contador | Conferir impostos por competência | B10 |
 | 8+ | Contas a pagar, conciliação, fluxo de caixa, BOM, cronograma, compras, estoque, produção, qualidade, instalação, repasses, pós-venda, importação do histórico | Um fluxo novo por sprint | B04–B12 |

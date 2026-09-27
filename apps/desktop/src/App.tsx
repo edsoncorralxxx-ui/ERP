@@ -7,8 +7,16 @@ import { CockpitWindow } from './screens/CockpitWindow';
 import { CompanyProfileWindow } from './screens/CompanyProfileWindow';
 import { CustomerWindow } from './screens/CustomerWindow';
 import { CustomersWindow } from './screens/CustomersWindow';
+import { EquipmentsWindow } from './screens/EquipmentsWindow';
+import { EquipmentWindow } from './screens/EquipmentWindow';
 import { ItemsWindow } from './screens/ItemsWindow';
 import { ItemWindow } from './screens/ItemWindow';
+import { ProjectsWindow } from './screens/ProjectsWindow';
+import { ProjectWindow } from './screens/ProjectWindow';
+import { ProposalsWindow } from './screens/ProposalsWindow';
+import { ProposalWindow } from './screens/ProposalWindow';
+import { SalesOrdersWindow } from './screens/SalesOrdersWindow';
+import { SalesOrderWindow } from './screens/SalesOrderWindow';
 import { ServerStatusWindow } from './screens/ServerStatusWindow';
 import { SuppliersWindow } from './screens/SuppliersWindow';
 import { SupplierWindow } from './screens/SupplierWindow';
@@ -36,6 +44,14 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   items: { title: 'Materiais e serviços', size: { w: 1100, h: 620 } },
   item: { title: 'Material ou serviço', size: { w: 900, h: 600 } },
   catalog: { title: 'Unidades e categorias', size: { w: 920, h: 560 } },
+  proposals: { title: 'Oportunidades e propostas', size: { w: 1100, h: 620 } },
+  proposal: { title: 'Proposta', size: { w: 1120, h: 680 } },
+  orders: { title: 'Pedidos e contratos', size: { w: 1100, h: 620 } },
+  order: { title: 'Pedido de venda', size: { w: 1120, h: 700 } },
+  projects: { title: 'Carteira de projetos', size: { w: 1100, h: 620 } },
+  project: { title: 'Detalhe do projeto', size: { w: 1000, h: 640 } },
+  equipments: { title: 'Equipamentos', size: { w: 1100, h: 620 } },
+  equipment: { title: 'Equipamento', size: { w: 900, h: 600 } },
   users: { title: 'Usuários e permissões', size: { w: 980, h: 560 } },
   password: { title: 'Alteração de senha', size: { w: 520, h: 330 } },
 };
@@ -196,13 +212,21 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         saveActive();
-      } else if (e.key === 'Escape' && drawer.open && !(document.activeElement as HTMLElement | null)?.closest('.rp-janela-mdi')) {
-        setDrawer((d) => ({ ...d, open: false }));
+      } else if (e.key === 'Escape' && !e.defaultPrevented) {
+        // Caixa de mensagem ou login por cima: o Esc é deles. Lista suspensa e calendário já tratam o próprio Esc.
+        if (document.querySelector('.rp-modal, .rp-login-sobre')) return;
+        // Foco na gaveta: recolhe a gaveta. Senão fecha a janela ativa; sem janela aberta, recolhe a gaveta.
+        const naGaveta = !!(document.activeElement as HTMLElement | null)?.closest('.rp-gaveta');
+        if (drawer.open && (naGaveta || !active)) setDrawer((d) => ({ ...d, open: false }));
+        else if (active) {
+          e.preventDefault();
+          requestClose(active.id);
+        }
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [saveActive, drawer.open]);
+  }, [saveActive, drawer.open, active, requestClose]);
 
   const windowsKey = state.windows.map((w) => `${w.id}:${w.dirty}`).join('|');
   const apis = useMemo(() => {
@@ -257,18 +281,19 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
         <Rail view={drawer.view} open={drawer.open} cockpitOpen={cockpitOpen} onSelect={selectRail} onCockpit={openCockpit} />
         <Drawer open={drawer.open} view={drawer.view} onClose={() => setDrawer((d) => ({ ...d, open: false }))} onOpen={openKind} />
         <div className="rp-appmain">
-          <div className="rp-apphead">
-            <span>
-              Bem-vindo, {user.displayName}. Você está no cockpit inicial da {company ?? 'Fourtech'}.
-            </span>
-            <div className="rp-search">
-              <input placeholder="Pesquisar operações, dados mestre e documentos" disabled title="A busca global entra nas próximas sprints" aria-label="Busca global" />
-              <button type="button" aria-label="Pesquisar" disabled>
-                <i className="rp-ico rp-ico-buscar" aria-hidden="true" />
-              </button>
-            </div>
-          </div>
           <div className="rp-appwork">
+            {/* A linha de boas-vindas e a busca ficam por baixo da área de trabalho: as janelas podem passar por cima delas. */}
+            <div className="rp-apphead rp-apphead--sob">
+              <span>
+                Bem-vindo, {user.displayName}. Você está no cockpit inicial da {company ?? 'Fourtech'}.
+              </span>
+              <div className="rp-search">
+                <input placeholder="Pesquisar operações, dados mestre e documentos" disabled title="A busca global entra nas próximas sprints" aria-label="Busca global" />
+                <button type="button" aria-label="Pesquisar" disabled>
+                  <i className="rp-ico rp-ico-buscar" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
             <main className="rp-aplicativo__area" ref={workspace} aria-label="Área de trabalho">
               <div className="rp-watermark" aria-hidden="true">
                 <span>
@@ -307,6 +332,22 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                         <ItemWindow recordKey={w.recordKey} />
                       ) : w.kind === 'catalog' ? (
                         <CatalogWindow />
+                      ) : w.kind === 'proposals' ? (
+                        <ProposalsWindow />
+                      ) : w.kind === 'proposal' ? (
+                        <ProposalWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'orders' ? (
+                        <SalesOrdersWindow />
+                      ) : w.kind === 'order' ? (
+                        <SalesOrderWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'projects' ? (
+                        <ProjectsWindow />
+                      ) : w.kind === 'project' ? (
+                        <ProjectWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'equipments' ? (
+                        <EquipmentsWindow />
+                      ) : w.kind === 'equipment' ? (
+                        <EquipmentWindow recordKey={w.recordKey} />
                       ) : w.kind === 'users' ? (
                         <UsersWindow />
                       ) : w.kind === 'password' ? (

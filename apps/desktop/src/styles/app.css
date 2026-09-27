@@ -58,13 +58,13 @@ body { background: var(--ground); }
   background: linear-gradient(90deg, var(--nav-selected-top), var(--rail-selected)); transition: opacity .2s ease; }
 .rp-rail-tab[aria-selected=true]::before { opacity: 1; }
 
-/* Hover amarelo em todos os componentes, exceto o menu lateral (pedido do PO). Amarelo = "você pode agir aqui". */
+/* Hover amarelo em todos os componentes, exceto o menu lateral e as abas, que ficam no azul do design system (pedido do PO). Amarelo = "você pode agir aqui". */
 .rp-btn, .rp-tool, .rp-campo-btn, .rp-pag button, .rp-tab, .rp-menubar > div > span, .rp-grid tbody tr td, .rp-cockpit-list div {
   transition: background-color .18s ease, border-color .18s ease, outline-color .18s ease; }
 .rp-btn:hover:not(:disabled), .rp-campo-btn:hover, .rp-pag button:hover { background: var(--field-active); }
 .rp-tool:hover:not([disabled]) { background: var(--field-active); border-color: var(--gold-light); }
 .rp-menubar > div > span:hover, .rp-menubar > div > span[aria-expanded=true] { background: var(--field-active); outline: 1px solid var(--gold-light); }
-.rp-tab:not([aria-selected=true]):hover { background: var(--field-active); }
+.rp-tab:not([aria-selected=true]):not([aria-disabled=true]):hover { background: var(--tab-active); } /* azul do design system (Abas), não o amarelo de ação */
 .rp-grid tbody tr:hover td, .rp-grid tbody tr:hover td.rownum { background: var(--field-note); }
 .rp-grid tbody tr[aria-selected=true]:hover td { background: var(--field-active); }
 .rp-cockpit-list div:hover { background: var(--field-active); }
@@ -264,3 +264,46 @@ body { background: var(--ground); }
 .rp-catalogo__lista .rp-grid { width: 100%; }
 .rp-catalogo__ficha { margin: 0; min-width: 0; align-self: start; }
 .rp-catalogo__form { grid-template-columns: 90px 14px minmax(140px, 1fr); }
+
+/* ───────────── Sprint 4 ───────────── */
+
+/* Seleção: o campo do design system com a lista suspensa desenhada como o menu do sistema (no lugar da lista nativa). */
+.rp-select .rp-selecao__campo { display: block; text-align: left; cursor: default; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-select .rp-selecao__campo[aria-expanded=true] { background: var(--field-active); }
+.rp-select .rp-selecao__campo:disabled { background: var(--field-readonly); color: var(--ink); box-shadow: none; }
+.rp-selecao__lista { position: fixed; z-index: 1000; box-sizing: border-box; width: auto; overflow-y: auto; }
+.rp-selecao__lista .rp-menu-item { white-space: nowrap; }
+.rp-selecao__atual { font-weight: 600; }
+
+/* Campo de data: o calendário abre ancorado ao campo. */
+.rp-campo-data { position: relative; }
+.rp-campo-data__cal { position: absolute; top: calc(100% + 2px); left: 0; z-index: 30; }
+
+/* Total da janela de lista, à direita da contagem. */
+.rp-jlista__total { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Linhas comerciais (proposta e pedido). */
+.rp-linhas { max-height: 320px; }
+.rp-linhas__tipo { width: 110px; }
+.rp-linhas__item { width: 220px; }
+.rp-linhas__qtd { width: 90px; }
+.rp-linhas__valor { width: 110px; }
+.rp-linhas__sem-item { display: block; padding: 0 var(--space-2); color: var(--ink-muted); }
+
+/* Arrastar a janela pela barra de título: mão fechada enquanto o botão do mouse está pressionado. */
+.rp-janela-mdi--arrastando, .rp-janela-mdi--arrastando .rp-titlebar, .rp-janela-mdi--arrastando * { cursor: grabbing; }
+
+/* A área de trabalho ocupa também a faixa de boas-vindas e busca: as janelas passam por cima dela. A faixa continua
+   clicável onde não há janela, porque a área só recebe o mouse nas janelas e na barra de minimizadas. */
+.rp-appwork > .rp-apphead--sob { position: absolute; top: 0; left: 0; right: 0; z-index: 0; }
+.rp-appwork > main.rp-aplicativo__area { z-index: 1; pointer-events: none; }
+.rp-aplicativo__area > .rp-janela-mdi, .rp-aplicativo__area > .rp-minimizadas { pointer-events: auto; }
+
+/* Seta de link antes do valor que se refere a outro registro (componente Seta de link). */
+.rp-ficha__ref { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.rp-ficha__ref .rp-field { flex: 1; min-width: 0; }
+/* Aviso acima da grade nas fichas (revisão emitida, pedido confirmado). */
+.rp-ficha__nota { margin-bottom: var(--space-3); }
+/* Parcelas do pedido. */
+.rp-parcelas__data { width: 150px; }
+.rp-parcelas__diferenca { color: var(--ink-danger); }

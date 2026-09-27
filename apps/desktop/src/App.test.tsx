@@ -97,6 +97,22 @@ describe('moldura do aplicativo', () => {
     expect(await screen.findByText('Nenhum fornecedor cadastrado ainda.')).toBeInTheDocument();
   });
 
+  it('Esc fecha a janela ativa; a de trás passa a ser a ativa', async () => {
+    servidor();
+    const user = await entrar();
+    const gaveta = screen.getByRole('complementary', { name: 'Módulos' });
+    await user.click(within(gaveta).getByRole('button', { name: /Clientes e unidades/ }));
+    await user.click(within(gaveta).getByRole('button', { name: /^Fornecedores/ }));
+    const fornecedores = await screen.findByRole('dialog', { name: 'Fornecedores' });
+    await user.click(within(fornecedores).getByRole('searchbox'));
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Fornecedores' })).toBeNull());
+    expect(screen.getByRole('dialog', { name: 'Clientes e unidades' })).toBeInTheDocument();
+    await user.click(within(screen.getByRole('dialog', { name: 'Clientes e unidades' })).getByRole('searchbox'));
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Clientes e unidades' })).toBeNull());
+  });
+
   it('campo com limite em foco mostra o tamanho permitido no rodapé', async () => {
     servidor();
     const user = await entrar();

@@ -200,3 +200,201 @@ export type ItemCategory = {
   updatedAt: string | null;
   updatedBy: string | null;
 };
+
+// ───────────── Sprint 4: propostas, pedidos, projetos, equipamentos e títulos ─────────────
+
+export type TipoLinha = 'EQUIPAMENTO' | 'MATERIAL' | 'SERVICO';
+
+/** Linha comercial: quantidade e preço como texto com ponto; valores em centavos como texto de inteiro. */
+export type SalesLine = {
+  id: string;
+  kind: TipoLinha;
+  itemId: string | null;
+  itemCode: string | null;
+  description: string;
+  quantity: string;
+  uom: string;
+  unitPrice: string;
+  discountCents: string;
+  grossCents: string;
+  totalCents: string;
+};
+
+export type ProposalStatus = 'ABERTA' | 'GANHA' | 'PERDIDA';
+
+export type ProposalRevision = {
+  id: string;
+  revision: number;
+  status: 'RASCUNHO' | 'EMITIDA';
+  validUntil: string;
+  paymentTerms: string | null;
+  totalCents: string;
+  issuedAt: string | null;
+  issuedBy: string | null;
+  lines: SalesLine[];
+};
+
+export type Proposal = {
+  id: string;
+  code: string;
+  customerId: string;
+  customerCode: string;
+  customerName: string;
+  unitId: string | null;
+  unitName: string | null;
+  title: string;
+  status: ProposalStatus;
+  outcomeReason: string | null;
+  currentRevision: number;
+  revisions: ProposalRevision[];
+  version: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export type ProposalSummary = {
+  id: string;
+  code: string;
+  customerCode: string;
+  customerName: string;
+  unitName: string | null;
+  title: string;
+  status: ProposalStatus;
+  revision: number;
+  revisionStatus: 'RASCUNHO' | 'EMITIDA';
+  validUntil: string;
+  totalCents: string;
+  version: string;
+};
+
+export type OrderStatus = 'DRAFT' | 'CONFIRMED' | 'IN_EXECUTION' | 'COMPLETED' | 'CANCELLED';
+
+export type Installment = { seq: number | null; dueDate: string; amountCents: string; milestone: string | null };
+
+export type TitleStatus = 'OPEN' | 'PARTIAL' | 'SETTLED' | 'RENEGOTIATED' | 'CANCELLED';
+
+export type SalesOrder = {
+  id: string;
+  code: string;
+  customerId: string;
+  customerCode: string;
+  customerName: string;
+  unitId: string;
+  unitName: string;
+  proposalId: string | null;
+  proposalCode: string | null;
+  proposalRevision: number | null;
+  contractDate: string;
+  promisedDate: string | null;
+  notes: string | null;
+  status: OrderStatus;
+  totalCents: string;
+  scheduledCents: string;
+  lines: SalesLine[];
+  installments: Installment[];
+  confirmedAt: string | null;
+  confirmedBy: string | null;
+  projectId: string | null;
+  projectCode: string | null;
+  projectStage: string | null;
+  equipment: { id: string; code: string; model: string; serialNumber: string | null; status: string }[];
+  titles: { id: string; code: string; label: string; dueDate: string; competence: string; originalCents: string; balanceCents: string; status: TitleStatus }[];
+  cancelledAt: string | null;
+  cancelledBy: string | null;
+  cancelReason: string | null;
+  version: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export type SalesOrderSummary = {
+  id: string;
+  code: string;
+  customerCode: string;
+  customerName: string;
+  unitName: string;
+  proposalCode: string | null;
+  contractDate: string;
+  totalCents: string;
+  status: OrderStatus;
+  version: string;
+};
+
+export type ProjectStage = 'PLANEJADO' | 'ENGENHARIA' | 'SUPRIMENTOS' | 'PRODUCAO' | 'INSTALACAO' | 'ACEITO' | 'ENCERRADO';
+
+export type Project = {
+  id: string;
+  code: string;
+  name: string;
+  orderId: string;
+  orderCode: string;
+  customerId: string;
+  customerCode: string;
+  customerName: string;
+  unitId: string;
+  unitName: string;
+  stage: ProjectStage;
+  contractDelivery: string | null;
+  contractCents: string;
+  equipmentCount: number;
+  closedReason: string | null;
+  version: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export type Equipment = {
+  id: string;
+  code: string;
+  model: string;
+  itemId: string | null;
+  projectId: string;
+  projectCode: string;
+  orderCode: string;
+  customerId: string;
+  customerCode: string;
+  customerName: string;
+  unitId: string;
+  unitName: string;
+  serialNumber: string | null;
+  notes: string | null;
+  status: 'ATIVO' | 'CANCELADO';
+  acceptedOn: string | null;
+  warrantyStart: string | null;
+  version: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export type Receivable = {
+  id: string;
+  code: string;
+  customerId: string;
+  customerCode: string;
+  customerName: string;
+  originType: string;
+  originId: string;
+  origin: string;
+  projectId: string | null;
+  category: string;
+  competence: string;
+  issueDate: string;
+  dueDate: string;
+  originalCents: string;
+  receivedCents: string;
+  balanceCents: string;
+  status: TitleStatus;
+  overdue: boolean;
+  cancelReason: string | null;
+  version: string;
+  createdAt: string;
+  createdBy: string;
+};

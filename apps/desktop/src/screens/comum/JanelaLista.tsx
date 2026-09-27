@@ -2,8 +2,22 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type React
 import { ApiError } from '../../api/client';
 import { numero } from '../../format';
 import { useWindow } from '../../windows/WindowContext';
+import { Selecao } from './Selecao';
 
-export type Situacao = 'ATIVO' | 'INATIVO' | 'TODOS';
+/** Situação filtrada no servidor: ATIVO, INATIVO ou TODOS nos cadastros; cada documento tem as suas. */
+export type Situacao = string;
+
+export type OpcaoSituacao = { valor: string; rotulo: string };
+
+const SITUACOES_CADASTRO: OpcaoSituacao[] = [
+  { valor: 'ATIVO', rotulo: 'Ativos' },
+  { valor: 'INATIVO', rotulo: 'Inativos' },
+  { valor: 'TODOS', rotulo: 'Todos' },
+];
+
+const seloCadastro = (status: string) => (
+  <span className={`rp-badge ${status === 'ATIVO' ? 'rp-badge--aprovado' : 'rp-badge--cancelado'}`}>{status === 'ATIVO' ? 'Ativo' : 'Inativo'}</span>
+);
 
 export type Coluna<T> = { titulo: string; num?: boolean; valor: (linha: T) => ReactNode };
 
@@ -17,7 +31,7 @@ export type FiltroExtra<T> = {
   testa: (linha: T, valor: string) => boolean;
 };
 
-type Props<T extends { id: string; status: string }> = {
+type Props<T extends { id: string; status?: string }> = {
   /** Nome no singular e no plural, para a contagem e as mensagens ("cliente", "clientes"). */
   nome: [string, string];
   /** Rótulo acessível da grade. */
@@ -32,6 +46,12 @@ type Props<T extends { id: string; status: string }> = {
   /** Rótulo acessível da seta de cada linha. */
   rotuloLinha: (linha: T) => string;
   novo?: () => void;
+  /** Situações do filtro; a primeira é a padrão. Sem elas, Ativos, Inativos e Todos. */
+  situacoes?: OpcaoSituacao[];
+  /** Selo da coluna Situação; sem ele, Ativo ou Inativo. */
+  selo?: (linha: T) => ReactNode;
+  /** Totaliza a lista visível no rodapé (ex.: soma em reais). */
+  total?: (linhas: T[]) => ReactNode;
 };
 
 /**
@@ -39,14 +59,16 @@ type Props<T extends { id: string; status: string }> = {
  * filtros aplicados, grade com a seta que abre a ficha (numeração a partir de 0), a contagem no padrão da Paginação,
  * Cancelar e Novo embaixo à esquerda e o funil de filtro no canto direito.
  */
-export function JanelaLista<T extends { id: string; status: string }>(p: Props<T>) {
+export function JanelaLista<T extends { id: string; status?: string }>(p: Props<T>) {
   const win = useWindow();
   const winRef = useRef(win);
   winRef.current = win;
   const carregarRef = useRef(p.carregar);
   carregarRef.current = p.carregar;
   const [busca, setBusca] = useState('');
-  const [situacao, setSituacao] = useState<Situacao>('ATIVO');
+  const situacoes = p.situacoes ?? SITUACOES_CADASTRO;
+  const padrao = situacoes[0].valor;
+  const [situacao, setSituacao] = useState<Situacao>(padrao);
   const [extras, setExtras] = useState<Record<string, string>>({});
   const [filtroAberto, setFiltroAberto] = useState(false);
   const [linhas, setLinhas] = useState<T[] | null>(null);
@@ -84,9 +106,9 @@ export function JanelaLista<T extends { id: string; status: string }>(p: Props<T
     [linhas, extras, filtros],
   );
   const ativos = filtros.filter((f) => extras[f.chave]?.trim());
-  const filtrado = situacao !== 'ATIVO' || ativos.length > 0;
+  const filtrado = situacao !== padrao || ativos.length > 0;
   const limpar = () => {
-    setSituacao('ATIVO');
+    setSituacao(padrao);
     setExtras({});
   };
   const valorDoFiltro = (f: FiltroExtra<T>) => f.opcoes?.find((o) => o.valor === extras[f.chave])?.rotulo ?? extras[f.chave].trim();
@@ -107,10 +129,10 @@ export function JanelaLista<T extends { id: string; status: string }>(p: Props<T
             </button>
           )}
           <div className="rp-filtros-dir">
-            {situacao !== 'ATIVO' && (
+            {situacao !== padrao && (
               <span className="rp-chip">
-                <b>Situação:</b> {situacao === 'INATIVO' ? 'Inativos' : 'Todos'}
-                <i className="x" role="button" tabIndex={0} title="Remover" aria-label="Remover o filtro de situação" onClick={() => setSituacao('ATIVO')} onKeyDown={(e) => e.key === 'Enter' && setSituacao('ATIVO')}>
+                <b>Situação:</b> {situacoes.find((o) => o.valor === situacao)?.rotulo ?? situacao}
+                <i className="x" role="button" tabIndex={0} title="Remover" aria-label="Remover o filtro de situação" onClick={() => setSituacao(padrao)} onKeyDown={(e) => e.key === 'Enter' && setSituacao(padrao)}>
                   &times;
                 </i>
               </span>
@@ -172,9 +194,7 @@ export function JanelaLista<T extends { id: string; status: string }>(p: Props<T
                         {c.valor(l)}
                       </td>
                     ))}
-                    <td>
-                      <span className={`rp-badge ${l.status === 'ATIVO' ? 'rp-badge--aprovado' : 'rp-badge--cancelado'}`}>{l.status === 'ATIVO' ? 'Ativo' : 'Inativo'}</span>
-                    </td>
+                    <td>{p.selo ? p.selo(l) : seloCadastro(l.status ?? '')}</td>
                   </tr>
                 ))}
               </tbody>
@@ -193,6 +213,7 @@ export function JanelaLista<T extends { id: string; status: string }>(p: Props<T
                   ? 'Nenhum registro'
                   : `1 a ${numero(visiveis.length)} de ${numero(visiveis.length)} ${visiveis.length === 1 ? 'registro' : 'registros'}`}
             </span>
+            {p.total && visiveis.length > 0 && <span className="rp-pag-info rp-jlista__total">{p.total(visiveis)}</span>}
           </div>
         )}
       </div>
@@ -226,27 +247,17 @@ export function JanelaLista<T extends { id: string; status: string }>(p: Props<T
           <div className="rp-window-body">
             <div className="rp-form">
               <label className="rp-label" htmlFor={`${win.windowId}-situacao`}>Situação</label>
-              <div className="rp-select">
-                <select id={`${win.windowId}-situacao`} className="rp-field" value={situacao} onChange={(e) => setSituacao(e.target.value as Situacao)}>
-                  <option value="ATIVO">Ativos</option>
-                  <option value="INATIVO">Inativos</option>
-                  <option value="TODOS">Todos</option>
-                </select>
-              </div>
+              <Selecao id={`${win.windowId}-situacao`} valor={situacao} onChange={setSituacao} opcoes={situacoes} />
               {filtros.map((f) => (
                 <Fragment key={f.chave}>
                   <label className="rp-label" htmlFor={`${win.windowId}-${f.chave}`}>{f.rotulo}</label>
                   {f.opcoes ? (
-                    <div className="rp-select">
-                      <select id={`${win.windowId}-${f.chave}`} className="rp-field" value={extras[f.chave] ?? ''} onChange={(e) => setExtras((x) => ({ ...x, [f.chave]: e.target.value }))}>
-                        <option value="">Todos</option>
-                        {f.opcoes.map((o) => (
-                          <option key={o.valor} value={o.valor}>
-                            {o.rotulo}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    <Selecao
+                      id={`${win.windowId}-${f.chave}`}
+                      valor={extras[f.chave] ?? ''}
+                      onChange={(v) => setExtras((x) => ({ ...x, [f.chave]: v }))}
+                      opcoes={[{ valor: '', rotulo: 'Todos' }, ...f.opcoes]}
+                    />
                   ) : (
                     <input id={`${win.windowId}-${f.chave}`} className="rp-field" maxLength={f.max ?? 100} value={extras[f.chave] ?? ''} onChange={(e) => setExtras((x) => ({ ...x, [f.chave]: e.target.value }))} />
                   )}

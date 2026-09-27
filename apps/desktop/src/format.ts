@@ -49,3 +49,115 @@ export const decimalDaApi = (valor: string | null | undefined, minimo = 2): stri
   const milhar = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   return `${valor.startsWith('-') ? '-' : ''}${milhar}${casas ? `,${casas}` : ''}`;
 };
+
+// ───────────── Dinheiro em centavos e datas de negócio (Sprint 4) ─────────────
+
+/** Centavos da API ("30207146") no padrão brasileiro, sem o símbolo: `302.071,46`. */
+export const centavos = (valor: string | number | null | undefined): string => {
+  if (valor === null || valor === undefined || valor === '') return '';
+  const texto = String(valor);
+  if (!/^-?\d+$/.test(texto)) return texto;
+  const negativo = texto.startsWith('-');
+  const digitos = texto.replace('-', '').padStart(3, '0');
+  const inteiro = digitos.slice(0, -2).replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${negativo ? '-' : ''}${inteiro},${digitos.slice(-2)}`;
+};
+
+/** Centavos da API como valor em reais: `R$ 302.071,46`. */
+export const reais = (valor: string | number | null | undefined): string => {
+  const t = centavos(valor);
+  return t === '' ? '' : t.startsWith('-') ? `-R$ ${t.slice(1)}` : `R$ ${t}`;
+};
+
+/**
+ * Valor em reais digitado no padrão brasileiro ("1.234,5", "1234", "R$ 10,00") para centavos em texto ("123450"), sem
+ * ponto flutuante. Vazio vira nulo; texto que não é valor volta como veio, para o servidor apontar o erro no campo.
+ */
+export const centavosParaApi = (texto: string): string | null => {
+  const t = texto.replace(/R\$\s?/, '').trim();
+  if (t === '') return null;
+  const decimal = decimalParaApi(t);
+  if (decimal === null || !/^\d+(\.\d+)?$/.test(decimal)) return t;
+  const [inteiro, fracao = ''] = decimal.split('.');
+  if (fracao.length > 2) return t;
+  const c = `${inteiro}${fracao.padEnd(2, '0')}`.replace(/^0+(?=\d)/, '');
+  return c;
+};
+
+/** Data de negócio da API (`2026-10-10`) em `10/10/2026`, sem passar por fuso horário. */
+export const dataDaApi = (iso: string | null | undefined): string => {
+  const m = iso ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso) : null;
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+};
+
+/**
+ * Data digitada para o formato da API. Aceita `20/09/2026`, `20/09/26`, `200926`, `20092026` e `20-09-2026` (componente
+ * Campo de data). Vazio vira nulo; o que não é data volta como veio, para o servidor apontar o erro.
+ */
+export const dataParaApi = (texto: string): string | null => {
+  const t = texto.trim();
+  if (t === '') return null;
+  let m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$/.exec(t);
+  if (!m) m = /^(\d{2})(\d{2})(\d{2}|\d{4})$/.exec(t);
+  if (!m) return t;
+  const ano = m[3].length === 2 ? `20${m[3]}` : m[3];
+  const iso = `${ano}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  const d = new Date(`${iso}T12:00:00Z`);
+  return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== iso ? t : iso;
+};
+
+/** Normaliza a data digitada para `DD/MM/AAAA` ao sair do campo; o que não é data fica como está. */
+export const normalizarData = (texto: string): string => {
+  const iso = dataParaApi(texto);
+  return iso && /^\d{4}-\d{2}-\d{2}$/.test(iso) ? dataDaApi(iso) : texto;
+};
+
+/** Data de hoje (fuso do computador) no formato da API. */
+export const hojeIso = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+const ESCALA = 1_000_000n;
+
+/** Decimal com ponto ("10.5") em inteiro com 6 casas; nulo se não for decimal não negativo com até 6 casas. */
+const escalado = (v: string | null): bigint | null => {
+  if (v === null || !/^\d+(\.\d{1,6})?$/.test(v)) return null;
+  const [i, f = ''] = v.split('.');
+  return BigInt(i) * ESCALA + BigInt(f.padEnd(6, '0'));
+};
+
+/**
+ * Valor bruto da linha em centavos, como o servidor calcula (INV-SO-2): quantidade × preço arredondado uma vez, meio-par
+ * (premissa PD-002). Nulo quando quantidade ou preço não são válidos. Só para mostrar; quem vale é o servidor.
+ */
+export const brutoDaLinha = (quantidade: string | null, preco: string | null): bigint | null => {
+  const q = escalado(quantidade);
+  const p = escalado(preco);
+  if (q === null || p === null) return null;
+  // q × p tem 12 casas; centavos têm 2: divide por 10^10 arredondando meio-par.
+  const produto = q * p;
+  const divisor = 10_000_000_000n;
+  const inteiro = produto / divisor;
+  const resto = produto % divisor;
+  const metade = divisor / 2n;
+  if (resto > metade || (resto === metade && inteiro % 2n === 1n)) return inteiro + 1n;
+  return inteiro;
+};
+
+/** Divide o total em `n` parcelas com o resíduo de centavos a partir da primeira (premissa PD-002); a soma é exata. */
+export const dividirEmParcelas = (total: bigint, n: number): bigint[] => {
+  if (n <= 0 || total < 0n) return [];
+  const base = total / BigInt(n);
+  const resto = Number(total % BigInt(n));
+  return Array.from({ length: n }, (_, i) => base + (i < resto ? 1n : 0n));
+};
+
+/** Mesmo dia `meses` meses depois (dia 31 cai no último dia do mês), em formato da API. */
+export const somarMeses = (iso: string, meses: number): string => {
+  const [a, m, d] = iso.split('-').map(Number);
+  const alvo = new Date(Date.UTC(a, m - 1 + meses, 1));
+  const ultimo = new Date(Date.UTC(alvo.getUTCFullYear(), alvo.getUTCMonth() + 1, 0)).getUTCDate();
+  alvo.setUTCDate(Math.min(d, ultimo));
+  return alvo.toISOString().slice(0, 10);
+};

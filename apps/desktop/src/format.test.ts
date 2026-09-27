@@ -1,4 +1,4 @@
-import { data, dataHora, decimalDaApi, decimalParaApi, hora, numero } from './format';
+import { brutoDaLinha, centavos, centavosParaApi, data, dataDaApi, dataHora, dataParaApi, decimalDaApi, decimalParaApi, dividirEmParcelas, hora, normalizarData, numero, reais, somarMeses } from './format';
 
 describe('formatos do design system', () => {
   const d = new Date(2026, 8, 5, 9, 7, 3);
@@ -38,5 +38,43 @@ describe('decimais da API', () => {
     expect(decimalDaApi('6.000000', 0)).toBe('6');
     expect(decimalDaApi('0.333333', 0)).toBe('0,333333');
     expect(decimalDaApi(null)).toBe('');
+  });
+});
+
+describe('dinheiro e datas de negócio (Sprint 4)', () => {
+  it('centavos da API em reais no padrão brasileiro', () => {
+    expect(reais('30207146')).toBe('R$ 302.071,46');
+    expect(reais('5')).toBe('R$ 0,05');
+    expect(reais(0)).toBe('R$ 0,00');
+    expect(reais('-1250')).toBe('-R$ 12,50');
+    expect(centavos('100000000')).toBe('1.000.000,00');
+  });
+
+  it('valor digitado vira centavos sem ponto flutuante', () => {
+    expect(centavosParaApi('1.234,5')).toBe('123450');
+    expect(centavosParaApi('R$ 10,00')).toBe('1000');
+    expect(centavosParaApi('0,1')).toBe('10');
+    expect(centavosParaApi('1,234')).toBe('1,234');
+    expect(centavosParaApi('')).toBeNull();
+  });
+
+  it('datas de negócio sem fuso e digitação livre normalizada', () => {
+    expect(dataDaApi('2026-10-01')).toBe('01/10/2026');
+    expect(dataParaApi('01/10/2026')).toBe('2026-10-01');
+    expect(dataParaApi('1/10/26')).toBe('2026-10-01');
+    expect(dataParaApi('011026')).toBe('2026-10-01');
+    expect(dataParaApi('01-10-2026')).toBe('2026-10-01');
+    expect(dataParaApi('31/02/2026')).toBe('31/02/2026');
+    expect(normalizarData('200926')).toBe('20/09/2026');
+  });
+
+  it('linha arredondada meio-par como no servidor e parcelas com resíduo na primeira', () => {
+    expect(brutoDaLinha('10.5', '16.33')).toBe(17146n); // 171,465 → 171,46
+    expect(brutoDaLinha('1', '0.125')).toBe(12n); // 0,125 → 0,12
+    expect(brutoDaLinha('1', '0.135')).toBe(14n); // 0,135 → 0,14
+    expect(brutoDaLinha('2', '150000')).toBe(30000000n);
+    expect(brutoDaLinha('abc', '1')).toBeNull();
+    expect(dividirEmParcelas(10000n, 3)).toEqual([3334n, 3333n, 3333n]);
+    expect(somarMeses('2026-01-31', 1)).toBe('2026-02-28');
   });
 });

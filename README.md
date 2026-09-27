@@ -2,7 +2,7 @@
 
 ERP industrial orientado a projetos para a Fourtech/Renda+. App macOS em Electron + React; servidor em Java (Spring Boot) + PostgreSQL; Python para processamento (a partir da sprint de importação).
 
-Situação: **Sprint 3 — fornecedores, materiais e serviços** (entregue para Review). Funcionam de ponta a ponta (app → servidor → banco): entrar com usuário e senha, perfis Administrador e Consulta, *Clientes e unidades* e *Fornecedores* (o mesmo parceiro com dois papéis, com contatos, histórico e inativação por papel), *Materiais e serviços* (código do sistema, unidade, categoria, conversões e custo de referência), *Unidades e categorias*, *Usuários e permissões* e *Dados da empresa*, com controle de versão, auditoria e comando que não se duplica. Os demais módulos entram a cada sprint (`docs/scrum/product-backlog.md`).
+Situação: **Sprint 4 — proposta → pedido confirmado → projeto, equipamentos e parcelas** (entregue para Review). Funcionam de ponta a ponta (app → servidor → banco): entrar com usuário e senha, perfis Administrador e Consulta, *Clientes e unidades*, *Fornecedores*, *Materiais e serviços*, *Unidades e categorias*, *Oportunidades e propostas* (revisões preservadas, conversão em pedido), *Pedidos e contratos* (parcelas, confirmação que cria o projeto, os equipamentos e as parcelas a receber uma única vez, cancelamento), *Carteira de projetos*, *Detalhe do projeto*, *Equipamentos*, *Usuários e permissões* e *Dados da empresa*, com controle de versão, auditoria e comando que não se duplica. Os demais módulos entram a cada sprint (`docs/scrum/product-backlog.md`).
 
 ## Rodar no seu Mac
 
@@ -49,10 +49,9 @@ createdb renda_test --owner renda  # usado pelos testes automáticos
 cd ~/Documents
 git clone https://github.com/edsoncorralxxx-ui/ERP.git
 cd ERP
-git checkout claude/kind-thompson-qidwjm
 ```
 
-Para receber atualizações depois: `git pull` dentro da pasta `ERP`.
+O clone já traz a branch principal do repositório, com a sprint mais recente. Para receber atualizações depois: `git pull` dentro da pasta `ERP`.
 
 ### 4. Iniciar o servidor (Terminal 1)
 
@@ -85,6 +84,11 @@ A janela do Renda+ ERP abre na tela de login: entre com o administrador criado n
 - *Cadastros → Clientes e unidades*: lista, **Novo**, ficha com Unidades, Contatos e Histórico, Inativar.
 - *Administração → Usuários e permissões*: crie outros usuários (Administrador ou Consulta) e redefina senhas.
 - *Configurações → Dados da empresa*: dados cadastrais da empresa.
+- *Vendas → Oportunidades e propostas*: proposta com linhas, **Emitir revisão**, **Nova revisão**, **Converter em pedido**, **Registrar perda**.
+- *Vendas → Pedidos e contratos*: pedido com linhas e parcelas (**Dividir o total**), **Confirmar pedido** (cria projeto, equipamentos e parcelas a receber) e **Cancelar pedido**.
+- *Projetos → Carteira de projetos* e *Equipamentos → Equipamentos*: projetos gerados pelos pedidos e equipamentos com número de série.
+
+Atalhos: **Esc** fecha a janela ativa (pergunta antes se houver alterações não salvas); **⌘S** grava; **Alt + letra sublinhada** aciona abas e botões.
 
 *Arquivo → Bloquear tela* pede a senha de novo sem fechar as janelas; *Arquivo → Trocar senha* troca a sua senha.
 
@@ -115,7 +119,12 @@ cd apps/desktop && npm test
 
 # especificação B01
 python3 tools/b01/verificar_b01.py
+
+# roteiro de ponta a ponta no navegador (com o servidor do passo 4 rodando; usa o administrador informado)
+cd apps/desktop && RENDA_E2E_USER=edson RENDA_E2E_PASSWORD='uma-senha-forte' npm run e2e
 ```
+
+Na primeira vez, o roteiro de ponta a ponta precisa do navegador do Playwright: `npx playwright install chromium`. Ele cria clientes, itens, propostas e pedidos de teste no banco em uso — prefira rodá-lo num banco de testes.
 
 ### Configurações do servidor
 

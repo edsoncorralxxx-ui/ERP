@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
+import { escolher } from '../test/selecao';
 import { setTransport, type TransportRequest, type TransportResponse } from '../api/client';
 import type { Item, SessionUser, Supplier } from '../api/types';
 import { SessionContext, sessionOf } from '../shell/SessionContext';
@@ -99,13 +100,12 @@ describe('Material ou serviço', () => {
     expect(screen.getByRole('checkbox', { name: 'Controla estoque' })).toBeDisabled();
     await user.click(screen.getByRole('radio', { name: 'Material' }));
     expect(screen.getByRole('checkbox', { name: 'Controla estoque' })).toBeChecked();
-    await screen.findByRole('option', { name: 'M — Metro' });
-    await user.selectOptions(screen.getByLabelText('Unidade de medida'), 'M');
-    await user.selectOptions(screen.getByLabelText('Categoria'), 'cat-1');
+    await escolher(user, screen.getByLabelText('Unidade de medida'), 'M — Metro');
+    await escolher(user, screen.getByLabelText('Categoria'), 'Chapas');
     await user.type(screen.getByLabelText('Custo de referência (R$)'), '1.234,5');
     await user.click(screen.getByRole('tab', { name: /Conversões/ }));
     await user.click(screen.getByRole('button', { name: /adicionar uma conversão/ }));
-    await user.selectOptions(screen.getByLabelText('Unidade de compra da linha 1'), 'BR');
+    await escolher(user, screen.getByLabelText('Unidade de compra da linha 1'), 'BR — Barra');
     await user.type(screen.getByLabelText('Fator da linha 1'), '6');
     expect(screen.getByText('1 BR = 6 M')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Adicionar' }));

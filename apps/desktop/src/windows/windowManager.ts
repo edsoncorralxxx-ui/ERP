@@ -14,6 +14,14 @@ export type WindowKind =
   | 'items'
   | 'item'
   | 'catalog'
+  | 'proposals'
+  | 'proposal'
+  | 'orders'
+  | 'order'
+  | 'projects'
+  | 'project'
+  | 'equipments'
+  | 'equipment'
   | 'users'
   | 'password';
 export type WindowMode = 'normal' | 'minimized' | 'maximized';

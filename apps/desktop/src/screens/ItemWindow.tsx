@@ -6,6 +6,7 @@ import { useSession } from '../shell/SessionContext';
 import { useWindow } from '../windows/WindowContext';
 import { DialogoConflito, DialogoInativar } from './comum/Dialogos';
 import { GradeHistorico } from './comum/GradeHistorico';
+import { Selecao } from './comum/Selecao';
 import { ITENS_ALTERADOS } from './ItemsWindow';
 
 type Tab = 'geral' | 'conversoes' | 'historico';
@@ -329,30 +330,33 @@ export function ItemWindow({ recordKey }: { recordKey: string }) {
                 <div className={`rp-form rp-form--req rp-janela-mdi__form${adicao && !somenteLeitura ? ' rp-form--adicao' : ''}`}>
                   <label className="rp-label" htmlFor={fid('uom')}>Unidade de medida</label>
                   <span className="rp-req" aria-hidden="true">*</span>
-                  <div className="rp-select">
-                    <select id={fid('uom')} className={classeCampo} value={form.uom} disabled={somenteLeitura} aria-invalid={!!erros.uom} onChange={(e) => set({ uom: e.target.value })}>
-                      {!unidades.some((u) => u.code === form.uom) && <option value={form.uom}>{form.uom}</option>}
-                      {unidadesUsaveis(form.uom).map((u) => (
-                        <option key={u.code} value={u.code}>
-                          {u.code} — {u.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <Selecao
+                    id={fid('uom')}
+                    className={classeCampo}
+                    valor={form.uom}
+                    disabled={somenteLeitura}
+                    aria-invalid={!!erros.uom}
+                    onChange={(v) => set({ uom: v })}
+                    opcoes={[
+                      ...(unidades.some((u) => u.code === form.uom) ? [] : [{ valor: form.uom, rotulo: form.uom }]),
+                      ...unidadesUsaveis(form.uom).map((u) => ({ valor: u.code, rotulo: `${u.code} — ${u.name}` })),
+                    ]}
+                  />
                   {erroDe('uom')}
                   <label className="rp-label" htmlFor={fid('categoria')}>Categoria</label>
                   <span className="rp-req" aria-hidden="true">*</span>
-                  <div className="rp-select">
-                    <select id={fid('categoria')} className={classeCampo} value={form.categoryId} disabled={somenteLeitura} aria-invalid={!!erros.categoryId} onChange={(e) => set({ categoryId: e.target.value })}>
-                      <option value="">{categoriasUsaveis.length ? 'Escolha a categoria' : 'Nenhuma categoria cadastrada'}</option>
-                      {categoriasUsaveis.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                          {c.status === 'INATIVO' ? ' (inativa)' : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <Selecao
+                    id={fid('categoria')}
+                    className={classeCampo}
+                    valor={form.categoryId}
+                    disabled={somenteLeitura}
+                    aria-invalid={!!erros.categoryId}
+                    onChange={(v) => set({ categoryId: v })}
+                    opcoes={[
+                      { valor: '', rotulo: categoriasUsaveis.length ? 'Escolha a categoria' : 'Nenhuma categoria cadastrada' },
+                      ...categoriasUsaveis.map((c) => ({ valor: c.id, rotulo: `${c.name}${c.status === 'INATIVO' ? ' (inativa)' : ''}` })),
+                    ]}
+                  />
                   {erroDe('categoryId')}
                   <label className="rp-label" htmlFor={fid('custo')}>Custo de referência (R$)</label>
                   <span />
@@ -421,26 +425,20 @@ export function ItemWindow({ recordKey }: { recordKey: string }) {
                           <tr key={c.id ?? `n${i}`}>
                             <td className="rownum">{i + 1}</td>
                             <td>
-                              <div className="rp-select">
-                                <select
-                                  className="rp-field"
-                                  value={c.fromUom}
-                                  disabled={somenteLeitura}
-                                  aria-label={`Unidade de compra da linha ${i + 1}`}
-                                  aria-invalid={!!erros[`conversions[${i}].fromUom`]}
-                                  title={erros[`conversions[${i}].fromUom`]}
-                                  onChange={(e) => setConv(i, { fromUom: e.target.value })}
-                                >
-                                  <option value="">Escolha</option>
-                                  {unidadesUsaveis(c.fromUom)
+                              <Selecao
+                                valor={c.fromUom}
+                                disabled={somenteLeitura}
+                                aria-label={`Unidade de compra da linha ${i + 1}`}
+                                aria-invalid={!!erros[`conversions[${i}].fromUom`]}
+                                title={erros[`conversions[${i}].fromUom`]}
+                                onChange={(v) => setConv(i, { fromUom: v })}
+                                opcoes={[
+                                  { valor: '', rotulo: 'Escolha' },
+                                  ...unidadesUsaveis(c.fromUom)
                                     .filter((u) => u.code !== form.uom)
-                                    .map((u) => (
-                                      <option key={u.code} value={u.code}>
-                                        {u.code} — {u.name}
-                                      </option>
-                                    ))}
-                                </select>
-                              </div>
+                                    .map((u) => ({ valor: u.code, rotulo: `${u.code} — ${u.name}` })),
+                                ]}
+                              />
                             </td>
                             <td>
                               <input

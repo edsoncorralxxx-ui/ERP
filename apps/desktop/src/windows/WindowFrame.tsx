@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import type { AppWindow } from './windowManager';
 
 type Props = {
@@ -26,6 +26,8 @@ function WinButton({ label, text, onClick }: { label: string; text: string; onCl
 export function WindowFrame({ win, active, children, onFocus, onMove, onResize, onMinimize, onToggleMaximize, onClose }: Props) {
   const drag = useRef<{ dx: number; dy: number } | null>(null);
   const size = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+  // Enquanto a janela é arrastada pela barra de título, o cursor é a mão fechada.
+  const [arrastando, setArrastando] = useState(false);
 
   if (win.mode === 'minimized') return null;
   const maximized = win.mode === 'maximized';
@@ -34,6 +36,11 @@ export function WindowFrame({ win, active, children, onFocus, onMove, onResize, 
     if (maximized || (e.target as HTMLElement).closest('[role=button]')) return;
     drag.current = { dx: e.clientX - win.x, dy: e.clientY - win.y };
     e.currentTarget.setPointerCapture(e.pointerId);
+    setArrastando(true);
+  };
+  const endDrag = () => {
+    drag.current = null;
+    setArrastando(false);
   };
   const startResize = (e: ReactPointerEvent<HTMLDivElement>) => {
     e.stopPropagation();
@@ -47,7 +54,7 @@ export function WindowFrame({ win, active, children, onFocus, onMove, onResize, 
 
   return (
     <section
-      className={`rp-window rp-janela-mdi${active ? '' : ' rp-window--inactive'}${maximized ? ' rp-janela-mdi--max' : ''}`}
+      className={`rp-window rp-janela-mdi${active ? '' : ' rp-window--inactive'}${maximized ? ' rp-janela-mdi--max' : ''}${arrastando ? ' rp-janela-mdi--arrastando' : ''}`}
       style={style}
       role="dialog"
       aria-label={win.title}
@@ -59,7 +66,9 @@ export function WindowFrame({ win, active, children, onFocus, onMove, onResize, 
         className="rp-titlebar"
         onPointerDown={startDrag}
         onPointerMove={(e) => drag.current && onMove(e.clientX - drag.current.dx, e.clientY - drag.current.dy)}
-        onPointerUp={() => (drag.current = null)}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onLostPointerCapture={endDrag}
         onDoubleClick={onToggleMaximize}
       >
         <h1 className="rp-janela-mdi__titulo">{win.title}</h1>

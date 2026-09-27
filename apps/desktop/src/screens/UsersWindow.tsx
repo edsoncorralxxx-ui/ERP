@@ -4,6 +4,7 @@ import type { UserAccount } from '../api/types';
 import { Dialog } from '../shell/Dialog';
 import { useSession } from '../shell/SessionContext';
 import { useWindow } from '../windows/WindowContext';
+import { Selecao } from './comum/Selecao';
 
 type Form = { username: string; displayName: string; profile: 'ADMINISTRADOR' | 'CONSULTA'; active: boolean; password: string };
 const VAZIO: Form = { username: '', displayName: '', profile: 'CONSULTA', active: true, password: '' };
@@ -170,12 +171,15 @@ export function UsersWindow() {
             {erro('displayName')}
             <label className="rp-label" htmlFor={fid('profile')}>Perfil</label>
             <span className="rp-req" aria-hidden="true">*</span>
-            <div className="rp-select">
-              <select id={fid('profile')} className="rp-field" value={form.profile} onChange={(e) => setForm({ ...form, profile: e.target.value as Form['profile'] })}>
-                <option value="ADMINISTRADOR">Administrador — todas as operações</option>
-                <option value="CONSULTA">Consulta — só leitura</option>
-              </select>
-            </div>
+            <Selecao
+              id={fid('profile')}
+              valor={form.profile}
+              onChange={(v) => setForm({ ...form, profile: v as Form['profile'] })}
+              opcoes={[
+                { valor: 'ADMINISTRADOR', rotulo: 'Administrador — todas as operações' },
+                { valor: 'CONSULTA', rotulo: 'Consulta — só leitura' },
+              ]}
+            />
             {erro('profile')}
             {!sel && (
               <>
