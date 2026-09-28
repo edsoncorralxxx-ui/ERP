@@ -36,7 +36,7 @@ Decidido com o PO em 25/09/2026: cada sprint entrega uma **fatia vertical comple
 | 3 | Fornecedores, materiais e serviços, unidades e categorias — **entregue para Review** (equipamentos passaram para a Sprint 4, decisão do PO em 25/09/2026) | Cadastros básicos completos | B03 |
 | 4 | Proposta → pedido confirmado → projeto, equipamento e parcelas; tela de Equipamentos — **entregue para Review** (premissas PD-001, PD-002 e PD-003 a confirmar) | Vender e ver projeto, equipamentos e parcelas gerados uma única vez | B05 |
 | 5 | Contas a receber (tela e títulos da Sprint 4): baixa parcial e estorno; contas financeiras e extrato; roteiro Playwright no CI — **entregue para Review** (premissas PD-004, PD-005 e PD-009 a confirmar) | Registrar e estornar recebimentos | B05, B06 |
-| 6 | Documentos e faturamento vinculados às parcelas | Registrar notas sem duplicar cobrança | B06 |
+| 6 | Documentos e faturamento vinculados às parcelas — **em planejamento** (`sprints/sprint-06.md`, aguardando o PO; premissa PD-023 a confirmar) | Registrar notas sem duplicar cobrança | B06 |
 | 7 | Fiscal gerencial: histórico, simulação e conferência do contador | Conferir impostos por competência | B10 |
 | 8+ | Contas a pagar, conciliação, fluxo de caixa, BOM, cronograma, compras, estoque, produção, qualidade, instalação, repasses, pós-venda, importação do histórico | Um fluxo novo por sprint | B04–B12 |
 
