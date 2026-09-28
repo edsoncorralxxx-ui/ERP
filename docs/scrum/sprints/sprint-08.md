@@ -1,6 +1,6 @@
 # Sprint 8 — Contas a pagar: títulos, pagamentos e o DAS da competência conferida
 
-Situação: **Em execução**. Planning aprovado pelo PO em 28/09/2026 ("aprovado"), com as cinco respostas como propostas (tabela abaixo).
+Situação: **Entregue para Review** (28/09/2026). Planning aprovado pelo PO em 28/09/2026 ("aprovado"), com as cinco respostas como propostas (tabela abaixo).
 
 ## Objetivo
 
@@ -71,3 +71,33 @@ Conciliação e importação de extrato (OFX/CSV); fluxo de caixa; título gerad
 - **Pagamento muda o recebimento**: a liquidação é a mesma da Sprint 5; os testes e o roteiro da Sprint 5 continuam no CI para garantir que receber e estornar não mudaram.
 - **DAS e a conferência na mesma transação**: se a criação do título falhar, a conferência também não grava — uma competência nunca fica conferida sem o DAS.
 - **Categorias em texto nos títulos antigos**: os títulos a receber já gravam `RECEITA_VENDA`; a categoria passa a ter cadastro com esse mesmo código, sem migrar dados.
+
+## Review — evidências
+
+| Item | Resultado | Evidência |
+|---|---|---|
+| S8-01 Categorias financeiras | Pronto | Migração V13 com as 10 categorias semeadas. `ContasAPagarApiTest.categoriasSemeadasECadastroPeloAdministrador`: lista por tipo; nova categoria com código derivado do nome (`MANUTENCAO_DE_MAQUINAS`); nome repetido → `CATEGORY_DUPLICATE`; inativa não aceita título; categoria do sistema (DAS) não é inativada; versão desatualizada → 412; histórico |
+| S8-02 Título a pagar manual | Pronto | `tituloManualEmParcelasPagamentoParcialExcedenteEEstorno`: campos obrigatórios apontados; soma das parcelas diferente do total e categoria de receita recusadas; R$ 3.000,00 em 3 títulos `CP` de R$ 1.000,00; a mesma chave devolve os mesmos títulos; 3 eventos `FinancialTitleCreated` com `direction` PAYABLE |
+| S8-03 Pagamento | Pronto | Pagar R$ 400,00 → parcial, saldo R$ 600,00, conta de R$ 10.000,00 para R$ 9.600,00 com a saída `-40000` no extrato; R$ 600,01 → "Saldo atual: R$ 600,00."; título a pagar num recebimento → `SETTLEMENT_DIRECTION_MISMATCH`. `pagamentoPodeDeixarAContaNegativa` (Caixa em −R$ 500,00) e `pagamentosSimultaneosNaoPassamDoSaldo` (dois de R$ 700,00 sobre R$ 1.000,00: um passa, outro 422) |
+| S8-04 Estorno e cancelamento | Pronto | Estorno devolve o saldo e cria a entrada `+40000`; `cancelarTituloManualSoSemPagamento`: motivo obrigatório, cancelar de novo não muda nada, cancelado não é pago, com pagamento → 409, versão desatualizada → 412 |
+| S8-05 DAS a partir do fiscal | Pronto | `dasNasceDaConferenciaEReconferirNaoDuplica`: conferência de R$ 1.330,00 cria o DAS (Receita Federal — DAS, Impostos — Simples Nacional, competência e vencimento da conferência) e o `TaxPeriodConfirmed` leva o `titleId`; o DAS não é cancelado pela tela; reconferir com R$ 1.335,00 cancela o anterior ("Substituído pela conferência 2 do contador.") e deixa um só DAS ativo; com pagamento → `TAX_DAS_PAID`; conferência de R$ 0,00 cancela o DAS aberto e não cria outro. `FiscalApiTest` ajustado (o evento traz o título) |
+| S8-06 Contratos | Pronto | `openapi.yaml` com `/payables`, `/financial-categories` e a direção PAYABLE (`OpenApiContractTest` passa); permissões nos perfis; `financeiro` passa a depender de `projetos` (`modulos.json`, `ArchitectureTest` passa); conceito `CATEGORIA_FINANCEIRA`, formulário "pagar" v2, `menu.json` com Contas a pagar e Categorias financeiras, PD-010 respondida; verificador B01 OK |
+| S8-07 Telas | Pronto | `Sprint8Windows.test.tsx` (7 testes): novo título com Dividir o total, só categorias de despesa ativas, títulos gerados com a seta; erros do servidor nos campos; pagar com o aviso de conta negativa, saldo da conta depois e a mesma chave depois de queda de rede; estornar e cancelar com motivo; DAS abre a competência e não oferece cancelar; Consulta sem Pagar, Estornar e Cancelar; categorias. Na competência fiscal, a aba Conferência mostra o DAS de cada conferência com a seta |
+| S8-08 Roteiro de ponta a ponta | Pronto | `apps/desktop/e2e/sprint-08.e2e.ts` no Chromium contra o servidor real (banco vazio), com os roteiros das Sprints 4 a 7: 5 passando. Confere pela API os títulos gerados, o saldo da conta (R$ 9.600,00 e de volta a R$ 10.000,00), o extrato (`-40000`, `+40000`), o cancelamento e um só DAS ativo depois da reconferência |
+
+Testes executados: servidor **100** (PostgreSQL 16 real; eram 93), app **93** (eram 86), typecheck, build, verificador B01 + testes, roteiros Playwright das Sprints 4 a 8.
+
+**Não verificado aqui:** o app dentro do Electron no macOS (ambiente Linux sem tela).
+
+**Limitações conhecidas:**
+- A ficha do título a pagar mostra a seta para o projeto, mas não o código dele; a tela de novo título ainda não oferece escolher o projeto (a API aceita `projectId`).
+- O roteiro da Sprint 4 falha quando roda de novo num banco já usado (a janela Equipamento não fecha com Esc); já acontecia na Sprint 7 e no CI o banco começa vazio. Fica como tarefa à parte.
+- Ajustado junto: o roteiro da Sprint 6 lia o Tipo da nota antes de a nota gravada aparecer (falha intermitente); agora espera o campo de texto.
+- Sem juros, multa e desconto, pagamento em lote, conciliação e fluxo de caixa (fora do escopo).
+
+## Retrospectiva
+
+- Funcionou: reaproveitar a liquidação da Sprint 5 com a direção PAYABLE deu pagamento, estorno, concorrência e extrato sem código novo de caixa; os testes da Sprint 5 continuaram passando sem mudança.
+- Funcionou: a ação da retrospectiva da Sprint 7 (o DAS uma vez só) virou critério de aceite, teste do servidor e passo do roteiro, com a conferência pela API.
+- Melhorar: o fornecedor semeado pela migração quebrou testes que contavam parceiros ou esperavam a lista de fornecedores vazia; dado semeado precisa ser previsto nos testes de quem lista aquele cadastro.
+- Ação: na próxima sprint, antes de fechar, rodar os roteiros duas vezes seguidas no mesmo banco, para pegar roteiros que não toleram execuções anteriores (como o da Sprint 4).

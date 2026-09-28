@@ -11,7 +11,7 @@ Ordenado por prioridade. Épicos correspondem às fases do roteiro (`../backend/
 | 3 | Acesso, cadastros e metadados | B03 | Backlog |
 | 4 | Arquivos, importação e conferência | B04 | Backlog |
 | 5 | Comercial e primeiro fluxo transacional | B05 | Em execução (Sprints 4 e 5) |
-| 6 | Financeiro, conciliação e caixa | B06 | Em execução (Sprint 5: recebimentos, estornos e contas; Sprint 6: documentos e faturamento) |
+| 6 | Financeiro, conciliação e caixa | B06 | Em execução (Sprint 5: recebimentos, estornos e contas; Sprint 6: documentos e faturamento; Sprint 8: contas a pagar) |
 | 7 | Engenharia e planejamento | B07 | Backlog |
 | 8 | Suprimentos, estoque e terceiros | B08 | Backlog |
 | 9 | Produção, qualidade e instalação | B09 | Backlog |
@@ -38,7 +38,8 @@ Decidido com o PO em 25/09/2026: cada sprint entrega uma **fatia vertical comple
 | 5 | Contas a receber (tela e títulos da Sprint 4): baixa parcial e estorno; contas financeiras e extrato; roteiro Playwright no CI — **entregue para Review** (premissas PD-004, PD-005 e PD-009 a confirmar) | Registrar e estornar recebimentos | B05, B06 |
 | 6 | Documentos e faturamento vinculados às parcelas — **entregue para Review**, ajustada na Review para o regime de caixa (PD-023 respondida; PD-009 a confirmar) | Registrar notas sem duplicar cobrança | B06 |
 | 7 | Fiscal gerencial: receita por competência, histórico informado, simulação do Simples Nacional, conferência do contador e fechamento e notas separadas de produto e serviço; registro anterior e próximo nas fichas — **entregue para Review** (`sprints/sprint-07.md`; PD-013 respondida) | Conferir impostos por competência | B10 |
-| 8+ | Contas a pagar, conciliação, fluxo de caixa, BOM, cronograma, compras, estoque, produção, qualidade, instalação, repasses, pós-venda, importação do histórico | Um fluxo novo por sprint | B04–B12 |
+| 8 | Contas a pagar: títulos manuais com parcelas, pagamento parcial com saída na conta, estorno, cancelamento, categorias financeiras (PD-010) e o DAS gerado pela conferência do contador — **entregue para Review** (`sprints/sprint-08.md`) | Registrar e pagar obrigações; DAS uma vez só | B06, B10 |
+| 9+ | Conciliação, fluxo de caixa, BOM, cronograma, compras, estoque, produção, qualidade, instalação, repasses, pós-venda, importação do histórico | Um fluxo novo por sprint | B04–B12 |
 
 A ordem pode ser revista em cada refinamento. O worker Python entra na primeira sprint que precisar dele (importação de arquivos).
 

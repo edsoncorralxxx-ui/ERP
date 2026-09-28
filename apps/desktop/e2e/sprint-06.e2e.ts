@@ -145,7 +145,8 @@ test('nota registrada a partir do pedido fatura só o recebido; pedido faturado 
   await expect(nf.getByRole('table', { name: 'Linhas da nota' })).toContainText('Instalação e comissionamento');
   await nf.getByLabel('Nº da nota').fill('5001');
   await nf.getByRole('button', { name: 'Adicionar', exact: true }).click();
-  await expect(nf.getByLabel('Tipo da nota')).toHaveValue('Serviço (NFS-e)');
+  // Espera a nota gravada: antes disso o Tipo da nota ainda é a Seleção (não um campo de texto).
+  await expect(nf.getByRole('textbox', { name: 'Tipo da nota' })).toHaveValue('Serviço (NFS-e)');
   expect(await doPedido(request)).toMatchObject({ invoicedCents: '2000000', toIssueCents: '0' });
   await foto(page, '02b-nota-de-servico');
   await nf.getByRole('button', { name: 'OK', exact: true }).click();
