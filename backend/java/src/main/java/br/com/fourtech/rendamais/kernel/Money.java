@@ -63,6 +63,14 @@ public final class Money implements Comparable<Money> {
         return BigDecimal.valueOf(cents, 2);
     }
 
+    /** Valor para mensagens: R$ 23.579,23 (negativo: -R$ 10,00). Só para reais. */
+    public String toBrl() {
+        long abs = Math.abs(cents);
+        StringBuilder inteiro = new StringBuilder(Long.toString(abs / 100));
+        for (int i = inteiro.length() - 3; i > 0; i -= 3) inteiro.insert(i, '.');
+        return (cents < 0 ? "-" : "") + "R$ " + inteiro + "," + String.format("%02d", abs % 100);
+    }
+
     public Money plus(Money other) {
         requireSameCurrency(other);
         return new Money(Math.addExact(cents, other.cents), currency);

@@ -2,6 +2,7 @@ package br.com.fourtech.rendamais.financeiro.application;
 
 import br.com.fourtech.rendamais.financeiro.domain.FinancialTitle;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,6 +27,15 @@ public interface FinancialTitleRepository {
 
     List<FinancialTitle> findByOrigin(String originType, List<String> originIds);
 
+    /**
+     * Filtro de situação da lista: ACTIVE (não cancelados), OPEN (com saldo), OVERDUE (com saldo e vencidos), SETTLED
+     * (liquidados), CANCELLED ou ALL.
+     */
+    enum Filter { ACTIVE, OPEN, OVERDUE, SETTLED, CANCELLED, ALL }
+
+    /** Títulos pelos ids, bloqueados em ordem crescente de id (INV-ST-3). */
+    List<FinancialTitle> findByIdsForUpdate(List<UUID> ids);
+
     /** Contas a receber: busca por código, cliente ou descrição da origem; filtros nulos não filtram. */
-    List<Summary> listReceivables(String search, UUID projectId, UUID counterpartyId, boolean includeCancelled, int limit);
+    List<Summary> listReceivables(String search, UUID projectId, UUID counterpartyId, Filter filter, LocalDate today, int limit);
 }

@@ -3,6 +3,7 @@ package br.com.fourtech.rendamais.financeiro.application;
 import br.com.fourtech.rendamais.acesso.api.CurrentUserHolder;
 import br.com.fourtech.rendamais.acesso.api.Permissions;
 import br.com.fourtech.rendamais.auditoria.api.AuditEntry;
+import br.com.fourtech.rendamais.auditoria.api.AuditQuery;
 import br.com.fourtech.rendamais.auditoria.api.AuditTrail;
 import br.com.fourtech.rendamais.financeiro.api.TitleIssuanceApi;
 import br.com.fourtech.rendamais.financeiro.api.TitleQueryApi;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,7 +28,7 @@ import java.util.stream.Collectors;
 
 /**
  * Títulos financeiros: emissão e cancelamento pedidos por outros módulos (na transação deles, com auditoria e evento)
- * e as consultas da tela de contas a receber.
+ * e as consultas da tela de contas a receber. Recebimentos e estornos ficam no {@link SettlementService}.
  */
 @Service
 public class TitleService implements TitleIssuanceApi, TitleQueryApi {
@@ -35,12 +37,14 @@ public class TitleService implements TitleIssuanceApi, TitleQueryApi {
 
     private final FinancialTitleRepository repository;
     private final AuditTrail audit;
+    private final AuditQuery auditQuery;
     private final Outbox outbox;
     private final Clock clock;
 
-    public TitleService(FinancialTitleRepository repository, AuditTrail audit, Outbox outbox, Clock clock) {
+    public TitleService(FinancialTitleRepository repository, AuditTrail audit, AuditQuery auditQuery, Outbox outbox, Clock clock) {
         this.repository = repository;
         this.audit = audit;
+        this.auditQuery = auditQuery;
         this.outbox = outbox;
         this.clock = clock;
     }
@@ -109,10 +113,18 @@ public class TitleService implements TitleIssuanceApi, TitleQueryApi {
     }
 
     @Transactional(readOnly = true)
-    public List<FinancialTitleRepository.Summary> listReceivables(String search, UUID projectId, UUID customerId, boolean includeCancelled) {
+    public List<FinancialTitleRepository.Summary> listReceivables(String search, UUID projectId, UUID customerId,
+                                                                  FinancialTitleRepository.Filter filter, LocalDate today) {
         CurrentUserHolder.require(Permissions.FINANCIAL_TITLE_READ);
         return repository.listReceivables(search == null || search.isBlank() ? null : search.strip(), projectId, customerId,
-                includeCancelled, 500);
+                filter, today, 500);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AuditQuery.AuditRecord> history(UUID id) {
+        CurrentUserHolder.require(Permissions.FINANCIAL_TITLE_READ);
+        repository.findById(id).orElseThrow(() -> new NotFoundException("Título não encontrado."));
+        return auditQuery.history(ENTITY, id.toString());
     }
 
     @Transactional(readOnly = true)

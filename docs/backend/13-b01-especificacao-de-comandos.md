@@ -52,7 +52,10 @@ sequenceDiagram
 | SETTLEMENT_UNBALANCED | 422 | não | INV-ST-1 |
 | SETTLEMENT_DIRECTION_MISMATCH | 422 | não | INV-ST-2 |
 | SETTLEMENT_RECONCILED | 422 | não | INV-ST-5 |
+| SETTLEMENT_INVALID | 422 | não | campos da baixa ou do estorno (acrescentado na Sprint 5) |
 | ACCOUNT_INACTIVE | 422 | não | conta inativa |
+| ACCOUNT_INVALID | 422 | não | campos da conta financeira; saldo inicial depois de movimento (Sprint 5) |
+| ACCOUNT_DUPLICATE | 422 | não | nome de conta já usado (Sprint 5) |
 | INSPECTION_INCOMPLETE | 422 | não | INV-INS-1 |
 | BLOCKING_DATA_QUALITY_ISSUE | 422 | não | INV-DQ-1 |
 | CONCURRENCY_RETRY_EXHAUSTED | 503 | sim | retries técnicos esgotados |

@@ -27,6 +27,12 @@ public final class Permissions {
     public static final String EQUIPMENT_READ = "equipment.read";
     public static final String EQUIPMENT_UPDATE = "equipment.update";
     public static final String FINANCIAL_TITLE_READ = "financial_title.read";
+    /** Registrar recebimento (PostSettlement). */
+    public static final String FINANCIAL_TITLE_SETTLE = "financial_title.settle";
+    /** Estornar recebimento (ReverseSettlement). */
+    public static final String SETTLEMENT_REVERSE = "settlement.reverse";
+    /** Cadastrar e alterar contas financeiras (caixa e bancos). */
+    public static final String BANK_ACCOUNT_ADMIN = "bank_account.admin";
     public static final String USER_ADMIN = "user.admin";
 
     private Permissions() { }

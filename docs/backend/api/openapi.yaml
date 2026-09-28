@@ -3,7 +3,7 @@ info:
   title: Renda+ ERP — API do servidor
   version: v1
   description: |
-    Contrato da API usada pelo app do Mac (Sprints 1 a 4).
+    Contrato da API usada pelo app do Mac (Sprints 1 a 5).
     Regras gerais:
     - Toda rota exige sessão (`Authorization: Bearer <token>`), exceto `GET /api/v1/status` e `POST /api/v1/session` (ADR-005).
       Sem sessão válida: 401 `UNAUTHENTICATED`. Perfil sem a permissão: 403 `FORBIDDEN` (a negativa fica na auditoria).
@@ -18,6 +18,9 @@ info:
       (`Idempotency-Key` + `If-Match`) cria o projeto, um equipamento por unidade das linhas de equipamento e um título a receber
       por parcela, uma única vez; confirmar de novo devolve a mesma confirmação. Operação que a situação não permite: 409
       `INVALID_STATE_TRANSITION`.
+    - Recebimentos (Sprint 5): a baixa (`Idempotency-Key`) reparte o valor entre títulos do mesmo cliente; a soma tem de fechar
+      com o total (422 `SETTLEMENT_UNBALANCED`) e nenhum título passa do saldo (422 `INSUFFICIENT_TITLE_BALANCE`, com o saldo
+      atual). O estorno é total, com motivo; estornar de novo devolve o mesmo estorno.
     - Erros sempre no formato `ApiError`, em português, com `correlationId` (cabeçalho `X-Correlation-Id` é aceito e devolvido).
 servers:
   - url: http://localhost:8080
@@ -35,6 +38,8 @@ tags:
   - name: Pedidos
   - name: Projetos e equipamentos
   - name: Contas a receber
+  - name: Recebimentos
+  - name: Contas financeiras
 
 paths:
   /api/v1/status:
@@ -755,12 +760,17 @@ paths:
   /api/v1/receivables:
     get:
       tags: [Contas a receber]
-      summary: Títulos a receber (financial_title.read); cancelados só com includeCancelled. Recebimento e estorno entram na Sprint 5
+      summary: Títulos a receber (financial_title.read), com o recebido e o saldo
       parameters:
         - { name: search, in: query, required: false, schema: { type: string }, description: 'Código, origem ou cliente' }
         - { name: projectId, in: query, required: false, schema: { type: string, format: uuid } }
         - { name: customerId, in: query, required: false, schema: { type: string, format: uuid } }
-        - { name: includeCancelled, in: query, required: false, schema: { type: boolean, default: false } }
+        - name: status
+          in: query
+          required: false
+          description: 'ATIVOS (padrão, sem os cancelados), ABERTOS (com saldo), VENCIDOS, LIQUIDADOS, CANCELADOS ou TODOS'
+          schema: { type: string, enum: [ATIVOS, ABERTOS, VENCIDOS, LIQUIDADOS, CANCELADOS, TODOS] }
+        - { name: includeCancelled, in: query, required: false, schema: { type: boolean, default: false }, description: 'Sem status: true = TODOS (Sprint 4)' }
       responses:
         '200': { description: Títulos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Receivable' } } } } }
 
@@ -771,6 +781,131 @@ paths:
       summary: Título a receber (financial_title.read)
       responses:
         '200': { description: Título, content: { application/json: { schema: { $ref: '#/components/schemas/Receivable' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/receivables/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Contas a receber]
+      summary: Trilha do título — criação, baixas, estornos e cancelamento (financial_title.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/settlements:
+    get:
+      tags: [Recebimentos]
+      summary: Recebimentos, os mais recentes primeiro (financial_title.read)
+      parameters:
+        - { name: titleId, in: query, required: false, schema: { type: string, format: uuid }, description: 'Só os que alocam neste título' }
+        - { name: accountId, in: query, required: false, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Recebimentos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Settlement' } } } } }
+    post:
+      tags: [Recebimentos]
+      summary: >-
+        Registra um recebimento — PostSettlement (financial_title.settle). Na mesma transação: bloqueia os títulos em ordem de id,
+        aplica cada alocação contra o saldo, cria a entrada na conta, grava auditoria e o evento SettlementPosted
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SettlementRequest' } } }
+      responses:
+        '201': { description: Recebimento registrado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Settlement' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/settlements/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Recebimentos]
+      summary: Recebimento com as alocações e o estorno, se houver (financial_title.read)
+      responses:
+        '200': { description: Recebimento, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Settlement' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/settlements/{id}/reversals:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Recebimentos]
+      summary: >-
+        Estorna o recebimento inteiro — ReverseSettlement (settlement.reverse), com motivo obrigatório (PD-005). Devolve o saldo
+        aos mesmos títulos e cria a saída inversa na conta; já estornado devolve o estorno existente (INV-ST-6)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { description: Recebimento estornado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Settlement' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/settlements/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Recebimentos]
+      summary: Trilha do recebimento (financial_title.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/bank-accounts:
+    get:
+      tags: [Contas financeiras]
+      summary: Caixa e contas bancárias com o saldo atual (financial_title.read)
+      parameters:
+        - { name: includeInactive, in: query, required: false, schema: { type: boolean, default: false } }
+      responses:
+        '200': { description: Contas, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/BankAccount' } } } } }
+    post:
+      tags: [Contas financeiras]
+      summary: Cadastra uma conta (bank_account.admin); nome único; banco obrigatório no tipo BANCO
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/BankAccountRequest' } } }
+      responses:
+        '201': { description: Conta cadastrada, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/BankAccount' } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/bank-accounts/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Contas financeiras]
+      summary: Conta com o saldo (financial_title.read)
+      responses:
+        '200': { description: Conta, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/BankAccount' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Contas financeiras]
+      summary: Altera ou inativa (bank_account.admin); saldo inicial e data não mudam depois do primeiro movimento
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/BankAccountRequest' } } }
+      responses:
+        '200': { description: Conta alterada, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/BankAccount' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/bank-accounts/{id}/movements:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Contas financeiras]
+      summary: Extrato — movimentos da conta com o saldo acumulado (financial_title.read)
+      parameters:
+        - { name: from, in: query, required: false, schema: { type: string, format: date } }
+        - { name: to, in: query, required: false, schema: { type: string, format: date } }
+      responses:
+        '200': { description: Movimentos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/CashMovement' } } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/bank-accounts/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Contas financeiras]
+      summary: Trilha da conta (financial_title.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
         '404': { $ref: '#/components/responses/Erro' }
 
 components:
@@ -1304,6 +1439,105 @@ components:
         createdBy: { type: string }
         updatedAt: { type: [string, 'null'], format: date-time }
         updatedBy: { type: [string, 'null'] }
+    SettlementRequest:
+      type: object
+      required: [accountId, effectiveDate, amountCents, allocations]
+      properties:
+        direction: { type: string, enum: [RECEIVABLE], default: RECEIVABLE, description: 'Pagamentos entram com as contas a pagar' }
+        accountId: { type: string, format: uuid }
+        effectiveDate: { type: string, format: date, description: 'Data do recebimento; não pode ser futura' }
+        amountCents: { $ref: '#/components/schemas/Cents' }
+        currency: { type: string, enum: [BRL], default: BRL }
+        allocations:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [titleId, amountCents]
+            properties:
+              titleId: { type: string, format: uuid }
+              amountCents: { $ref: '#/components/schemas/Cents' }
+              expectedTitleVersion: { type: [string, 'null'], description: 'Versão lida do título; diferente: 412' }
+        creditCents: { type: [string, 'null'], description: 'Só "0": crédito do cliente ainda não é aceito (PD-004)' }
+        notes: { type: [string, 'null'], maxLength: 500 }
+    Settlement:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: RC00001 }
+        direction: { type: string, enum: [RECEIVABLE, PAYABLE] }
+        accountId: { type: string, format: uuid }
+        accountCode: { type: string, example: CT001 }
+        accountName: { type: string }
+        customerId: { type: string, format: uuid }
+        customerCode: { type: string }
+        customerName: { type: string }
+        effectiveDate: { type: string, format: date }
+        amountCents: { $ref: '#/components/schemas/Cents' }
+        creditCents: { $ref: '#/components/schemas/Cents' }
+        allocations:
+          type: array
+          items:
+            type: object
+            properties:
+              titleId: { type: string, format: uuid }
+              titleCode: { type: string, example: CR00001 }
+              label: { type: string }
+              amountCents: { $ref: '#/components/schemas/Cents' }
+        notes: { type: [string, 'null'] }
+        status: { type: string, enum: [POSTED, REVERSED] }
+        reversalReason: { type: [string, 'null'] }
+        reversalDate: { type: [string, 'null'], format: date }
+        reversedAt: { type: [string, 'null'], format: date-time }
+        reversedBy: { type: [string, 'null'] }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+    BankAccountRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 100 }
+        kind: { type: string, enum: [CAIXA, BANCO], default: BANCO }
+        bank: { type: [string, 'null'], maxLength: 100, description: 'Obrigatório no tipo BANCO' }
+        agency: { type: [string, 'null'], maxLength: 20 }
+        accountNumber: { type: [string, 'null'], maxLength: 30 }
+        openingCents: { type: [string, 'null'], description: 'Saldo inicial em centavos (pode ser negativo)' }
+        openingOn: { type: [string, 'null'], format: date }
+        status: { type: [string, 'null'], enum: [ATIVO, INATIVO, null] }
+    BankAccount:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: CT001 }
+        name: { type: string }
+        kind: { type: string, enum: [CAIXA, BANCO] }
+        bank: { type: [string, 'null'] }
+        agency: { type: [string, 'null'] }
+        accountNumber: { type: [string, 'null'] }
+        openingCents: { type: string }
+        openingOn: { type: string, format: date }
+        balanceCents: { type: string, description: 'Saldo inicial + movimentos' }
+        movements: { type: integer }
+        status: { type: string, enum: [ATIVO, INATIVO] }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    CashMovement:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        effectiveDate: { type: string, format: date }
+        amountCents: { type: string, description: 'Entrada positiva, saída negativa' }
+        kind: { type: string, enum: [SETTLEMENT, SETTLEMENT_REVERSAL] }
+        settlementId: { type: string, format: uuid }
+        settlementCode: { type: string }
+        description: { type: string }
+        balanceCents: { type: string, description: 'Saldo da conta depois do movimento' }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
     Receivable:
       type: object
       properties:

@@ -1,19 +1,23 @@
 package br.com.fourtech.rendamais.financeiro.domain;
 
 import br.com.fourtech.rendamais.kernel.Currency;
+import br.com.fourtech.rendamais.kernel.DomainException;
 import br.com.fourtech.rendamais.kernel.InvalidStateException;
 import br.com.fourtech.rendamais.kernel.Money;
+import br.com.fourtech.rendamais.kernel.RuleViolationException;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
 /**
  * Título financeiro (formulário "receber" do B01). O valor original e a origem são imutáveis (INV-FT-2); o saldo é
- * derivado: original + ajustes − valores recebidos. Nesta sprint ainda não há ajustes nem recebimentos (Sprint 5), então
- * o saldo é o original. Vencido é condição por data e saldo, não situação.
+ * derivado: original + ajustes − alocações não estornadas (INV-FT-1: nunca negativo). As alocações moram na liquidação;
+ * o título guarda a soma recebida, alterada só pelo serviço de liquidação, com o título bloqueado (INV-ST-3). Ajustes
+ * (juros, multa, desconto) ainda não existem. Vencido é condição por data e saldo, não situação.
  */
 public final class FinancialTitle {
 
@@ -36,6 +40,7 @@ public final class FinancialTitle {
     private final LocalDate issueDate;
     private final LocalDate dueDate;
     private final Money original;
+    private final Money received;
     private final Lifecycle lifecycle;
     private final String cancelReason;
     private final long version;
@@ -46,7 +51,7 @@ public final class FinancialTitle {
 
     public FinancialTitle(UUID id, String code, Direction direction, UUID counterpartyId, String originType, String originId,
                           String originLabel, UUID projectId, String category, YearMonth competence, LocalDate issueDate,
-                          LocalDate dueDate, Money original, Lifecycle lifecycle, String cancelReason, long version,
+                          LocalDate dueDate, Money original, Money received, Lifecycle lifecycle, String cancelReason, long version,
                           Instant createdAt, String createdBy, Instant updatedAt, String updatedBy) {
         this.id = Objects.requireNonNull(id);
         this.code = Objects.requireNonNull(code);
@@ -61,6 +66,10 @@ public final class FinancialTitle {
         this.issueDate = Objects.requireNonNull(issueDate);
         this.dueDate = Objects.requireNonNull(dueDate);
         this.original = Objects.requireNonNull(original);
+        this.received = Objects.requireNonNull(received);
+        if (received.isNegative() || received.compareTo(original) > 0) {
+            throw new IllegalArgumentException("Valor recebido fora do intervalo do título " + code + ": " + received);
+        }
         this.lifecycle = Objects.requireNonNull(lifecycle);
         this.cancelReason = cancelReason;
         this.version = version;
@@ -81,13 +90,40 @@ public final class FinancialTitle {
             throw new IllegalArgumentException("Valor do título deve ser positivo, em reais: " + amount);
         }
         return new FinancialTitle(UUID.randomUUID(), code, Direction.RECEIVABLE, counterpartyId, originType, originId, label,
-                projectId, category, YearMonth.from(dueDate), issueDate, dueDate, amount, Lifecycle.ACTIVE, null, 1, now, actor,
+                projectId, category, YearMonth.from(dueDate), issueDate, dueDate, amount, Money.zero(amount.currency()), Lifecycle.ACTIVE,
+                null, 1, now, actor,
                 now, actor);
     }
 
-    /** Valor recebido e não estornado. Recebimentos entram na Sprint 5. */
+    /** Valor recebido e não estornado. */
     public Money received() {
-        return Money.zero(original.currency());
+        return received;
+    }
+
+    /**
+     * Aplica a alocação de uma liquidação (chamado com o título bloqueado). Recusa título que não está ativo ou valor
+     * acima do saldo (INV-FT-1, {@code INSUFFICIENT_TITLE_BALANCE}); o excedente não vira crédito sozinho (PD-004).
+     */
+    public FinancialTitle applyAllocation(Money amount, Instant now, String actor) {
+        if (amount.isNegative() || amount.isZero()) throw new IllegalArgumentException("Alocação deve ser positiva: " + amount);
+        if (lifecycle != Lifecycle.ACTIVE) {
+            throw new InvalidStateException("O título " + code + " está " + (lifecycle == Lifecycle.CANCELLED ? "cancelado" : "renegociado")
+                    + " e não recebe baixa.");
+        }
+        if (amount.compareTo(balance()) > 0) {
+            throw new RuleViolationException("INSUFFICIENT_TITLE_BALANCE", "O valor de " + amount.toBrl() + " passa do saldo do título "
+                    + code + " (" + balance().toBrl() + "). O excedente não vira crédito nesta versão.",
+                    List.of(new DomainException.FieldIssue("titles." + id, "Saldo atual: " + balance().toBrl() + ".")));
+        }
+        return with(received.plus(amount), lifecycle, cancelReason, now, actor);
+    }
+
+    /** Desfaz a alocação de uma liquidação estornada (chamado com o título bloqueado). */
+    public FinancialTitle reverseAllocation(Money amount, Instant now, String actor) {
+        if (amount.isNegative() || amount.isZero() || amount.compareTo(received) > 0) {
+            throw new IllegalStateException("Estorno de " + amount + " maior que o recebido no título " + code + ": " + received);
+        }
+        return with(received.minus(amount), lifecycle, cancelReason, now, actor);
     }
 
     public Money balance() {
@@ -112,8 +148,12 @@ public final class FinancialTitle {
         if (!received().isZero()) {
             throw new InvalidStateException("O título " + code + " tem valor recebido; estorne o recebimento antes de cancelar.");
         }
+        return with(received, Lifecycle.CANCELLED, reason, now, actor);
+    }
+
+    private FinancialTitle with(Money newReceived, Lifecycle newLifecycle, String reason, Instant now, String actor) {
         return new FinancialTitle(id, code, direction, counterpartyId, originType, originId, originLabel, projectId, category,
-                competence, issueDate, dueDate, original, Lifecycle.CANCELLED, reason, version + 1, createdAt, createdBy, now, actor);
+                competence, issueDate, dueDate, original, newReceived, newLifecycle, reason, version + 1, createdAt, createdBy, now, actor);
     }
 
     public UUID id() { return id; }

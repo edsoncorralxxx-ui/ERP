@@ -12,6 +12,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
@@ -40,17 +41,18 @@ class JdbcFinancialTitleRepository implements FinancialTitleRepository {
     public void insert(FinancialTitle t) {
         jdbc.sql("""
                 insert into financial_title (id, code, direction, counterparty_id, origin_type, origin_id, origin_label, project_id,
-                       category, competence, issue_date, due_date, original_cents, lifecycle, cancel_reason, version, created_at,
+                       category, competence, issue_date, due_date, original_cents, received_cents, lifecycle, cancel_reason, version, created_at,
                        created_by, updated_at, updated_by)
                 values (:id, :code, :direction, :counterparty, :originType, :originId, :label, :project, :category, :competence,
-                        :issue, :due, :cents, :lifecycle, :reason, :version, :createdAt, :createdBy, :updatedAt, :updatedBy)
+                        :issue, :due, :cents, :received, :lifecycle, :reason, :version, :createdAt, :createdBy, :updatedAt, :updatedBy)
                 """)
                 .param("id", t.id()).param("code", t.code()).param("direction", t.direction().name())
                 .param("counterparty", t.counterpartyId()).param("originType", t.originType()).param("originId", t.originId())
                 .param("label", t.originLabel()).param("project", t.projectId()).param("category", t.category())
                 .param("competence", t.competence().toString()).param("issue", Date.valueOf(t.issueDate()))
                 .param("due", Date.valueOf(t.dueDate())).param("cents", t.original().cents())
-                .param("lifecycle", t.lifecycle().name()).param("reason", t.cancelReason()).param("version", t.version())
+                .param("received", t.received().cents()).param("lifecycle", t.lifecycle().name())
+                .param("reason", t.cancelReason()).param("version", t.version())
                 .param("createdAt", ts(t.createdAt())).param("createdBy", t.createdBy())
                 .param("updatedAt", ts(t.updatedAt())).param("updatedBy", t.updatedBy())
                 .update();
@@ -59,11 +61,12 @@ class JdbcFinancialTitleRepository implements FinancialTitleRepository {
     @Override
     public void update(FinancialTitle t) {
         jdbc.sql("""
-                update financial_title set lifecycle = :lifecycle, cancel_reason = :reason, version = :version,
-                       updated_at = :updatedAt, updated_by = :updatedBy
+                update financial_title set received_cents = :received, lifecycle = :lifecycle, cancel_reason = :reason,
+                       version = :version, updated_at = :updatedAt, updated_by = :updatedBy
                  where id = :id
                 """)
-                .param("lifecycle", t.lifecycle().name()).param("reason", t.cancelReason()).param("version", t.version())
+                .param("received", t.received().cents()).param("lifecycle", t.lifecycle().name())
+                .param("reason", t.cancelReason()).param("version", t.version())
                 .param("updatedAt", ts(t.updatedAt())).param("updatedBy", t.updatedBy()).param("id", t.id())
                 .update();
     }
@@ -81,6 +84,13 @@ class JdbcFinancialTitleRepository implements FinancialTitleRepository {
     }
 
     @Override
+    public List<FinancialTitle> findByIdsForUpdate(List<UUID> ids) {
+        if (ids.isEmpty()) return List.of();
+        return jdbc.sql("select * from financial_title where id in (:ids) order by id for update")
+                .param("ids", ids).query(JdbcFinancialTitleRepository::title).list();
+    }
+
+    @Override
     public List<FinancialTitle> findByOrigin(String originType, List<String> originIds) {
         if (originIds.isEmpty()) return List.of();
         return jdbc.sql("select * from financial_title where origin_type = :type and origin_id in (:ids) order by due_date, code")
@@ -88,10 +98,16 @@ class JdbcFinancialTitleRepository implements FinancialTitleRepository {
     }
 
     @Override
-    public List<Summary> listReceivables(String search, UUID projectId, UUID counterpartyId, boolean includeCancelled, int limit) {
+    public List<Summary> listReceivables(String search, UUID projectId, UUID counterpartyId, Filter filter, LocalDate today, int limit) {
         return jdbc.sql(SELECT + """
                  where t.direction = 'RECEIVABLE'
-                   and (:all or t.lifecycle <> 'CANCELLED')
+                   and case :filter
+                         when 'OPEN' then t.lifecycle = 'ACTIVE' and t.received_cents < t.original_cents
+                         when 'OVERDUE' then t.lifecycle = 'ACTIVE' and t.received_cents < t.original_cents and t.due_date < :today
+                         when 'SETTLED' then t.lifecycle = 'ACTIVE' and t.received_cents = t.original_cents
+                         when 'CANCELLED' then t.lifecycle = 'CANCELLED'
+                         when 'ACTIVE' then t.lifecycle <> 'CANCELLED'
+                         else true end
                    and (cast(:project as uuid) is null or t.project_id = cast(:project as uuid))
                    and (cast(:partner as uuid) is null or t.counterparty_id = cast(:partner as uuid))
                    and (cast(:term as varchar) is null
@@ -101,7 +117,7 @@ class JdbcFinancialTitleRepository implements FinancialTitleRepository {
                         or p.code ilike '%' || cast(:term as varchar) || '%')
                  order by t.due_date, t.code limit :limit
                 """)
-                .param("all", includeCancelled).param("project", projectId).param("partner", counterpartyId)
+                .param("filter", filter.name()).param("today", Date.valueOf(today)).param("project", projectId).param("partner", counterpartyId)
                 .param("term", search).param("limit", limit)
                 .query(JdbcFinancialTitleRepository::summary).list();
     }
@@ -116,7 +132,8 @@ class JdbcFinancialTitleRepository implements FinancialTitleRepository {
                 rs.getString("origin_type"), rs.getString("origin_id"), rs.getString("origin_label"),
                 rs.getObject("project_id", UUID.class), rs.getString("category"), YearMonth.parse(rs.getString("competence")),
                 rs.getDate("issue_date").toLocalDate(), rs.getDate("due_date").toLocalDate(),
-                Money.ofCents(rs.getLong("original_cents"), Currency.BRL), FinancialTitle.Lifecycle.valueOf(rs.getString("lifecycle")),
+                Money.ofCents(rs.getLong("original_cents"), Currency.BRL), Money.ofCents(rs.getLong("received_cents"), Currency.BRL),
+                FinancialTitle.Lifecycle.valueOf(rs.getString("lifecycle")),
                 rs.getString("cancel_reason"), rs.getLong("version"), instant(rs, "created_at"), rs.getString("created_by"),
                 instant(rs, "updated_at"), rs.getString("updated_by"));
     }
