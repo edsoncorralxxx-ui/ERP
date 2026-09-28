@@ -8,15 +8,13 @@ type Props = {
   children: ReactNode;
   buttons: DialogButton[];
   onEscape: () => void;
-  /** Caixa larga, para uma grade dentro dela (ex.: Vincular parcelas). */
-  larga?: boolean;
 };
 
 /**
  * Caixa de mensagem do design system: título com o nome do produto, ícone de 32px, fato e depois a pergunta,
  * botões à direita com o padrão primeiro. Modal: prende o foco e fecha com Esc.
  */
-export function Dialog({ icon, label, children, buttons, onEscape, larga }: Props) {
+export function Dialog({ icon, label, children, buttons, onEscape }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -28,7 +26,7 @@ export function Dialog({ icon, label, children, buttons, onEscape, larga }: Prop
     <div className="rp-modal">
       <div
         ref={ref}
-        className={`rp-window rp-msgbox${larga ? ' rp-msgbox--larga' : ''}`}
+        className="rp-window rp-msgbox"
         role="alertdialog"
         aria-modal="true"
         aria-label={label}

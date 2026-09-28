@@ -10,7 +10,8 @@ import { JanelaLista, type Situacao } from './comum/JanelaLista';
 export const DOCUMENTOS_ALTERADOS = 'renda:documentos-alterados';
 
 let novos = 0;
-export const novoDocumento = () => `novo-${++novos}`;
+/** Chave de uma nota nova; com o pedido, a ficha já abre com ele escolhido (`novo-3:<pedido>`). */
+export const novoDocumento = (pedido?: string) => `novo-${++novos}${pedido ? `:${pedido}` : ''}`;
 
 const carregar = async (busca: string, situacao: Situacao) => {
   const q = new URLSearchParams({ status: situacao });
@@ -58,6 +59,7 @@ export function DocumentsWindow() {
       colunas={[
         { titulo: 'Documento', valor: (d) => d.code },
         { titulo: 'Nota', valor: numeroDaNota },
+        { titulo: 'Pedido', valor: (d) => d.orderCode ?? '' },
         { titulo: 'Cliente', valor: (d) => `${d.customerCode} — ${d.customerName}` },
         { titulo: 'Emissão', valor: (d) => dataDaApi(d.issueDate) },
         { titulo: 'Competência', valor: (d) => competenciaDaApi(d.competence) },

@@ -6,8 +6,9 @@ import br.com.fourtech.rendamais.acesso.api.Permissions;
 import br.com.fourtech.rendamais.auditoria.api.AuditEntry;
 import br.com.fourtech.rendamais.auditoria.api.AuditQuery;
 import br.com.fourtech.rendamais.auditoria.api.AuditTrail;
-import br.com.fourtech.rendamais.cadastros.api.PartnerQueryApi;
+import br.com.fourtech.rendamais.comercial.api.SalesOrderQueryApi;
 import br.com.fourtech.rendamais.documentos.domain.BusinessDocument;
+import br.com.fourtech.rendamais.documentos.domain.InvoiceProposal;
 import br.com.fourtech.rendamais.financeiro.api.TitleQueryApi;
 import br.com.fourtech.rendamais.financeiro.api.TitleQueryApi.TitleView;
 import br.com.fourtech.rendamais.kernel.Currency;
@@ -39,11 +40,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Documentos e faturamento (formulário "documentos" do B01): registrar a nota emitida fora do Renda+, vinculá-la às
- * parcelas existentes (PD-023), desfazer um vínculo, cancelar e classificar. O vínculo, numa transação: bloqueia o
- * documento (Σ vínculos ≤ total) e depois as parcelas em ordem crescente de id (faturado da parcela ≤ valor da
- * parcela), relendo a situação delas já com o bloqueio. Recebimento não limita o faturamento: uma parcela recebida
- * continua faturável, e o vínculo não muda saldo a receber nem caixa.
+ * Documentos e faturamento (formulário "documentos" do B01): registrar a nota emitida fora do Renda+ a partir do pedido,
+ * desfazer um vínculo, cancelar e classificar. Regime de caixa (decisão do PO na Review da Sprint 6, PD-023): a nota
+ * fatura só o que já foi recebido — o a emitir de cada parcela é recebido − faturado —, e o sistema monta as linhas
+ * (proporcionais ao pedido) e os vínculos (pela ordem de vencimento). O vínculo, numa transação: bloqueia o documento
+ * (Σ vínculos ≤ total) e depois as parcelas em ordem crescente de id, relendo o recebido delas já com o bloqueio. A
+ * nota não muda saldo a receber nem caixa.
  */
 @Service
 public class DocumentService {
@@ -56,18 +58,18 @@ public class DocumentService {
 
     private final DocumentRepository repository;
     private final TitleQueryApi titles;
-    private final PartnerQueryApi partners;
+    private final SalesOrderQueryApi orders;
     private final AuditTrail audit;
     private final AuditQuery auditQuery;
     private final Outbox outbox;
     private final CommandReceipts receipts;
     private final Clock clock;
 
-    public DocumentService(DocumentRepository repository, TitleQueryApi titles, PartnerQueryApi partners, AuditTrail audit,
+    public DocumentService(DocumentRepository repository, TitleQueryApi titles, SalesOrderQueryApi orders, AuditTrail audit,
                            AuditQuery auditQuery, Outbox outbox, CommandReceipts receipts, Clock clock) {
         this.repository = repository;
         this.titles = titles;
-        this.partners = partners;
+        this.orders = orders;
         this.audit = audit;
         this.auditQuery = auditQuery;
         this.outbox = outbox;
@@ -75,18 +77,34 @@ public class DocumentService {
         this.clock = clock;
     }
 
-    /** Corpo do RegisterDocument, como chega da API: valores em centavos como texto de inteiro (ADR-006). */
-    public record RegisterRequest(String direction, String customerId, String series, String number, String issueDate,
-                                  String competence, List<LineRequest> lines, List<LinkRequest> links, String notes) { }
-
-    public record LineRequest(String description, String kind, String amountCents) { }
+    /**
+     * Corpo do RegisterDocument, como chega da API: o pedido, os dados da nota emitida e, se for menor que o a emitir do
+     * pedido, o valor da nota; valores em centavos como texto de inteiro (ADR-006). Linhas e vínculos vêm do pedido.
+     */
+    public record RegisterRequest(String direction, String orderId, String series, String number, String issueDate,
+                                  String competence, String amountCents, String notes) { }
 
     public record LinkRequest(String titleId, String amountCents) { }
 
     public record ClassifyRequest(String operationNature, String projectId) { }
 
-    /** Faturado de uma parcela: o título, quanto já foi faturado, quanto falta e os documentos vinculados. */
-    public record TitleInvoicing(TitleView title, long invoicedCents, long toInvoiceCents, List<DocumentRepository.TitleLink> documents) { }
+    /**
+     * Faturado de uma parcela: o título, quanto já foi faturado, quanto falta faturar do valor, quanto do recebido ainda
+     * não tem nota (a emitir) e os documentos vinculados.
+     */
+    public record TitleInvoicing(TitleView title, long invoicedCents, long toInvoiceCents, long toIssueCents,
+                                 List<DocumentRepository.TitleLink> documents) { }
+
+    /** Parcela do pedido vista pelo caixa: faturado, a emitir e quanto a nota proposta vincula a ela. */
+    public record ParcelInvoicing(TitleView title, long invoicedCents, long toIssueCents, long proposedCents) { }
+
+    /**
+     * Pedido visto pelo caixa: recebido, faturado, a emitir (recebido sem nota), faturado além do recebido (depois de um
+     * estorno) e a nota proposta para o valor pedido (o a emitir, por padrão).
+     */
+    public record OrderInvoicing(SalesOrderQueryApi.OrderRef order, List<ParcelInvoicing> parcels, long receivedCents,
+                                 long invoicedCents, long toIssueCents, long beyondReceivedCents, long proposedCents,
+                                 InvoiceProposal.Result proposal) { }
 
     @Transactional(readOnly = true)
     public List<DocumentRepository.Summary> list(String search, DocumentRepository.Filter filter, YearMonth competence, UUID customerId) {
@@ -123,41 +141,124 @@ public class DocumentService {
         return found.stream().map(t -> {
             long done = invoiced.getOrDefault(t.id(), 0L);
             long limit = "CANCELLED".equals(t.status()) ? done : t.originalCents();
-            return new TitleInvoicing(t, done, limit - done, links.getOrDefault(t.id(), List.of()));
+            return new TitleInvoicing(t, done, limit - done, toIssue(t, done), links.getOrDefault(t.id(), List.of()));
         }).toList();
     }
 
-    /** RegisterDocument: registra a nota e, se vierem, os primeiros vínculos; a mesma chave devolve o mesmo documento. */
+    /** Recebido sem nota da parcela (regime de caixa); parcela cancelada não tem nada a emitir. */
+    private static long toIssue(TitleView t, long invoiced) {
+        return "CANCELLED".equals(t.status()) ? 0 : Math.max(0, t.receivedCents() - invoiced);
+    }
+
+    /** Pedidos confirmados vistos pelo caixa; {@code onlyToIssue} deixa só os que têm recebimento sem nota. */
+    @Transactional(readOnly = true)
+    public List<OrderInvoicing> orders(String search, boolean onlyToIssue) {
+        CurrentUserHolder.require(Permissions.DOCUMENT_READ);
+        List<SalesOrderQueryApi.OrderRef> refs = orders.confirmedOrders(search);
+        List<UUID> ids = refs.stream().flatMap(o -> o.titleIds().stream()).toList();
+        Map<UUID, TitleView> byId = byId(titles.byIds(ids));
+        Map<UUID, Long> invoiced = repository.invoiced(ids);
+        return refs.stream().map(o -> orderInvoicing(o, byId, invoiced, null))
+                .filter(o -> !onlyToIssue || o.toIssueCents() > 0).toList();
+    }
+
+    /** Um pedido visto pelo caixa, com a nota proposta para {@code amountCents} (o a emitir, se vazio). */
+    @Transactional(readOnly = true)
+    public OrderInvoicing order(UUID orderId, String amountCents) {
+        CurrentUserHolder.require(Permissions.DOCUMENT_READ);
+        SalesOrderQueryApi.OrderRef o = confirmedOrder(orderId);
+        Map<UUID, TitleView> byId = byId(titles.byIds(o.titleIds()));
+        OrderInvoicing all = orderInvoicing(o, byId, repository.invoiced(o.titleIds()), null);
+        return orderInvoicing(o, byId, repository.invoiced(o.titleIds()), amount(amountCents, all.toIssueCents(), o));
+    }
+
+    private OrderInvoicing orderInvoicing(SalesOrderQueryApi.OrderRef o, Map<UUID, TitleView> byId, Map<UUID, Long> invoiced, Long amount) {
+        List<TitleView> ts = o.titleIds().stream().map(byId::get).filter(Objects::nonNull)
+                .sorted(java.util.Comparator.comparing(TitleView::dueDate).thenComparing(TitleView::code)).toList();
+        List<InvoiceProposal.Parcel> parcels = ts.stream()
+                .map(t -> new InvoiceProposal.Parcel(t.id(), toIssue(t, invoiced.getOrDefault(t.id(), 0L)))).toList();
+        long toIssue = InvoiceProposal.toIssue(parcels);
+        long proposed = amount == null ? toIssue : amount;
+        InvoiceProposal.Result proposal = InvoiceProposal.of(proposed, parcels, lines(o));
+        Map<UUID, Long> perTitle = proposal.links().stream()
+                .collect(Collectors.toMap(BusinessDocument.LinkRequest::titleId, l -> l.amount().cents()));
+        long received = ts.stream().filter(t -> !"CANCELLED".equals(t.status())).mapToLong(TitleView::receivedCents).sum();
+        long done = ts.stream().mapToLong(t -> invoiced.getOrDefault(t.id(), 0L)).sum();
+        List<ParcelInvoicing> views = ts.stream().map(t -> new ParcelInvoicing(t, invoiced.getOrDefault(t.id(), 0L),
+                toIssue(t, invoiced.getOrDefault(t.id(), 0L)), perTitle.getOrDefault(t.id(), 0L))).toList();
+        return new OrderInvoicing(o, views, received, done, toIssue, Math.max(0, done - received), proposed, proposal);
+    }
+
+    private static List<InvoiceProposal.OrderLine> lines(SalesOrderQueryApi.OrderRef o) {
+        return o.lines().stream().map(l -> new InvoiceProposal.OrderLine(l.kind(), l.description(), l.totalCents())).toList();
+    }
+
+    private SalesOrderQueryApi.OrderRef confirmedOrder(UUID orderId) {
+        return orders.confirmed(orderId).orElseThrow(() -> new RuleViolationException("DOCUMENT_INVALID",
+                "Pedido não encontrado ou não confirmado.", List.of(new FieldIssue("orderId", "Escolha um pedido confirmado."))));
+    }
+
+    /** Valor pedido para a nota: vazio é o a emitir; maior que zero e até o a emitir do pedido. */
+    private static long amount(String raw, long toIssue, SalesOrderQueryApi.OrderRef o) {
+        if (raw == null || raw.isBlank()) return toIssue;
+        List<FieldIssue> issues = new ArrayList<>();
+        Money m = cents(raw, "amountCents", issues);
+        if (!issues.isEmpty()) throw new RuleViolationException("DOCUMENT_INVALID", "Valor da nota inválido.", issues);
+        if (m.isZero() || m.isNegative()) {
+            throw new RuleViolationException("DOCUMENT_INVALID", "O valor da nota deve ser maior que zero.",
+                    List.of(new FieldIssue("amountCents", "Deve ser maior que zero.")));
+        }
+        if (m.cents() > toIssue) {
+            throw new RuleViolationException("DOCUMENT_EXCEEDS_RECEIVED", "O valor de " + m.toBrl() + " passa do recebido sem nota do pedido "
+                    + o.code() + " (" + brl(toIssue) + "). A nota só fatura o que já foi recebido.",
+                    List.of(new FieldIssue("amountCents", "A emitir do pedido: " + brl(toIssue) + ".")));
+        }
+        return m.cents();
+    }
+
+    /**
+     * RegisterDocument pelo caixa: a nota do pedido fatura o recebido sem nota (ou parte dele); o sistema monta as linhas
+     * e os vínculos com as parcelas bloqueadas. A mesma chave devolve o mesmo documento.
+     */
     @Transactional
     public DocumentRepository.Summary register(String idempotencyKey, RegisterRequest r) {
         CurrentUser user = CurrentUserHolder.require(Permissions.DOCUMENT_REGISTER);
+        CurrentUserHolder.require(Permissions.DOCUMENT_LINK);
         String key = CommandReceipts.requireKey(idempotencyKey);
         var done = receipts.claim(user.username(), key, "RegisterDocument", r);
         if (done.isPresent()) return view(UUID.fromString(done.get()));
 
         Parsed p = parse(r);
-        if (!p.links().isEmpty()) CurrentUserHolder.require(Permissions.DOCUMENT_LINK);
-        PartnerQueryApi.CustomerRef customer = partners.customer(p.customerId()).orElseThrow(() -> new RuleViolationException(
-                "DOCUMENT_INVALID", "Cliente não encontrado.", List.of(new FieldIssue("customerId", "Cliente não encontrado."))));
-        if (!customer.active()) {
-            throw new RuleViolationException("DOCUMENT_INVALID", "O cliente " + customer.code() + " — " + customer.name()
-                    + " está inativo.", List.of(new FieldIssue("customerId", "Cliente inativo.")));
+        SalesOrderQueryApi.OrderRef order = confirmedOrder(p.orderId());
+        duplicate(p.series(), p.number(), order.customerId());
+        // O a emitir é lido com as parcelas bloqueadas: outra nota do mesmo pedido espera esta terminar.
+        List<TitleView> before = titles.byIds(order.titleIds());
+        Map<UUID, Long> invoiced = repository.lockInvoicing(before.stream()
+                .collect(Collectors.toMap(TitleView::id, TitleView::originalCents)));
+        OrderInvoicing now = orderInvoicing(order, byId(titles.byIds(order.titleIds())), invoiced, null);
+        if (now.toIssueCents() == 0) {
+            throw new RuleViolationException("DOCUMENT_EXCEEDS_RECEIVED", "O pedido " + order.code()
+                    + " não tem recebimento sem nota: a nota só fatura o que já foi recebido.",
+                    List.of(new FieldIssue("orderId", "Nada a emitir neste pedido.")));
         }
-        duplicate(p.series(), p.number(), customer.id());
-        Instant now = clock.instant();
-        BusinessDocument d = BusinessDocument.register(repository.nextCode(), BusinessDocument.Direction.SAIDA, customer.id(),
-                p.series(), p.number(), p.issueDate(), p.competence(), p.lines(), p.notes(), now, user.username());
+        long amount = amount(p.amountCents(), now.toIssueCents(), order);
+        InvoiceProposal.Result proposal = orderInvoicing(order, byId(titles.byIds(order.titleIds())), invoiced, amount).proposal();
+        Instant at = clock.instant();
+        BusinessDocument d = BusinessDocument.register(repository.nextCode(), BusinessDocument.Direction.SAIDA, order.customerId(),
+                order.id(), p.series(), p.number(), p.issueDate(), p.competence(), proposal.lines(), p.notes(), at, user.username());
         try {
             repository.insert(d);
         } catch (DuplicateKeyException e) {
             // Outro registro simultâneo do mesmo número chegou primeiro.
-            duplicate(p.series(), p.number(), customer.id());
+            duplicate(p.series(), p.number(), order.customerId());
             throw e;
         }
+        String customerLabel = order.customerCode() + " — " + order.customerName();
         Map<String, AuditEntry.Change> changes = new LinkedHashMap<>();
         changes.put("code", new AuditEntry.Change(null, d.code()));
         changes.put("number", new AuditEntry.Change(null, "Série " + d.series() + " nº " + d.number()));
-        changes.put("customer", new AuditEntry.Change(null, customer.code() + " — " + customer.name()));
+        changes.put("customer", new AuditEntry.Change(null, customerLabel));
+        changes.put("order", new AuditEntry.Change(null, order.code()));
         changes.put("issueDate", new AuditEntry.Change(null, d.issueDate().toString()));
         changes.put("competence", new AuditEntry.Change(null, d.competence().toString()));
         changes.put("totalCents", new AuditEntry.Change(null, d.total().centsAsString()));
@@ -167,13 +268,14 @@ public class DocumentService {
         payload.put("documentId", d.id().toString());
         payload.put("direction", d.direction().name());
         payload.put("partnerId", d.partnerId().toString());
+        payload.put("orderId", order.id().toString());
         payload.put("issueDate", d.issueDate().toString());
         payload.put("competence", d.competence().toString());
         payload.put("totalCents", d.total().centsAsString());
         payload.put("lines", d.lines().stream().map(l -> Map.of("description", l.description(), "kind", l.kind().name(),
                 "amountCents", l.amount().centsAsString())).toList());
         outbox.append("DocumentRegistered", ENTITY, d.id().toString(), payload, user.username());
-        if (!p.links().isEmpty()) link(user, d, p.links());
+        link(user, d, proposal.links());
         receipts.complete(user.username(), key, d.id().toString());
         return view(d.id());
     }
@@ -234,11 +336,12 @@ public class DocumentService {
                 throw new InvalidStateException("A parcela " + t.code() + " está cancelada e não recebe vínculo de documento.");
             }
             long already = invoiced.get(t.id());
-            long free = t.originalCents() - already;
+            // Regime de caixa (PD-023, Review da Sprint 6): só o recebido que ainda não tem nota.
+            long free = Math.max(0, t.receivedCents() - already);
             if (r.amount().cents() > free) {
-                throw new RuleViolationException("LINK_EXCEEDS_TITLE", "O vínculo de " + r.amount().toBrl() + " passa do que falta faturar "
-                        + "na parcela " + t.code() + " (" + brl(free) + ").",
-                        List.of(new FieldIssue(f + ".amountCents", "A faturar da parcela: " + brl(free) + ".")));
+                throw new RuleViolationException("LINK_EXCEEDS_TITLE", "O vínculo de " + r.amount().toBrl() + " passa do recebido sem nota "
+                        + "na parcela " + t.code() + " (" + brl(free) + "). A nota só fatura o que já foi recebido.",
+                        List.of(new FieldIssue(f + ".amountCents", "A emitir da parcela: " + brl(free) + ".")));
             }
             repository.setInvoiced(t.id(), already + r.amount().cents());
             audited.add(new String[]{t.id().toString(), t.code(), brl(already), brl(already + r.amount().cents()), r.amount().centsAsString()});
@@ -382,16 +485,16 @@ public class DocumentService {
                 .map(l -> Map.of("titleId", l.titleId().toString(), "amountCents", l.amount().centsAsString())).toList());
     }
 
-    private record Parsed(UUID customerId, String series, String number, LocalDate issueDate, YearMonth competence,
-                          List<BusinessDocument.Line> lines, List<BusinessDocument.LinkRequest> links, String notes) { }
+    private record Parsed(UUID orderId, String series, String number, LocalDate issueDate, YearMonth competence, String amountCents,
+                          String notes) { }
 
-    /** Formato e campos obrigatórios; as regras entre campos e com o banco vêm depois. */
+    /** Formato e campos obrigatórios; as regras com o pedido e as parcelas vêm depois. */
     private Parsed parse(RegisterRequest r) {
         List<FieldIssue> issues = new ArrayList<>();
         if (r.direction() != null && !r.direction().isBlank() && !"SAIDA".equals(r.direction().strip())) {
             issues.add(new FieldIssue("direction", "Nesta versão só há documentos de saída (SAIDA); os de entrada vêm com as contas a pagar."));
         }
-        UUID customer = uuid(r.customerId(), "customerId", "Escolha o cliente.", issues);
+        UUID order = uuid(r.orderId(), "orderId", "Escolha o pedido.", issues);
         String series = r.series() == null ? "" : r.series().strip();
         if (series.isEmpty()) issues.add(new FieldIssue("series", "Informe a série (ex.: 1)."));
         else if (!series.matches("[A-Za-z0-9]{1,10}")) issues.add(new FieldIssue("series", "Até 10 letras ou números."));
@@ -422,35 +525,10 @@ public class DocumentService {
                 issues.add(new FieldIssue("competence", "Competência inválida; use AAAA-MM."));
             }
         }
-        List<BusinessDocument.Line> lines = new ArrayList<>();
-        List<LineRequest> rawLines = r.lines() == null ? List.of() : r.lines();
-        if (rawLines.isEmpty()) issues.add(new FieldIssue("lines", "Informe ao menos uma linha com valor."));
-        for (int i = 0; i < rawLines.size(); i++) {
-            LineRequest l = rawLines.get(i);
-            String f = "lines[" + i + "]";
-            String desc = l == null || l.description() == null ? "" : l.description().strip();
-            if (desc.isEmpty()) issues.add(new FieldIssue(f + ".description", "Informe a descrição."));
-            else if (desc.length() > 200) issues.add(new FieldIssue(f + ".description", "Máximo de 200 caracteres."));
-            BusinessDocument.LineKind kind = null;
-            try {
-                kind = BusinessDocument.LineKind.valueOf(l == null || l.kind() == null ? "" : l.kind().strip());
-            } catch (IllegalArgumentException e) {
-                issues.add(new FieldIssue(f + ".kind", "Escolha Produto ou Serviço."));
-            }
-            Money amount = cents(l == null ? null : l.amountCents(), f + ".amountCents", issues);
-            if (amount != null && (amount.isZero() || amount.isNegative())) {
-                issues.add(new FieldIssue(f + ".amountCents", "Deve ser maior que zero."));
-                amount = null;
-            }
-            if (!desc.isEmpty() && desc.length() <= 200 && kind != null && amount != null) {
-                lines.add(new BusinessDocument.Line(i + 1, desc, kind, amount));
-            }
-        }
-        List<BusinessDocument.LinkRequest> links = links(r.links(), issues);
         if (r.notes() != null && r.notes().strip().length() > 500) issues.add(new FieldIssue("notes", "Máximo de 500 caracteres."));
         if (!issues.isEmpty()) throw new RuleViolationException("DOCUMENT_INVALID", "Corrija os campos indicados.", issues);
         String notes = r.notes() == null || r.notes().isBlank() ? null : r.notes().strip();
-        return new Parsed(customer, series.toUpperCase(java.util.Locale.ROOT), number, issue, competence, lines, links, notes);
+        return new Parsed(order, series.toUpperCase(java.util.Locale.ROOT), number, issue, competence, r.amountCents(), notes);
     }
 
     private static List<BusinessDocument.LinkRequest> links(List<LinkRequest> raw, List<FieldIssue> issues) {

@@ -1,24 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { api, type ApiError } from '../api/client';
-import type { BusinessDocument, DocumentLineKind, DocumentLink, HistoryEntry, OperationNature, TitleInvoicing } from '../api/types';
+import type { BusinessDocument, DocumentLineKind, HistoryEntry, OperationNature, OrderInvoicing, TitleInvoicing } from '../api/types';
 import { centavos, centavosParaApi, competenciaDaApi, competenciaParaApi, dataDaApi, dataHora, dataParaApi, hojeIso, reais } from '../format';
-import { Dialog } from '../shell/Dialog';
-import type { StatusMessage } from '../shell/StatusBar';
 import { useSession } from '../shell/SessionContext';
 import { useWindow } from '../windows/WindowContext';
-import { novaChave, useClientes } from './comum/Cadastros';
+import { novaChave } from './comum/Cadastros';
 import { CampoData } from './comum/CampoData';
 import { DialogoConflito, DialogoMotivo } from './comum/Dialogos';
 import { FATURAMENTO_ALTERADO } from './comum/Faturamento';
 import { tratarFalha } from './comum/Falhas';
 import { GradeHistorico } from './comum/GradeHistorico';
 import { Selecao } from './comum/Selecao';
-import { DOCUMENTOS_ALTERADOS, numeroDaNota, seloDocumento } from './DocumentsWindow';
+import { DOCUMENTOS_ALTERADOS, seloDocumento } from './DocumentsWindow';
 import { TITULOS_ALTERADOS } from './ReceivablesWindow';
 
-type Tab = 'linhas' | 'vinculos' | 'classificacao' | 'historico';
-type Linha = { description: string; kind: DocumentLineKind | ''; amount: string };
-type Form = { customerId: string; series: string; number: string; issueDate: string; competence: string; notes: string; lines: Linha[] };
+type Tab = 'linhas' | 'parcelas' | 'vinculos' | 'classificacao' | 'historico';
+type Form = { orderId: string; series: string; number: string; issueDate: string; competence: string; amount: string; notes: string };
 
 export const NATUREZA: Record<OperationNature, string> = {
   VENDA_PRODUCAO: 'Venda de produção própria',
@@ -29,42 +26,30 @@ export const NATUREZA: Record<OperationNature, string> = {
 
 const TIPO: Record<DocumentLineKind, string> = { PRODUTO: 'Produto', SERVICO: 'Serviço' };
 
-const vazio = (): Form => {
-  const hoje = hojeIso();
-  return { customerId: '', series: '1', number: '', issueDate: dataDaApi(hoje), competence: competenciaDaApi(hoje), notes: '', lines: [] };
-};
+/** A chave `novo-3:<pedido>` abre a nota nova já com o pedido escolhido (seta da lista Notas a emitir e do pedido). */
+const pedidoDaChave = (recordKey: string) => (recordKey.startsWith('novo-') && recordKey.includes(':') ? recordKey.slice(recordKey.indexOf(':') + 1) : '');
 
-const toForm = (d: BusinessDocument): Form => ({
-  customerId: d.customerId,
-  series: d.series,
-  number: d.number,
-  issueDate: dataDaApi(d.issueDate),
-  competence: competenciaDaApi(d.competence),
-  notes: d.notes ?? '',
-  lines: d.lines.map((l) => ({ description: l.description, kind: l.kind, amount: centavos(l.amountCents) })),
-});
+const vazio = (orderId = ''): Form => {
+  const hoje = hojeIso();
+  return { orderId, series: '1', number: '', issueDate: dataDaApi(hoje), competence: competenciaDaApi(hoje), amount: '', notes: '' };
+};
 
 const toRequest = (f: Form) => ({
   direction: 'SAIDA',
-  customerId: f.customerId || null,
+  orderId: f.orderId || null,
   series: f.series.trim(),
   number: f.number.trim(),
   issueDate: dataParaApi(f.issueDate),
   competence: competenciaParaApi(f.competence),
-  lines: f.lines.map((l) => ({ description: l.description.trim(), kind: l.kind || null, amountCents: centavosParaApi(l.amount) })),
+  amountCents: centavosParaApi(f.amount),
   notes: f.notes.trim() || null,
 });
-
-const somaLinhas = (ls: Linha[]) => ls.reduce((t, l) => {
-  const c = centavosParaApi(l.amount);
-  return t + (c && /^\d+$/.test(c) ? BigInt(c) : 0n);
-}, 0n);
 
 const seta = (rotulo: string, fn: () => void) => (
   <span className="rp-link" role="link" tabIndex={0} aria-label={rotulo} title={rotulo} onClick={fn} onKeyDown={(e) => e.key === 'Enter' && fn()} />
 );
 
-/** Avisa as outras janelas: listas de documentos, parcelas e o faturado dos pedidos, projetos e títulos. */
+/** Avisa as outras janelas: listas de documentos e de notas a emitir, parcelas e o faturado dos pedidos, projetos e títulos. */
 const avisar = () => {
   window.dispatchEvent(new Event(DOCUMENTOS_ALTERADOS));
   window.dispatchEvent(new Event(FATURAMENTO_ALTERADO));
@@ -72,10 +57,11 @@ const avisar = () => {
 };
 
 /**
- * Ficha do documento de faturamento (formulário "documentos"): a nota emitida fora do Renda+ — cliente, série, número,
- * emissão e competência (sugerida pelo mês da emissão) — com as abas Linhas, Vínculos (as parcelas que a nota fatura,
- * com Desfazer), Classificação e Histórico. A nota não cria cobrança: "Vincular parcelas" reparte o valor dela entre
- * as parcelas do cliente, sem passar do que falta faturar em cada uma (PD-023).
+ * Ficha do documento de faturamento (formulário "documentos"), no regime de caixa decidido na Review da Sprint 6: a nota
+ * nova parte do pedido. O sistema mostra o recebido que ainda não tem nota (a emitir), monta as linhas proporcionais
+ * às do pedido (produto e serviço) e reparte o valor entre as parcelas recebidas, da mais antiga para a mais nova; o
+ * usuário emite a nota no portal da SEFAZ ou da prefeitura e registra aqui o número, a série e a emissão. Depois de
+ * adicionada: Linhas, Vínculos, Classificação e Histórico; Cancelar documento devolve o valor ao a emitir.
  */
 export function DocumentWindow({ recordKey }: { recordKey: string }) {
   const win = useWindow();
@@ -85,28 +71,27 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
   const [id, setId] = useState<string | null>(recordKey.startsWith('novo-') ? null : recordKey);
   const [doc, setDoc] = useState<BusinessDocument | null>(null);
   const [etag, setEtag] = useState('');
-  const [form, setForm] = useState<Form>(vazio);
+  const [form, setForm] = useState<Form>(() => vazio(pedidoDaChave(recordKey)));
   const [tab, setTab] = useState<Tab>('linhas');
   const [carregando, setCarregando] = useState(id !== null);
   const [erroCarga, setErroCarga] = useState<string | null>(null);
   const [gravando, setGravando] = useState(false);
   const [erros, setErros] = useState<Record<string, string>>({});
   const [conflito, setConflito] = useState<string | null>(null);
-  const [vinculando, setVinculando] = useState(false);
-  const [desfazer, setDesfazer] = useState<DocumentLink | null>(null);
   const [cancelar, setCancelar] = useState(false);
   const [historico, setHistorico] = useState<HistoryEntry[] | null>(null);
-  const clientes = useClientes();
+  const [pedidos, setPedidos] = useState<OrderInvoicing[]>([]);
+  const [proposta, setProposta] = useState<OrderInvoicing | null>(null);
   const chave = useRef(novaChave());
   // A competência acompanha a emissão até o usuário mudá-la.
   const competenciaManual = useRef(false);
 
   const adicao = doc === null;
-  const somenteLeitura = !adicao || !can('document.register');
+  const somenteLeitura = !adicao || !can('document.register') || !can('document.link');
   const ativo = doc?.status === 'ATIVO';
-  const original = useMemo(() => (doc ? toForm(doc) : vazio()), [doc]);
-  const alterado = useMemo(() => !somenteLeitura && JSON.stringify(form) !== JSON.stringify(original), [form, original, somenteLeitura]);
-  const total = adicao ? somaLinhas(form.lines) : BigInt(doc.totalCents);
+  const original = useMemo(() => vazio(pedidoDaChave(recordKey)), [recordKey]);
+  const alterado = useMemo(() => adicao && !somenteLeitura && JSON.stringify({ ...form, amount: '' }) !== JSON.stringify(original),
+    [form, original, adicao, somenteLeitura]);
 
   useEffect(() => win.setDirty(alterado), [alterado, win]);
 
@@ -114,7 +99,6 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
     setDoc(d);
     setId(d.id);
     setEtag(etagLido ?? `"${d.version}"`);
-    setForm(toForm(d));
     setErros({});
     setHistorico(null);
   }, []);
@@ -141,6 +125,42 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
     if (id) void carregar(id);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Nota nova: os pedidos com recebimento sem nota, para escolher.
+  useEffect(() => {
+    if (!adicao || somenteLeitura) return;
+    api
+      .get<OrderInvoicing[]>('/api/v1/invoicing/orders?status=A_EMITIR')
+      .then((r) => setPedidos(r.data))
+      .catch((e: ApiError) => winRef.current.notify({ tone: 'erro', text: `${e.message} (${e.code})` }));
+  }, [adicao, somenteLeitura]);
+
+  /** Proposta do servidor para o pedido e o valor (vazio = todo o a emitir); o valor volta formatado. */
+  const propor = useCallback(async (orderId: string, valor?: string) => {
+    if (!orderId) {
+      setProposta(null);
+      return;
+    }
+    const cents = valor ? centavosParaApi(valor) : null;
+    try {
+      const r = await api.get<OrderInvoicing>(`/api/v1/invoicing/orders/${orderId}${cents && /^\d+$/.test(cents) ? `?amountCents=${cents}` : ''}`);
+      setProposta(r.data);
+      setForm((f) => (f.orderId === orderId ? { ...f, amount: centavos(r.data.proposedCents) } : f));
+      setErros((m) => {
+        const { amountCents: _a, orderId: _o, ...resto } = m;
+        return resto;
+      });
+    } catch (e) {
+      const x = e as ApiError;
+      const campo = x.details.find((d) => d.field === 'amountCents')?.message;
+      if (campo) setErros((m) => ({ ...m, amountCents: campo }));
+      else winRef.current.notify({ tone: 'erro', text: `${x.message} (${x.code}) [${x.correlationId ?? '—'}]` });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (adicao && form.orderId) void propor(form.orderId);
+  }, [form.orderId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (tab !== 'historico' || !id || historico !== null) return;
     api
@@ -153,8 +173,7 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
   formRef.current = form;
 
   const falha = useCallback((e: unknown) => {
-    const campos = tratarFalha(e, { objeto: 'O documento', notify: winRef.current.notify, setErros, setConflito });
-    if (campos && Object.keys(campos).some((c) => c.startsWith('lines'))) setTab('linhas');
+    tratarFalha(e, { objeto: 'O documento', notify: winRef.current.notify, setErros, setConflito });
   }, []);
 
   /** Registra a nota; a mesma chave vai de novo se a rede cair antes da resposta, para não registrar duas vezes. */
@@ -165,7 +184,10 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
       chave.current = novaChave();
       aplicar(r.data, r.etag);
       setTab('vinculos');
-      winRef.current.notify({ tone: 'sucesso', text: `Documento ${r.data.code} (nota nº ${r.data.number}) adicionado com sucesso` });
+      winRef.current.notify({
+        tone: 'sucesso',
+        text: `Documento ${r.data.code} (nota nº ${r.data.number}) adicionado com sucesso: ${reais(r.data.totalCents)} faturados no pedido ${r.data.orderCode}`,
+      });
       avisar();
       return true;
     } catch (e) {
@@ -177,31 +199,19 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
     }
   }, [falha, aplicar]);
 
-  const acao = async (fn: () => Promise<{ data: BusinessDocument; etag?: string }>, texto: (d: BusinessDocument) => string) => {
+  const cancelarDocumento = async (motivo: string) => {
+    setCancelar(false);
     try {
-      const r = await fn();
+      const r = await api.post<BusinessDocument>(`/api/v1/documents/${doc!.id}/cancellations`, { reason: motivo }, { 'If-Match': etag });
       aplicar(r.data, r.etag);
-      winRef.current.notify({ tone: 'sucesso', text: texto(r.data) });
+      winRef.current.notify({ tone: 'sucesso', text: `Documento ${r.data.code} (nota nº ${r.data.number}) cancelado com sucesso; o valor volta às notas a emitir` });
       avisar();
     } catch (e) {
       falha(e);
     }
   };
 
-  const cancelarDocumento = (motivo: string) => {
-    setCancelar(false);
-    void acao(() => api.post<BusinessDocument>(`/api/v1/documents/${doc!.id}/cancellations`, { reason: motivo }, { 'If-Match': etag }),
-      (d) => `Documento ${d.code} (nota nº ${d.number}) cancelado com sucesso; os vínculos foram desfeitos`);
-  };
-
-  const desfazerVinculo = (l: DocumentLink, motivo: string) => {
-    setDesfazer(null);
-    void acao(() => api.post<BusinessDocument>(`/api/v1/documents/${doc!.id}/links/${l.id}/removals`, { reason: motivo }, { 'If-Match': etag }),
-      (d) => `Vínculo com a parcela ${l.titleCode} desfeito com sucesso: ${reais(l.amountCents)} voltaram ao a faturar; restam ${reais(d.unlinkedCents)} sem vínculo na nota`);
-  };
-
-  const podeGravar = adicao && alterado && !gravando && !somenteLeitura;
-  const podeVincular = !!doc && ativo && BigInt(doc.unlinkedCents) > 0n && can('document.link');
+  const podeGravar = adicao && !gravando && !somenteLeitura && !!form.orderId && !!proposta && BigInt(proposta.toIssueCents) > 0n;
   const podeCancelar = !!doc && ativo && can('document.cancel');
   useEffect(() => win.registerCommands({ save: podeGravar ? gravar : undefined }), [podeGravar, gravar, win]);
 
@@ -210,17 +220,13 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
     const iso = dataParaApi(v);
     setForm((f) => ({ ...f, issueDate: v, competence: !competenciaManual.current && iso && /^\d{4}-\d{2}-\d{2}$/.test(iso) ? competenciaDaApi(iso) : f.competence }));
   };
-  const setLinha = (i: number, patch: Partial<Linha>) => setForm((f) => ({ ...f, lines: f.lines.map((l, j) => (j === i ? { ...l, ...patch } : l)) }));
-  const addLinha = () => setForm((f) => ({ ...f, lines: [...f.lines, { description: '', kind: 'PRODUTO', amount: '' }] }));
-  const remLinha = (i: number) => setForm((f) => ({ ...f, lines: f.lines.filter((_, j) => j !== i) }));
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (conflito !== null || vinculando || desfazer || cancelar) return;
+    if (conflito !== null || cancelar) return;
     if (e.altKey) {
       const k = e.key.toLowerCase();
-      const alvo: Record<string, Tab> = { l: 'linhas', v: 'vinculos', a: 'classificacao', h: 'historico' };
-      if (alvo[k] && (alvo[k] === 'linhas' || id)) setTab(alvo[k]);
-      else if (k === 'p' && podeVincular) setVinculando(true);
+      const alvo: Record<string, Tab> = { l: 'linhas', p: 'parcelas', v: 'vinculos', a: 'classificacao', h: 'historico' };
+      if (alvo[k] && tabs.some(([t, , ok]) => t === alvo[k] && ok)) setTab(alvo[k]);
       else if (k === 'c' && podeCancelar) setCancelar(true);
       else return;
       e.preventDefault();
@@ -231,16 +237,6 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
       e.preventDefault();
       win.requestClose();
     }
-  };
-
-  const teclasLinhas = (e: KeyboardEvent<HTMLTableElement>) => {
-    if (somenteLeitura || !e.ctrlKey || (e.key !== 'Insert' && e.key !== 'Delete')) return;
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.key === 'Insert') return addLinha();
-    const tr = (e.target as HTMLElement).closest('tr');
-    const i = tr ? Array.from(tr.parentElement?.children ?? []).indexOf(tr) : -1;
-    if (i >= 0 && i < form.lines.length) remLinha(i);
   };
 
   const fid = (k: string) => `${win.windowId}-${k}`;
@@ -256,20 +252,25 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
     );
   const classeCampo = `rp-field${somenteLeitura ? ' rp-field--readonly' : ''}`;
   const emAdicao = adicao && !somenteLeitura;
-  const opcoesClientes = clientes.filter((c) => c.status === 'ATIVO' || c.id === form.customerId).map((c) => ({ valor: c.id, rotulo: `${c.code} — ${c.legalName}` }));
-  if (doc && !opcoesClientes.some((o) => o.valor === doc.customerId)) opcoesClientes.unshift({ valor: doc.customerId, rotulo: `${doc.customerCode} — ${doc.customerName}` });
-  const erroLinhas = Object.entries(erros).filter(([k]) => k.startsWith('lines')).map(([k, v]) => {
-    const m = /\[(\d+)\]/.exec(k);
-    return m ? `Linha ${Number(m[1]) + 1}: ${v}` : v;
-  });
-  const ativos = doc?.links.filter((l) => l.status === 'ATIVO') ?? [];
+  const opcoesPedidos = pedidos.map((o) => ({ valor: o.id, rotulo: `${o.orderCode} — ${o.customerName} — a emitir ${reais(o.toIssueCents)}` }));
+  if (form.orderId && proposta && !opcoesPedidos.some((o) => o.valor === form.orderId)) {
+    opcoesPedidos.unshift({ valor: proposta.id, rotulo: `${proposta.orderCode} — ${proposta.customerName} — a emitir ${reais(proposta.toIssueCents)}` });
+  }
+  const linhas = doc ? doc.lines : proposta?.lines ?? [];
+  const total = doc ? doc.totalCents : proposta?.proposedCents ?? '0';
+  const semNada = adicao && !!proposta && BigInt(proposta.toIssueCents) === 0n;
 
-  const tabs: [Tab, ReactNode, boolean][] = [
-    ['linhas', <span><u>L</u>inhas ({form.lines.length})</span>, true],
-    ['vinculos', <span><u>V</u>ínculos ({ativos.length})</span>, id !== null],
-    ['classificacao', <span>Cl<u>a</u>ssificação</span>, id !== null],
-    ['historico', <span><u>H</u>istórico</span>, id !== null],
-  ];
+  const tabs: [Tab, ReactNode, boolean][] = adicao
+    ? [
+        ['linhas', <span><u>L</u>inhas ({linhas.length})</span>, true],
+        ['parcelas', <span><u>P</u>arcelas ({proposta?.parcels.filter((p) => BigInt(p.proposedCents) > 0n).length ?? 0})</span>, true],
+      ]
+    : [
+        ['linhas', <span><u>L</u>inhas ({linhas.length})</span>, true],
+        ['vinculos', <span><u>V</u>ínculos ({doc?.links.filter((l) => l.status === 'ATIVO').length ?? 0})</span>, true],
+        ['classificacao', <span>Cl<u>a</u>ssificação</span>, true],
+        ['historico', <span><u>H</u>istórico</span>, true],
+      ];
 
   return (
     <>
@@ -285,74 +286,116 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
                 <span className="rp-label">Documento</span>
                 <span />
                 <input className="rp-field rp-field--readonly" readOnly value={doc?.code ?? 'Gerado ao adicionar'} aria-label="Documento" />
-                <label className="rp-label" htmlFor={fid('cliente')}>Cliente</label>
+                <label className="rp-label" htmlFor={fid('pedido')}>Pedido</label>
                 <span className="rp-req" aria-hidden="true">*</span>
                 {doc ? (
                   <span className="rp-ficha__ref">
-                    {seta(`Abrir cliente ${doc.customerCode}`, () => win.open('customer', doc.customerId))}
-                    <input id={fid('cliente')} className="rp-field rp-field--readonly" readOnly value={`${doc.customerCode} — ${doc.customerName}`} />
+                    {doc.orderId && seta(`Abrir pedido ${doc.orderCode}`, () => win.open('order', doc.orderId!))}
+                    <input id={fid('pedido')} className="rp-field rp-field--readonly" readOnly value={doc.orderCode ?? ''} />
                   </span>
                 ) : (
-                  <Selecao id={fid('cliente')} className={classeCampo} valor={form.customerId} disabled={somenteLeitura} aria-invalid={!!erros.customerId}
-                    onChange={(v) => set({ customerId: v })} opcoes={[{ valor: '', rotulo: 'Escolha o cliente' }, ...opcoesClientes]} />
+                  <Selecao id={fid('pedido')} className={classeCampo} valor={form.orderId} disabled={somenteLeitura} aria-invalid={!!erros.orderId}
+                    onChange={(v) => set({ orderId: v, amount: '' })}
+                    opcoes={[{ valor: '', rotulo: pedidos.length || form.orderId ? 'Escolha o pedido' : 'Nenhum pedido com recebimento sem nota' }, ...opcoesPedidos]} />
                 )}
-                {erroDe('customerId')}
+                {erroDe('orderId')}
+                <span className="rp-label">Cliente</span>
+                <span />
+                <span className="rp-ficha__ref">
+                  {(doc || proposta) && seta(`Abrir cliente ${(doc ?? proposta)!.customerCode}`, () => win.open('customer', (doc ?? proposta)!.customerId))}
+                  <input className="rp-field rp-field--readonly" readOnly aria-label="Cliente"
+                    value={doc ? `${doc.customerCode} — ${doc.customerName}` : proposta ? `${proposta.customerCode} — ${proposta.customerName}` : ''} />
+                </span>
                 <label className="rp-label" htmlFor={fid('numero')}>Nº da nota</label>
                 <span className="rp-req" aria-hidden="true">*</span>
                 <span className="rp-ficha__ref">
-                  <input id={fid('numero')} className={`${classeCampo} rp-field--curto`} value={form.number} maxLength={20} inputMode="numeric" readOnly={somenteLeitura}
-                    aria-invalid={!!erros.number} onChange={(e) => set({ number: e.target.value })} />
+                  <input id={fid('numero')} className={`${classeCampo} rp-field--curto`} value={doc?.number ?? form.number} maxLength={20} inputMode="numeric"
+                    readOnly={somenteLeitura} aria-invalid={!!erros.number} onChange={(e) => set({ number: e.target.value })} />
                   <label className="rp-label" htmlFor={fid('serie')}>Série</label>
-                  <input id={fid('serie')} className={`${classeCampo} rp-field--curto`} value={form.series} maxLength={10} readOnly={somenteLeitura}
+                  <input id={fid('serie')} className={`${classeCampo} rp-field--curto`} value={doc?.series ?? form.series} maxLength={10} readOnly={somenteLeitura}
                     aria-invalid={!!erros.series} onChange={(e) => set({ series: e.target.value })} />
                 </span>
                 {erroDe('number')}
                 {erroDe('series')}
                 <label className="rp-label" htmlFor={fid('emissao')}>Emissão</label>
                 <span className="rp-req" aria-hidden="true">*</span>
-                <CampoData id={fid('emissao')} rotulo="Emissão" className={`${classeCampo} rp-field--curto`} valor={form.issueDate} somenteLeitura={somenteLeitura}
-                  invalido={!!erros.issueDate} onChange={setEmissao} />
+                <CampoData id={fid('emissao')} rotulo="Emissão" className={`${classeCampo} rp-field--curto`} valor={doc ? dataDaApi(doc.issueDate) : form.issueDate}
+                  somenteLeitura={somenteLeitura} invalido={!!erros.issueDate} onChange={setEmissao} />
                 {erroDe('issueDate')}
                 <label className="rp-label" htmlFor={fid('competencia')}>Competência</label>
                 <span className="rp-req" aria-hidden="true">*</span>
-                <input id={fid('competencia')} className={`${classeCampo} rp-field--curto`} value={form.competence} maxLength={7} placeholder="MM/AAAA" readOnly={somenteLeitura}
-                  aria-invalid={!!erros.competence} onChange={(e) => {
+                <input id={fid('competencia')} className={`${classeCampo} rp-field--curto`} value={doc ? competenciaDaApi(doc.competence) : form.competence} maxLength={7}
+                  placeholder="MM/AAAA" readOnly={somenteLeitura} aria-invalid={!!erros.competence} onChange={(e) => {
                     competenciaManual.current = true;
                     set({ competence: e.target.value });
                   }} />
                 {erroDe('competence')}
                 <label className="rp-label" htmlFor={fid('obs')}>Observações</label>
                 <span />
-                <input id={fid('obs')} className={classeCampo} value={form.notes} maxLength={500} readOnly={somenteLeitura} onChange={(e) => set({ notes: e.target.value })} />
+                <input id={fid('obs')} className={classeCampo} value={doc?.notes ?? form.notes} maxLength={500} readOnly={somenteLeitura}
+                  onChange={(e) => set({ notes: e.target.value })} />
               </div>
               <div className="rp-form rp-ficha__situacao">
                 <span className="rp-label">Situação</span>
                 <span>
-                  {doc ? seloDocumento(doc.status) : <span className="rp-badge">Novo</span>}
+                  {doc ? seloDocumento(doc.status) : <span className="rp-badge">Nova</span>}
                   {alterado && <span className="rp-badge rp-badge--pendente rp-janela-mdi__selo">Alterações não salvas</span>}
                 </span>
-                <span className="rp-label">Total da nota</span>
-                <input className="rp-field rp-field--readonly rp-field--num" readOnly aria-label="Total da nota" value={reais(total.toString())} />
-                <span className="rp-label">Vinculado</span>
-                <input className="rp-field rp-field--readonly rp-field--num" readOnly aria-label="Vinculado" value={reais(doc?.linkedCents ?? '0')} />
-                <span className="rp-label">Sem vínculo</span>
-                <input className="rp-field rp-field--readonly rp-field--num" readOnly aria-label="Sem vínculo" value={reais(doc?.unlinkedCents ?? total.toString())} />
-                <span className="rp-label">Versão</span>
-                <input className="rp-field rp-field--readonly rp-field--num" readOnly value={doc?.version ?? ''} aria-label="Versão" />
-                {doc?.status === 'CANCELADO' && (
+                {adicao ? (
                   <>
-                    <span className="rp-label">Motivo</span>
-                    <input className="rp-field rp-field--readonly" readOnly aria-label="Motivo do cancelamento" value={doc.cancelReason ?? ''} />
+                    <span className="rp-label">Recebido</span>
+                    <input className="rp-field rp-field--readonly rp-field--num" readOnly aria-label="Recebido do pedido" value={reais(proposta?.receivedCents ?? '0')} />
+                    <span className="rp-label">Já faturado</span>
+                    <input className="rp-field rp-field--readonly rp-field--num" readOnly aria-label="Já faturado" value={reais(proposta?.invoicedCents ?? '0')} />
+                    <span className="rp-label">A emitir</span>
+                    <input className="rp-field rp-field--readonly rp-field--num" readOnly aria-label="A emitir" value={reais(proposta?.toIssueCents ?? '0')} />
+                    <label className="rp-label" htmlFor={fid('valor')}>Valor da nota</label>
+                    <input id={fid('valor')} className={`${classeCampo} rp-field--num`} value={form.amount} maxLength={20} inputMode="decimal"
+                      readOnly={somenteLeitura || !proposta} aria-invalid={!!erros.amountCents} onChange={(e) => set({ amount: e.target.value })}
+                      onBlur={() => form.orderId && void propor(form.orderId, form.amount)} />
+                    {erros.amountCents && (
+                      <>
+                        <span />
+                        <span className="rp-campo-erro">
+                          <i className="rp-ico rp-ico-status-erro" aria-hidden="true" /> {erros.amountCents}
+                        </span>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <span className="rp-label">Total da nota</span>
+                    <input className="rp-field rp-field--readonly rp-field--num" readOnly aria-label="Total da nota" value={reais(total)} />
+                    <span className="rp-label">Vinculado</span>
+                    <input className="rp-field rp-field--readonly rp-field--num" readOnly aria-label="Vinculado" value={reais(doc!.linkedCents)} />
+                    <span className="rp-label">Versão</span>
+                    <input className="rp-field rp-field--readonly rp-field--num" readOnly value={doc!.version} aria-label="Versão" />
+                    {doc!.status === 'CANCELADO' && (
+                      <>
+                        <span className="rp-label">Motivo</span>
+                        <input className="rp-field rp-field--readonly" readOnly aria-label="Motivo do cancelamento" value={doc!.cancelReason ?? ''} />
+                      </>
+                    )}
                   </>
                 )}
               </div>
             </div>
 
+            {semNada && (
+              <p className="rp-janela-mdi__aviso rp-ficha__nota">
+                <i className="rp-ico rp-ico-status-aviso" aria-hidden="true" /> O pedido {proposta!.orderCode} não tem recebimento sem nota: a nota só fatura o que já foi recebido.
+              </p>
+            )}
+            {adicao && proposta && !semNada && (
+              <p className="rp-janela-mdi__aviso rp-ficha__nota">
+                <i className="rp-ico rp-ico-status-info" aria-hidden="true" /> Emita a nota de {reais(proposta.proposedCents)} no portal (produto {reais(proposta.productCents)},
+                serviço {reais(proposta.serviceCents)}) e registre aqui o número, a série e a emissão.
+              </p>
+            )}
+
             <div className="rp-tabs" role="tablist">
-              {tabs.map(([t, rotulo, disponivel]) => (
-                <div key={t} className="rp-tab" role="tab" tabIndex={disponivel ? 0 : -1} aria-selected={tab === t} aria-disabled={!disponivel || undefined}
-                  title={disponivel ? undefined : 'Disponível depois de adicionar o documento'}
-                  onClick={() => disponivel && setTab(t)} onKeyDown={(e) => e.key === 'Enter' && disponivel && setTab(t)}>
+              {tabs.map(([t, rotulo]) => (
+                <div key={t} className="rp-tab" role="tab" tabIndex={0} aria-selected={tab === t} onClick={() => setTab(t)} onKeyDown={(e) => e.key === 'Enter' && setTab(t)}>
                   {rotulo}
                 </div>
               ))}
@@ -361,75 +404,76 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
               {carregando ? (
                 <p className="rp-janela-mdi__aviso">Carregando</p>
               ) : tab === 'linhas' ? (
-                <div className="rp-tabela">
-                  <div className="rp-grid-rolagem rp-rolagem rp-ficha__grade">
-                    <table className={`rp-grid rp-grid--edicao${emAdicao ? ' rp-form--adicao' : ''}`} aria-label="Linhas da nota" onKeyDown={teclasLinhas}>
-                      <thead>
-                        <tr>
-                          <th className="rp-ficha__col-num">#</th>
-                          <th>Descrição</th>
-                          <th className="rp-linhas__tipo">Tipo</th>
-                          <th className="num rp-linhas__valor">Valor</th>
-                          <th className="rp-ficha__col-x" aria-label="Remover" />
+                <div className="rp-grid-rolagem rp-rolagem rp-ficha__grade">
+                  <table className="rp-grid rp-janela-mdi__grade" aria-label="Linhas da nota">
+                    <thead>
+                      <tr>
+                        <th className="rownum">#</th>
+                        <th>Descrição</th>
+                        <th className="rp-linhas__tipo">Tipo</th>
+                        <th className="num rp-linhas__valor">Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {linhas.map((l) => (
+                        <tr key={l.seq}>
+                          <td className="rownum">{l.seq}</td>
+                          <td>{l.description}</td>
+                          <td>{TIPO[l.kind]}</td>
+                          <td className="num">{reais(l.amountCents)}</td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {form.lines.map((l, i) => (
-                          <tr key={i}>
-                            <td className="rownum">{i + 1}</td>
-                            <td>
-                              <input className="rp-field" value={l.description} maxLength={200} readOnly={somenteLeitura} aria-label={`Descrição da linha ${i + 1}`}
-                                aria-invalid={!!erros[`lines[${i}].description`]} onChange={(e) => setLinha(i, { description: e.target.value })} />
-                            </td>
-                            <td>
-                              {somenteLeitura ? (
-                                <input className="rp-field rp-field--readonly" readOnly aria-label={`Tipo da linha ${i + 1}`} value={l.kind ? TIPO[l.kind] : ''} />
-                              ) : (
-                                <Selecao className="rp-field" valor={l.kind} aria-label={`Tipo da linha ${i + 1}`} aria-invalid={!!erros[`lines[${i}].kind`]}
-                                  onChange={(v) => setLinha(i, { kind: v as DocumentLineKind })} opcoes={[{ valor: 'PRODUTO', rotulo: 'Produto' }, { valor: 'SERVICO', rotulo: 'Serviço' }]} />
-                              )}
-                            </td>
-                            <td>
-                              <input className="rp-field rp-field--num" value={l.amount} maxLength={20} inputMode="decimal" readOnly={somenteLeitura}
-                                aria-label={`Valor da linha ${i + 1}`} aria-invalid={!!erros[`lines[${i}].amountCents`]}
-                                onChange={(e) => setLinha(i, { amount: e.target.value })}
-                                onBlur={() => {
-                                  const c = centavosParaApi(l.amount);
-                                  if (c && /^\d+$/.test(c)) setLinha(i, { amount: centavos(c) });
-                                }} />
-                            </td>
-                            <td className="rp-linha-x" role={somenteLeitura ? undefined : 'button'} tabIndex={somenteLeitura ? -1 : 0} title="Remover linha"
-                              aria-label={`Remover linha ${i + 1}`} onClick={() => !somenteLeitura && remLinha(i)} onKeyDown={(e) => e.key === 'Enter' && !somenteLeitura && remLinha(i)}>
-                              {somenteLeitura ? '' : '×'}
-                            </td>
-                          </tr>
-                        ))}
-                        {!somenteLeitura && (
-                          <tr className="nova">
-                            <td className="rownum">{form.lines.length + 1}</td>
-                            <td colSpan={4} role="button" tabIndex={0} onClick={addLinha} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), addLinha())}>
-                              Clique para adicionar uma linha…
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                      <tfoot>
-                        <tr>
-                          <td colSpan={3}>Total da nota</td>
-                          <td className="num" aria-label="Soma das linhas">{reais(total.toString())}</td>
-                          <td />
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td colSpan={3}>Total da nota</td>
+                        <td className="num" aria-label="Soma das linhas">{reais(total)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                  {adicao && !proposta && <p className="rp-jlista__vazio">Escolha o pedido: as linhas vêm dele, na proporção de cada item.</p>}
+                </div>
+              ) : tab === 'parcelas' && proposta ? (
+                <div className="rp-grid-rolagem rp-rolagem rp-ficha__grade">
+                  <table className="rp-grid rp-janela-mdi__grade" aria-label="Parcelas do pedido">
+                    <thead>
+                      <tr>
+                        <th className="rownum">#</th>
+                        <th>Parcela</th>
+                        <th>Descrição</th>
+                        <th>Vencimento</th>
+                        <th className="num">Valor</th>
+                        <th className="num">Recebido</th>
+                        <th className="num">Faturado</th>
+                        <th className="num">A emitir</th>
+                        <th className="num">Nesta nota</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {proposta.parcels.map((p, i) => (
+                        <tr key={p.titleId}>
+                          <td className="rownum">{i + 1}</td>
+                          <td>{p.titleCode}</td>
+                          <td>{p.label}</td>
+                          <td>{dataDaApi(p.dueDate)}</td>
+                          <td className="num">{reais(p.originalCents)}</td>
+                          <td className="num">{reais(p.receivedCents)}</td>
+                          <td className="num">{reais(p.invoicedCents)}</td>
+                          <td className="num">{reais(p.toIssueCents)}</td>
+                          <td className="num">{reais(p.proposedCents)}</td>
                         </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                  {erroLinhas.map((m) => (
-                    <p key={m} className="rp-campo-erro rp-ficha__erro">
-                      <i className="rp-ico rp-ico-status-erro" aria-hidden="true" /> {m}
-                    </p>
-                  ))}
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td colSpan={8}>Nesta nota</td>
+                        <td className="num" aria-label="Soma das parcelas nesta nota">{reais(proposta.proposedCents)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
               ) : tab === 'vinculos' && doc ? (
-                <Vinculos doc={doc} podeDesfazer={ativo && can('document.link')} abrir={(t) => win.open('receivable', t)} onDesfazer={setDesfazer} />
+                <Vinculos doc={doc} abrir={(t) => win.open('receivable', t)} />
               ) : tab === 'classificacao' && doc ? (
                 <Classificacao doc={doc} etag={etag} idBase={fid('cl')} podeClassificar={ativo && can('document.classify')}
                   onClassificado={(d, e) => {
@@ -437,8 +481,10 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
                     winRef.current.notify({ tone: 'sucesso', text: `Documento ${d.code} classificado com sucesso (revisão ${d.classificationRevision})` });
                     avisar();
                   }} falha={falha} />
-              ) : (
+              ) : tab === 'historico' ? (
                 <GradeHistorico historico={historico} rotulo="Histórico do documento" />
+              ) : (
+                <p className="rp-jlista__vazio">Escolha o pedido para ver as parcelas.</p>
               )}
             </div>
           </>
@@ -457,11 +503,6 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
           </button>
         </div>
         <div className="rp-btn-row">
-          {podeVincular && (
-            <button type="button" className="rp-btn" onClick={() => setVinculando(true)}>
-              <span>Vincular <u>p</u>arcelas</span>
-            </button>
-          )}
           {podeCancelar && (
             <button type="button" className="rp-btn" onClick={() => setCancelar(true)}>
               <span><u>C</u>ancelar documento</span>
@@ -470,31 +511,10 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
         </div>
       </div>
 
-      {vinculando && doc && (
-        <DialogoVincular doc={doc} etag={etag} idBase={fid('vin')} notify={win.notify} onCancelar={() => setVinculando(false)}
-          onConflito={() => {
-            setVinculando(false);
-            setConflito('?');
-          }}
-          onVinculado={(d, e) => {
-            setVinculando(false);
-            aplicar(d, e);
-            setTab('vinculos');
-            win.notify({ tone: 'sucesso', text: `Nota nº ${d.number} vinculada com sucesso: ${reais(d.linkedCents)} faturados nas parcelas; restam ${reais(d.unlinkedCents)} sem vínculo` });
-            avisar();
-          }} />
-      )}
-
-      {desfazer && doc && (
-        <DialogoMotivo rotulo="Desfazer vínculo" idCampo={fid('motivo-desfazer')} botao="Desfazer" voltar="Voltar" falta="Informe o motivo para desfazer o vínculo."
-          texto={`O vínculo de ${reais(desfazer.amountCents)} com a parcela ${desfazer.titleCode} será desfeito: o valor volta ao a faturar da parcela e fica sem vínculo na nota. O registro continua no histórico.`}
-          onCancelar={() => setDesfazer(null)} onConfirmar={(m) => desfazerVinculo(desfazer, m)} />
-      )}
-
       {cancelar && doc && (
         <DialogoMotivo rotulo="Cancelar documento" idCampo={fid('motivo-cancelar')} botao="Cancelar documento" voltar="Voltar" falta="Informe o motivo do cancelamento."
-          texto={`O documento ${doc.code} (nota nº ${doc.number}) fica cancelado e os ${ativos.length} vínculo(s) são desfeitos: ${reais(doc.linkedCents)} voltam ao a faturar das parcelas. Recebimentos não mudam.`}
-          onCancelar={() => setCancelar(false)} onConfirmar={cancelarDocumento} />
+          texto={`O documento ${doc.code} (nota nº ${doc.number}) fica cancelado e os vínculos são desfeitos: ${reais(doc.linkedCents)} voltam às notas a emitir do pedido ${doc.orderCode ?? ''}. Recebimentos não mudam.`}
+          onCancelar={() => setCancelar(false)} onConfirmar={(m) => void cancelarDocumento(m)} />
       )}
 
       {conflito !== null && (
@@ -509,13 +529,8 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
   );
 }
 
-/** Aba Vínculos: as parcelas que a nota fatura, com a seta para o título e Desfazer nos ativos. */
-function Vinculos({ doc, podeDesfazer, abrir, onDesfazer }: {
-  doc: BusinessDocument;
-  podeDesfazer: boolean;
-  abrir: (titleId: string) => void;
-  onDesfazer: (l: DocumentLink) => void;
-}) {
+/** Aba Vínculos: as parcelas que a nota fatura, com a seta para o título; vínculos desfeitos ficam com o motivo. */
+function Vinculos({ doc, abrir }: { doc: BusinessDocument; abrir: (titleId: string) => void }) {
   return (
     <div className="rp-grid-rolagem rp-rolagem rp-ficha__grade">
       <table className="rp-grid rp-janela-mdi__grade" aria-label="Vínculos da nota com as parcelas">
@@ -529,7 +544,6 @@ function Vinculos({ doc, podeDesfazer, abrir, onDesfazer }: {
             <th>Situação</th>
             <th>Vinculado em</th>
             <th>Desfeito</th>
-            <th aria-label="Ações" />
           </tr>
         </thead>
         <tbody>
@@ -545,13 +559,6 @@ function Vinculos({ doc, podeDesfazer, abrir, onDesfazer }: {
               </td>
               <td>{`${dataHora(l.createdAt)} por ${l.createdBy}`}</td>
               <td>{l.status === 'DESFEITO' ? `${dataHora(l.removedAt)} por ${l.removedBy}: ${l.removedReason}` : ''}</td>
-              <td>
-                {l.status === 'ATIVO' && podeDesfazer && (
-                  <button type="button" className="rp-btn" aria-label={`Desfazer vínculo com a parcela ${l.titleCode}`} onClick={() => onDesfazer(l)}>
-                    Desfazer
-                  </button>
-                )}
-              </td>
             </tr>
           ))}
         </tbody>
@@ -559,15 +566,10 @@ function Vinculos({ doc, podeDesfazer, abrir, onDesfazer }: {
           <tr>
             <td colSpan={4}>Vinculado</td>
             <td className="num">{reais(doc.linkedCents)}</td>
-            <td colSpan={4}>Sem vínculo: {reais(doc.unlinkedCents)}</td>
+            <td colSpan={3} />
           </tr>
         </tfoot>
       </table>
-      {doc.links.length === 0 && (
-        <p className="rp-jlista__vazio">
-          Nenhuma parcela vinculada. {doc.status === 'ATIVO' ? 'Use Vincular parcelas para dizer quais parcelas do pedido esta nota fatura.' : ''}
-        </p>
-      )}
     </div>
   );
 }
@@ -651,157 +653,3 @@ function Classificacao({ doc, etag, idBase, podeClassificar, onClassificado, fal
   );
 }
 
-/**
- * Caixa "Vincular parcelas": as parcelas do cliente com o que falta faturar; o valor sem vínculo da nota já vem
- * repartido pela ordem de vencimento, e o usuário ajusta. A chave só muda depois de o servidor responder.
- */
-function DialogoVincular({ doc, etag, idBase, notify, onCancelar, onVinculado, onConflito }: {
-  doc: BusinessDocument;
-  etag: string;
-  idBase: string;
-  notify: (m: StatusMessage) => void;
-  onCancelar: () => void;
-  onVinculado: (d: BusinessDocument, etag?: string) => void;
-  onConflito: () => void;
-}) {
-  const [parcelas, setParcelas] = useState<TitleInvoicing[] | null>(null);
-  const [valores, setValores] = useState<Record<string, string>>({});
-  const [erros, setErros] = useState<Record<string, string>>({});
-  const [enviando, setEnviando] = useState(false);
-  const chave = useRef(novaChave());
-
-  useEffect(() => {
-    const ja = new Set(doc.links.filter((l) => l.status === 'ATIVO').map((l) => l.titleId));
-    api
-      .get<TitleInvoicing[]>(`/api/v1/invoicing?customerId=${doc.customerId}`)
-      .then((r) => {
-        const livres = r.data.filter((p) => !ja.has(p.titleId) && p.titleStatus !== 'CANCELLED' && BigInt(p.toInvoiceCents) > 0n);
-        // Sugestão: o que está sem vínculo na nota, pela ordem de vencimento, até o a faturar de cada parcela.
-        let resta = BigInt(doc.unlinkedCents);
-        const sugestao: Record<string, string> = {};
-        livres.forEach((p) => {
-          const v = resta < BigInt(p.toInvoiceCents) ? resta : BigInt(p.toInvoiceCents);
-          sugestao[p.titleId] = v > 0n ? centavos(v.toString()) : '';
-          resta -= v;
-        });
-        setParcelas(livres);
-        setValores(sugestao);
-      })
-      .catch((e: ApiError) => notify({ tone: 'erro', text: `${e.message} (${e.code})` }));
-  }, [doc, notify]);
-
-  const escolhidas = (parcelas ?? []).filter((p) => {
-    const c = centavosParaApi(valores[p.titleId] ?? '');
-    return !!c && c !== '0' && !/^0+$/.test(c);
-  });
-  const soma = escolhidas.reduce((t, p) => {
-    const c = centavosParaApi(valores[p.titleId] ?? '') ?? '';
-    return t + (/^\d+$/.test(c) ? BigInt(c) : 0n);
-  }, 0n);
-
-  const confirmar = async () => {
-    if (enviando) return;
-    const falta: Record<string, string> = {};
-    escolhidas.forEach((p) => {
-      if (!/^\d+$/.test(centavosParaApi(valores[p.titleId] ?? '') ?? '')) falta[p.titleId] = 'Valor inválido.';
-    });
-    if (escolhidas.length === 0) falta.geral = 'Informe o valor de ao menos uma parcela.';
-    if (Object.keys(falta).length > 0) return setErros(falta);
-    setEnviando(true);
-    try {
-      const r = await api.post<BusinessDocument>(`/api/v1/documents/${doc.id}/links`,
-        { links: escolhidas.map((p) => ({ titleId: p.titleId, amountCents: centavosParaApi(valores[p.titleId]) })) },
-        { 'If-Match': etag, 'Idempotency-Key': chave.current });
-      chave.current = novaChave();
-      onVinculado(r.data, r.etag);
-    } catch (e) {
-      const x = e as ApiError;
-      if (x.isNetwork) {
-        notify({ tone: 'aviso', text: `Sem conexão com o servidor; confirme de novo para reenviar os mesmos vínculos (${x.code})` });
-      } else if (x.isConflict) {
-        onConflito();
-      } else {
-        // O servidor respondeu e nada foi gravado: a próxima tentativa é outro comando.
-        chave.current = novaChave();
-        const m: Record<string, string> = {};
-        x.details.forEach((d) => {
-          const i = /^links\[(\d+)\]/.exec(d.field ?? '');
-          if (i && escolhidas[Number(i[1])]) m[escolhidas[Number(i[1])].titleId] = d.message;
-          else m.geral = d.message;
-        });
-        setErros(Object.keys(m).length > 0 ? m : { geral: x.message });
-        notify({ tone: 'erro', text: `${x.message} (${x.code}) [${x.correlationId ?? '—'}]` });
-      }
-    } finally {
-      setEnviando(false);
-    }
-  };
-
-  return (
-    <Dialog
-      icon="info"
-      label="Vincular parcelas"
-      larga
-      onEscape={onCancelar}
-      buttons={[
-        { label: 'Vincular', primary: true, onClick: () => void confirmar() },
-        { label: 'Cancelar', onClick: onCancelar },
-      ]}
-    >
-      {numeroDaNota(doc)} — {reais(doc.unlinkedCents)} sem vínculo. O vínculo não pode passar do que falta faturar na parcela; a nota
-      não cria cobrança nem muda o saldo a receber.
-      <div className="rp-grid-rolagem rp-rolagem rp-vincular">
-        <table className="rp-grid rp-grid--edicao" aria-label="Parcelas do cliente">
-          <thead>
-            <tr>
-              <th>Parcela</th>
-              <th>Descrição</th>
-              <th>Vencimento</th>
-              <th className="num">Valor</th>
-              <th className="num">Faturado</th>
-              <th className="num">A faturar</th>
-              <th className="num rp-linhas__valor">Vincular</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(parcelas ?? []).map((p) => (
-              <tr key={p.titleId}>
-                <td>{p.titleCode}</td>
-                <td>{p.label}</td>
-                <td>{dataDaApi(p.dueDate)}</td>
-                <td className="num">{reais(p.originalCents)}</td>
-                <td className="num">{reais(p.invoicedCents)}</td>
-                <td className="num">{reais(p.toInvoiceCents)}</td>
-                <td>
-                  <input id={`${idBase}-${p.titleCode}`} className="rp-field rp-field--num" value={valores[p.titleId] ?? ''} maxLength={20} inputMode="decimal"
-                    aria-label={`Vincular à parcela ${p.titleCode}`} aria-invalid={!!erros[p.titleId]}
-                    onChange={(e) => {
-                      setValores((v) => ({ ...v, [p.titleId]: e.target.value }));
-                      setErros({});
-                    }}
-                    onBlur={() => {
-                      const c = centavosParaApi(valores[p.titleId] ?? '');
-                      if (c && /^\d+$/.test(c)) setValores((v) => ({ ...v, [p.titleId]: centavos(c) }));
-                    }}
-                    onKeyDown={(e) => e.key === 'Enter' && void confirmar()} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colSpan={6}>Soma dos vínculos</td>
-              <td className="num" aria-label="Soma dos vínculos">{reais(soma.toString())}</td>
-            </tr>
-          </tfoot>
-        </table>
-        {parcelas?.length === 0 && <p className="rp-jlista__vazio">O cliente não tem parcelas com valor a faturar.</p>}
-      </div>
-      {Object.entries(erros).map(([k, v]) => (
-        <span key={k} className="rp-campo-erro">
-          <i className="rp-ico rp-ico-status-erro" aria-hidden="true" /> {k === 'geral' ? v : `${parcelas?.find((p) => p.titleId === k)?.titleCode}: ${v}`}
-        </span>
-      ))}
-    </Dialog>
-  );
-}

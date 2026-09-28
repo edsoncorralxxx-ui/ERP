@@ -1,10 +1,25 @@
 # Sprint 6 — Documentos e faturamento vinculados às parcelas
 
-Situação: **Entregue para Review** (28/09/2026). Planning aprovado pelo PO em 28/09/2026 ("aprovado, implemente a sprint 6"), com as decisões propostas abaixo; as regras de negócio pendentes seguem as premissas do B01, para aceite ou ajuste na Review.
+Situação: **Entregue para Review, com o ajuste pedido pelo PO na Review** (28/09/2026). Planning aprovado pelo PO em 28/09/2026 ("aprovado, implemente a sprint 6"); na Review o PO mudou a regra do faturamento para o **regime de caixa** (ver "Ajuste da Review" abaixo), e a sprint foi refeita nesse ponto.
 
 ## Objetivo
 
 Registrar o faturamento sem duplicar cobrança: lançar a nota fiscal de venda emitida fora do Renda+ e **vinculá-la às parcelas que já existem**, inteira ou em partes, de forma que o pedido mostre sempre quanto já foi faturado e quanto falta faturar — com o valor vinculado nunca passando do total da nota nem do valor da parcela, mesmo com lançamentos simultâneos. Faturamento e recebimento continuam independentes: a nota não cria título, não muda saldo a receber nem caixa. Primeira fatia do módulo `documentos` (B06).
+
+## Ajuste da Review — regime de caixa (decisão do PO, 28/09/2026)
+
+Na primeira entrega a nota era digitada linha a linha e vinculada a qualquer parcela até o valor dela. O PO decidiu:
+
+| Tema | Decisão |
+|---|---|
+| PD-023 — o que a nota fatura | **Só o recebido que ainda não tem nota** (a emitir = recebido − faturado, por parcela e por pedido). Nota antes do recebimento é recusada (`DOCUMENT_EXCEEDS_RECEIVED`) |
+| Como a nota nasce | A partir do **pedido**: o usuário escolhe o pedido, o sistema mostra o a emitir e monta a nota; o usuário emite no portal da SEFAZ ou da prefeitura e registra aqui número, série e emissão. O valor pode ser menor que o a emitir (nota parcial) |
+| Linhas | Montadas pelo sistema, **proporcionais às linhas do pedido** (equipamento e material = Produto, serviço = Serviço), com os centavos que sobram na primeira linha |
+| Vínculos | Montados pelo sistema, **pela ordem de vencimento** das parcelas, até o a emitir de cada uma |
+| Notas a emitir | Nova lista *Faturamento → Notas a emitir* com cada pedido, o recebido, o faturado, o a emitir e quanto é produto e serviço; a seta abre a nota já com o pedido. No pedido, o valor "A emitir" e o botão **Registrar nota** |
+| O Renda+ emite a nota? | Não: registra a nota emitida fora. Emissão pela SEFAZ/prefeitura (certificado digital, XML, autorização) pode virar uma sprint própria |
+| Estorno de recebimento já faturado | Permitido (o dinheiro voltou); o pedido mostra "Faturado além do recebido" |
+| Desfazer vínculo | Continua na API; a tela não oferece mais (para corrigir, cancela-se a nota e registra-se de novo) |
 
 ## Pendências da Review da Sprint 5 (antes do planning)
 
@@ -60,16 +75,16 @@ Emissão de NF-e/NFS-e e comunicação com SEFAZ/prefeitura; importação de XML
 
 ## Como verificar (ao final)
 
-1. Confirmar um pedido com duas parcelas (R$ 55.500,00 e R$ 100.000,00) e receber R$ 20.000,00 da primeira, como na Sprint 5.
-2. *Faturamento → Documentos e faturamento → Novo*: saída, cliente do pedido, série 1, número 1234, emissão hoje (competência sugerida no mês), linha de produto R$ 92.500,00. **Adicionar**.
-3. **Vincular parcelas**: R$ 55.500,00 na parcela 1 (já parcialmente recebida) e R$ 37.000,00 na parcela 2 → a nota fica totalmente vinculada.
-4. Abrir o pedido: faturado R$ 92.500,00, a faturar R$ 63.000,00; o saldo a receber **não mudou** (R$ 135.500,00).
-5. Nova nota 1235 de R$ 70.000,00 vinculando R$ 63.000,01 na parcela 2 → recusado no campo com "A faturar da parcela: R$ 63.000,00."; vincular R$ 63.000,00 → aceito; a nota fica com R$ 7.000,00 sem vínculo.
-6. Repetir a nota 1234 da mesma série para o mesmo cliente → recusado apontando a nota existente.
-7. **Cancelar pedido** → recusado enquanto houver nota vinculada.
-8. **Cancelar** a nota 1235 com motivo → a faturar do pedido volta a R$ 63.000,00; o *Histórico* mostra registro, vínculos e cancelamento.
-9. Lista com a competência do mês: total faturado R$ 92.500,00 (a nota cancelada fica fora).
-10. Entrar como Consulta: vê notas e vínculos; não registra, não vincula, não cancela.
+1. Confirmar um pedido de R$ 155.500,00 com equipamento (R$ 100.000,00) e instalação (serviço, R$ 55.500,00), em duas parcelas (R$ 55.500,00 e R$ 100.000,00), e receber R$ 20.000,00 da primeira.
+2. *Faturamento → Notas a emitir*: o pedido aparece com R$ 20.000,00 a emitir — produto R$ 12.861,74 e serviço R$ 7.138,26.
+3. Pela seta, a nota abre com o pedido, as linhas e a parcela já montadas. Emitir a nota no portal; informar número 1234, série 1 e emissão; **Adicionar**. O pedido some da lista; o saldo a receber continua R$ 135.500,00.
+4. Receber mais R$ 35.500,00 da parcela 1 e R$ 10.000,00 da parcela 2: o pedido volta com R$ 45.500,00 a emitir. Valor da nota R$ 45.500,01 → recusado com "A emitir do pedido: R$ 45.500,00."; R$ 30.000,00 → a aba Parcelas mostra tudo na parcela 1 (a mais antiga); número 1235, **Adicionar**.
+5. Nova nota do mesmo pedido com o número 1234 → recusada com "Já registrada como DF…".
+6. Abrir o pedido → *Projeto e títulos*: Faturado R$ 50.000,00, A emitir R$ 15.500,00 e o botão **Registrar nota**.
+7. **Cancelar pedido** → recusado: há recebimento e nota vinculada (a mensagem lista os dois).
+8. Na nota 1235, **Cancelar documento** com motivo → o pedido volta a ter R$ 45.500,00 a emitir.
+9. *Documentos e faturamento*, buscando o cliente: só a nota 1234 ativa; "Faturado da lista: R$ 20.000,00".
+10. Entrar como Consulta: vê notas e notas a emitir; não registra, não cancela, não classifica.
 
 Automático: `cd apps/desktop && npm run e2e` (servidor rodando; ver README) — e o job `e2e` do CI.
 
@@ -90,30 +105,34 @@ O PO aprovou o planning sem responder item a item; a sprint seguiu as propostas,
 
 ## Review — evidências
 
+Depois do ajuste da Review (regime de caixa):
+
 | Item | Resultado | Evidência |
 |---|---|---|
-| S6-01 Registrar | Pronto | `DocumentosApiTest.notaVinculadaAsParcelasMostraFaturadoSemMudarOSaldo`: nota `DF` idempotente (mesma chave → o mesmo documento; outro corpo → `IDEMPOTENCY_KEY_REUSED`); número repetido — inclusive com zeros à esquerda — → `DOCUMENT_DUPLICATE` apontando o código; evento `DocumentRegistered` com o payload do catálogo. `registroConfereCamposClienteDaParcelaEClassificacao`: série, número, emissão futura, competência inválida, linha sem descrição/tipo/valor e sem linhas, todos apontados no campo; duas linhas (Produto e Serviço) somam o total |
-| S6-02 Vincular (PD-023) | Pronto | Mesmo teste: a nota de R$ 92.500,00 fatura a parcela 1 inteira (já parcialmente recebida) e R$ 37.000,00 da parcela 2; o saldo a receber e a versão dos títulos não mudam; R$ 63.000,01 → `LINK_EXCEEDS_TITLE` "A faturar da parcela: R$ 63.000,00."; acima do total da nota → `LINK_EXCEEDS_DOCUMENT`; versão velha → 412; parcela de outro cliente recusada; mesma parcela duas vezes na nota recusada |
-| S6-03 Vínculos simultâneos | Pronto | `vinculosSimultaneosNaMesmaParcelaNaoPassamDoValor`: duas notas vinculando R$ 70,00 ao mesmo tempo numa parcela de R$ 100,00 → uma 200 e uma 422 com "A faturar da parcela: R$ 30,00."; um vínculo só. Barreiras no banco: `invoiced_cents <= limit_cents` por parcela e `linked_cents <= total_cents` por nota |
-| S6-04 Cancelar e desfazer | Pronto | Motivo obrigatório; cancelar libera os vínculos (preservados como desfeitos, com motivo) e repetir devolve o mesmo; nota cancelada → 409 ao vincular; o número fica livre; desfazer um vínculo devolve o a faturar da parcela; trilha na nota e na parcela; eventos `DocumentCancelled` e `DocumentLinkRemoved` |
-| S6-05 Pedido faturado | Pronto | `pedidoFaturadoSoCancelaDepoisDeCancelarANota`: cancelar pedido com nota vinculada → `CANCELLATION_BLOCKED_BY_EFFECTS` "vinculada à nota nº 900", nenhum título cancelado; depois de cancelar a nota, o pedido cancela; parcela cancelada não recebe vínculo. Com recebimento **e** nota, a recusa lista os dois efeitos. O financeiro recusa pela porta `TitleCancellationGuard`, implementada por documentos (sem dependência nova do financeiro) |
-| S6-06 Classificar | Pronto | Natureza obrigatória; projeto só o de uma parcela vinculada; reclassificar gera a revisão 2; evento `DocumentClassified` com a revisão |
-| S6-07 Telas | Pronto | `Sprint6Windows.test.tsx` (8 testes): registro com a competência da emissão e **a mesma chave reenviada depois de queda de rede**; Vincular parcelas com a sugestão por vencimento, a parcela cancelada fora e a recusa apontada na parcela; desfazer e cancelar com motivo e a versão lida; classificação; Consulta sem botões; Título a receber com Faturado, A faturar e a aba Faturamento com a seta para a nota. Pedido e Detalhe do projeto ganharam as colunas Faturado e A faturar |
-| S6-08 Contratos | Pronto | Migração V10; `docs/backend/api/openapi.yaml` (+8 rotas; `OpenApiContractTest` passa); permissões `document.*` nos perfis; erros `DOCUMENT_INVALID`, `DOCUMENT_DUPLICATE`, `LINK_EXCEEDS_DOCUMENT`, `LINK_EXCEEDS_TITLE` no catálogo; comandos `RemoveDocumentLink` e `CancelDocument` e seus eventos no B01; `menu.json` com Documentos e faturamento implementado; `ArchitectureTest` passa (documentos → financeiro só pelas APIs públicas); verificador B01 OK |
-| S6-09 Roteiro com conferência pela API | Pronto | `apps/desktop/e2e/sprint-06.e2e.ts` executado aqui no Chromium contra o servidor real (banco vazio), junto com os das Sprints 4 e 5: 3 roteiros passando. Cada nota criada pela tela é conferida pela API (documento, vínculos, faturado das parcelas e saldo) |
-| S6-10 Dívidas da Sprint 5 | Pronto | (a) `/api/v1/status` devolve `businessDate` (fuso de São Paulo) e o app usa esse dia nos campos de data enquanto o computador estiver no mesmo dia; (b) conferência recebido do título = Σ alocações de recebimentos não estornados, e movimentos de caixa por recebimento, nos testes do financeiro; conferência equivalente para o faturado das parcelas e o vinculado das notas |
+| S6-01 Registrar pelo pedido | Pronto | `DocumentosApiTest.notaDoPedidoFaturaSoORecebidoComLinhasProporcionaisEVinculosPorVencimento`: sem recebimento → `DOCUMENT_EXCEEDS_RECEIVED`; com R$ 20.000,00 recebidos, a nota sai com as linhas R$ 12.861,74 (Produto) e R$ 7.138,26 (Serviço) e o vínculo na parcela 1; idempotente pela chave; número repetido (inclusive com zeros à esquerda) → `DOCUMENT_DUPLICATE`; evento `DocumentRegistered` com o pedido. `registroConfereCamposEClassificaComOProjetoDoPedido`: pedido, série, número, emissão futura, competência e valor zero apontados no campo |
+| S6-02 Só o recebido (PD-023) | Pronto | Mesmo teste: R$ 20.000,01 → "A emitir do pedido: R$ 20.000,00."; nota parcial de R$ 30.000,00 vai à parcela mais antiga e a seguinte fecha R$ 15.500,00 entre as duas parcelas; vínculo manual acima do recebido sem nota → `LINK_EXCEEDS_TITLE` "A emitir da parcela: R$ 0,00."; o saldo a receber não muda; estorno de recebimento já faturado é aceito e o pedido mostra R$ 20.000,00 faturados além do recebido |
+| S6-03 Notas simultâneas | Pronto | `notasSimultaneasDoMesmoPedidoNaoPassamDoRecebido`: duas notas de R$ 70,00 ao mesmo tempo num pedido com R$ 100,00 recebidos → uma 201 e uma 422 com "A emitir do pedido: R$ 30,00."; uma nota e um vínculo. Barreiras no banco: faturado ≤ valor da parcela e vinculado ≤ total da nota |
+| S6-04 Cancelar | Pronto | Motivo obrigatório; cancelar desfaz os vínculos e o pedido volta à lista a emitir; repetir devolve o mesmo cancelamento; o número fica livre; desfazer vínculo pela API devolve o a emitir da parcela |
+| S6-05 Pedido faturado | Pronto | `pedidoFaturadoSoCancelaDepoisDeCancelarANotaEEstornar`: a recusa lista o recebimento e a nota; depois de cancelar a nota e estornar, o pedido cancela; pedido cancelado não recebe nota |
+| S6-06 Classificar | Pronto | Natureza obrigatória; projeto só o das parcelas vinculadas; reclassificar gera a revisão 2; evento `DocumentClassified` |
+| S6-07 Telas | Pronto | `Sprint6Windows.test.tsx` (9 testes): nota aberta com o pedido, linhas e a emitir do servidor; nota parcial refeita pelo servidor; **a mesma chave reenviada depois de queda de rede**; valor acima do a emitir apontado no campo; pedido sem nada a emitir não deixa adicionar; cancelar com a versão lida; classificação; Consulta sem botões; lista Notas a emitir com a seta que abre a nota do pedido; Título a receber com Faturado, A emitir e as notas vinculadas. Pedido e Detalhe do projeto com as colunas Faturado e A emitir |
+| S6-08 Contratos | Pronto | Migrações V10 e V11 (pedido na nota); `openapi.yaml` com `/invoicing/orders` e `/invoicing/orders/{orderId}` (`OpenApiContractTest` passa); comercial ganhou a porta pública `SalesOrderQueryApi`, e documentos passa a depender de comercial (`modulos.json`, `ArchitectureTest` passa); PD-023 respondida em `pendencias.json`; contrato do formulário com o pedido e linhas e vínculos derivados; `menu.json` com Notas a emitir; erro `DOCUMENT_EXCEEDS_RECEIVED` no catálogo; verificador B01 OK |
+| S6-09 Roteiro com conferência pela API | Pronto | `apps/desktop/e2e/sprint-06.e2e.ts` refeito para o caixa (passos 2 a 9 acima), conferindo pela API cada nota criada pela tela; executado aqui no Chromium com os roteiros das Sprints 4 e 5: 3 passando |
+| S6-10 Dívidas da Sprint 5 | Pronto | Dia de negócio do servidor nos campos de data; conferência recebido × alocações e faturado × vínculos nos testes |
 
-Testes executados: servidor **86** (PostgreSQL 16 real; eram 81), app **72** (eram 64), typecheck e build do app e do Electron, verificador B01 + 15 testes, roteiros Playwright das Sprints 4, 5 e 6.
+Testes executados: servidor **86** (PostgreSQL 16 real), app **73**, typecheck do app e do Electron, verificador B01 + 15 testes, roteiros Playwright das Sprints 4, 5 e 6.
 
 **Não verificado aqui:** o app dentro do Electron no macOS (ambiente Linux sem tela).
 
 **Limitações conhecidas:**
-- O faturado de cada parcela é mantido numa tabela própria (sob bloqueio) além dos vínculos; as duas fontes são gravadas na mesma transação e conferidas nos testes, mas ainda não há rotina de conferência em produção.
-- A tela Vincular parcelas mostra as parcelas do cliente, de todos os pedidos; não filtra por pedido.
-- A lista de documentos soma o faturado da lista visível (até 500 notas); o painel de faturamento por competência (IND-005) entra com os indicadores.
+- Uma nota por vez reúne produto e serviço, nas proporções do pedido. No Brasil, produto (NF-e) e serviço (NFS-e) costumam sair em documentos separados: a tela mostra quanto é cada um, mas o registro de duas notas (uma só de produto, outra só de serviço) para o mesmo recebimento fica para o próximo refinamento.
+- O faturado de cada parcela é mantido numa tabela própria (sob bloqueio) além dos vínculos; as duas fontes são conferidas nos testes, sem rotina de conferência em produção.
+- A lista de notas a emitir considera até 500 pedidos confirmados.
+
 
 ## Retrospectiva
 
 - Funcionou: a porta `TitleCancellationGuard` resolveu o bloqueio do cancelamento do pedido sem o financeiro depender de documentos, e o teste concorrente escrito antes da tela garantiu o bloqueio por parcela desde o primeiro commit.
 - Melhorar: o roteiro Playwright achou uma recusa que listava só o primeiro efeito (recebimento) e escondia a nota vinculada; a recusa agora lista todos. Vale conferir as mensagens de recusa com mais de uma causa já nos testes do servidor.
-- Ação: na Sprint 7 (fiscal gerencial), a competência das notas desta sprint alimenta a receita por competência; conferir no roteiro que o total por competência bate com a lista de documentos.
+- Melhorar: a regra do faturamento (PD-023) ficou como premissa até a Review e foi trocada lá, depois de a tela pronta. Pendência de negócio que muda a tela deve ser confirmada com o PO no planning, com um exemplo numérico, antes de implementar.
+- Ação: na Sprint 7 (fiscal gerencial), a competência das notas desta sprint alimenta a receita por competência; conferir no roteiro que o total por competência bate com a lista de documentos. E perguntar no planning se produto e serviço saem em notas separadas.

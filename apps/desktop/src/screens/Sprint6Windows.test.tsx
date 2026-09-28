@@ -2,12 +2,13 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { setTransport, type TransportRequest, type TransportResponse } from '../api/client';
-import type { BusinessDocument, Receivable, SessionUser, TitleInvoicing } from '../api/types';
+import type { BusinessDocument, OrderInvoicing, Receivable, SessionUser, TitleInvoicing } from '../api/types';
 import { competenciaDaApi, competenciaParaApi, definirHojeDoServidor, hojeIso } from '../format';
 import { SessionContext, sessionOf } from '../shell/SessionContext';
 import { escolher } from '../test/selecao';
 import { WindowContext, type WindowApi } from '../windows/WindowContext';
 import { DocumentWindow } from './DocumentWindow';
+import { ToIssueWindow } from './ToIssueWindow';
 import { ReceivableWindow } from './ReceivableWindow';
 
 const ADMIN: SessionUser = {
@@ -29,10 +30,9 @@ function abrir(janela: ReactNode, user: SessionUser = ADMIN) {
   return winApi;
 }
 
-const clientes = [{ id: 'c-1', code: 'C00001', legalName: 'Fecularia Vale Ltda.', tradeName: null, cnpj: null, city: null, state: null, status: 'ATIVO' }];
-
 const nota: BusinessDocument = {
-  id: 'd-1', code: 'DF00001', direction: 'SAIDA', customerId: 'c-1', customerCode: 'C00001', customerName: 'Fecularia Vale Ltda.', series: '1',
+  id: 'd-1', code: 'DF00001', direction: 'SAIDA', customerId: 'c-1', customerCode: 'C00001', customerName: 'Fecularia Vale Ltda.',
+  orderId: 'o-1', orderCode: 'PV00001', series: '1',
   number: '1234', issueDate: '2026-09-28', competence: '2026-09', totalCents: '9250000', linkedCents: '0', unlinkedCents: '9250000',
   lines: [{ seq: 1, description: 'Balança de fluxo BF-200', kind: 'PRODUTO', amountCents: '9250000' }], links: [], notes: null, operationNature: null,
   projectId: null, projectCode: null, classificationRevision: 0, status: 'ATIVO', cancelReason: null, version: '1', createdAt: '2026-09-28T12:00:00Z',
@@ -42,7 +42,7 @@ const nota: BusinessDocument = {
 const parcela = (id: string, code: string, valor: string, faturado: string, extra: Partial<TitleInvoicing> = {}): TitleInvoicing => ({
   titleId: id, titleCode: code, label: `Pedido PV00001 — parcela ${code.slice(-1)}/2`, dueDate: `2026-10-1${code.slice(-1)}`, titleStatus: 'OPEN',
   projectId: 'pj-1', originalCents: valor, receivedCents: '0', balanceCents: valor, invoicedCents: faturado,
-  toInvoiceCents: (BigInt(valor) - BigInt(faturado)).toString(), documents: [], ...extra,
+  toInvoiceCents: (BigInt(valor) - BigInt(faturado)).toString(), toIssueCents: '0', documents: [], ...extra,
 });
 
 const vinculada = (links: [string, string, string][]): BusinessDocument => {
@@ -74,127 +74,133 @@ describe('Datas de negócio e competência', () => {
   });
 });
 
-describe('Documento de faturamento', () => {
-  it('registra a nota com a competência da emissão e reenvia a mesma chave depois de uma queda de rede', async () => {
+/** Pedido PV00001 pelo caixa: R$ 20.000,00 recebidos na parcela 1, sem nota; proposta para {@code valor}. */
+const pedidoCaixa = (valor = '2000000', extra: Partial<OrderInvoicing> = {}): OrderInvoicing => {
+  const v = BigInt(valor);
+  const produto = (v * 10000000n) / 15550000n + (v === 2000000n ? 1n : v === 1000000n ? 1n : 0n);
+  return {
+    id: 'o-1', orderCode: 'PV00001', orderStatus: 'CONFIRMED', customerId: 'c-1', customerCode: 'C00001', customerName: 'Fecularia Vale Ltda.',
+    projectId: 'pj-1', totalCents: '15550000', receivedCents: '2000000', invoicedCents: '0', toIssueCents: '2000000', beyondReceivedCents: '0',
+    proposedCents: valor, productCents: produto.toString(), serviceCents: (v - produto).toString(),
+    parcels: [
+      { titleId: 't-1', titleCode: 'CR00001', label: 'Pedido PV00001 — parcela 1/2', dueDate: '2026-10-10', titleStatus: 'PARTIAL', originalCents: '5550000',
+        receivedCents: '2000000', invoicedCents: '0', toIssueCents: '2000000', proposedCents: valor },
+      { titleId: 't-2', titleCode: 'CR00002', label: 'Pedido PV00001 — parcela 2/2', dueDate: '2026-11-10', titleStatus: 'OPEN', originalCents: '10000000',
+        receivedCents: '0', invoicedCents: '0', toIssueCents: '0', proposedCents: '0' },
+    ],
+    lines: [
+      { seq: 1, description: 'Balança de fluxo BF-200', kind: 'PRODUTO', amountCents: produto.toString() },
+      { seq: 2, description: 'Instalação e comissionamento', kind: 'SERVICO', amountCents: (v - produto).toString() },
+    ],
+    ...extra,
+  };
+};
+
+describe('Documento de faturamento pelo caixa', () => {
+  it('registra a nota do pedido com as linhas e parcelas do sistema e reenvia a mesma chave depois de uma queda de rede', async () => {
     const posts: TransportRequest[] = [];
+    const propostas: string[] = [];
     let falhaDeRede = true;
     setTransport(async (req) => {
-      if (req.path === '/api/v1/customers?status=TODOS') return resposta(200, clientes);
+      if (req.path === '/api/v1/invoicing/orders?status=A_EMITIR') return resposta(200, [pedidoCaixa()]);
+      if (req.path.startsWith('/api/v1/invoicing/orders/o-1')) {
+        propostas.push(req.path);
+        return resposta(200, pedidoCaixa(req.path.endsWith('=1000000') ? '1000000' : '2000000'));
+      }
       if (req.path === '/api/v1/documents' && req.method === 'POST') {
         posts.push(req);
         if (falhaDeRede) {
           falhaDeRede = false;
           throw new Error('rede caiu');
         }
-        return resposta(201, nota, { etag: '"1"' });
+        return resposta(201, { ...nota, totalCents: '1000000', linkedCents: '1000000', unlinkedCents: '0', version: '2' }, { etag: '"2"' });
       }
       return naoAchou();
     });
-    const win = abrir(<DocumentWindow recordKey="novo-1" />);
+    const win = abrir(<DocumentWindow recordKey="novo-1:o-1" />);
     const user = userEvent.setup();
-    await escolher(user, await screen.findByRole('combobox', { name: 'Cliente' }), 'C00001 — Fecularia Vale Ltda.');
+    // O pedido já vem escolhido: cliente, recebido, a emitir e a nota proposta.
+    await waitFor(() => expect(screen.getByLabelText('A emitir')).toHaveValue('R$ 20.000,00'));
+    expect(screen.getByLabelText('Cliente')).toHaveValue('C00001 — Fecularia Vale Ltda.');
+    expect(screen.getByLabelText('Valor da nota')).toHaveValue('20.000,00');
+    expect(screen.getByRole('table', { name: 'Linhas da nota' })).toHaveTextContent('Balança de fluxo BF-200ProdutoR$ 12.861,74');
+    expect(screen.getByRole('table', { name: 'Linhas da nota' })).toHaveTextContent('Instalação e comissionamentoServiçoR$ 7.138,26');
+    // Nota parcial: o servidor refaz a proposta para o valor digitado.
+    await user.clear(screen.getByLabelText('Valor da nota'));
+    await user.type(screen.getByLabelText('Valor da nota'), '10.000');
+    await user.click(screen.getByRole('tab', { name: /Parcelas/ }));
+    await waitFor(() => expect(screen.getByLabelText('Soma das parcelas nesta nota')).toHaveTextContent('R$ 10.000,00'));
+    expect(propostas).toContain('/api/v1/invoicing/orders/o-1?amountCents=1000000');
+    expect(screen.getByRole('table', { name: 'Parcelas do pedido' })).toHaveTextContent('CR00001');
     await user.type(screen.getByLabelText('Nº da nota'), '1234');
     const emissao = screen.getByLabelText('Emissão', { selector: 'input' });
     await user.clear(emissao);
     await user.type(emissao, '28/09/2026');
-    // A competência acompanha a emissão.
     expect(screen.getByLabelText('Competência')).toHaveValue('09/2026');
-    await user.click(screen.getByText('Clique para adicionar uma linha…'));
-    await user.type(screen.getByLabelText('Descrição da linha 1'), 'Balança de fluxo BF-200');
-    await user.type(screen.getByLabelText('Valor da linha 1'), '92.500,00');
-    expect(screen.getByLabelText('Total da nota')).toHaveValue('R$ 92.500,00');
     await user.click(screen.getByRole('button', { name: 'Adicionar' }));
     await user.click(screen.getByRole('button', { name: 'Adicionar' }));
     await waitFor(() => expect(screen.getByLabelText('Documento')).toHaveValue('DF00001'));
     expect(posts).toHaveLength(2);
     expect(posts[0].headers?.['Idempotency-Key']).toBe(posts[1].headers?.['Idempotency-Key']);
     expect(JSON.parse(posts[1].body!)).toEqual({
-      direction: 'SAIDA', customerId: 'c-1', series: '1', number: '1234', issueDate: '2026-09-28', competence: '2026-09',
-      lines: [{ description: 'Balança de fluxo BF-200', kind: 'PRODUTO', amountCents: '9250000' }], notes: null,
+      direction: 'SAIDA', orderId: 'o-1', series: '1', number: '1234', issueDate: '2026-09-28', competence: '2026-09', amountCents: '1000000', notes: null,
     });
-    expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Documento DF00001 (nota nº 1234) adicionado com sucesso' });
+    expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Documento DF00001 (nota nº 1234) adicionado com sucesso: R$ 10.000,00 faturados no pedido PV00001' });
     expect(screen.getByRole('tab', { name: /Vínculos/ })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('vincula sugerindo o sem vínculo por vencimento e aponta na parcela a recusa acima do a faturar', async () => {
-    const posts: TransportRequest[] = [];
-    let recusar = true;
+  it('aponta no valor da nota o que passa do recebido e não deixa registrar pedido sem nada a emitir', async () => {
     setTransport(async (req) => {
-      if (req.path === '/api/v1/documents/d-1') return resposta(200, nota, { etag: '"1"' });
-      if (req.path === '/api/v1/invoicing?customerId=c-1') {
-        return resposta(200, [parcela('t-1', 'CR00001', '5550000', '0'), parcela('t-2', 'CR00002', '10000000', '0'),
-          parcela('t-3', 'CR00003', '100', '0', { titleStatus: 'CANCELLED' })]);
+      if (req.path === '/api/v1/invoicing/orders?status=A_EMITIR') return resposta(200, [pedidoCaixa()]);
+      if (req.path === '/api/v1/invoicing/orders/o-1?amountCents=2000001') {
+        return resposta(422, { code: 'DOCUMENT_EXCEEDS_RECEIVED', message: 'O valor passa do recebido sem nota do pedido PV00001 (R$ 20.000,00).',
+          details: [{ field: 'amountCents', message: 'A emitir do pedido: R$ 20.000,00.' }] });
       }
-      if (req.path === '/api/v1/documents/d-1/links') {
-        posts.push(req);
-        if (recusar) {
-          recusar = false;
-          return resposta(422, { code: 'LINK_EXCEEDS_TITLE', message: 'O vínculo passa do que falta faturar na parcela CR00002 (R$ 37.000,00).',
-            details: [{ field: 'links[1].amountCents', message: 'A faturar da parcela: R$ 37.000,00.' }] });
-        }
-        return resposta(200, vinculada([['t-1', 'CR00001', '5550000'], ['t-2', 'CR00002', '3700000']]), { etag: '"2"' });
+      if (req.path === '/api/v1/invoicing/orders/o-1') return resposta(200, pedidoCaixa());
+      if (req.path === '/api/v1/invoicing/orders/o-2') {
+        return resposta(200, pedidoCaixa('0', { id: 'o-2', orderCode: 'PV00002', receivedCents: '0', toIssueCents: '0', lines: [], parcels: [] }));
       }
       return naoAchou();
     });
-    const win = abrir(<DocumentWindow recordKey="d-1" />);
+    abrir(<DocumentWindow recordKey="novo-1:o-1" />);
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Vincular parcelas' }));
-    const dialogo = screen.getByRole('alertdialog', { name: 'Vincular parcelas' });
-    // Sugestão: a parcela 1 inteira e o resto na parcela 2; a cancelada não aparece.
-    await waitFor(() => expect(within(dialogo).getByLabelText('Vincular à parcela CR00001')).toHaveValue('55.500,00'));
-    expect(within(dialogo).getByLabelText('Vincular à parcela CR00002')).toHaveValue('37.000,00');
-    expect(within(dialogo).queryByText('CR00003')).toBeNull();
-    expect(within(dialogo).getByLabelText('Soma dos vínculos')).toHaveTextContent('R$ 92.500,00');
-    await user.click(within(dialogo).getByRole('button', { name: 'Vincular' }));
-    expect(await within(dialogo).findByText(/CR00002: A faturar da parcela: R\$ 37\.000,00\./)).toBeInTheDocument();
-    expect(within(dialogo).getByLabelText('Vincular à parcela CR00002')).toHaveAttribute('aria-invalid', 'true');
-    await user.click(within(dialogo).getByRole('button', { name: 'Vincular' }));
-    await waitFor(() => expect(screen.getByLabelText('Vinculado')).toHaveValue('R$ 92.500,00'));
-    expect(posts[1].headers?.['If-Match']).toBe('"1"');
-    expect(posts[0].headers?.['Idempotency-Key']).not.toBe(posts[1].headers?.['Idempotency-Key']);
-    expect(JSON.parse(posts[1].body!)).toEqual({ links: [{ titleId: 't-1', amountCents: '5550000' }, { titleId: 't-2', amountCents: '3700000' }] });
-    expect(screen.getByRole('table', { name: 'Vínculos da nota com as parcelas' })).toHaveTextContent('CR00002');
-    expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Nota nº 1234 vinculada com sucesso: R$ 92.500,00 faturados nas parcelas; restam R$ 0,00 sem vínculo' });
+    await waitFor(() => expect(screen.getByLabelText('Valor da nota')).toHaveValue('20.000,00'));
+    await user.clear(screen.getByLabelText('Valor da nota'));
+    await user.type(screen.getByLabelText('Valor da nota'), '20.000,01');
+    await user.tab();
+    expect(await screen.findByText('A emitir do pedido: R$ 20.000,00.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Valor da nota')).toHaveAttribute('aria-invalid', 'true');
+
+    abrir(<DocumentWindow recordKey="novo-2:o-2" />);
+    expect(await screen.findByText(/O pedido PV00002 não tem recebimento sem nota/)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Adicionar' }).at(-1)).toBeDisabled();
   });
 
-  it('desfaz vínculo e cancela a nota com motivo, com a versão lida', async () => {
+  it('cancela a nota com motivo e a versão lida', async () => {
     const posts: TransportRequest[] = [];
-    let atual = vinculada([['t-1', 'CR00001', '5550000'], ['t-2', 'CR00002', '3700000']]);
+    let atual = vinculada([['t-1', 'CR00001', '2000000']]);
     setTransport(async (req) => {
       if (req.path === '/api/v1/documents/d-1') return resposta(200, atual, { etag: `"${atual.version}"` });
-      if (req.path === '/api/v1/documents/d-1/links/l-1/removals') {
-        posts.push(req);
-        atual = { ...atual, version: '3', linkedCents: '5550000', unlinkedCents: '3700000',
-          links: [atual.links[0], { ...atual.links[1], status: 'DESFEITO', removedReason: 'Parcela errada', removedAt: '2026-09-28T13:00:00Z', removedBy: 'ana' }] };
-        return resposta(200, atual, { etag: '"3"' });
-      }
       if (req.path === '/api/v1/documents/d-1/cancellations') {
         posts.push(req);
-        atual = { ...atual, version: '4', status: 'CANCELADO', cancelReason: 'Valor digitado errado', linkedCents: '0', unlinkedCents: '9250000' };
-        return resposta(200, atual, { etag: '"4"' });
+        atual = { ...atual, version: '3', status: 'CANCELADO', cancelReason: 'Valor digitado errado', linkedCents: '0', unlinkedCents: atual.totalCents };
+        return resposta(200, atual, { etag: '"3"' });
       }
       return naoAchou();
     });
     const win = abrir(<DocumentWindow recordKey="d-1" />);
     const user = userEvent.setup();
     await user.click(await screen.findByRole('tab', { name: /Vínculos/ }));
-    await user.click(screen.getByRole('button', { name: 'Desfazer vínculo com a parcela CR00002' }));
-    const desfazer = screen.getByRole('alertdialog', { name: 'Desfazer vínculo' });
-    await user.type(within(desfazer).getByLabelText('Motivo'), 'Parcela errada');
-    await user.click(within(desfazer).getByRole('button', { name: 'Desfazer' }));
-    await waitFor(() => expect(screen.getByLabelText('Sem vínculo')).toHaveValue('R$ 37.000,00'));
-    expect(posts[0].headers?.['If-Match']).toBe('"2"');
-    expect(JSON.parse(posts[0].body!)).toEqual({ reason: 'Parcela errada' });
-    expect(screen.getByRole('table', { name: 'Vínculos da nota com as parcelas' })).toHaveTextContent('Desfeito');
-
+    expect(screen.getByRole('table', { name: 'Vínculos da nota com as parcelas' })).toHaveTextContent('CR00001');
+    expect(screen.getByLabelText('Pedido')).toHaveValue('PV00001');
     await user.click(screen.getByRole('button', { name: 'Cancelar documento' }));
     const cancelar = screen.getByRole('alertdialog', { name: 'Cancelar documento' });
     await user.type(within(cancelar).getByLabelText('Motivo'), 'Valor digitado errado');
     await user.click(within(cancelar).getByRole('button', { name: 'Cancelar documento' }));
     await waitFor(() => expect(screen.getByLabelText('Motivo do cancelamento')).toHaveValue('Valor digitado errado'));
-    expect(posts[1].headers?.['If-Match']).toBe('"3"');
-    expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Documento DF00001 (nota nº 1234) cancelado com sucesso; os vínculos foram desfeitos' });
-    expect(screen.queryByRole('button', { name: 'Vincular parcelas' })).toBeNull();
+    expect(posts[0].headers?.['If-Match']).toBe('"2"');
+    expect(JSON.parse(posts[0].body!)).toEqual({ reason: 'Valor digitado errado' });
+    expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Documento DF00001 (nota nº 1234) cancelado com sucesso; o valor volta às notas a emitir' });
     expect(screen.queryByRole('button', { name: 'Cancelar documento' })).toBeNull();
   });
 
@@ -222,17 +228,30 @@ describe('Documento de faturamento', () => {
     expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Documento DF00001 classificado com sucesso (revisão 1)' });
   });
 
-  it('Consulta vê a nota e os vínculos sem vincular, desfazer, cancelar nem classificar', async () => {
+  it('Consulta vê a nota e os vínculos sem cancelar nem classificar', async () => {
     setTransport(async (req) => (req.path === '/api/v1/documents/d-1' ? resposta(200, vinculada([['t-1', 'CR00001', '5550000']]), { etag: '"2"' }) : naoAchou()));
     abrir(<DocumentWindow recordKey="d-1" />, CONSULTA);
     const user = userEvent.setup();
     await user.click(await screen.findByRole('tab', { name: /Vínculos/ }));
     expect(screen.getByRole('table', { name: 'Vínculos da nota com as parcelas' })).toHaveTextContent('CR00001');
-    expect(screen.queryByRole('button', { name: /Desfazer/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Vincular parcelas' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Cancelar documento' })).toBeNull();
     await user.click(screen.getByRole('tab', { name: /Classificação/ }));
     expect(screen.queryByRole('button', { name: 'Classificar' })).toBeNull();
+  });
+});
+
+describe('Notas a emitir', () => {
+  it('lista os pedidos com recebimento sem nota e a seta abre a nota nova com o pedido', async () => {
+    setTransport(async (req) => (req.path === '/api/v1/invoicing/orders?status=A_EMITIR' ? resposta(200, [pedidoCaixa()]) : naoAchou()));
+    const win = abrir(<ToIssueWindow />);
+    const user = userEvent.setup();
+    const grade = await screen.findByRole('table', { name: 'Notas a emitir' });
+    await waitFor(() => expect(grade).toHaveTextContent('PV00001'));
+    expect(grade).toHaveTextContent('R$ 20.000,00');
+    expect(grade).toHaveTextContent('A emitir');
+    expect(screen.getByText('A emitir da lista: R$ 20.000,00')).toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: 'Registrar nota do pedido PV00001' }));
+    expect(win.open).toHaveBeenCalledWith('document', expect.stringMatching(/^novo-\d+:o-1$/));
   });
 });
 
@@ -256,7 +275,7 @@ describe('Título a receber com faturamento', () => {
     const win = abrir(<ReceivableWindow recordKey="t-1" />);
     const user = userEvent.setup();
     await waitFor(() => expect(screen.getByLabelText('Faturado')).toHaveValue('R$ 37.000,00'));
-    expect(screen.getByLabelText('A faturar')).toHaveValue('R$ 63.000,00');
+    expect(screen.getByLabelText('A emitir')).toHaveValue('R$ 0,00');
     await user.click(screen.getByRole('tab', { name: /Faturamento/ }));
     expect(screen.getByRole('table', { name: 'Notas vinculadas ao título' })).toHaveTextContent('Nº 1234 / série 1');
     await user.click(screen.getByRole('link', { name: 'Abrir documento DF00001' }));

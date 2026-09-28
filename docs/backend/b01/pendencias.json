@@ -209,7 +209,8 @@
       "premissaB01": "Vínculo documento→parcelas com valor por vínculo; soma vinculada ≤ valor do documento e ≤ valor das parcelas",
       "bloqueia": "B06",
       "responsavel": "Financeiro",
-      "adr": "ADR-010"
+      "adr": "ADR-010",
+      "resposta": "Respondida pelo PO na Review da Sprint 6 (28/09/2026): regime de caixa — a nota é registrada a partir do pedido e fatura só o recebido que ainda não tem nota; linhas proporcionais às do pedido e vínculos pela ordem de vencimento"
     },
     {
       "id": "PD-024",

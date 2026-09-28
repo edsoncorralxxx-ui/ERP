@@ -27,6 +27,7 @@ export type WindowKind =
   | 'bank-accounts'
   | 'documents'
   | 'document'
+  | 'to-issue'
   | 'users'
   | 'password';
 export type WindowMode = 'normal' | 'minimized' | 'maximized';

@@ -172,7 +172,7 @@ export function ReceivableWindow({ recordKey }: { recordKey: string }) {
                   {campo('Recebido', reais(titulo.receivedCents), 'rp-field--num rp-field--curto')}
                   {campo('Saldo', reais(titulo.balanceCents), 'rp-field--num rp-field--curto')}
                   {faturamento && campo('Faturado', reais(faturamento.invoicedCents), 'rp-field--num rp-field--curto')}
-                  {faturamento && campo('A faturar', reais(faturamento.toInvoiceCents), 'rp-field--num rp-field--curto')}
+                  {faturamento && campo('A emitir', reais(faturamento.toIssueCents), 'rp-field--num rp-field--curto')}
                   {campo('Categoria', titulo.category === 'RECEITA_VENDA' ? 'Receita de venda' : titulo.category)}
                   {titulo.projectId && (
                     <>

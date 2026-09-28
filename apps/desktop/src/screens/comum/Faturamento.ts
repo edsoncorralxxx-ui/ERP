@@ -7,7 +7,7 @@ import { useSession } from '../../shell/SessionContext';
 export const FATURAMENTO_ALTERADO = 'renda:faturamento-alterado';
 
 /**
- * Faturado e a faturar das parcelas (IND-003 por parcela), pelos ids. Sem a permissão document.read, fica vazio e as
+ * Faturado, a faturar (IND-003 por parcela) e a emitir (recebido sem nota, regime de caixa) das parcelas, pelos ids. Sem a permissão document.read, fica vazio e as
  * telas simplesmente não mostram as colunas.
  */
 export function useFaturamento(titleIds: string[]): Map<string, TitleInvoicing> | null {
@@ -39,5 +39,5 @@ export function useFaturamento(titleIds: string[]): Map<string, TitleInvoicing> 
 }
 
 /** Soma em centavos de um campo das parcelas conhecidas. */
-export const somaFaturamento = (dados: Map<string, TitleInvoicing>, ids: string[], campo: 'invoicedCents' | 'toInvoiceCents'): string =>
+export const somaFaturamento = (dados: Map<string, TitleInvoicing>, ids: string[], campo: 'invoicedCents' | 'toInvoiceCents' | 'toIssueCents'): string =>
   ids.reduce((t, id) => t + BigInt(dados.get(id)?.[campo] ?? '0'), 0n).toString();

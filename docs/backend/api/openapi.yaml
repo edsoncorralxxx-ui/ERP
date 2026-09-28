@@ -21,10 +21,11 @@ info:
     - Recebimentos (Sprint 5): a baixa (`Idempotency-Key`) reparte o valor entre títulos do mesmo cliente; a soma tem de fechar
       com o total (422 `SETTLEMENT_UNBALANCED`) e nenhum título passa do saldo (422 `INSUFFICIENT_TITLE_BALANCE`, com o saldo
       atual). O estorno é total, com motivo; estornar de novo devolve o mesmo estorno.
-    - Documentos e faturamento (Sprint 6): a nota é emitida fora do Renda+ e registrada (`Idempotency-Key`); não cria título.
-      Vincula-se às parcelas existentes com um valor por vínculo (PD-023): Σ vínculos ≤ total da nota (422 `LINK_EXCEEDS_DOCUMENT`)
-      e faturado da parcela ≤ valor da parcela (422 `LINK_EXCEEDS_TITLE`, com o a faturar), independente do recebimento.
-      Pedido com parcela faturada não é cancelado (422 `CANCELLATION_BLOCKED_BY_EFFECTS`).
+    - Documentos e faturamento (Sprint 6, regime de caixa decidido na Review — PD-023): a nota é emitida fora do Renda+ e
+      registrada a partir do pedido (`Idempotency-Key`); não cria título. Fatura só o recebido que ainda não tem nota (a emitir
+      = recebido − faturado): acima disso, 422 `DOCUMENT_EXCEEDS_RECEIVED` / `LINK_EXCEEDS_TITLE`. O servidor monta as linhas
+      (proporcionais às do pedido) e os vínculos (pela ordem de vencimento). Pedido com parcela faturada não é cancelado
+      (422 `CANCELLATION_BLOCKED_BY_EFFECTS`).
     - Erros sempre no formato `ApiError`, em português, com `correlationId` (cabeçalho `X-Correlation-Id` é aceito e devolvido).
 servers:
   - url: http://localhost:8080
@@ -928,8 +929,9 @@ paths:
     post:
       tags: [Documentos e faturamento]
       summary: >-
-        Registra a nota de saída emitida fora do Renda+ — RegisterDocument (document.register; com vínculos, também document.link).
-        Número único por cliente e série entre as notas ativas (422 DOCUMENT_DUPLICATE); total = soma das linhas; evento DocumentRegistered
+        Registra a nota de saída do pedido, emitida fora do Renda+ — RegisterDocument (document.register e document.link). Valor =
+        recebido sem nota do pedido (ou o informado, até ele); linhas proporcionais às do pedido e vínculos pela ordem de vencimento,
+        com as parcelas bloqueadas. Número único por cliente e série entre as notas ativas (422 DOCUMENT_DUPLICATE); evento DocumentRegistered
       parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody:
         required: true
@@ -953,8 +955,8 @@ paths:
     post:
       tags: [Documentos e faturamento]
       summary: >-
-        Vincula parcelas — LinkDocumentToTitles (document.link). Bloqueia o documento e as parcelas em ordem de id; parcela do
-        mesmo cliente, não cancelada, uma vez por documento; evento DocumentLinkedToTitles
+        Vincula parcelas — LinkDocumentToTitles (document.link), para refazer um vínculo desfeito. Bloqueia o documento e as parcelas
+        em ordem de id; parcela do mesmo cliente, não cancelada, uma vez por documento, até o recebido sem nota; evento DocumentLinkedToTitles
       parameters: [{ $ref: '#/components/parameters/IfMatch' }, { $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody:
         required: true
@@ -1032,13 +1034,39 @@ paths:
     get:
       tags: [Documentos e faturamento]
       summary: >-
-        Faturado e a faturar por parcela, com as notas vinculadas (document.read): as parcelas não canceladas do cliente
-        (`customerId`) ou as indicadas (`titleId`, repetível). A faturar = valor − faturado (IND-003 por parcela)
+        Faturado por parcela, com as notas vinculadas (document.read): as parcelas não canceladas do cliente (`customerId`) ou as
+        indicadas (`titleId`, repetível). A faturar = valor − faturado (IND-003); a emitir = recebido − faturado (regime de caixa)
       parameters:
         - { name: customerId, in: query, required: false, schema: { type: string, format: uuid } }
         - { name: titleId, in: query, required: false, schema: { type: array, items: { type: string, format: uuid } }, style: form, explode: true }
       responses:
         '200': { description: Parcelas, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/TitleInvoicing' } } } } }
+
+  /api/v1/invoicing/orders:
+    get:
+      tags: [Documentos e faturamento]
+      summary: >-
+        Notas a emitir pelo caixa (document.read): pedidos confirmados com recebido, faturado, a emitir e a divisão do a emitir
+        entre produto e serviço; `status` A_EMITIR (padrão, só com recebimento sem nota) ou TODOS
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Número do pedido ou cliente' }
+        - { name: status, in: query, required: false, schema: { type: string, enum: [A_EMITIR, TODOS], default: A_EMITIR } }
+      responses:
+        '200': { description: Pedidos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/OrderInvoicing' } } } } }
+
+  /api/v1/invoicing/orders/{orderId}:
+    parameters:
+      - { name: orderId, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Documentos e faturamento]
+      summary: >-
+        Um pedido pelo caixa com a nota proposta (document.read): linhas e parcelas para `amountCents` (o a emitir, se vazio);
+        acima do a emitir, 422 DOCUMENT_EXCEEDS_RECEIVED
+      parameters:
+        - { name: amountCents, in: query, required: false, schema: { $ref: '#/components/schemas/Cents' } }
+      responses:
+        '200': { description: Pedido, content: { application/json: { schema: { $ref: '#/components/schemas/OrderInvoicing' } } } }
+        '422': { $ref: '#/components/responses/Erro' }
 
 components:
   securitySchemes:
@@ -1703,25 +1731,15 @@ components:
         amountCents: { $ref: '#/components/schemas/Cents' }
     DocumentRequest:
       type: object
-      required: [customerId, series, number, issueDate, competence, lines]
+      required: [orderId, series, number, issueDate, competence]
       properties:
         direction: { type: string, enum: [SAIDA], default: SAIDA, description: 'Documentos de entrada vêm com as contas a pagar' }
-        customerId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid, description: 'Pedido confirmado; o cliente, as linhas e os vínculos vêm dele' }
+        amountCents: { type: [string, 'null'], description: 'Valor da nota; vazio = todo o recebido sem nota do pedido' }
         series: { type: string, maxLength: 10, example: '1' }
         number: { type: string, pattern: '^[0-9]{1,20}$', example: '1234', description: 'Zeros à esquerda são ignorados' }
         issueDate: { type: string, format: date, description: 'Não pode ser futura' }
         competence: { type: string, example: '2026-09', description: 'AAAA-MM; o app sugere o mês da emissão' }
-        lines:
-          type: array
-          minItems: 1
-          items:
-            type: object
-            required: [description, kind, amountCents]
-            properties:
-              description: { type: string, maxLength: 200 }
-              kind: { type: string, enum: [PRODUTO, SERVICO] }
-              amountCents: { $ref: '#/components/schemas/Cents' }
-        links: { type: array, items: { $ref: '#/components/schemas/DocumentLinkRequest' } }
         notes: { type: [string, 'null'], maxLength: 500 }
     DocumentClassificationRequest:
       type: object
@@ -1738,6 +1756,8 @@ components:
         customerId: { type: string, format: uuid }
         customerCode: { type: string }
         customerName: { type: string }
+        orderId: { type: [string, 'null'], format: uuid }
+        orderCode: { type: [string, 'null'], example: PV00001 }
         series: { type: string }
         number: { type: string }
         issueDate: { type: string, format: date }
@@ -1797,6 +1817,7 @@ components:
         balanceCents: { $ref: '#/components/schemas/Cents' }
         invoicedCents: { $ref: '#/components/schemas/Cents' }
         toInvoiceCents: { $ref: '#/components/schemas/Cents' }
+        toIssueCents: { $ref: '#/components/schemas/Cents' }
         documents:
           type: array
           items:
@@ -1807,4 +1828,46 @@ components:
               series: { type: string }
               number: { type: string }
               issueDate: { type: string, format: date }
+              amountCents: { $ref: '#/components/schemas/Cents' }
+    OrderInvoicing:
+      type: object
+      properties:
+        id: { type: string, format: uuid, description: 'Id do pedido' }
+        orderCode: { type: string, example: PV00001 }
+        orderStatus: { type: string, enum: [CONFIRMED, IN_EXECUTION, COMPLETED] }
+        customerId: { type: string, format: uuid }
+        customerCode: { type: string }
+        customerName: { type: string }
+        projectId: { type: [string, 'null'], format: uuid }
+        totalCents: { $ref: '#/components/schemas/Cents' }
+        receivedCents: { $ref: '#/components/schemas/Cents' }
+        invoicedCents: { $ref: '#/components/schemas/Cents' }
+        toIssueCents: { $ref: '#/components/schemas/Cents' }
+        beyondReceivedCents: { $ref: '#/components/schemas/Cents' }
+        proposedCents: { $ref: '#/components/schemas/Cents' }
+        productCents: { $ref: '#/components/schemas/Cents' }
+        serviceCents: { $ref: '#/components/schemas/Cents' }
+        parcels:
+          type: array
+          items:
+            type: object
+            properties:
+              titleId: { type: string, format: uuid }
+              titleCode: { type: string }
+              label: { type: string }
+              dueDate: { type: string, format: date }
+              titleStatus: { type: string }
+              originalCents: { $ref: '#/components/schemas/Cents' }
+              receivedCents: { $ref: '#/components/schemas/Cents' }
+              invoicedCents: { $ref: '#/components/schemas/Cents' }
+              toIssueCents: { $ref: '#/components/schemas/Cents' }
+              proposedCents: { $ref: '#/components/schemas/Cents' }
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              seq: { type: integer }
+              description: { type: string }
+              kind: { type: string, enum: [PRODUTO, SERVICO] }
               amountCents: { $ref: '#/components/schemas/Cents' }

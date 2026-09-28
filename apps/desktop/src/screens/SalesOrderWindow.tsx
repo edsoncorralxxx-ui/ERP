@@ -14,6 +14,7 @@ import { GradeHistorico } from './comum/GradeHistorico';
 import { GradeLinhas, linhaDaApi, linhaParaApi, totalDasLinhas, type LinhaForm } from './comum/GradeLinhas';
 import { Selecao } from './comum/Selecao';
 import { ESTAGIO, seloEquipamento, seloPedido, seloTitulo } from './comum/Selos';
+import { novoDocumento } from './DocumentsWindow';
 import { PEDIDOS_ALTERADOS } from './SalesOrdersWindow';
 
 type Tab = 'linhas' | 'parcelas' | 'gerado' | 'historico';
@@ -430,7 +431,8 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
                   ))}
                 </div>
               ) : tab === 'gerado' && pedido ? (
-                <Gerado pedido={pedido} abrir={win.open} />
+                <Gerado pedido={pedido} abrir={win.open} podeRegistrarNota={can('document.register') && can('document.link')}
+                  registrarNota={() => win.open('document', novoDocumento(pedido.id))} />
               ) : (
                 <GradeHistorico historico={historico} rotulo="Histórico do pedido" />
               )}
@@ -506,7 +508,12 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
 }
 
 /** O que a confirmação gerou: projeto, equipamentos e parcelas a receber, cada um com a seta para a sua ficha. */
-function Gerado({ pedido, abrir }: { pedido: SalesOrder; abrir: (kind: 'project' | 'equipment' | 'receivable', id: string) => void }) {
+function Gerado({ pedido, abrir, podeRegistrarNota, registrarNota }: {
+  pedido: SalesOrder;
+  abrir: (kind: 'project' | 'equipment' | 'receivable', id: string) => void;
+  podeRegistrarNota: boolean;
+  registrarNota: () => void;
+}) {
   const ids = pedido.titles.map((t) => t.id);
   const faturamento = useFaturamento(ids);
   const ativos = pedido.titles.filter((t) => t.status !== 'CANCELLED').map((t) => t.id);
@@ -525,6 +532,21 @@ function Gerado({ pedido, abrir }: { pedido: SalesOrder; abrir: (kind: 'project'
         <span className="rp-label">Confirmado em</span>
         <span />
         <input className="rp-field rp-field--readonly" readOnly aria-label="Confirmado em" value={pedido.confirmedAt ? `${dataHora(pedido.confirmedAt)} por ${pedido.confirmedBy}` : ''} />
+        {faturamento && (
+          <>
+            <span className="rp-label">A emitir</span>
+            <span />
+            <span className="rp-ficha__ref">
+              <input className="rp-field rp-field--readonly rp-field--num rp-field--curto" readOnly aria-label="Nota a emitir do pedido"
+                value={reais(somaFaturamento(faturamento, ativos, 'toIssueCents'))} />
+              {podeRegistrarNota && BigInt(somaFaturamento(faturamento, ativos, 'toIssueCents')) > 0n && (
+                <button type="button" className="rp-btn" onClick={registrarNota}>
+                  Registrar nota
+                </button>
+              )}
+            </span>
+          </>
+        )}
       </div>
       <div className="rp-grid-rolagem rp-rolagem rp-ficha__grade">
         <table className="rp-grid rp-janela-mdi__grade" aria-label="Equipamentos do pedido">
@@ -566,7 +588,7 @@ function Gerado({ pedido, abrir }: { pedido: SalesOrder; abrir: (kind: 'project'
               <th className="num">Valor</th>
               <th className="num">Saldo</th>
               {faturamento && <th className="num">Faturado</th>}
-              {faturamento && <th className="num">A faturar</th>}
+              {faturamento && <th className="num">A emitir</th>}
               <th>Situação</th>
             </tr>
           </thead>
@@ -582,7 +604,7 @@ function Gerado({ pedido, abrir }: { pedido: SalesOrder; abrir: (kind: 'project'
                 <td className="num">{reais(t.originalCents)}</td>
                 <td className="num">{reais(t.balanceCents)}</td>
                 {faturamento && <td className="num">{reais(faturamento.get(t.id)?.invoicedCents ?? '0')}</td>}
-                {faturamento && <td className="num">{reais(faturamento.get(t.id)?.toInvoiceCents ?? '0')}</td>}
+                {faturamento && <td className="num">{reais(faturamento.get(t.id)?.toIssueCents ?? '0')}</td>}
                 <td>{seloTitulo(t.status)}</td>
               </tr>
             ))}
@@ -593,7 +615,7 @@ function Gerado({ pedido, abrir }: { pedido: SalesOrder; abrir: (kind: 'project'
               <td className="num">{reais(pedido.titles.reduce((s, t) => s + BigInt(t.originalCents), 0n).toString())}</td>
               <td className="num">{reais(pedido.titles.reduce((s, t) => s + BigInt(t.balanceCents), 0n).toString())}</td>
               {faturamento && <td className="num" aria-label="Faturado do pedido">{reais(somaFaturamento(faturamento, ativos, 'invoicedCents'))}</td>}
-              {faturamento && <td className="num" aria-label="A faturar do pedido">{reais(somaFaturamento(faturamento, ativos, 'toInvoiceCents'))}</td>}
+              {faturamento && <td className="num" aria-label="A emitir do pedido">{reais(somaFaturamento(faturamento, ativos, 'toIssueCents'))}</td>}
               <td />
             </tr>
           </tfoot>

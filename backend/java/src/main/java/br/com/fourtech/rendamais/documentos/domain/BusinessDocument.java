@@ -69,6 +69,7 @@ public final class BusinessDocument {
     private final String code;
     private final Direction direction;
     private final UUID partnerId;
+    private final UUID orderId;
     private final String series;
     private final String number;
     private final LocalDate issueDate;
@@ -88,7 +89,7 @@ public final class BusinessDocument {
     private final Instant updatedAt;
     private final String updatedBy;
 
-    public BusinessDocument(UUID id, String code, Direction direction, UUID partnerId, String series, String number,
+    public BusinessDocument(UUID id, String code, Direction direction, UUID partnerId, UUID orderId, String series, String number,
                             LocalDate issueDate, YearMonth competence, List<Line> lines, Money total, List<Link> links, String notes,
                             OperationNature operationNature, UUID projectId, int classificationRev, Status status,
                             String cancelReason, long version, Instant createdAt, String createdBy, Instant updatedAt,
@@ -97,6 +98,7 @@ public final class BusinessDocument {
         this.code = Objects.requireNonNull(code);
         this.direction = Objects.requireNonNull(direction);
         this.partnerId = Objects.requireNonNull(partnerId);
+        this.orderId = orderId;
         this.series = Objects.requireNonNull(series);
         this.number = Objects.requireNonNull(number);
         this.issueDate = Objects.requireNonNull(issueDate);
@@ -117,8 +119,11 @@ public final class BusinessDocument {
         this.updatedBy = updatedBy;
     }
 
-    /** Novo documento de saída: total = Σ linhas (cada linha maior que zero). Os vínculos vêm depois, pelo serviço. */
-    public static BusinessDocument register(String code, Direction direction, UUID partnerId, String series, String number,
+    /**
+     * Novo documento de saída do pedido: total = Σ linhas (cada linha maior que zero). Os vínculos vêm depois, pelo
+     * serviço.
+     */
+    public static BusinessDocument register(String code, Direction direction, UUID partnerId, UUID orderId, String series, String number,
                                             LocalDate issueDate, YearMonth competence, List<Line> lines, String notes,
                                             Instant now, String actor) {
         if (lines.isEmpty()) {
@@ -133,7 +138,7 @@ public final class BusinessDocument {
             }
             sum = sum.plus(l.amount());
         }
-        return new BusinessDocument(UUID.randomUUID(), code, direction, partnerId, series, number, issueDate, competence, lines,
+        return new BusinessDocument(UUID.randomUUID(), code, direction, partnerId, orderId, series, number, issueDate, competence, lines,
                 sum, List.of(), notes, null, null, 0, Status.ATIVO, null, 1, now, actor, now, actor);
     }
 
@@ -218,7 +223,7 @@ public final class BusinessDocument {
 
     private BusinessDocument with(List<Link> newLinks, Status newStatus, String reason, OperationNature nature, UUID project,
                                   int rev, Instant now, String actor) {
-        return new BusinessDocument(id, code, direction, partnerId, series, number, issueDate, competence, lines, total, newLinks,
+        return new BusinessDocument(id, code, direction, partnerId, orderId, series, number, issueDate, competence, lines, total, newLinks,
                 notes, nature, project, rev, newStatus, reason, version + 1, createdAt, createdBy, now, actor);
     }
 
@@ -226,6 +231,7 @@ public final class BusinessDocument {
     public String code() { return code; }
     public Direction direction() { return direction; }
     public UUID partnerId() { return partnerId; }
+    public UUID orderId() { return orderId; }
     public String series() { return series; }
     public String number() { return number; }
     public LocalDate issueDate() { return issueDate; }

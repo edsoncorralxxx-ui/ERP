@@ -14,8 +14,8 @@ public interface DocumentRepository {
     /** Parcela de um vínculo, com o código e a descrição do título. */
     record TitleRef(UUID titleId, String code, String label) { }
 
-    /** Documento com o nome do parceiro, o código do projeto classificado e as parcelas dos vínculos. */
-    record Summary(BusinessDocument document, String partnerCode, String partnerName, String projectCode,
+    /** Documento com o nome do parceiro, o código do projeto classificado, o pedido de origem e as parcelas dos vínculos. */
+    record Summary(BusinessDocument document, String partnerCode, String partnerName, String projectCode, String orderCode,
                    Map<UUID, TitleRef> titles) { }
 
     /** Vínculo visto pela parcela: documento e valor. */

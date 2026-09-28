@@ -499,6 +499,8 @@ export type BusinessDocument = {
   customerId: string;
   customerCode: string;
   customerName: string;
+  orderId: string | null;
+  orderCode: string | null;
   series: string;
   number: string;
   issueDate: string;
@@ -535,5 +537,31 @@ export type TitleInvoicing = {
   balanceCents: string;
   invoicedCents: string;
   toInvoiceCents: string;
+  /** Recebido que ainda não tem nota (regime de caixa). */
+  toIssueCents: string;
   documents: { documentId: string; documentCode: string; series: string; number: string; issueDate: string; amountCents: string }[];
+};
+
+/** Pedido visto pelo caixa: recebido, faturado, a emitir e a nota proposta (linhas e parcelas). */
+export type OrderInvoicing = {
+  id: string;
+  orderCode: string;
+  orderStatus: string;
+  customerId: string;
+  customerCode: string;
+  customerName: string;
+  projectId: string | null;
+  totalCents: string;
+  receivedCents: string;
+  invoicedCents: string;
+  toIssueCents: string;
+  beyondReceivedCents: string;
+  proposedCents: string;
+  productCents: string;
+  serviceCents: string;
+  parcels: {
+    titleId: string; titleCode: string; label: string; dueDate: string; titleStatus: TitleStatus; originalCents: string;
+    receivedCents: string; invoicedCents: string; toIssueCents: string; proposedCents: string;
+  }[];
+  lines: { seq: number; description: string; kind: DocumentLineKind; amountCents: string }[];
 };

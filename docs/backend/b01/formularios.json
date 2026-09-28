@@ -857,17 +857,30 @@
         {"nome": "numero", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
         {"nome": "serie", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
         {"nome": "direcao", "tipo": "enum", "valores": ["SAIDA", "ENTRADA"], "obrigatorio": true, "origem": "usuario"},
-        {"nome": "contraparte", "tipo": "ref", "conceito": "PARCEIRO", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "pedido", "tipo": "ref", "conceito": "PEDIDO", "obrigatorio": true, "origem": "referencia"},
+        {"nome": "contraparte", "tipo": "ref", "conceito": "PARCEIRO", "obrigatorio": true, "origem": "derivado"},
         {"nome": "emissao", "tipo": "data", "obrigatorio": true, "origem": "usuario"},
         {"nome": "competencia", "tipo": "competencia", "obrigatorio": true, "origem": "usuario"},
-        {"nome": "linhas", "tipo": "lista", "itens": "descrição, tipo PRODUTO/SERVICO, valor", "obrigatorio": true, "origem": "usuario"},
+        {
+          "nome": "linhas",
+          "tipo": "lista",
+          "itens": "descrição, tipo PRODUTO/SERVICO, valor (proporcionais às linhas do pedido)",
+          "obrigatorio": true,
+          "origem": "derivado"
+        },
         {"nome": "total", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
-        {"nome": "vinculos", "tipo": "lista", "itens": "título e valor vinculado", "obrigatorio": false, "origem": "usuario"}
+        {
+          "nome": "vinculos",
+          "tipo": "lista",
+          "itens": "título e valor vinculado (recebido sem nota, por vencimento)",
+          "obrigatorio": false,
+          "origem": "derivado"
+        }
       ],
       "classificacoes": ["tipoProdutoServico", "naturezaOperacao", "projeto"],
       "validacoes": [
         {"regra": "Documento vincula títulos existentes; não cria nova obrigação de venda"},
-        {"regra": "Σ vínculos ≤ total e ≤ saldo das parcelas", "pendencia": "PD-023"},
+        {"regra": "Σ vínculos ≤ total e ≤ recebido sem nota das parcelas (regime de caixa)", "pendencia": "PD-023"},
         {"regra": "Classificação fiscal não é inferida só pela descrição"}
       ],
       "comandos": [
@@ -879,7 +892,7 @@
       ],
       "indicadores": ["IND-003", "IND-005"],
       "analises": ["AN-018", "AN-019"],
-      "acoes": ["Registrar faturamento parcial", "Vincular a títulos", "Desfazer vínculo", "Cancelar", "Classificar", "Anexar"],
+      "acoes": ["Ver notas a emitir pelo caixa", "Registrar nota do pedido", "Desfazer vínculo", "Cancelar", "Classificar", "Anexar"],
       "permissoes": ["document.read", "document.register", "document.link", "document.classify", "document.cancel"]
     },
     {

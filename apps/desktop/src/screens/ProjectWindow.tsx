@@ -173,7 +173,7 @@ export function ProjectWindow({ recordKey }: { recordKey: string }) {
                         <th className="num">Recebido</th>
                         <th className="num">Saldo</th>
                         {faturamento && <th className="num">Faturado</th>}
-                        {faturamento && <th className="num">A faturar</th>}
+                        {faturamento && <th className="num">A emitir</th>}
                         <th>Situação</th>
                       </tr>
                     </thead>
@@ -192,7 +192,7 @@ export function ProjectWindow({ recordKey }: { recordKey: string }) {
                           <td className="num">{reais(t.receivedCents)}</td>
                           <td className="num">{reais(t.balanceCents)}</td>
                           {faturamento && <td className="num">{reais(faturamento.get(t.id)?.invoicedCents ?? '0')}</td>}
-                          {faturamento && <td className="num">{reais(faturamento.get(t.id)?.toInvoiceCents ?? '0')}</td>}
+                          {faturamento && <td className="num">{reais(faturamento.get(t.id)?.toIssueCents ?? '0')}</td>}
                           <td>{seloTitulo(t.status)}</td>
                         </tr>
                       ))}
@@ -204,7 +204,7 @@ export function ProjectWindow({ recordKey }: { recordKey: string }) {
                         <td className="num">{reais(ativos.reduce((s, t) => s + BigInt(t.receivedCents), 0n).toString())}</td>
                         <td className="num">{reais(ativos.reduce((s, t) => s + BigInt(t.balanceCents), 0n).toString())}</td>
                         {faturamento && <td className="num">{reais(somaFaturamento(faturamento, ativos.map((t) => t.id), 'invoicedCents'))}</td>}
-                        {faturamento && <td className="num">{reais(somaFaturamento(faturamento, ativos.map((t) => t.id), 'toInvoiceCents'))}</td>}
+                        {faturamento && <td className="num">{reais(somaFaturamento(faturamento, ativos.map((t) => t.id), 'toIssueCents'))}</td>}
                         <td />
                       </tr>
                     </tfoot>
