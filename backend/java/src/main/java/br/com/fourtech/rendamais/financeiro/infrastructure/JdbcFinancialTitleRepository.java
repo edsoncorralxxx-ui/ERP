@@ -98,6 +98,23 @@ class JdbcFinancialTitleRepository implements FinancialTitleRepository {
     }
 
     @Override
+    public List<FinancialTitle> findByIds(List<UUID> ids) {
+        if (ids.isEmpty()) return List.of();
+        return jdbc.sql("select * from financial_title where id in (:ids) order by due_date, code")
+                .param("ids", ids).query(JdbcFinancialTitleRepository::title).list();
+    }
+
+    @Override
+    public List<FinancialTitle> activeReceivablesOf(UUID counterpartyId) {
+        return jdbc.sql("""
+                select * from financial_title
+                 where direction = 'RECEIVABLE' and counterparty_id = :p and lifecycle <> 'CANCELLED'
+                 order by due_date, code
+                """)
+                .param("p", counterpartyId).query(JdbcFinancialTitleRepository::title).list();
+    }
+
+    @Override
     public List<Summary> listReceivables(String search, UUID projectId, UUID counterpartyId, Filter filter, LocalDate today, int limit) {
         return jdbc.sql(SELECT + """
                  where t.direction = 'RECEIVABLE'

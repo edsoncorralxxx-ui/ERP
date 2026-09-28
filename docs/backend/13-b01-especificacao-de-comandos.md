@@ -56,6 +56,10 @@ sequenceDiagram
 | ACCOUNT_INACTIVE | 422 | não | conta inativa |
 | ACCOUNT_INVALID | 422 | não | campos da conta financeira; saldo inicial depois de movimento (Sprint 5) |
 | ACCOUNT_DUPLICATE | 422 | não | nome de conta já usado (Sprint 5) |
+| DOCUMENT_INVALID | 422 | não | campos do documento, do vínculo, do cancelamento ou da classificação (Sprint 6) |
+| DOCUMENT_DUPLICATE | 422 | não | número da nota já registrado para o cliente e a série (Sprint 6) |
+| LINK_EXCEEDS_DOCUMENT | 422 | não | Σ vínculos > total do documento (PD-023, Sprint 6) |
+| LINK_EXCEEDS_TITLE | 422 | não | faturado da parcela > valor da parcela (PD-023, Sprint 6) |
 | INSPECTION_INCOMPLETE | 422 | não | INV-INS-1 |
 | BLOCKING_DATA_QUALITY_ISSUE | 422 | não | INV-DQ-1 |
 | CONCURRENCY_RETRY_EXHAUSTED | 503 | sim | retries técnicos esgotados |

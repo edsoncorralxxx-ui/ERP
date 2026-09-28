@@ -48,10 +48,14 @@ public abstract class IntegrationTest {
     }
 
     /**
-     * Apaga recebimentos, estornos, movimentos e contas criadas nos testes (Sprint 5) e pedidos, propostas, projetos,
+     * Apaga documentos e vínculos (Sprint 6), recebimentos, estornos, movimentos e contas criadas nos testes (Sprint 5) e pedidos, propostas, projetos,
      * equipamentos e títulos (Sprint 4), que referenciam parceiros e itens.
      */
     protected void limpaDocumentos() {
+        jdbc.sql("delete from document_title_invoicing").update();
+        jdbc.sql("delete from document_title_link").update();
+        jdbc.sql("delete from document_line").update();
+        jdbc.sql("delete from business_document").update();
         jdbc.sql("delete from settlement_reversal").update();
         jdbc.sql("delete from cash_movement").update();
         jdbc.sql("delete from settlement_allocation").update();

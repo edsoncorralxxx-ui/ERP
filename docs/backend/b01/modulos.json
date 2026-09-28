@@ -103,7 +103,7 @@
       "id": "documentos",
       "nome": "Documentos",
       "responsabilidade": "Documentos recebidos/emitidos externamente, classificação, competência, vínculo a títulos existentes, anexos",
-      "dependsOn": ["kernel", "plataforma", "cadastros", "projetos", "financeiro"]
+      "dependsOn": ["kernel", "acesso", "auditoria", "plataforma", "cadastros", "projetos", "financeiro"]
     },
     {
       "id": "posvenda",

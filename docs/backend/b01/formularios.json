@@ -855,6 +855,7 @@
       "significado": "Documento emitido/recebido externamente, classificado e vinculado a títulos existentes",
       "campos": [
         {"nome": "numero", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "serie", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
         {"nome": "direcao", "tipo": "enum", "valores": ["SAIDA", "ENTRADA"], "obrigatorio": true, "origem": "usuario"},
         {"nome": "contraparte", "tipo": "ref", "conceito": "PARCEIRO", "obrigatorio": true, "origem": "referencia"},
         {"nome": "emissao", "tipo": "data", "obrigatorio": true, "origem": "usuario"},
@@ -872,12 +873,14 @@
       "comandos": [
         {"nome": "RegisterDocument", "permissao": "document.register", "idempotente": true, "eventos": ["DocumentRegistered"]},
         {"nome": "LinkDocumentToTitles", "permissao": "document.link", "idempotente": true, "eventos": ["DocumentLinkedToTitles"]},
-        {"nome": "ClassifyDocument", "permissao": "document.classify", "idempotente": true, "eventos": ["DocumentClassified"]}
+        {"nome": "RemoveDocumentLink", "permissao": "document.link", "idempotente": true, "eventos": ["DocumentLinkRemoved"]},
+        {"nome": "ClassifyDocument", "permissao": "document.classify", "idempotente": true, "eventos": ["DocumentClassified"]},
+        {"nome": "CancelDocument", "permissao": "document.cancel", "idempotente": true, "eventos": ["DocumentCancelled"]}
       ],
       "indicadores": ["IND-003", "IND-005"],
       "analises": ["AN-018", "AN-019"],
-      "acoes": ["Registrar faturamento parcial", "Vincular a títulos", "Classificar", "Anexar"],
-      "permissoes": ["document.read", "document.register", "document.link", "document.classify"]
+      "acoes": ["Registrar faturamento parcial", "Vincular a títulos", "Desfazer vínculo", "Cancelar", "Classificar", "Anexar"],
+      "permissoes": ["document.read", "document.register", "document.link", "document.classify", "document.cancel"]
     },
     {
       "id": "receber",

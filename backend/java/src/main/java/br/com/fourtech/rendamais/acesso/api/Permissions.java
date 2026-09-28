@@ -33,6 +33,13 @@ public final class Permissions {
     public static final String SETTLEMENT_REVERSE = "settlement.reverse";
     /** Cadastrar e alterar contas financeiras (caixa e bancos). */
     public static final String BANK_ACCOUNT_ADMIN = "bank_account.admin";
+    public static final String DOCUMENT_READ = "document.read";
+    /** Registrar documento (RegisterDocument). */
+    public static final String DOCUMENT_REGISTER = "document.register";
+    /** Vincular documento a parcelas e desfazer vínculo (LinkDocumentToTitles, RemoveDocumentLink). */
+    public static final String DOCUMENT_LINK = "document.link";
+    public static final String DOCUMENT_CLASSIFY = "document.classify";
+    public static final String DOCUMENT_CANCEL = "document.cancel";
     public static final String USER_ADMIN = "user.admin";
 
     private Permissions() { }

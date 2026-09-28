@@ -3,7 +3,7 @@ info:
   title: Renda+ ERP — API do servidor
   version: v1
   description: |
-    Contrato da API usada pelo app do Mac (Sprints 1 a 5).
+    Contrato da API usada pelo app do Mac (Sprints 1 a 6).
     Regras gerais:
     - Toda rota exige sessão (`Authorization: Bearer <token>`), exceto `GET /api/v1/status` e `POST /api/v1/session` (ADR-005).
       Sem sessão válida: 401 `UNAUTHENTICATED`. Perfil sem a permissão: 403 `FORBIDDEN` (a negativa fica na auditoria).
@@ -21,6 +21,10 @@ info:
     - Recebimentos (Sprint 5): a baixa (`Idempotency-Key`) reparte o valor entre títulos do mesmo cliente; a soma tem de fechar
       com o total (422 `SETTLEMENT_UNBALANCED`) e nenhum título passa do saldo (422 `INSUFFICIENT_TITLE_BALANCE`, com o saldo
       atual). O estorno é total, com motivo; estornar de novo devolve o mesmo estorno.
+    - Documentos e faturamento (Sprint 6): a nota é emitida fora do Renda+ e registrada (`Idempotency-Key`); não cria título.
+      Vincula-se às parcelas existentes com um valor por vínculo (PD-023): Σ vínculos ≤ total da nota (422 `LINK_EXCEEDS_DOCUMENT`)
+      e faturado da parcela ≤ valor da parcela (422 `LINK_EXCEEDS_TITLE`, com o a faturar), independente do recebimento.
+      Pedido com parcela faturada não é cancelado (422 `CANCELLATION_BLOCKED_BY_EFFECTS`).
     - Erros sempre no formato `ApiError`, em português, com `correlationId` (cabeçalho `X-Correlation-Id` é aceito e devolvido).
 servers:
   - url: http://localhost:8080
@@ -40,6 +44,7 @@ tags:
   - name: Contas a receber
   - name: Recebimentos
   - name: Contas financeiras
+  - name: Documentos e faturamento
 
 paths:
   /api/v1/status:
@@ -60,6 +65,7 @@ paths:
                   serverVersion: { type: string }
                   database: { type: string, enum: [UP, DOWN] }
                   serverTime: { type: string, format: date-time }
+                  businessDate: { type: string, format: date, description: 'Hoje no fuso da empresa (America/Sao_Paulo); sugestão dos campos de data' }
 
   /api/v1/company-profile:
     get:
@@ -908,6 +914,132 @@ paths:
         '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
         '404': { $ref: '#/components/responses/Erro' }
 
+  /api/v1/documents:
+    get:
+      tags: [Documentos e faturamento]
+      summary: Documentos, os mais recentes primeiro (document.read)
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Código, número ou cliente' }
+        - { name: status, in: query, required: false, schema: { type: string, enum: [ATIVOS, CANCELADOS, TODOS], default: ATIVOS } }
+        - { name: competence, in: query, required: false, schema: { type: string, example: '2026-09' } }
+        - { name: customerId, in: query, required: false, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Documentos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/BusinessDocument' } } } } }
+    post:
+      tags: [Documentos e faturamento]
+      summary: >-
+        Registra a nota de saída emitida fora do Renda+ — RegisterDocument (document.register; com vínculos, também document.link).
+        Número único por cliente e série entre as notas ativas (422 DOCUMENT_DUPLICATE); total = soma das linhas; evento DocumentRegistered
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/DocumentRequest' } } }
+      responses:
+        '201': { description: Documento registrado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/BusinessDocument' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/documents/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Documentos e faturamento]
+      summary: Documento com linhas e vínculos (document.read)
+      responses:
+        '200': { description: Documento, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/BusinessDocument' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/documents/{id}/links:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Documentos e faturamento]
+      summary: >-
+        Vincula parcelas — LinkDocumentToTitles (document.link). Bloqueia o documento e as parcelas em ordem de id; parcela do
+        mesmo cliente, não cancelada, uma vez por documento; evento DocumentLinkedToTitles
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [links], properties: { links: { type: array, minItems: 1, items: { $ref: '#/components/schemas/DocumentLinkRequest' } } } } } }
+      responses:
+        '200': { description: Documento com os vínculos, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/BusinessDocument' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/documents/{id}/links/{linkId}/removals:
+    parameters:
+      - { $ref: '#/components/parameters/Id' }
+      - { name: linkId, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Documentos e faturamento]
+      summary: >-
+        Desfaz um vínculo, com motivo (document.link); o valor volta ao a faturar da parcela; já desfeito devolve o documento;
+        evento DocumentLinkRemoved
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { description: Vínculo desfeito, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/BusinessDocument' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/documents/{id}/cancellations:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Documentos e faturamento]
+      summary: >-
+        Cancela o documento com motivo — CancelDocument (document.cancel); desfaz todos os vínculos; o documento continua
+        consultável; cancelar de novo devolve o cancelamento existente; evento DocumentCancelled
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { description: Documento cancelado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/BusinessDocument' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/documents/{id}/classification:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    put:
+      tags: [Documentos e faturamento]
+      summary: >-
+        Classifica — ClassifyDocument (document.classify): natureza da operação e projeto (de uma parcela vinculada); cada
+        reclassificação é uma nova revisão; evento DocumentClassified
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/DocumentClassificationRequest' } } }
+      responses:
+        '200': { description: Documento classificado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/BusinessDocument' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/documents/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Documentos e faturamento]
+      summary: Trilha do documento (document.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/invoicing:
+    get:
+      tags: [Documentos e faturamento]
+      summary: >-
+        Faturado e a faturar por parcela, com as notas vinculadas (document.read): as parcelas não canceladas do cliente
+        (`customerId`) ou as indicadas (`titleId`, repetível). A faturar = valor − faturado (IND-003 por parcela)
+      parameters:
+        - { name: customerId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: titleId, in: query, required: false, schema: { type: array, items: { type: string, format: uuid } }, style: form, explode: true }
+      responses:
+        '200': { description: Parcelas, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/TitleInvoicing' } } } } }
+
 components:
   securitySchemes:
     sessao:
@@ -1563,3 +1695,116 @@ components:
         version: { type: string }
         createdAt: { type: string, format: date-time }
         createdBy: { type: string }
+    DocumentLinkRequest:
+      type: object
+      required: [titleId, amountCents]
+      properties:
+        titleId: { type: string, format: uuid }
+        amountCents: { $ref: '#/components/schemas/Cents' }
+    DocumentRequest:
+      type: object
+      required: [customerId, series, number, issueDate, competence, lines]
+      properties:
+        direction: { type: string, enum: [SAIDA], default: SAIDA, description: 'Documentos de entrada vêm com as contas a pagar' }
+        customerId: { type: string, format: uuid }
+        series: { type: string, maxLength: 10, example: '1' }
+        number: { type: string, pattern: '^[0-9]{1,20}$', example: '1234', description: 'Zeros à esquerda são ignorados' }
+        issueDate: { type: string, format: date, description: 'Não pode ser futura' }
+        competence: { type: string, example: '2026-09', description: 'AAAA-MM; o app sugere o mês da emissão' }
+        lines:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [description, kind, amountCents]
+            properties:
+              description: { type: string, maxLength: 200 }
+              kind: { type: string, enum: [PRODUTO, SERVICO] }
+              amountCents: { $ref: '#/components/schemas/Cents' }
+        links: { type: array, items: { $ref: '#/components/schemas/DocumentLinkRequest' } }
+        notes: { type: [string, 'null'], maxLength: 500 }
+    DocumentClassificationRequest:
+      type: object
+      required: [operationNature]
+      properties:
+        operationNature: { type: string, enum: [VENDA_PRODUCAO, VENDA_MERCADORIA, PRESTACAO_SERVICO, REMESSA] }
+        projectId: { type: [string, 'null'], format: uuid, description: 'Projeto de uma das parcelas vinculadas' }
+    BusinessDocument:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: DF00001 }
+        direction: { type: string, enum: [SAIDA, ENTRADA] }
+        customerId: { type: string, format: uuid }
+        customerCode: { type: string }
+        customerName: { type: string }
+        series: { type: string }
+        number: { type: string }
+        issueDate: { type: string, format: date }
+        competence: { type: string, example: '2026-09' }
+        totalCents: { $ref: '#/components/schemas/Cents' }
+        linkedCents: { $ref: '#/components/schemas/Cents' }
+        unlinkedCents: { $ref: '#/components/schemas/Cents' }
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              seq: { type: integer }
+              description: { type: string }
+              kind: { type: string, enum: [PRODUTO, SERVICO] }
+              amountCents: { $ref: '#/components/schemas/Cents' }
+        links:
+          type: array
+          description: Vínculos ativos e desfeitos (na lista, as linhas vêm vazias)
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              titleId: { type: string, format: uuid }
+              titleCode: { type: string, example: CR00001 }
+              titleLabel: { type: string }
+              amountCents: { $ref: '#/components/schemas/Cents' }
+              status: { type: string, enum: [ATIVO, DESFEITO] }
+              removedReason: { type: [string, 'null'] }
+              removedAt: { type: [string, 'null'], format: date-time }
+              removedBy: { type: [string, 'null'] }
+              createdAt: { type: string, format: date-time }
+              createdBy: { type: string }
+        notes: { type: [string, 'null'] }
+        operationNature: { type: [string, 'null'], enum: [VENDA_PRODUCAO, VENDA_MERCADORIA, PRESTACAO_SERVICO, REMESSA, null] }
+        projectId: { type: [string, 'null'], format: uuid }
+        projectCode: { type: [string, 'null'] }
+        classificationRevision: { type: integer, description: '0 = não classificado' }
+        status: { type: string, enum: [ATIVO, CANCELADO] }
+        cancelReason: { type: [string, 'null'] }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    TitleInvoicing:
+      type: object
+      properties:
+        titleId: { type: string, format: uuid }
+        titleCode: { type: string }
+        label: { type: string }
+        dueDate: { type: string, format: date }
+        titleStatus: { type: string, enum: [OPEN, PARTIAL, SETTLED, RENEGOTIATED, CANCELLED] }
+        projectId: { type: [string, 'null'], format: uuid }
+        originalCents: { $ref: '#/components/schemas/Cents' }
+        receivedCents: { $ref: '#/components/schemas/Cents' }
+        balanceCents: { $ref: '#/components/schemas/Cents' }
+        invoicedCents: { $ref: '#/components/schemas/Cents' }
+        toInvoiceCents: { $ref: '#/components/schemas/Cents' }
+        documents:
+          type: array
+          items:
+            type: object
+            properties:
+              documentId: { type: string, format: uuid }
+              documentCode: { type: string }
+              series: { type: string }
+              number: { type: string }
+              issueDate: { type: string, format: date }
+              amountCents: { $ref: '#/components/schemas/Cents' }

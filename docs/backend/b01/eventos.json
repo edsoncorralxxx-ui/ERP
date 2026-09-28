@@ -306,6 +306,20 @@
       "consumidores": ["fiscal"]
     },
     {
+      "type": "DocumentLinkRemoved",
+      "produtor": "documentos",
+      "conceito": "FATURAMENTO",
+      "payload": ["documentId", "linkId", "titleId", "amountCents", "reason"],
+      "consumidores": []
+    },
+    {
+      "type": "DocumentCancelled",
+      "produtor": "documentos",
+      "conceito": "FATURAMENTO",
+      "payload": ["documentId", "reason", "releasedTitleIds"],
+      "consumidores": []
+    },
+    {
       "type": "FinancialTitleCreated",
       "produtor": "financeiro",
       "conceito": "TITULO",

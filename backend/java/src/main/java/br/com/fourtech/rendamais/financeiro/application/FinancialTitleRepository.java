@@ -27,6 +27,12 @@ public interface FinancialTitleRepository {
 
     List<FinancialTitle> findByOrigin(String originType, List<String> originIds);
 
+    /** Títulos pelos ids, na ordem de vencimento, sem bloqueio. */
+    List<FinancialTitle> findByIds(List<UUID> ids);
+
+    /** Títulos a receber não cancelados do parceiro, na ordem de vencimento. */
+    List<FinancialTitle> activeReceivablesOf(UUID counterpartyId);
+
     /**
      * Filtro de situação da lista: ACTIVE (não cancelados), OPEN (com saldo), OVERDUE (com saldo e vencidos), SETTLED
      * (liquidados), CANCELLED ou ALL.

@@ -5,6 +5,7 @@ import br.com.fourtech.rendamais.acesso.api.Permissions;
 import br.com.fourtech.rendamais.auditoria.api.AuditEntry;
 import br.com.fourtech.rendamais.auditoria.api.AuditQuery;
 import br.com.fourtech.rendamais.auditoria.api.AuditTrail;
+import br.com.fourtech.rendamais.financeiro.api.TitleCancellationGuard;
 import br.com.fourtech.rendamais.financeiro.api.TitleIssuanceApi;
 import br.com.fourtech.rendamais.financeiro.api.TitleQueryApi;
 import br.com.fourtech.rendamais.financeiro.domain.FinancialTitle;
@@ -40,13 +41,16 @@ public class TitleService implements TitleIssuanceApi, TitleQueryApi {
     private final AuditQuery auditQuery;
     private final Outbox outbox;
     private final Clock clock;
+    private final List<TitleCancellationGuard> guards;
 
-    public TitleService(FinancialTitleRepository repository, AuditTrail audit, AuditQuery auditQuery, Outbox outbox, Clock clock) {
+    public TitleService(FinancialTitleRepository repository, AuditTrail audit, AuditQuery auditQuery, Outbox outbox, Clock clock,
+                        List<TitleCancellationGuard> guards) {
         this.repository = repository;
         this.audit = audit;
         this.auditQuery = auditQuery;
         this.outbox = outbox;
         this.clock = clock;
+        this.guards = List.copyOf(guards);
     }
 
     @Override
@@ -93,8 +97,12 @@ public class TitleService implements TitleIssuanceApi, TitleQueryApi {
         Instant now = clock.instant();
         List<FinancialTitle> titles = repository.findByOriginForUpdate(originType, originIds);
         // Confere todos antes de cancelar qualquer um: ou cancela tudo, ou nada.
-        List<FinancialTitle> cancelled = titles.stream().filter(t -> t.lifecycle() != FinancialTitle.Lifecycle.CANCELLED)
-                .map(t -> t.cancel(reason, now, actor)).toList();
+        List<FinancialTitle> active = titles.stream().filter(t -> t.lifecycle() != FinancialTitle.Lifecycle.CANCELLED).toList();
+        List<FinancialTitle> cancelled = active.stream().map(t -> t.cancel(reason, now, actor)).toList();
+        // Efeitos de outros módulos (nota vinculada) também impedem, com os títulos já bloqueados.
+        List<TitleCancellationGuard.Cancelling> refs = active.stream()
+                .map(t -> new TitleCancellationGuard.Cancelling(t.id(), t.code(), t.original().cents())).toList();
+        if (!refs.isEmpty()) guards.forEach(g -> g.checkCancellable(refs));
         for (FinancialTitle t : cancelled) {
             repository.update(t);
             audit.record(new AuditEntry(actor, "FINANCIAL_TITLE_CANCELLED", ENTITY, t.id().toString(), t.version(), reason,
@@ -110,6 +118,18 @@ public class TitleService implements TitleIssuanceApi, TitleQueryApi {
     @Transactional(readOnly = true)
     public List<TitleView> byOrigin(String originType, List<String> originIds) {
         return repository.findByOrigin(originType, originIds).stream().map(TitleService::view).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TitleView> byIds(List<UUID> ids) {
+        return repository.findByIds(ids).stream().map(TitleService::view).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TitleView> activeReceivablesOf(UUID counterpartyId) {
+        return repository.activeReceivablesOf(counterpartyId).stream().map(TitleService::view).toList();
     }
 
     @Transactional(readOnly = true)
@@ -135,6 +155,7 @@ public class TitleService implements TitleIssuanceApi, TitleQueryApi {
 
     static TitleView view(FinancialTitle t) {
         return new TitleView(t.id(), t.code(), t.originId(), t.originLabel(), t.dueDate(), t.competence().toString(),
-                t.original().cents(), t.received().cents(), t.balance().cents(), t.status().name());
+                t.original().cents(), t.received().cents(), t.balance().cents(), t.status().name(), t.direction().name(),
+                t.counterpartyId(), t.projectId());
     }
 }

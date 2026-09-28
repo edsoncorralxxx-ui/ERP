@@ -129,7 +129,7 @@
     {
       "nome": "Faturamento",
       "icone": "faturamento",
-      "itens": [{"rotulo": "Documentos e faturamento", "tela": "documentos", "fase": "Sprint 6 · B06"}]
+      "itens": [{"rotulo": "Documentos e faturamento", "tela": "documentos", "fase": "Sprint 6 · B06", "implementado": true}]
     },
     {"nome": "Fiscal", "icone": "fiscal", "itens": [{"rotulo": "Impostos gerenciais", "tela": "impostos", "fase": "Sprint 7 · B10"}]},
     {"nome": "Custos", "icone": "custos", "itens": [{"rotulo": "Custos e resultado", "tela": "custos", "fase": "B08–B10"}]},

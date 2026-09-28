@@ -91,6 +91,24 @@ class FinanceiroApiTest extends CadastrosApiTest {
         return get("/api/v1/receivables/" + id).body();
     }
 
+    /**
+     * Conferência (dívida da Sprint 5): o recebido gravado em cada título é a soma das alocações de recebimentos não
+     * estornados, e cada conta tem um movimento por recebimento e um por estorno.
+     */
+    private void recebidoConfereComAlocacoes() {
+        assertThat(conta("""
+                select count(*) from financial_title t
+                 where t.received_cents <> coalesce((select sum(a.amount_cents) from settlement_allocation a
+                          join settlement s on s.id = a.settlement_id
+                         where a.title_id = t.id and s.status = 'POSTED'), 0)
+                """)).isZero();
+        assertThat(conta("""
+                select count(*) from settlement s
+                 where (select coalesce(sum(m.amount_cents), 0) from cash_movement m where m.settlement_id = s.id)
+                       <> case s.status when 'POSTED' then s.total_cents else 0 end
+                """)).isZero();
+    }
+
     @Test
     void recebimentoParcialTotalEEstornoDevolvemSaldoETrilha() throws Exception {
         HttpResponse<String> banco = post("/api/v1/bank-accounts", null, """
@@ -177,6 +195,7 @@ class FinanceiroApiTest extends CadastrosApiTest {
         assertThat(conta("select count(*) from outbox_event where event_type = 'SettlementReversed'")).isEqualTo(2);
         assertThat(jdbc.sql("select payload::text from outbox_event where event_type = 'SettlementPosted' and aggregate_id = :id")
                 .param("id", r2).query(String.class).single()).contains("allocations", t1, t2, "\"totalCents\": \"4550000\"");
+        recebidoConfereComAlocacoes();
     }
 
     @Test
@@ -202,6 +221,7 @@ class FinanceiroApiTest extends CadastrosApiTest {
         assertThat(titulo(t)).contains("\"receivedCents\":\"7000\"", "\"balanceCents\":\"3000\"");
         assertThat(conta("select count(*) from settlement")).isEqualTo(1);
         assertThat(conta("select count(*) from cash_movement")).isEqualTo(1);
+        recebidoConfereComAlocacoes();
     }
 
     @Test
