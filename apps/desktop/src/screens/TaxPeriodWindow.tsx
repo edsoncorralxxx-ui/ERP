@@ -240,7 +240,7 @@ export function TaxPeriodWindow({ recordKey }: { recordKey: string }) {
                 <span className="rp-label">Receita de serviço</span>
                 <span />
                 <input className="rp-field rp-field--readonly rp-field--num" readOnly aria-label="Receita de serviço" value={reais(p.serviceRevenueCents)} />
-                <span className="rp-label">Receita documentada</span>
+                <span className="rp-label">Receita total</span>
                 <span />
                 <input className="rp-field rp-field--readonly rp-field--num" readOnly aria-label="Receita documentada" value={reais(p.revenueCents)} />
                 <span className="rp-label">Parâmetros</span>
@@ -249,7 +249,7 @@ export function TaxPeriodWindow({ recordKey }: { recordKey: string }) {
                   {seta('Abrir parâmetros fiscais', () => win.open('tax-parameters'))}
                   <input className="rp-field rp-field--readonly" readOnly aria-label="Parâmetros vigentes"
                     value={p.parameters
-                      ? `Revisão ${p.parameters.revision} — Simples Nacional, produto Anexo ${p.parameters.productAnnex}, serviço Anexo ${p.parameters.serviceAnnex}`
+                      ? `Revisão ${p.parameters.revision} — Anexo ${p.parameters.productAnnex} (produto), ${p.parameters.serviceAnnex} (serviço)`
                       : 'Sem parâmetros vigentes nesta competência'} />
                 </span>
                 <span className="rp-label">RBT12</span>
@@ -263,8 +263,8 @@ export function TaxPeriodWindow({ recordKey }: { recordKey: string }) {
                   {seloCompetencia(p.status)}
                   {alterado && <span className="rp-badge rp-badge--pendente rp-janela-mdi__selo">Alterações não salvas</span>}
                 </span>
-                {campoLeitura('Simulação gerencial', resultado(ultima))}
-                {campoLeitura('Valor do contador', conferencia ? reais(conferencia.amountCents) : '')}
+                {campoLeitura('Simulação', resultado(ultima))}
+                {campoLeitura('Contador', conferencia ? reais(conferencia.amountCents) : '')}
                 {campoLeitura('Diferença', p.differenceCents ? reais(p.differenceCents) : '')}
                 {campoLeitura('Vencimento', conferencia ? dataDaApi(conferencia.dueDate) : '', false)}
                 {campoLeitura('Versão', p.version)}

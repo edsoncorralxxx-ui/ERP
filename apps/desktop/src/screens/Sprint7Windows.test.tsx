@@ -151,7 +151,7 @@ describe('Competência fiscal', () => {
     const user = userEvent.setup();
     await waitFor(() => expect(screen.getByLabelText('Receita documentada')).toHaveValue('R$ 20.000,00'));
     expect(screen.getByLabelText('Receita de produto')).toHaveValue('R$ 12.861,74');
-    expect(screen.getByLabelText('Parâmetros vigentes')).toHaveValue('Revisão 1 — Simples Nacional, produto Anexo II, serviço Anexo III');
+    expect(screen.getByLabelText('Parâmetros vigentes')).toHaveValue('Revisão 1 — Anexo II (produto), III (serviço)');
     expect(screen.getByLabelText('RBT12 usado')).toHaveValue('Desconhecido: informe o RBT12 do PGDAS-D');
     expect(screen.getByRole('table', { name: 'Notas da competência' })).toHaveTextContent('Nº 5001 / série 1Serviço (NFS-e)');
     // Fechar só depois da conferência do contador.
@@ -178,7 +178,7 @@ describe('Competência fiscal', () => {
     expect(memoria).toHaveTextContent('ProdutoII2ª7,80%R$ 5.940,005,82%R$ 12.861,74R$ 748,55');
     expect(memoria).toHaveTextContent('ServiçoIII2ª11,20%R$ 9.360,008,08%R$ 7.138,26R$ 576,77');
     expect(screen.getByRole('table', { name: 'Simulações anteriores' })).toHaveTextContent('Não calculável');
-    expect(screen.getByLabelText('Simulação gerencial')).toHaveValue('R$ 1.325,32');
+    expect(screen.getByLabelText('Simulação', { selector: 'input' })).toHaveValue('R$ 1.325,32');
   });
 
   it('registra a conferência do contador, fecha e reabre com motivo', async () => {
@@ -207,7 +207,7 @@ describe('Competência fiscal', () => {
     const win = abrir(<TaxPeriodWindow recordKey="2026-10" />);
     const user = userEvent.setup();
     await user.click(await screen.findByRole('tab', { name: /Conferência/ }));
-    await user.type(screen.getByLabelText('Valor do contador', { selector: 'input:not([readonly])' }), '1.330,00');
+    await user.type(screen.getByLabelText('Valor do contador'), '1.330,00');
     const venc = screen.getByLabelText('Vencimento', { selector: 'input:not([readonly])' });
     await user.clear(venc);
     await user.type(venc, '20/11/2026');
@@ -241,7 +241,7 @@ describe('Competência fiscal', () => {
     setTransport(async (req) => (req.path === '/api/v1/tax-periods/2026-10' ? resposta(200, competencia({ version: '3', simulations: [simulacao] })) : naoAchou()));
     abrir(<TaxPeriodWindow recordKey="2026-10" />, CONSULTA);
     const user = userEvent.setup();
-    await waitFor(() => expect(screen.getByLabelText('Simulação gerencial')).toHaveValue('R$ 1.325,32'));
+    await waitFor(() => expect(screen.getByLabelText('Simulação', { selector: 'input' })).toHaveValue('R$ 1.325,32'));
     expect(screen.queryByRole('button', { name: 'Simular' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Fechar competência' })).toBeNull();
     await user.click(screen.getByRole('tab', { name: /RBT12/ }));

@@ -4,6 +4,10 @@ renda:
   bootstrap-admin:
     username: ${RENDA_BOOTSTRAP_ADMIN_USER:}
     password: ${RENDA_BOOTSTRAP_ADMIN_PASSWORD:}
+  # Fiscal (Sprint 7): primeira competência com toda a receita no Renda+ (o sistema começou do zero). Antes dela, o
+  # RBT12 não é calculado das notas e vale o informado pelo contador.
+  fiscal:
+    revenue-start: ${RENDA_FISCAL_REVENUE_START:2026-09}
 
 spring:
   application:

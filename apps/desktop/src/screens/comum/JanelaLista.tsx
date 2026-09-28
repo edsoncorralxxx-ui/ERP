@@ -54,6 +54,8 @@ type Props<T extends { id: string; status?: string }> = {
   novo?: () => void;
   /** Situações do filtro; a primeira é a padrão. Sem elas, Ativos, Inativos e Todos. */
   situacoes?: OpcaoSituacao[];
+  /** Nome do filtro do servidor na janela Filtrar tabela e na barra de filtros (padrão: Situação; ex.: Ano). */
+  rotuloSituacao?: string;
   /** Selo da coluna Situação; sem ele, Ativo ou Inativo. */
   selo?: (linha: T) => ReactNode;
   /** Totaliza a lista visível no rodapé (ex.: soma em reais). */
@@ -139,7 +141,7 @@ export function JanelaLista<T extends { id: string; status?: string }>(p: Props<
           <div className="rp-filtros-dir">
             {situacao !== padrao && (
               <span className="rp-chip">
-                <b>Situação:</b> {situacoes.find((o) => o.valor === situacao)?.rotulo ?? situacao}
+                <b>{p.rotuloSituacao ?? 'Situação'}:</b> {situacoes.find((o) => o.valor === situacao)?.rotulo ?? situacao}
                 <i className="x" role="button" tabIndex={0} title="Remover" aria-label="Remover o filtro de situação" onClick={() => setSituacao(padrao)} onKeyDown={(e) => e.key === 'Enter' && setSituacao(padrao)}>
                   &times;
                 </i>
@@ -254,7 +256,7 @@ export function JanelaLista<T extends { id: string; status?: string }>(p: Props<
           </div>
           <div className="rp-window-body">
             <div className="rp-form">
-              <label className="rp-label" htmlFor={`${win.windowId}-situacao`}>Situação</label>
+              <label className="rp-label" htmlFor={`${win.windowId}-situacao`}>{p.rotuloSituacao ?? 'Situação'}</label>
               <Selecao id={`${win.windowId}-situacao`} valor={situacao} onChange={setSituacao} opcoes={situacoes} />
               {filtros.map((f) => (
                 <Fragment key={f.chave}>

@@ -173,7 +173,7 @@ export function TaxParametersWindow() {
             <i className="rp-ico rp-ico-status-info" aria-hidden="true" /> A nova revisão vale a partir da vigência; as competências anteriores e as simulações já feitas continuam com a revisão que usaram.
           </p>
         )}
-        <div className="rp-ficha__grade rp-rolagem">
+        <div className="rp-parametros__faixas">
           {TIPOS.map(([k, nome]) => {
             const faixas = atual?.brackets[k] ?? [];
             return (

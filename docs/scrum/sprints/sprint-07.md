@@ -1,6 +1,6 @@
 # Sprint 7 — Fiscal gerencial: receita por competência, simulação e conferência do contador
 
-Situação: **Planning proposto — perguntas respondidas pelo PO em 28/09/2026; aguardando a aprovação final** (e a confirmação do RBT12 informado, abaixo). Nada será implementado antes disso (ação da retrospectiva da Sprint 6: regra de negócio que muda a tela é confirmada no planning, com exemplo numérico).
+Situação: **Entregue para Review** (28/09/2026). Planning aprovado pelo PO em 28/09/2026 ("aprovado"), com o RBT12 informado como proposto; na aprovação o PO pediu também os botões **Registro anterior** e **Próximo registro** no menu superior, que entraram como S7-11 (ação da retrospectiva da Sprint 6 cumprida: a regra do faturamento e a do RBT12 foram confirmadas no planning, com exemplo numérico, antes de implementar).
 
 ## Objetivo
 
@@ -87,9 +87,10 @@ Simulação da competência: **R$ 1.325,32**. Se o contador apurar R$ 1.330,00, 
 | S7-07 | Fechar e reabrir | Fechar só com conferência; competência fechada não recebe simulação, conferência nem RBT12 informado; nota com essa competência recusada no registro e no cancelamento (`TAX_PERIOD_CLOSED`); reabrir com motivo; eventos `TaxPeriodClosed` e `TaxPeriodReopened` |
 | S7-08 | Telas | **Impostos gerenciais** (lista por competência: Receita de produto, Receita de serviço, RBT12, Simulação, Confirmado contador, Diferença, Situação; filtro por ano); **Competência** (abas Receitas — com seta para as notas —, Simulação com a memória, Conferência, Histórico; botões Informar RBT12, Simular, Registrar conferência, Fechar, Reabrir); **Parâmetros fiscais** (revisões e faixas; Nova revisão); na nota do pedido, o campo Tipo; Consulta só vê; design system (`rp-*`, Seleção, Campo de data, Campo de saldo) |
 | S7-09 | Contratos | OpenAPI de `/tax-periods`, `/tax-parameters`, `/tax-periods/{id}/simulations`, `/confirmation`, `/close`, `/reopen` (`OpenApiContractTest`); permissões nos perfis; erros no catálogo; eventos com o payload do catálogo; `menu.json` marca *Impostos gerenciais* como implementado; PD-013 respondida em `pendencias.json`; verificador B01 OK |
+| S7-11 | Registro anterior e próximo registro (pedido do PO na aprovação) | Nas fichas (cliente, fornecedor, produto, proposta, pedido, projeto, equipamento, título, documento e competência fiscal), as ferramentas Primeiro, Anterior, Próximo e Último registro da barra superior e do menu **Dados** (atalhos ⌥⌘ + setas) trocam o registro na mesma janela, pela lista de onde a ficha foi aberta (com a busca e os filtros dela) ou, vinda de uma seta, pela lista completa do tipo; nas pontas, a mensagem "Você já está no primeiro/último registro"; com alterações não gravadas, não sai do registro (NAV-001); registro já aberto em outra janela vem à frente |
 | S7-10 | Roteiro de ponta a ponta | `apps/desktop/e2e/sprint-07.e2e.ts`: nota de produto e nota de serviço do mesmo recebimento → competência na lista → RBT12 informado → simulação com os valores do exemplo → conferência → fechar → nota nessa competência recusada; confere pela API o total da competência contra a lista de documentos; roda no job `e2e` do CI com as Sprints 4 a 6 |
 
-Ordem de execução: S7-00 → S7-01 → S7-02 → S7-03 → S7-04 → S7-05 → S7-06 → S7-07 (servidor) → S7-09 → S7-08 → S7-10.
+Ordem de execução: S7-00 → S7-01 → S7-02 → S7-03 → S7-04 → S7-05 → S7-06 → S7-07 (servidor) → S7-09 → S7-08 → S7-11 → S7-10.
 
 Se faltar tempo, sai primeiro o bloqueio de notas em competência fechada (parte do S7-07) e depois a tela de Parâmetros como janela própria (os parâmetros ficam na aba da competência). S7-00 a S7-06, S7-08 e S7-10 formam o mínimo da sprint.
 
@@ -108,6 +109,7 @@ Emissão ou transmissão do PGDAS-D/DAS; título a pagar do DAS (Contas a pagar)
 7. **Fechar**. Registrar ou cancelar uma nota com competência 09/2026 → recusado com "Competência 09/2026 fechada".
 8. **Reabrir** com motivo → a nota é aceita; a trilha mostra fechamento e reabertura.
 9. Entrar como Consulta: vê tudo; não simula, não confere, não fecha, não altera parâmetros.
+10. Na competência aberta pela lista, **Registro anterior** e **Próximo registro** (barra superior ou menu *Dados*) trocam a competência na mesma janela; o mesmo vale para clientes, pedidos, títulos, notas e as demais fichas.
 
 Automático: `cd apps/desktop && npm run e2e` (servidor rodando; ver README) — e o job `e2e` do CI.
 
@@ -118,7 +120,37 @@ Automático: `cd apps/desktop && npm run e2e` (servidor rodando; ver README) —
 - **Anexo por tipo pode não bastar** (ex.: instalação em Anexo IV, atividade com Fator R): se o contador indicar, o anexo passa a ser por natureza da operação (classificação da Sprint 6) — muda a política de enquadramento, não o modelo.
 - **Notas separadas mudam a Sprint 6** (S7-00): o roteiro e os testes da Sprint 6 são ajustados junto, para o CI continuar verde.
 
-## Pendente para começar
+## Review — evidências
 
-1. **Aprovação** deste planning.
-2. **RBT12 informado** enquanto não houver 12 meses (proposta acima) ou simulação "Não calculável" até lá.
+| Item | Resultado | Evidência |
+|---|---|---|
+| S7-00 Nota de produto e nota de serviço | Pronto | `DocumentosApiTest.notaDoPedidoFaturaSoORecebidoComLinhasProporcionaisEVinculosPorVencimento` refeito: com R$ 20.000,00 recebidos, a emitir de produto R$ 12.861,74 e de serviço R$ 7.138,26; pedido com os dois tipos sem `kind` → `DOCUMENT_INVALID` no campo; R$ 12.861,75 de produto → "A emitir de produto: R$ 12.861,74."; a nota de produto leva só o equipamento e a de serviço só a instalação; pedido só de equipamento não aceita nota de serviço; com R$ 65.500,00 recebidos, R$ 29.260,45 e R$ 16.239,55 a emitir. `notasSimultaneasDoMesmoPedidoNaoPassamDoRecebido`: o bloqueio das parcelas continua valendo por tipo |
+| S7-01 Módulo e migração | Pronto | Migração V12 com a revisão 1 semeada (as 12 faixas da planilha FOURTECH); `fiscal` depende de `documentos` pelas portas públicas `DocumentQueryApi` e `CompetenceLockGuard` (`modulos.json`, `ArchitectureTest` passa) |
+| S7-02 Receita por competência | Pronto | `FiscalApiTest.simulacaoComRbt12InformadoConfereComOContadorEFechaACompetencia`: a lista mostra produto R$ 12.861,74 e serviço R$ 7.138,26, e o total bate com a soma da lista de documentos da mesma competência; nota cancelada sai da receita |
+| S7-03 RBT12 informado | Pronto | Campos obrigatórios apontados; versão lida conferida (412); a origem vai para a memória. `rbt12CalculadoDasNotasQuandoORendaTemOs12Meses`: com os 12 meses conhecidos, o RBT12 é calculado das notas (R$ 300.000,00 → R$ 582,00 sobre R$ 10.000,00) |
+| S7-04 Parâmetros com vigência | Pronto | `novaRevisaoDosParametrosTemVigenciaEPreservaAAnterior`: faixas decrescentes, alíquota fora de 0–100% e parcela negativa apontadas no campo; a revisão 2 vale só a partir da vigência dela; mesma chave → mesma revisão; evento `TaxParameterRevised` |
+| S7-05 Simulação | Pronto | `SimplesSimulationTest`: o exemplo do planning (5,82%, 8,08%, R$ 748,55 + R$ 576,77 = R$ 1.325,32), os limites da 1ª e da 2ª faixa, a 6ª faixa com o aviso de ICMS/ISS e os casos não calculáveis (sem parâmetro, RBT12 desconhecido com os meses, acima de R$ 4.800.000,00). Na API: não calculável sem RBT12, a mesma chave não repete, a memória guarda revisão, faixa e alíquotas |
+| S7-06 Conferência do contador | Pronto | R$ 1.330,00 → diferença R$ 4,68 na ficha e na lista; valor negativo e vencimento vazio apontados; evento `TaxPeriodConfirmed` com `titleId` nulo |
+| S7-07 Fechar e reabrir | Pronto | Fechar sem conferência → `TAX_PERIOD_INVALID`; fechada, a competência recusa registrar e cancelar nota (`TAX_PERIOD_CLOSED`, no campo competência) e simular; nota em outra competência continua aceita; reabrir exige motivo; reabrir aberta → 409; trilha e eventos |
+| S7-08 Telas | Pronto | `Sprint7Windows.test.tsx` (7 testes): lista do ano com os totais e a seta que abre a competência com a sequência; simular com a mesma chave depois de queda de rede; RBT12 informado com a versão lida; memória do cálculo; conferência, fechar e reabrir com motivo; Consulta sem botões; Parâmetros com as faixas e a nova revisão enviada como fração. `Sprint6Windows.test.tsx`: o campo Tipo da nota e o a emitir do tipo |
+| S7-09 Contratos | Pronto | `openapi.yaml` com as 9 rotas do fiscal e o `kind` da nota (`OpenApiContractTest` passa); permissões nos perfis; `menu.json` com Impostos gerenciais implementado; PD-013 respondida em `pendencias.json`; formulários `documentos` e `impostos` atualizados; verificador B01 OK |
+| S7-10 Roteiro de ponta a ponta | Pronto | `apps/desktop/e2e/sprint-07.e2e.ts` no Chromium contra o servidor real (banco vazio), junto com os roteiros das Sprints 4, 5 e 6 (o da 6 refeito para as notas separadas): 4 passando. Confere pela API a receita contra a lista de documentos, a simulação de R$ 1.325,32, a diferença e a nota recusada na competência fechada |
+| S7-11 Registro anterior e próximo | Pronto | `navegacao.test.ts` (pontas, registro novo, sequência padrão), `windowManager.test.ts` (troca na mesma janela, registro já aberto vem à frente) e `App.test.tsx` (lista de clientes → ficha → Próximo, último registro, menu Dados → Primeiro, ⌥⌘→, alterações não gravadas bloqueiam); no roteiro da Sprint 7, anterior e próximo entre competências |
+
+Testes executados: servidor **93** (PostgreSQL 16 real; eram 86), app **86** (eram 73), typecheck do app e do Electron, build, verificador B01 + testes, roteiros Playwright das Sprints 4 a 7.
+
+**Não verificado aqui:** o app dentro do Electron no macOS (ambiente Linux sem tela); os atalhos ⌥⌘ + setas foram testados no navegador (jsdom e Chromium), não no teclado do Mac.
+
+**Limitações conhecidas:**
+- O início da receita no Renda+ é a competência 09/2026 (`RENDA_FISCAL_REVENUE_START`). Antes dela, e enquanto faltar algum dos 12 meses, o RBT12 é o informado; notas registradas com competência anterior a esse início aparecem na receita, mas não tornam o mês "conhecido".
+- O fechamento guarda a receita, a simulação e a conferência do momento; como a competência fechada não aceita nem perde nota, a receita não muda enquanto ela estiver fechada.
+- Sem proporcionalização do RBT12 para início de atividade, sem Fator R e sem o ICMS/ISS fora do DAS na 6ª faixa (só o aviso).
+- A navegação da competência anda pelos 12 meses do ano da lista; para outro ano, troque o ano no filtro da lista.
+
+## Retrospectiva
+
+- Funcionou: confirmar no planning as duas regras que mudavam a tela (notas separadas e RBT12 informado), com o exemplo numérico, evitou refazer a tela na Review; o exemplo virou teste unitário e passo do roteiro.
+- Funcionou: as portas `DocumentQueryApi` e `CompetenceLockGuard` deram ao fiscal a receita e a trava de competência sem o módulo documentos depender do fiscal.
+- Melhorar: o roteiro de ponta a ponta clicou na ficha enquanto a lista ainda estava filtrada pela busca, e a sequência do anterior/próximo veio com um registro só. O comportamento estava certo, mas o roteiro precisa esperar a lista que ele pretende usar.
+- Melhorar: roteiros que dependem de estado global (competência, RBT12) precisam deixar o banco como encontraram ou tolerar execuções anteriores; o da Sprint 7 reabre a competência e cancela as notas de execuções passadas.
+- Ação: na próxima sprint (Contas a pagar), o título do DAS nasce da competência conferida, uma vez só; conferir no roteiro que reconferir não cria outro título.

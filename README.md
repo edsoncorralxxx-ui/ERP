@@ -2,7 +2,7 @@
 
 ERP industrial orientado a projetos para a Fourtech/Renda+. App macOS em Electron + React; servidor em Java (Spring Boot) + PostgreSQL; Python para processamento (a partir da sprint de importação).
 
-Situação: **Sprint 6 — documentos e faturamento vinculados às parcelas** (entregue para Review). Funcionam de ponta a ponta (app → servidor → banco): entrar com usuário e senha, perfis Administrador e Consulta, *Clientes e unidades* (com CNPJ por unidade), *Fornecedores*, *Produtos e serviços* (NCM nos produtos, código da LC 116 nos serviços), *Unidades e categorias*, *Oportunidades e propostas* (revisões preservadas, conversão em pedido), *Pedidos e contratos* (parcelas, confirmação que cria o projeto, os equipamentos e as parcelas a receber uma única vez, cancelamento), *Carteira de projetos*, *Detalhe do projeto*, *Equipamentos*, *Contas a receber* (receber em partes, estornar, histórico), *Contas financeiras* (caixa e bancos, com extrato), *Notas a emitir* e *Documentos e faturamento* (regime de caixa: a nota do pedido fatura o recebido que ainda não tem nota, sem criar cobrança), *Usuários e permissões* e *Dados da empresa*, com controle de versão, auditoria e comando que não se duplica. Os demais módulos entram a cada sprint (`docs/scrum/product-backlog.md`).
+Situação: **Sprint 7 — fiscal gerencial** (entregue para Review). Funcionam de ponta a ponta (app → servidor → banco): entrar com usuário e senha, perfis Administrador e Consulta, *Clientes e unidades* (com CNPJ por unidade), *Fornecedores*, *Produtos e serviços* (NCM nos produtos, código da LC 116 nos serviços), *Unidades e categorias*, *Oportunidades e propostas* (revisões preservadas, conversão em pedido), *Pedidos e contratos* (parcelas, confirmação que cria o projeto, os equipamentos e as parcelas a receber uma única vez, cancelamento), *Carteira de projetos*, *Detalhe do projeto*, *Equipamentos*, *Contas a receber* (receber em partes, estornar, histórico), *Contas financeiras* (caixa e bancos, com extrato), *Notas a emitir* e *Documentos e faturamento* (regime de caixa: a nota do pedido fatura o recebido que ainda não tem nota, sem criar cobrança; nota de produto e nota de serviço separadas), *Impostos gerenciais* (receita por competência, simulação do Simples Nacional, conferência do contador e fechamento), *Usuários e permissões* e *Dados da empresa*, com controle de versão, auditoria e comando que não se duplica. Os demais módulos entram a cada sprint (`docs/scrum/product-backlog.md`).
 
 ## Rodar no seu Mac
 
@@ -89,10 +89,11 @@ A janela do Renda+ ERP abre na tela de login: entre com o administrador criado n
 - *Projetos → Carteira de projetos* e *Equipamentos → Equipamentos*: projetos gerados pelos pedidos e equipamentos com número de série.
 - *Financeiro → Contas a receber*: parcelas dos pedidos confirmados; na ficha do título, **Receber** (conta, data e valor; parcial ou total) e **Estornar** com motivo na aba Recebimentos.
 - *Financeiro → Contas financeiras*: o Caixa já vem cadastrado; cadastre as contas bancárias com o saldo inicial e veja o **Extrato** de cada conta.
-- *Faturamento → Notas a emitir*: os pedidos com recebimento que ainda não tem nota, com quanto é produto e quanto é serviço. Pela seta, a nota abre com o pedido, as linhas e as parcelas montadas pelo sistema; emita a nota no portal da SEFAZ ou da prefeitura e registre aqui número, série e emissão. O valor pode ser menor que o a emitir (nota parcial), nunca maior.
+- *Faturamento → Notas a emitir*: os pedidos com recebimento que ainda não tem nota, com quanto é produto (NF-e) e quanto é serviço (NFS-e). Pela seta, a nota abre com o pedido; escolha o **Tipo da nota** (produto ou serviço) e o sistema monta as linhas desse tipo e as parcelas; emita a nota no portal da SEFAZ (produto) ou da prefeitura (serviço) e registre aqui número, série e emissão. O valor pode ser menor que o a emitir do tipo (nota parcial), nunca maior.
 - *Faturamento → Documentos e faturamento*: as notas registradas, com o pedido; **Cancelar documento** (com motivo) devolve o valor às notas a emitir. O pedido, o projeto e o título mostram o faturado e o que falta emitir.
+- *Fiscal → Impostos gerenciais*: as competências do ano com a receita das notas (produto e serviço), a simulação, o valor do contador e a diferença. Na competência: **Simular** (Simples Nacional, Anexo II para produto e III para serviço, com a memória do cálculo), aba *RBT12* para **Informar RBT12** (o que o contador usou no PGDAS-D, enquanto o Renda+ não tem 12 meses de notas), aba *Conferência* para **Registrar conferência** (valor e vencimento do contador), **Fechar competência** (as notas dela deixam de poder ser registradas ou canceladas) e **Reabrir competência** com motivo. A seta de *Parâmetros* abre as faixas e a **Nova revisão**.
 
-Atalhos: **Esc** fecha a janela ativa (pergunta antes se houver alterações não salvas); **⌘S** grava; **Alt + letra sublinhada** aciona abas e botões.
+Atalhos: **Esc** fecha a janela ativa (pergunta antes se houver alterações não salvas); **⌘S** grava; **Alt + letra sublinhada** aciona abas e botões; **⌥⌘ + setas** (ou as ferramentas da barra superior e o menu *Dados*) vão ao primeiro, anterior, próximo e último registro, pela lista de onde a ficha foi aberta.
 
 *Arquivo → Bloquear tela* pede a senha de novo sem fechar as janelas; *Arquivo → Trocar senha* troca a sua senha.
 
@@ -139,6 +140,7 @@ Na primeira vez, o roteiro de ponta a ponta precisa do navegador do Playwright: 
 | `RENDA_SERVER_ADDRESS` | `127.0.0.1` | só a própria máquina; use `0.0.0.0` para outros computadores da rede |
 | `RENDA_SERVER_PORT` | `8080` | porta da API |
 | `RENDA_BOOTSTRAP_ADMIN_USER` / `RENDA_BOOTSTRAP_ADMIN_PASSWORD` | — | primeiro administrador, usado só enquanto não há nenhum usuário |
+| `RENDA_FISCAL_REVENUE_START` | `2026-09` | primeira competência com toda a receita no Renda+; antes dela o RBT12 é o informado pelo contador |
 
 O app procura o servidor em `http://localhost:8080` (pode ser alterado com `RENDA_SERVER_URL`).
 

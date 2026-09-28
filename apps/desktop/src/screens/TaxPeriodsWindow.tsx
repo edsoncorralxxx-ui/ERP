@@ -13,7 +13,7 @@ type Linha = TaxPeriodSummary & { id: string };
 /** Anos do filtro: o corrente primeiro (padrão), o seguinte e os três anteriores. */
 const anos = (): OpcaoSituacao[] => {
   const atual = Number(hojeIso().slice(0, 4));
-  return [atual, atual + 1, atual - 1, atual - 2, atual - 3].map((a) => ({ valor: String(a), rotulo: `Ano ${a}` }));
+  return [atual, atual + 1, atual - 1, atual - 2, atual - 3].map((a) => ({ valor: String(a), rotulo: String(a) }));
 };
 
 const carregar = async (busca: string, ano: string) => {
@@ -49,6 +49,7 @@ export function TaxPeriodsWindow() {
       abrir={(id, sequencia) => win.open('tax-period', id, sequencia)}
       rotuloLinha={(l) => `Abrir competência ${competenciaDaApi(l.competence)}`}
       situacoes={anos()}
+      rotuloSituacao="Ano"
       selo={(l) => seloCompetencia(l.status)}
       total={(ls) =>
         `Receita da lista: ${reais(somar(ls, (l) => l.revenueCents))} · Simulado: ${reais(somar(ls, (l) => l.simulationCents))} · Contador: ${reais(

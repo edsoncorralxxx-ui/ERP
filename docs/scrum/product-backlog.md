@@ -15,7 +15,7 @@ Ordenado por prioridade. Épicos correspondem às fases do roteiro (`../backend/
 | 7 | Engenharia e planejamento | B07 | Backlog |
 | 8 | Suprimentos, estoque e terceiros | B08 | Backlog |
 | 9 | Produção, qualidade e instalação | B09 | Backlog |
-| 10 | Repasses, fiscal e indicadores | B10 | Sprint 7 (fiscal gerencial) — planning proposto |
+| 10 | Repasses, fiscal e indicadores | B10 | Em execução (Sprint 7: fiscal gerencial) |
 | 11 | Pós-venda | B11 | Backlog |
 | 12 | Migração do histórico | B12 | Backlog |
 | 13 | Piloto e implantação | B13 | Backlog |
@@ -37,7 +37,7 @@ Decidido com o PO em 25/09/2026: cada sprint entrega uma **fatia vertical comple
 | 4 | Proposta → pedido confirmado → projeto, equipamento e parcelas; tela de Equipamentos — **entregue para Review** (premissas PD-001, PD-002 e PD-003 a confirmar) | Vender e ver projeto, equipamentos e parcelas gerados uma única vez | B05 |
 | 5 | Contas a receber (tela e títulos da Sprint 4): baixa parcial e estorno; contas financeiras e extrato; roteiro Playwright no CI — **entregue para Review** (premissas PD-004, PD-005 e PD-009 a confirmar) | Registrar e estornar recebimentos | B05, B06 |
 | 6 | Documentos e faturamento vinculados às parcelas — **entregue para Review**, ajustada na Review para o regime de caixa (PD-023 respondida; PD-009 a confirmar) | Registrar notas sem duplicar cobrança | B06 |
-| 7 | Fiscal gerencial: receita por competência, histórico informado, simulação do Simples Nacional, conferência do contador e fechamento e notas separadas de produto e serviço — **planning com as respostas do PO, aguardando aprovação** (`sprints/sprint-07.md`) | Conferir impostos por competência | B10 |
+| 7 | Fiscal gerencial: receita por competência, histórico informado, simulação do Simples Nacional, conferência do contador e fechamento e notas separadas de produto e serviço; registro anterior e próximo nas fichas — **entregue para Review** (`sprints/sprint-07.md`; PD-013 respondida) | Conferir impostos por competência | B10 |
 | 8+ | Contas a pagar, conciliação, fluxo de caixa, BOM, cronograma, compras, estoque, produção, qualidade, instalação, repasses, pós-venda, importação do histórico | Um fluxo novo por sprint | B04–B12 |
 
 A ordem pode ser revista em cada refinamento. O worker Python entra na primeira sprint que precisar dele (importação de arquivos).

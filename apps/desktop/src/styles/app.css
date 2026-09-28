@@ -311,3 +311,6 @@ body { background: var(--ground); }
 
 /* Unidades do cliente: coluna do CNPJ da unidade. */
 .rp-clientes__col-cnpj { width: 150px; }
+
+/* Parâmetros fiscais (Sprint 7): as faixas de produto e de serviço uma embaixo da outra; quem rola é o corpo da janela. */
+.rp-parametros__faixas { display: grid; gap: var(--space-4); }
