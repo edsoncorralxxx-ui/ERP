@@ -12,8 +12,8 @@ import java.util.UUID;
 
 /**
  * Título financeiro (formulário "receber" do B01). O valor original e a origem são imutáveis (INV-FT-2); o saldo é
- * derivado: original + ajustes − valores recebidos. Nesta sprint ainda não há ajustes nem recebimentos (Sprint 5), então
- * o saldo é o original. Vencido é condição por data e saldo, não situação.
+ * derivado: original + ajustes − alocações das liquidações não estornadas, e nunca fica negativo (INV-FT-1). Ajustes
+ * ainda não existem (entram com o financeiro ampliado). Vencido é condição por data e saldo, não situação.
  */
 public final class FinancialTitle {
 
@@ -36,6 +36,7 @@ public final class FinancialTitle {
     private final LocalDate issueDate;
     private final LocalDate dueDate;
     private final Money original;
+    private final Money received;
     private final Lifecycle lifecycle;
     private final String cancelReason;
     private final long version;
@@ -44,9 +45,10 @@ public final class FinancialTitle {
     private final Instant updatedAt;
     private final String updatedBy;
 
+    /** {@code received}: soma das alocações das liquidações não estornadas, lida junto com o título. */
     public FinancialTitle(UUID id, String code, Direction direction, UUID counterpartyId, String originType, String originId,
                           String originLabel, UUID projectId, String category, YearMonth competence, LocalDate issueDate,
-                          LocalDate dueDate, Money original, Lifecycle lifecycle, String cancelReason, long version,
+                          LocalDate dueDate, Money original, Money received, Lifecycle lifecycle, String cancelReason, long version,
                           Instant createdAt, String createdBy, Instant updatedAt, String updatedBy) {
         this.id = Objects.requireNonNull(id);
         this.code = Objects.requireNonNull(code);
@@ -61,6 +63,7 @@ public final class FinancialTitle {
         this.issueDate = Objects.requireNonNull(issueDate);
         this.dueDate = Objects.requireNonNull(dueDate);
         this.original = Objects.requireNonNull(original);
+        this.received = Objects.requireNonNull(received);
         this.lifecycle = Objects.requireNonNull(lifecycle);
         this.cancelReason = cancelReason;
         this.version = version;
@@ -81,13 +84,55 @@ public final class FinancialTitle {
             throw new IllegalArgumentException("Valor do título deve ser positivo, em reais: " + amount);
         }
         return new FinancialTitle(UUID.randomUUID(), code, Direction.RECEIVABLE, counterpartyId, originType, originId, label,
-                projectId, category, YearMonth.from(dueDate), issueDate, dueDate, amount, Lifecycle.ACTIVE, null, 1, now, actor,
-                now, actor);
+                projectId, category, YearMonth.from(dueDate), issueDate, dueDate, amount, Money.zero(Currency.BRL), Lifecycle.ACTIVE,
+                null, 1, now, actor, now, actor);
     }
 
-    /** Valor recebido e não estornado. Recebimentos entram na Sprint 5. */
+    /** Valor recebido e não estornado. */
     public Money received() {
-        return Money.zero(original.currency());
+        return received;
+    }
+
+    /**
+     * Aplica a alocação de uma liquidação (chamado pelo serviço com o título bloqueado, INV-ST-3). Só título ativo
+     * recebe; acima do saldo é recusado com o saldo atual (INV-FT-1) — o excedente como crédito é a PD-004.
+     */
+    public FinancialTitle applyAllocation(Money amount, Instant now, String actor) {
+        if (amount.isNegative() || amount.isZero()) throw new IllegalArgumentException("Alocação deve ser positiva: " + amount);
+        if (lifecycle != Lifecycle.ACTIVE) {
+            throw new InvalidStateException("O título " + code + " está " + (lifecycle == Lifecycle.CANCELLED ? "cancelado" : "renegociado")
+                    + " e não recebe valores.");
+        }
+        if (amount.compareTo(balance()) > 0) throw new InsufficientBalanceException(code, balance(), amount);
+        return withReceived(received.plus(amount), now, actor);
+    }
+
+    /** Desfaz a alocação de uma liquidação estornada: o saldo volta pelo mesmo valor (INV-ST-4). */
+    public FinancialTitle reverseAllocation(Money amount, Instant now, String actor) {
+        if (amount.compareTo(received) > 0) {
+            throw new IllegalStateException("Estorno maior que o recebido no título " + code + ": " + amount + " > " + received);
+        }
+        return withReceived(received.minus(amount), now, actor);
+    }
+
+    /** Alocação acima do saldo do título (INV-FT-1). */
+    public static final class InsufficientBalanceException extends RuntimeException {
+        private final Money balance;
+
+        InsufficientBalanceException(String code, Money balance, Money requested) {
+            super("O título " + code + " tem saldo de " + balance.toBrl() + "; não recebe " + requested.toBrl() + ".");
+            this.balance = balance;
+        }
+
+        public Money balance() {
+            return balance;
+        }
+    }
+
+    private FinancialTitle withReceived(Money newReceived, Instant now, String actor) {
+        return new FinancialTitle(id, code, direction, counterpartyId, originType, originId, originLabel, projectId, category,
+                competence, issueDate, dueDate, original, newReceived, lifecycle, cancelReason, version + 1, createdAt, createdBy,
+                now, actor);
     }
 
     public Money balance() {
@@ -113,7 +158,8 @@ public final class FinancialTitle {
             throw new InvalidStateException("O título " + code + " tem valor recebido; estorne o recebimento antes de cancelar.");
         }
         return new FinancialTitle(id, code, direction, counterpartyId, originType, originId, originLabel, projectId, category,
-                competence, issueDate, dueDate, original, Lifecycle.CANCELLED, reason, version + 1, createdAt, createdBy, now, actor);
+                competence, issueDate, dueDate, original, received, Lifecycle.CANCELLED, reason, version + 1, createdAt, createdBy,
+                now, actor);
     }
 
     public UUID id() { return id; }

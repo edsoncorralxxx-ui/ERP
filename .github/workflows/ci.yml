@@ -55,3 +55,73 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  e2e:
+    # Ação da retrospectiva da Sprint 4: os roteiros Playwright (apps/desktop/e2e) rodam no CI contra o servidor real,
+    # com banco vazio e o primeiro administrador criado pelo próprio servidor.
+    name: Roteiro de ponta a ponta (Playwright, servidor real)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: renda
+          POSTGRES_USER: renda
+          POSTGRES_PASSWORD: renda
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U renda" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+      RENDA_E2E_USER: admin
+      RENDA_E2E_PASSWORD: senha-e2e-renda-ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - name: Empacotar o servidor
+        working-directory: backend/java
+        run: ./mvnw -B -DskipTests package
+      - name: Subir o servidor
+        working-directory: backend/java
+        env:
+          RENDA_BOOTSTRAP_ADMIN_USER: admin
+          RENDA_BOOTSTRAP_ADMIN_PASSWORD: senha-e2e-renda-ci
+        run: |
+          nohup java -jar target/renda-erp-server-*.jar > "$RUNNER_TEMP/servidor.log" 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:8080/api/v1/status && exit 0
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/servidor.log"
+          exit 1
+      - name: Instalar o app e o Chromium
+        working-directory: apps/desktop
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Rodar os roteiros
+        working-directory: apps/desktop
+        env:
+          RENDA_E2E_EVIDENCIAS: ${{ runner.temp }}/evidencias
+        run: |
+          mkdir -p "$RENDA_E2E_EVIDENCIAS"
+          npm run e2e
+      - name: Guardar evidências e o log do servidor
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-evidencias
+          path: |
+            ${{ runner.temp }}/evidencias
+            ${{ runner.temp }}/servidor.log
+            apps/desktop/test-results
+          if-no-files-found: ignore

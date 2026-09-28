@@ -3,6 +3,7 @@ package br.com.fourtech.rendamais.financeiro.application;
 import br.com.fourtech.rendamais.acesso.api.CurrentUserHolder;
 import br.com.fourtech.rendamais.acesso.api.Permissions;
 import br.com.fourtech.rendamais.auditoria.api.AuditEntry;
+import br.com.fourtech.rendamais.auditoria.api.AuditQuery;
 import br.com.fourtech.rendamais.auditoria.api.AuditTrail;
 import br.com.fourtech.rendamais.financeiro.api.TitleIssuanceApi;
 import br.com.fourtech.rendamais.financeiro.api.TitleQueryApi;
@@ -26,7 +27,7 @@ import java.util.stream.Collectors;
 
 /**
  * Títulos financeiros: emissão e cancelamento pedidos por outros módulos (na transação deles, com auditoria e evento)
- * e as consultas da tela de contas a receber.
+ * e as consultas da tela de contas a receber. Recebimento e estorno ficam no {@link SettlementService}.
  */
 @Service
 public class TitleService implements TitleIssuanceApi, TitleQueryApi {
@@ -35,12 +36,14 @@ public class TitleService implements TitleIssuanceApi, TitleQueryApi {
 
     private final FinancialTitleRepository repository;
     private final AuditTrail audit;
+    private final AuditQuery auditQuery;
     private final Outbox outbox;
     private final Clock clock;
 
-    public TitleService(FinancialTitleRepository repository, AuditTrail audit, Outbox outbox, Clock clock) {
+    public TitleService(FinancialTitleRepository repository, AuditTrail audit, AuditQuery auditQuery, Outbox outbox, Clock clock) {
         this.repository = repository;
         this.audit = audit;
+        this.auditQuery = auditQuery;
         this.outbox = outbox;
         this.clock = clock;
     }
@@ -119,6 +122,13 @@ public class TitleService implements TitleIssuanceApi, TitleQueryApi {
     public FinancialTitleRepository.Summary get(UUID id) {
         CurrentUserHolder.require(Permissions.FINANCIAL_TITLE_READ);
         return repository.findById(id).orElseThrow(() -> new NotFoundException("Título não encontrado."));
+    }
+
+    /** Histórico do título: criação, recebimentos, estornos e cancelamento. */
+    @Transactional(readOnly = true)
+    public List<AuditQuery.AuditRecord> history(UUID id) {
+        get(id);
+        return auditQuery.history(ENTITY, id.toString());
     }
 
     static TitleView view(FinancialTitle t) {

@@ -47,8 +47,15 @@ public abstract class IntegrationTest {
         throw new IllegalStateException("login de teste falhou: " + result);
     }
 
-    /** Apaga pedidos, propostas, projetos, equipamentos e títulos (Sprint 4), que referenciam parceiros e itens. */
+    /**
+     * Apaga recebimentos e contas criadas pelos testes (Sprint 5), pedidos, propostas, projetos, equipamentos e títulos
+     * (Sprint 4), que referenciam parceiros e itens. O caixa criado pela migração fica.
+     */
     protected void limpaDocumentos() {
+        jdbc.sql("delete from cash_movement").update();
+        jdbc.sql("delete from settlement_allocation").update();
+        jdbc.sql("delete from settlement").update();
+        jdbc.sql("delete from bank_account where created_by <> 'sistema'").update();
         jdbc.sql("delete from financial_title").update();
         jdbc.sql("delete from equipment").update();
         jdbc.sql("delete from project").update();

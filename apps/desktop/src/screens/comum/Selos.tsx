@@ -1,4 +1,4 @@
-import type { OrderStatus, ProjectStage, ProposalStatus, TitleStatus } from '../../api/types';
+import type { OrderStatus, ProjectStage, ProposalStatus, SettlementStatus, TitleStatus } from '../../api/types';
 
 /** Selos de situação (componente Selo de status): sempre com a palavra, nunca só a cor. */
 const selo = (classe: string, texto: string) => <span className={`rp-badge${classe ? ` rp-badge--${classe}` : ''}`}>{texto}</span>;
@@ -24,4 +24,7 @@ export const seloEstagio = (s: ProjectStage) => selo(s === 'ENCERRADO' ? 'cancel
 export const TITULO: Record<TitleStatus, string> = { OPEN: 'Em aberto', PARTIAL: 'Parcial', SETTLED: 'Liquidado', RENEGOTIATED: 'Renegociado', CANCELLED: 'Cancelado' };
 export const seloTitulo = (s: TitleStatus) => selo(s === 'OPEN' ? 'aberto' : s === 'PARTIAL' ? 'pendente' : s === 'SETTLED' ? 'aprovado' : s === 'CANCELLED' ? 'cancelado' : 'fechado', TITULO[s]);
 
-export const seloEquipamento = (s: 'ATIVO' | 'CANCELADO') => selo(s === 'ATIVO' ? 'aprovado' : 'cancelado', s === 'ATIVO' ? 'Ativo' : 'Cancelado');
+export const RECEBIMENTO: Record<SettlementStatus, string> = { POSTED: 'Registrado', REVERSED: 'Estornado' };
+export const seloRecebimento = (s: SettlementStatus) => selo(s === 'POSTED' ? 'aprovado' : 'cancelado', RECEBIMENTO[s]);
+
+export const seloEquipamento =(s: 'ATIVO' | 'CANCELADO') => selo(s === 'ATIVO' ? 'aprovado' : 'cancelado', s === 'ATIVO' ? 'Ativo' : 'Cancelado');

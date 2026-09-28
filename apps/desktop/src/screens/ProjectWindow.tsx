@@ -163,6 +163,7 @@ export function ProjectWindow({ recordKey }: { recordKey: string }) {
                     <thead>
                       <tr>
                         <th className="rownum">#</th>
+                        <th aria-label="Abrir" />
                         <th>Título</th>
                         <th>Descrição</th>
                         <th>Vencimento</th>
@@ -174,8 +175,9 @@ export function ProjectWindow({ recordKey }: { recordKey: string }) {
                     </thead>
                     <tbody>
                       {(titulos ?? []).map((t, i) => (
-                        <tr key={t.id}>
+                        <tr key={t.id} onDoubleClick={() => win.open('receivable', t.id)}>
                           <td className="rownum">{i + 1}</td>
+                          <td>{seta(`Abrir título ${t.code}`, () => win.open('receivable', t.id))}</td>
                           <td>{t.code}</td>
                           <td>{t.origin}</td>
                           <td>
@@ -191,7 +193,7 @@ export function ProjectWindow({ recordKey }: { recordKey: string }) {
                     </tbody>
                     <tfoot>
                       <tr>
-                        <td colSpan={4}>Total em aberto</td>
+                        <td colSpan={5}>Total em aberto</td>
                         <td className="num">{reais(ativos.reduce((s, t) => s + BigInt(t.originalCents), 0n).toString())}</td>
                         <td className="num">{reais(ativos.reduce((s, t) => s + BigInt(t.receivedCents), 0n).toString())}</td>
                         <td className="num">{reais(ativos.reduce((s, t) => s + BigInt(t.balanceCents), 0n).toString())}</td>

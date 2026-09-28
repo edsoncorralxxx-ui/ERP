@@ -80,6 +80,7 @@ const WINDOWS: Record<string, WindowKind> = {
   'carteira:': 'projects',
   'projeto:': 'projects',
   'equipamentos:': 'equipments',
+  'receber:': 'receivables',
 };
 
 /** Permissão de leitura que cada janela exige; sem ela o item aparece, mas não abre. */
@@ -93,6 +94,7 @@ const NEEDS: Partial<Record<WindowKind, string>> = {
   orders: 'sales_order.read',
   projects: 'project.read',
   equipments: 'equipment.read',
+  receivables: 'financial_title.read',
   'company-profile': 'company.read',
 };
 

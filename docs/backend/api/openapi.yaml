@@ -755,7 +755,7 @@ paths:
   /api/v1/receivables:
     get:
       tags: [Contas a receber]
-      summary: Títulos a receber (financial_title.read); cancelados só com includeCancelled. Recebimento e estorno entram na Sprint 5
+      summary: Títulos a receber (financial_title.read) com recebido e saldo derivados das liquidações; cancelados só com includeCancelled
       parameters:
         - { name: search, in: query, required: false, schema: { type: string }, description: 'Código, origem ou cliente' }
         - { name: projectId, in: query, required: false, schema: { type: string, format: uuid } }
@@ -768,9 +768,107 @@ paths:
     parameters: [{ $ref: '#/components/parameters/Id' }]
     get:
       tags: [Contas a receber]
-      summary: Título a receber (financial_title.read)
+      summary: Título a receber (financial_title.read); o ETag é a versão para expectedTitleVersion
       responses:
-        '200': { description: Título, content: { application/json: { schema: { $ref: '#/components/schemas/Receivable' } } } }
+        '200': { description: Título, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Receivable' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/receivables/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Contas a receber]
+      summary: Histórico do título — criação, recebimentos, estornos e cancelamento (financial_title.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/settlements:
+    get:
+      tags: [Contas a receber]
+      summary: Recebimentos (financial_title.read), do mais recente ao mais antigo; estornados incluídos por padrão
+      parameters:
+        - { name: titleId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: customerId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Código do recebimento, do título ou cliente' }
+        - { name: includeReversed, in: query, required: false, schema: { type: boolean, default: true } }
+      responses:
+        '200': { description: Recebimentos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Settlement' } } } } }
+    post:
+      tags: [Contas a receber]
+      summary: >-
+        Registra recebimento com baixa parcial — PostSettlement (financial_title.settle). Títulos bloqueados em ordem de id;
+        acima do saldo → 422 INSUFFICIENT_TITLE_BALANCE com o saldo atual; Σ alocações ≠ valor → 422 SETTLEMENT_UNBALANCED;
+        conta inativa → 422 ACCOUNT_INACTIVE; título a pagar → 422 SETTLEMENT_DIRECTION_MISMATCH; cancelado → 409
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SettlementRequest' } } }
+      responses:
+        '201': { description: Recebimento registrado (a mesma chave devolve o mesmo), headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Settlement' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/settlements/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Contas a receber]
+      summary: Recebimento (financial_title.read)
+      responses:
+        '200': { description: Recebimento, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Settlement' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/settlements/{id}/reversals:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Contas a receber]
+      summary: >-
+        Estorna o recebimento inteiro — ReverseSettlement (settlement.reverse), premissa PD-005. Os saldos voltam, um movimento
+        de caixa inverso é criado e o recebimento fica REVERSED. Estornar de novo devolve o estorno existente (INV-ST-6)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string, maxLength: 500 } } } } }
+      responses:
+        '200': { description: Recebimento estornado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Settlement' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '404': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/settlements/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Contas a receber]
+      summary: Histórico do recebimento (financial_title.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/bank-accounts:
+    get:
+      tags: [Contas a receber]
+      summary: Contas financeiras (caixa e bancos) com o saldo atual (financial_title.read)
+      parameters:
+        - { name: includeInactive, in: query, required: false, schema: { type: boolean, default: false } }
+      responses:
+        '200': { description: Contas, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/BankAccount' } } } } }
+    post:
+      tags: [Contas a receber]
+      summary: Cadastra conta — RegisterBankAccount (bank_account.manage); nome único
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/BankAccountRequest' } } }
+      responses:
+        '201': { description: Conta cadastrada, content: { application/json: { schema: { $ref: '#/components/schemas/BankAccount' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/bank-accounts/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Contas a receber]
+      summary: Conta com o saldo atual (financial_title.read)
+      responses:
+        '200': { description: Conta, content: { application/json: { schema: { $ref: '#/components/schemas/BankAccount' } } } }
         '404': { $ref: '#/components/responses/Erro' }
 
 components:
@@ -1304,6 +1402,77 @@ components:
         createdBy: { type: string }
         updatedAt: { type: [string, 'null'], format: date-time }
         updatedBy: { type: [string, 'null'] }
+    BankAccount:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: CT001 }
+        name: { type: string, example: Caixa }
+        bank: { type: [string, 'null'] }
+        openingCents: { $ref: '#/components/schemas/Cents' }
+        openingOn: { type: string, format: date }
+        balanceCents: { $ref: '#/components/schemas/Cents', description: 'Abertura + movimentos de caixa' }
+        status: { type: string, enum: [ATIVO, INATIVO] }
+        version: { type: string }
+    BankAccountRequest:
+      type: object
+      required: [name, openingOn]
+      properties:
+        name: { type: string, maxLength: 120 }
+        bank: { type: [string, 'null'], maxLength: 120 }
+        openingCents: { $ref: '#/components/schemas/Cents' }
+        openingOn: { type: string, format: date }
+    SettlementRequest:
+      type: object
+      required: [accountId, effectiveDate, amountCents, allocations]
+      properties:
+        direction: { type: string, enum: [RECEIVABLE], default: RECEIVABLE, description: 'Pagamentos entram com o contas a pagar' }
+        accountId: { type: string, format: uuid }
+        effectiveDate: { type: string, format: date, description: 'Data da entrada na conta; não pode ser futura' }
+        amountCents: { $ref: '#/components/schemas/Cents' }
+        allocations:
+          type: array
+          minItems: 1
+          description: 'Σ amountCents = amountCents (INV-ST-1); títulos do mesmo cliente, cada um uma vez; sem crédito de excedente (PD-004)'
+          items:
+            type: object
+            required: [titleId, amountCents]
+            properties:
+              titleId: { type: string, format: uuid }
+              amountCents: { $ref: '#/components/schemas/Cents' }
+              expectedTitleVersion: { type: [string, 'null'], description: 'Versão lida do título; diferente → 412' }
+        notes: { type: [string, 'null'], maxLength: 500 }
+    Settlement:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: RC00001 }
+        direction: { type: string, enum: [RECEIVABLE, PAYABLE] }
+        accountId: { type: string, format: uuid }
+        accountCode: { type: string }
+        accountName: { type: string }
+        customerId: { type: string, format: uuid }
+        customerCode: { type: string }
+        customerName: { type: string }
+        effectiveDate: { type: string, format: date }
+        totalCents: { $ref: '#/components/schemas/Cents' }
+        notes: { type: [string, 'null'] }
+        allocations:
+          type: array
+          items:
+            type: object
+            properties:
+              titleId: { type: string, format: uuid }
+              titleCode: { type: string }
+              titleLabel: { type: string }
+              amountCents: { $ref: '#/components/schemas/Cents' }
+        status: { type: string, enum: [POSTED, REVERSED] }
+        reversalReason: { type: [string, 'null'] }
+        reversedAt: { type: [string, 'null'], format: date-time }
+        reversedBy: { type: [string, 'null'] }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
     Receivable:
       type: object
       properties:

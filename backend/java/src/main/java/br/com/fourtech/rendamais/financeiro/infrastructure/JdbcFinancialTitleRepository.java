@@ -20,8 +20,16 @@ import java.util.UUID;
 @Repository
 class JdbcFinancialTitleRepository implements FinancialTitleRepository {
 
-    private static final String SELECT = """
-            select t.*, p.code as partner_code, p.legal_name as partner_name
+    /** Recebido = alocações das liquidações não estornadas (o saldo nunca é gravado). */
+    static final String RECEIVED = """
+            coalesce((select sum(a.amount_cents) from settlement_allocation a join settlement s on s.id = a.settlement_id
+                       where a.title_id = t.id and s.status = 'POSTED'), 0) as received_cents
+            """;
+
+    private static final String TITLE = "select t.*, " + RECEIVED + " from financial_title t";
+
+    private static final String SELECT = "select t.*, " + RECEIVED + """
+            , p.code as partner_code, p.legal_name as partner_name
               from financial_title t join partner p on p.id = t.counterparty_id
             """;
 
@@ -74,16 +82,31 @@ class JdbcFinancialTitleRepository implements FinancialTitleRepository {
     }
 
     @Override
+    public List<FinancialTitle> findByIdsForUpdate(List<UUID> ids) {
+        if (ids.isEmpty()) return List.of();
+        List<UUID> locked = jdbc.sql("select id from financial_title where id in (:ids) order by id for update")
+                .param("ids", ids).query(UUID.class).list();
+        return read(locked);
+    }
+
+    @Override
     public List<FinancialTitle> findByOriginForUpdate(String originType, List<String> originIds) {
         if (originIds.isEmpty()) return List.of();
-        return jdbc.sql("select * from financial_title where origin_type = :type and origin_id in (:ids) order by id for update")
-                .param("type", originType).param("ids", originIds).query(JdbcFinancialTitleRepository::title).list();
+        List<UUID> locked = jdbc.sql("select id from financial_title where origin_type = :type and origin_id in (:ids) order by id for update")
+                .param("type", originType).param("ids", originIds).query(UUID.class).list();
+        return read(locked);
+    }
+
+    private List<FinancialTitle> read(List<UUID> ids) {
+        if (ids.isEmpty()) return List.of();
+        return jdbc.sql(TITLE + " where t.id in (:ids) order by t.id").param("ids", ids)
+                .query(JdbcFinancialTitleRepository::title).list();
     }
 
     @Override
     public List<FinancialTitle> findByOrigin(String originType, List<String> originIds) {
         if (originIds.isEmpty()) return List.of();
-        return jdbc.sql("select * from financial_title where origin_type = :type and origin_id in (:ids) order by due_date, code")
+        return jdbc.sql(TITLE + " where t.origin_type = :type and t.origin_id in (:ids) order by t.due_date, t.code")
                 .param("type", originType).param("ids", originIds).query(JdbcFinancialTitleRepository::title).list();
     }
 
@@ -116,17 +139,17 @@ class JdbcFinancialTitleRepository implements FinancialTitleRepository {
                 rs.getString("origin_type"), rs.getString("origin_id"), rs.getString("origin_label"),
                 rs.getObject("project_id", UUID.class), rs.getString("category"), YearMonth.parse(rs.getString("competence")),
                 rs.getDate("issue_date").toLocalDate(), rs.getDate("due_date").toLocalDate(),
-                Money.ofCents(rs.getLong("original_cents"), Currency.BRL), FinancialTitle.Lifecycle.valueOf(rs.getString("lifecycle")),
-                rs.getString("cancel_reason"), rs.getLong("version"), instant(rs, "created_at"), rs.getString("created_by"),
-                instant(rs, "updated_at"), rs.getString("updated_by"));
+                Money.ofCents(rs.getLong("original_cents"), Currency.BRL), Money.ofCents(rs.getLong("received_cents"), Currency.BRL),
+                FinancialTitle.Lifecycle.valueOf(rs.getString("lifecycle")), rs.getString("cancel_reason"), rs.getLong("version"),
+                instant(rs, "created_at"), rs.getString("created_by"), instant(rs, "updated_at"), rs.getString("updated_by"));
     }
 
-    private static Instant instant(ResultSet rs, String col) throws SQLException {
+    static Instant instant(ResultSet rs, String col) throws SQLException {
         Timestamp t = rs.getTimestamp(col);
         return t == null ? null : t.toInstant();
     }
 
-    private static Timestamp ts(Instant i) {
+    static Timestamp ts(Instant i) {
         return i == null ? null : Timestamp.from(i);
     }
 }

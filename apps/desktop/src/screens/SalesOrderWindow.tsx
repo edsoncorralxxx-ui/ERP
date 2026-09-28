@@ -505,7 +505,7 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
 }
 
 /** O que a confirmação gerou: projeto, equipamentos e parcelas a receber, cada um com a seta para a sua ficha. */
-function Gerado({ pedido, abrir }: { pedido: SalesOrder; abrir: (kind: 'project' | 'equipment', id: string) => void }) {
+function Gerado({ pedido, abrir }: { pedido: SalesOrder; abrir: (kind: 'project' | 'equipment' | 'receivable', id: string) => void }) {
   const seta = (rotulo: string, fn: () => void) => (
     <span className="rp-link" role="link" tabIndex={0} aria-label={rotulo} title={rotulo} onClick={fn} onKeyDown={(e) => e.key === 'Enter' && fn()} />
   );
@@ -554,6 +554,7 @@ function Gerado({ pedido, abrir }: { pedido: SalesOrder; abrir: (kind: 'project'
           <thead>
             <tr>
               <th className="rownum">#</th>
+              <th aria-label="Abrir" />
               <th>Título</th>
               <th>Descrição</th>
               <th>Vencimento</th>
@@ -567,6 +568,7 @@ function Gerado({ pedido, abrir }: { pedido: SalesOrder; abrir: (kind: 'project'
             {pedido.titles.map((t, i) => (
               <tr key={t.id}>
                 <td className="rownum">{i + 1}</td>
+                <td>{seta(`Abrir título ${t.code}`, () => abrir('receivable', t.id))}</td>
                 <td>{t.code}</td>
                 <td>{t.label}</td>
                 <td>{dataDaApi(t.dueDate)}</td>
@@ -579,7 +581,7 @@ function Gerado({ pedido, abrir }: { pedido: SalesOrder; abrir: (kind: 'project'
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={5}>Total</td>
+              <td colSpan={6}>Total</td>
               <td className="num">{reais(pedido.titles.reduce((s, t) => s + BigInt(t.originalCents), 0n).toString())}</td>
               <td className="num">{reais(pedido.titles.reduce((s, t) => s + BigInt(t.balanceCents), 0n).toString())}</td>
               <td />

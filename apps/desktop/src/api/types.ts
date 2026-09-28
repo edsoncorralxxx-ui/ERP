@@ -408,3 +408,44 @@ export type Receivable = {
   createdAt: string;
   createdBy: string;
 };
+
+// ───────────── Sprint 5: recebimentos, estornos e contas ─────────────
+
+/** Conta financeira (caixa ou banco) com o saldo atual: abertura + movimentos de caixa. */
+export type BankAccount = {
+  id: string;
+  code: string;
+  name: string;
+  bank: string | null;
+  openingCents: string;
+  openingOn: string;
+  balanceCents: string;
+  status: Situacao;
+  version: string;
+};
+
+export type SettlementStatus = 'POSTED' | 'REVERSED';
+
+/** Recebimento (liquidação): o valor que entrou numa conta, distribuído entre títulos do mesmo cliente. */
+export type Settlement = {
+  id: string;
+  code: string;
+  direction: 'RECEIVABLE' | 'PAYABLE';
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  customerId: string;
+  customerCode: string;
+  customerName: string;
+  effectiveDate: string;
+  totalCents: string;
+  notes: string | null;
+  allocations: { titleId: string; titleCode: string; titleLabel: string; amountCents: string }[];
+  status: SettlementStatus;
+  reversalReason: string | null;
+  reversedAt: string | null;
+  reversedBy: string | null;
+  version: string;
+  createdAt: string;
+  createdBy: string;
+};

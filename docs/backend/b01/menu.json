@@ -119,7 +119,7 @@
       "nome": "Financeiro",
       "icone": "financas",
       "itens": [
-        {"rotulo": "Contas a receber", "tela": "receber", "fase": "Sprint 5 · B05/B06"},
+        {"rotulo": "Contas a receber", "tela": "receber", "fase": "Sprint 5 · B05/B06", "implementado": true},
         {"rotulo": "Contas a pagar", "tela": "pagar", "fase": "Sprint 8+ · B06"},
         {"rotulo": "Contas e conciliação", "tela": "conciliacao", "fase": "Sprint 8+ · B06"},
         {"rotulo": "Fluxo de caixa", "tela": "caixa", "fase": "Sprint 8+ · B06"}

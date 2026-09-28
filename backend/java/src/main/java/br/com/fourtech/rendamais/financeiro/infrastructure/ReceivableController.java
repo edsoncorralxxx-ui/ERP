@@ -3,6 +3,8 @@ package br.com.fourtech.rendamais.financeiro.infrastructure;
 import br.com.fourtech.rendamais.financeiro.application.FinancialTitleRepository;
 import br.com.fourtech.rendamais.financeiro.application.TitleService;
 import br.com.fourtech.rendamais.financeiro.domain.FinancialTitle;
+import br.com.fourtech.rendamais.plataforma.web.HistoryEntry;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,8 +19,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Consulta de contas a receber (Sprint 4: os títulos gerados pela confirmação do pedido). Valores em centavos como
- * texto de inteiro (ADR-006). Recebimento e estorno entram na Sprint 5.
+ * Consulta de contas a receber: os títulos gerados pela confirmação do pedido, com o recebido e o saldo derivados das
+ * liquidações. Valores em centavos como texto de inteiro (ADR-006). Recebimento e estorno: {@code /api/v1/settlements}.
  */
 @RestController
 @RequestMapping("/api/v1/receivables")
@@ -61,7 +63,13 @@ class ReceivableController {
     }
 
     @GetMapping("/{id}")
-    ReceivableDto get(@PathVariable UUID id) {
-        return ReceivableDto.of(service.get(id), LocalDate.now(clock.withZone(BUSINESS_ZONE)));
+    ResponseEntity<ReceivableDto> get(@PathVariable UUID id) {
+        FinancialTitleRepository.Summary s = service.get(id);
+        return ResponseEntity.ok().eTag("\"" + s.title().version() + "\"").body(ReceivableDto.of(s, LocalDate.now(clock.withZone(BUSINESS_ZONE))));
+    }
+
+    @GetMapping("/{id}/history")
+    List<HistoryEntry> history(@PathVariable UUID id) {
+        return service.history(id).stream().map(HistoryEntry::of).toList();
     }
 }
