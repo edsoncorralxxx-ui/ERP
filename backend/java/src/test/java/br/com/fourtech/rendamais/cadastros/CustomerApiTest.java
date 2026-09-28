@@ -59,7 +59,7 @@ class CustomerApiTest extends IntegrationTest {
         jdbc.sql("delete from outbox_event").update();
         jdbc.sql("delete from command_receipt").update();
         limpaDocumentos();
-        jdbc.sql("delete from partner").update();
+        jdbc.sql("delete from partner where created_by <> 'sistema'").update();
         jdbc.sql("delete from audit_event").update();
     }
 
@@ -107,7 +107,7 @@ class CustomerApiTest extends IntegrationTest {
         HttpResponse<String> r = cadastra(null, CLIENTE);
         assertThat(r.statusCode()).isEqualTo(422);
         assertThat(r.body()).contains("IDEMPOTENCY_KEY_REQUIRED");
-        assertThat(conta("select count(*) from partner")).isZero();
+        assertThat(conta("select count(*) from partner where created_by <> 'sistema'")).isZero();
     }
 
     @Test
@@ -116,7 +116,7 @@ class CustomerApiTest extends IntegrationTest {
         HttpResponse<String> repetido = cadastra("resposta-perdida-01", CLIENTE);
         assertThat(repetido.statusCode()).isEqualTo(201);
         assertThat(campo(repetido.body(), "id")).isEqualTo(primeiro);
-        assertThat(conta("select count(*) from partner")).isEqualTo(1);
+        assertThat(conta("select count(*) from partner where created_by <> 'sistema'")).isEqualTo(1);
         assertThat(conta("select count(*) from outbox_event")).isEqualTo(1);
 
         HttpResponse<String> outro = cadastra("resposta-perdida-01", CLIENTE.replace("Matriz", "Sede"));
@@ -145,7 +145,7 @@ class CustomerApiTest extends IntegrationTest {
         }
         pool.shutdown();
         assertThat(ids).allMatch(ids.getFirst()::equals);
-        assertThat(conta("select count(*) from partner")).isEqualTo(1);
+        assertThat(conta("select count(*) from partner where created_by <> 'sistema'")).isEqualTo(1);
     }
 
     @Test
@@ -157,7 +157,7 @@ class CustomerApiTest extends IntegrationTest {
         assertThat(r.statusCode()).isEqualTo(422);
         assertThat(r.body()).contains("PARTNER_INVALID", "\"field\":\"legalName\"", "\"field\":\"cnpj\"", "\"field\":\"units[0].name\"",
                 "\"field\":\"units[0].state\"", "\"field\":\"units[0].postalCode\"", "\"field\":\"contacts[0].email\"");
-        assertThat(conta("select count(*) from partner") + conta("select count(*) from outbox_event")).isZero();
+        assertThat(conta("select count(*) from partner where created_by <> 'sistema'") + conta("select count(*) from outbox_event")).isZero();
     }
 
     @Test
@@ -200,7 +200,7 @@ class CustomerApiTest extends IntegrationTest {
         HttpResponse<String> principal = cadastra("cad-ucnpj-0004", "{\"legalName\":\"Quarto Ltda.\",\"cnpj\":\"11222333000262\"}");
         assertThat(principal.statusCode()).isEqualTo(422);
         assertThat(principal.body()).contains("PARTNER_CNPJ_DUPLICATE", "unidade de " + codigo);
-        assertThat(conta("select count(*) from partner")).isEqualTo(1);
+        assertThat(conta("select count(*) from partner where created_by <> 'sistema'")).isEqualTo(1);
     }
 
     @Test
@@ -255,7 +255,7 @@ class CustomerApiTest extends IntegrationTest {
         HttpResponse<String> negado = call("POST", "/api/v1/customers", consulta, CLIENTE, Map.of("Idempotency-Key", "cad-consulta-0002"));
         assertThat(negado.statusCode()).isEqualTo(403);
         assertThat(negado.body()).contains("partner.create");
-        assertThat(conta("select count(*) from partner")).isEqualTo(1);
+        assertThat(conta("select count(*) from partner where created_by <> 'sistema'")).isEqualTo(1);
     }
 
     @Test

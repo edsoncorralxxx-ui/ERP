@@ -35,9 +35,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Recebimentos e estornos (docs/backend/13, §4 e §5). A baixa, numa transação: confere INV-ST-1/2 antes do banco,
- * bloqueia os títulos em ordem crescente de id (INV-ST-3), aplica cada alocação contra o saldo (INV-FT-1), cria o
- * movimento de entrada na conta e grava recibo, auditoria e evento. O estorno é total (PD-005): devolve o saldo aos
+ * Recebimentos, pagamentos e estornos (docs/backend/13, §4 e §5). A baixa, numa transação: confere INV-ST-1/2 antes do
+ * banco, bloqueia os títulos em ordem crescente de id (INV-ST-3), aplica cada alocação contra o saldo (INV-FT-1), cria o
+ * movimento na conta (entrada no recebimento, saída no pagamento — Sprint 8) e grava recibo, auditoria e evento. A
+ * conta pode ficar negativa com um pagamento (decisão do PO na Sprint 8); a tela avisa antes. O estorno é total (PD-005): devolve o saldo aos
  * mesmos títulos, cria o movimento inverso e preserva a liquidação como estornada; estornar de novo devolve o mesmo
  * estorno (INV-ST-6).
  */
@@ -94,7 +95,7 @@ public class SettlementService {
         return auditQuery.history(ENTITY, id.toString());
     }
 
-    /** PostSettlement: registra um recebimento; a mesma chave devolve o mesmo recebimento. */
+    /** PostSettlement: registra um recebimento ou um pagamento; a mesma chave devolve a mesma liquidação. */
     @Transactional
     public SettlementRepository.Summary post(String idempotencyKey, PostRequest r) {
         CurrentUser user = CurrentUserHolder.require(Permissions.FINANCIAL_TITLE_SETTLE);
@@ -116,6 +117,7 @@ public class SettlementService {
         Map<UUID, FinancialTitle> locked = titles.findByIdsForUpdate(ids).stream()
                 .collect(Collectors.toMap(FinancialTitle::id, Function.identity()));
         UUID counterparty = null;
+        boolean payable = p.direction() == FinancialTitle.Direction.PAYABLE;
         Instant now = clock.instant();
         List<FinancialTitle[]> changed = new ArrayList<>();
         for (int i = 0; i < p.allocations().size(); i++) {
@@ -126,12 +128,14 @@ public class SettlementService {
                         List.of(new FieldIssue("allocations[" + i + "].titleId", "Título não encontrado.")));
             }
             if (t.direction() != p.direction()) {
-                throw new RuleViolationException("SETTLEMENT_DIRECTION_MISMATCH", "O título " + t.code()
-                        + " não é uma conta a receber.", List.of(new FieldIssue("allocations[" + i + "].titleId", "Direção diferente.")));
+                throw new RuleViolationException("SETTLEMENT_DIRECTION_MISMATCH", "O título " + t.code() + " não é uma conta a "
+                        + (payable ? "pagar." : "receber."), List.of(new FieldIssue("allocations[" + i + "].titleId", "Direção diferente.")));
             }
             if (counterparty != null && !counterparty.equals(t.counterpartyId())) {
-                throw new RuleViolationException("SETTLEMENT_INVALID", "Um recebimento é de um só cliente; o título " + t.code()
-                        + " é de outro cliente.", List.of(new FieldIssue("allocations[" + i + "].titleId", "Cliente diferente.")));
+                throw new RuleViolationException("SETTLEMENT_INVALID", payable
+                        ? "Um pagamento é de um só beneficiário; o título " + t.code() + " é de outro beneficiário."
+                        : "Um recebimento é de um só cliente; o título " + t.code() + " é de outro cliente.",
+                        List.of(new FieldIssue("allocations[" + i + "].titleId", payable ? "Beneficiário diferente." : "Cliente diferente.")));
             }
             counterparty = t.counterpartyId();
             Long expected = p.expectedVersions().get(i);
@@ -139,12 +143,13 @@ public class SettlementService {
             changed.add(new FinancialTitle[]{t, t.applyAllocation(a.amount(), now, user.username())});
         }
 
-        Settlement s = Settlement.post(repository.nextCode(), p.direction(), account.id(), counterparty, p.effectiveDate(), p.total(),
+        Settlement s = Settlement.post(repository.nextCode(p.direction()), p.direction(), account.id(), counterparty, p.effectiveDate(), p.total(),
                 p.allocations(), p.notes(), now, user.username());
         repository.insert(s);
         UUID movement = UUID.randomUUID();
-        accounts.insertMovement(movement, account.id(), s.effectiveDate(), s.total().cents(), "SETTLEMENT", s.id(), null,
-                "Recebimento " + s.code(), now, user.username());
+        // Recebimento entra (positivo); pagamento sai (negativo).
+        accounts.insertMovement(movement, account.id(), s.effectiveDate(), payable ? -s.total().cents() : s.total().cents(), "SETTLEMENT",
+                s.id(), null, (payable ? "Pagamento " : "Recebimento ") + s.code(), now, user.username());
         changed.sort(Comparator.comparing(c -> c[0].id()));
         for (FinancialTitle[] c : changed) {
             titles.update(c[1]);
@@ -198,8 +203,11 @@ public class SettlementService {
         }
         UUID original = accounts.settlementMovement(id).orElseThrow(() -> new IllegalStateException("Liquidação sem movimento: " + id));
         UUID movement = UUID.randomUUID();
-        accounts.insertMovement(movement, current.accountId(), today, current.total().negate().cents(), "SETTLEMENT_REVERSAL", id,
-                original, "Estorno do recebimento " + current.code(), now, user.username());
+        // O estorno inverte o movimento original: tira o recebimento da conta ou devolve o pagamento a ela.
+        boolean payable = current.direction() == FinancialTitle.Direction.PAYABLE;
+        accounts.insertMovement(movement, current.accountId(), today, payable ? current.total().cents() : current.total().negate().cents(),
+                "SETTLEMENT_REVERSAL", id, original, (payable ? "Estorno do pagamento " : "Estorno do recebimento ") + current.code(), now,
+                user.username());
         Settlement reversed = current.reverse(new Settlement.Reversal(UUID.randomUUID(), why, today, movement, now, user.username()));
         repository.reverse(reversed, current.version());
         for (FinancialTitle[] c : changed) {
@@ -233,26 +241,30 @@ public class SettlementService {
     private Parsed parse(PostRequest r) {
         List<FieldIssue> issues = new ArrayList<>();
         FinancialTitle.Direction direction = FinancialTitle.Direction.RECEIVABLE;
-        if (r.direction() != null && !r.direction().isBlank() && !"RECEIVABLE".equals(r.direction().strip())) {
-            throw new RuleViolationException("SETTLEMENT_DIRECTION_MISMATCH",
-                    "Nesta versão só há recebimentos (RECEIVABLE); pagamentos entram com as contas a pagar.",
-                    List.of(new FieldIssue("direction", "Use RECEIVABLE.")));
+        if (r.direction() != null && !r.direction().isBlank()) {
+            try {
+                direction = FinancialTitle.Direction.valueOf(r.direction().strip());
+            } catch (IllegalArgumentException e) {
+                throw new RuleViolationException("SETTLEMENT_DIRECTION_MISMATCH", "Direção deve ser RECEIVABLE (recebimento) ou PAYABLE (pagamento).",
+                        List.of(new FieldIssue("direction", "Use RECEIVABLE ou PAYABLE.")));
+            }
         }
+        String what = direction == FinancialTitle.Direction.PAYABLE ? "pagamento" : "recebimento";
         if (r.currency() != null && !r.currency().isBlank() && !"BRL".equals(r.currency().strip())) {
             issues.add(new FieldIssue("currency", "Só reais (BRL)."));
         }
         if (r.creditCents() != null && !r.creditCents().isBlank() && !r.creditCents().strip().matches("0+")) {
-            issues.add(new FieldIssue("creditCents", "Crédito do cliente ainda não é aceito (PD-004): o valor recebido deve fechar com os títulos."));
+            issues.add(new FieldIssue("creditCents", "Crédito do parceiro ainda não é aceito (PD-004): o valor deve fechar com os títulos."));
         }
         UUID accountId = uuid(r.accountId(), "accountId", "Informe a conta.", issues);
         LocalDate date = null;
         if (r.effectiveDate() == null || r.effectiveDate().isBlank()) {
-            issues.add(new FieldIssue("effectiveDate", "Informe a data do recebimento."));
+            issues.add(new FieldIssue("effectiveDate", "Informe a data do " + what + "."));
         } else {
             try {
                 date = LocalDate.parse(r.effectiveDate().strip());
                 if (date.isAfter(LocalDate.now(clock.withZone(BUSINESS_ZONE)))) {
-                    issues.add(new FieldIssue("effectiveDate", "A data do recebimento não pode ser futura."));
+                    issues.add(new FieldIssue("effectiveDate", "A data do " + what + " não pode ser futura."));
                 }
             } catch (RuntimeException e) {
                 issues.add(new FieldIssue("effectiveDate", "Data inválida."));
@@ -312,6 +324,6 @@ public class SettlementService {
     }
 
     private static NotFoundException notFound() {
-        return new NotFoundException("Recebimento não encontrado.");
+        return new NotFoundException("Recebimento ou pagamento não encontrado.");
     }
 }

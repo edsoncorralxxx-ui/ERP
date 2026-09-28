@@ -3,6 +3,7 @@ package br.com.fourtech.rendamais.financeiro.api;
 import br.com.fourtech.rendamais.kernel.Money;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,6 +22,16 @@ public interface TitleIssuanceApi {
 
     /** Emite um título a receber por parcela; a origem que já tem título devolve o existente, sem criar outro. */
     List<UUID> issueReceivables(IssueRequest request);
+
+    /**
+     * Pedido de títulos a pagar (ex.: DAS da competência conferida): a competência é a da obrigação, não a do
+     * vencimento; {@code category} é o código de uma categoria de despesa.
+     */
+    record PayableRequest(String originType, UUID counterpartyId, UUID projectId, LocalDate issueDate, String category,
+                          YearMonth competence, List<Installment> installments) { }
+
+    /** Emite um título a pagar por parcela; a origem que já tem título devolve o existente, sem criar outro. */
+    List<UUID> issuePayables(PayableRequest request);
 
     /**
      * Cancela os títulos ativos das origens, com motivo. Recusa (sem cancelar nenhum) se algum título tiver valor

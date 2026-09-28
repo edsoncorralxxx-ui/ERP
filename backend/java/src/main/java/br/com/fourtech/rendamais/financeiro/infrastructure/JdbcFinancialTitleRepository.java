@@ -38,13 +38,19 @@ class JdbcFinancialTitleRepository implements FinancialTitleRepository {
     }
 
     @Override
+    public String nextPayableCode() {
+        return String.format("CP%05d", jdbc.sql("select nextval('payable_code_seq')").query(Long.class).single());
+    }
+
+    @Override
     public void insert(FinancialTitle t) {
         jdbc.sql("""
                 insert into financial_title (id, code, direction, counterparty_id, origin_type, origin_id, origin_label, project_id,
-                       category, competence, issue_date, due_date, original_cents, received_cents, lifecycle, cancel_reason, version, created_at,
-                       created_by, updated_at, updated_by)
+                       category, competence, issue_date, due_date, original_cents, received_cents, lifecycle, cancel_reason, document_number, notes,
+                       version, created_at, created_by, updated_at, updated_by)
                 values (:id, :code, :direction, :counterparty, :originType, :originId, :label, :project, :category, :competence,
-                        :issue, :due, :cents, :received, :lifecycle, :reason, :version, :createdAt, :createdBy, :updatedAt, :updatedBy)
+                        :issue, :due, :cents, :received, :lifecycle, :reason, :documentNumber, :notes, :version, :createdAt, :createdBy,
+                        :updatedAt, :updatedBy)
                 """)
                 .param("id", t.id()).param("code", t.code()).param("direction", t.direction().name())
                 .param("counterparty", t.counterpartyId()).param("originType", t.originType()).param("originId", t.originId())
@@ -52,7 +58,8 @@ class JdbcFinancialTitleRepository implements FinancialTitleRepository {
                 .param("competence", t.competence().toString()).param("issue", Date.valueOf(t.issueDate()))
                 .param("due", Date.valueOf(t.dueDate())).param("cents", t.original().cents())
                 .param("received", t.received().cents()).param("lifecycle", t.lifecycle().name())
-                .param("reason", t.cancelReason()).param("version", t.version())
+                .param("reason", t.cancelReason()).param("documentNumber", t.documentNumber()).param("notes", t.notes())
+                .param("version", t.version())
                 .param("createdAt", ts(t.createdAt())).param("createdBy", t.createdBy())
                 .param("updatedAt", ts(t.updatedAt())).param("updatedBy", t.updatedBy())
                 .update();
@@ -98,6 +105,12 @@ class JdbcFinancialTitleRepository implements FinancialTitleRepository {
     }
 
     @Override
+    public List<FinancialTitle> findByOriginPrefix(String originType, String prefix) {
+        return jdbc.sql("select * from financial_title where origin_type = :type and starts_with(origin_id, :prefix) order by code")
+                .param("type", originType).param("prefix", prefix).query(JdbcFinancialTitleRepository::title).list();
+    }
+
+    @Override
     public List<FinancialTitle> findByIds(List<UUID> ids) {
         if (ids.isEmpty()) return List.of();
         return jdbc.sql("select * from financial_title where id in (:ids) order by due_date, code")
@@ -115,12 +128,14 @@ class JdbcFinancialTitleRepository implements FinancialTitleRepository {
     }
 
     @Override
-    public List<Summary> listReceivables(String search, UUID projectId, UUID counterpartyId, Filter filter, LocalDate today, int limit) {
+    public List<Summary> list(FinancialTitle.Direction direction, String search, UUID projectId, UUID counterpartyId, Filter filter,
+                              LocalDate today, int limit) {
         return jdbc.sql(SELECT + """
-                 where t.direction = 'RECEIVABLE'
+                 where t.direction = :direction
                    and case :filter
                          when 'OPEN' then t.lifecycle = 'ACTIVE' and t.received_cents < t.original_cents
                          when 'OVERDUE' then t.lifecycle = 'ACTIVE' and t.received_cents < t.original_cents and t.due_date < :today
+                         when 'DUE' then t.lifecycle = 'ACTIVE' and t.received_cents < t.original_cents and t.due_date >= :today
                          when 'SETTLED' then t.lifecycle = 'ACTIVE' and t.received_cents = t.original_cents
                          when 'CANCELLED' then t.lifecycle = 'CANCELLED'
                          when 'ACTIVE' then t.lifecycle <> 'CANCELLED'
@@ -130,11 +145,12 @@ class JdbcFinancialTitleRepository implements FinancialTitleRepository {
                    and (cast(:term as varchar) is null
                         or t.code ilike '%' || cast(:term as varchar) || '%'
                         or t.origin_label ilike '%' || cast(:term as varchar) || '%'
+                        or t.document_number ilike '%' || cast(:term as varchar) || '%'
                         or p.legal_name ilike '%' || cast(:term as varchar) || '%'
                         or p.code ilike '%' || cast(:term as varchar) || '%')
                  order by t.due_date, t.code limit :limit
                 """)
-                .param("filter", filter.name()).param("today", Date.valueOf(today)).param("project", projectId).param("partner", counterpartyId)
+                .param("direction", direction.name()).param("filter", filter.name()).param("today", Date.valueOf(today)).param("project", projectId).param("partner", counterpartyId)
                 .param("term", search).param("limit", limit)
                 .query(JdbcFinancialTitleRepository::summary).list();
     }
@@ -151,7 +167,7 @@ class JdbcFinancialTitleRepository implements FinancialTitleRepository {
                 rs.getDate("issue_date").toLocalDate(), rs.getDate("due_date").toLocalDate(),
                 Money.ofCents(rs.getLong("original_cents"), Currency.BRL), Money.ofCents(rs.getLong("received_cents"), Currency.BRL),
                 FinancialTitle.Lifecycle.valueOf(rs.getString("lifecycle")),
-                rs.getString("cancel_reason"), rs.getLong("version"), instant(rs, "created_at"), rs.getString("created_by"),
+                rs.getString("cancel_reason"), rs.getString("document_number"), rs.getString("notes"), rs.getLong("version"), instant(rs, "created_at"), rs.getString("created_by"),
                 instant(rs, "updated_at"), rs.getString("updated_by"));
     }
 

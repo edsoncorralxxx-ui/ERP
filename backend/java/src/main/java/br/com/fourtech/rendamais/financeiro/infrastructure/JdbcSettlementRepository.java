@@ -41,7 +41,10 @@ class JdbcSettlementRepository implements SettlementRepository {
     }
 
     @Override
-    public String nextCode() {
+    public String nextCode(FinancialTitle.Direction direction) {
+        if (direction == FinancialTitle.Direction.PAYABLE) {
+            return String.format("PG%05d", jdbc.sql("select nextval('payment_code_seq')").query(Long.class).single());
+        }
         return String.format("RC%05d", jdbc.sql("select nextval('settlement_code_seq')").query(Long.class).single());
     }
 

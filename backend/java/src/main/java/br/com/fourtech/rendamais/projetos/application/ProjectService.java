@@ -135,6 +135,13 @@ public class ProjectService implements ProjectProvisioningApi, ProjectQueryApi {
                 .map(e -> new EquipmentView(e.id(), e.code(), e.model(), e.serialNumber(), e.status().name())).toList()));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<ProjectView> projectById(UUID id) {
+        return repository.findProject(id).map(s -> new ProjectView(s.project().id(), s.project().code(), s.project().stage().name(),
+                List.of()));
+    }
+
     // ───────────── Consultas das janelas ─────────────
 
     @Transactional(readOnly = true)

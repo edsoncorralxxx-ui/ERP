@@ -27,9 +27,15 @@ public final class Permissions {
     public static final String EQUIPMENT_READ = "equipment.read";
     public static final String EQUIPMENT_UPDATE = "equipment.update";
     public static final String FINANCIAL_TITLE_READ = "financial_title.read";
-    /** Registrar recebimento (PostSettlement). */
+    /** Registrar título a pagar (RegisterPayableTitle, Sprint 8). */
+    public static final String FINANCIAL_TITLE_CREATE = "financial_title.create";
+    /** Registrar recebimento ou pagamento (PostSettlement). */
     public static final String FINANCIAL_TITLE_SETTLE = "financial_title.settle";
-    /** Estornar recebimento (ReverseSettlement). */
+    /** Cancelar título a pagar manual sem pagamento (CancelTitle). */
+    public static final String FINANCIAL_TITLE_CANCEL = "financial_title.cancel";
+    /** Cadastrar, renomear e inativar categorias financeiras (PD-010). */
+    public static final String FINANCIAL_CATEGORY_ADMIN = "financial_category.admin";
+    /** Estornar recebimento ou pagamento (ReverseSettlement). */
     public static final String SETTLEMENT_REVERSE = "settlement.reverse";
     /** Cadastrar e alterar contas financeiras (caixa e bancos). */
     public static final String BANK_ACCOUNT_ADMIN = "bank_account.admin";

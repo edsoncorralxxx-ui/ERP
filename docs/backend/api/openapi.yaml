@@ -3,7 +3,7 @@ info:
   title: Renda+ ERP — API do servidor
   version: v1
   description: |
-    Contrato da API usada pelo app do Mac (Sprints 1 a 7).
+    Contrato da API usada pelo app do Mac (Sprints 1 a 8).
     Regras gerais:
     - Toda rota exige sessão (`Authorization: Bearer <token>`), exceto `GET /api/v1/status` e `POST /api/v1/session` (ADR-005).
       Sem sessão válida: 401 `UNAUTHENTICATED`. Perfil sem a permissão: 403 `FORBIDDEN` (a negativa fica na auditoria).
@@ -32,6 +32,10 @@ info:
       meses), simulação do Simples Nacional com memória (`Idempotency-Key`), conferência do contador e fechamento (`If-Match`; a
       competência começa na versão 0). Histórico, simulação e contador ficam separados. Competência fechada não recebe nem perde
       nota nem muda no fiscal: 422 `TAX_PERIOD_CLOSED`. Alíquotas trafegam como fração (`"0.078"` = 7,8%).
+    - Contas a pagar (Sprint 8): título manual com parcelas (`Idempotency-Key`; uma parcela = um título; categoria de despesa e
+      competência obrigatórias — PD-010). O pagamento é a mesma liquidação dos recebimentos com `direction` PAYABLE: saída na
+      conta (que pode ficar negativa), excedente recusado, estorno total. A conferência do contador cria o título do DAS; reconferir
+      cancela o DAS sem pagamento e cria outro; DAS com pagamento: 422 `TAX_DAS_PAID`.
     - Erros sempre no formato `ApiError`, em português, com `correlationId` (cabeçalho `X-Correlation-Id` é aceito e devolvido).
 servers:
   - url: http://localhost:8080
@@ -49,6 +53,8 @@ tags:
   - name: Pedidos
   - name: Projetos e equipamentos
   - name: Contas a receber
+  - name: Contas a pagar
+  - name: Categorias financeiras
   - name: Recebimentos
   - name: Contas financeiras
   - name: Documentos e faturamento
@@ -806,10 +812,125 @@ paths:
         '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
         '404': { $ref: '#/components/responses/Erro' }
 
+  /api/v1/payables:
+    get:
+      tags: [Contas a pagar]
+      summary: Títulos a pagar (financial_title.read), com o pago e o saldo
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Código, origem, beneficiário ou número do documento' }
+        - { name: projectId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: supplierId, in: query, required: false, schema: { type: string, format: uuid } }
+        - name: status
+          in: query
+          required: false
+          description: 'ATIVOS (padrão, sem os cancelados), ABERTOS (com saldo), VENCIDOS, A_VENCER, PAGOS, CANCELADOS ou TODOS'
+          schema: { type: string, enum: [ATIVOS, ABERTOS, VENCIDOS, A_VENCER, PAGOS, CANCELADOS, TODOS] }
+      responses:
+        '200': { description: Títulos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Payable' } } } } }
+    post:
+      tags: [Contas a pagar]
+      summary: >-
+        Registra um título a pagar manual — RegisterPayableTitle (financial_title.create): um título por parcela, com a soma das
+        parcelas igual ao total; beneficiário fornecedor ativo; categoria de despesa ativa; evento FinancialTitleCreated por parcela
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/PayableRequest' } } }
+      responses:
+        '201': { description: Títulos criados, na ordem das parcelas, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Payable' } } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/payables/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Contas a pagar]
+      summary: Título a pagar (financial_title.read)
+      responses:
+        '200': { description: Título, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Payable' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/payables/{id}/cancellation:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Contas a pagar]
+      summary: >-
+        Cancela o título manual sem pagamento — CancelTitle (financial_title.cancel), com motivo; com pagamento ou gerado por
+        outra origem (DAS): 409 INVALID_STATE_TRANSITION; cancelar de novo devolve o título cancelado
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { description: Título cancelado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Payable' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+        '428': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/payables/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Contas a pagar]
+      summary: Trilha do título — criação, pagamentos, estornos e cancelamento (financial_title.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/financial-categories:
+    get:
+      tags: [Categorias financeiras]
+      summary: Categorias de receita e despesa (financial_title.read), ativas por padrão
+      parameters:
+        - { name: direction, in: query, required: false, schema: { type: string, enum: [RECEITA, DESPESA] } }
+        - { name: includeInactive, in: query, required: false, schema: { type: boolean, default: false } }
+      responses:
+        '200': { description: Categorias, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/FinancialCategory' } } } } }
+    post:
+      tags: [Categorias financeiras]
+      summary: Cadastra uma categoria (financial_category.admin); nome único; código derivado do nome
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/FinancialCategoryRequest' } } }
+      responses:
+        '201': { description: Categoria cadastrada, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/FinancialCategory' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/financial-categories/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Categorias financeiras]
+      summary: Categoria (financial_title.read)
+      responses:
+        '200': { description: Categoria, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/FinancialCategory' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Categorias financeiras]
+      summary: Renomeia ou inativa (financial_category.admin); o tipo e o código não mudam; categoria do sistema não é inativada
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/FinancialCategoryRequest' } } }
+      responses:
+        '200': { description: Categoria alterada, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/FinancialCategory' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/financial-categories/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Categorias financeiras]
+      summary: Trilha da categoria (financial_title.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
   /api/v1/settlements:
     get:
       tags: [Recebimentos]
-      summary: Recebimentos, os mais recentes primeiro (financial_title.read)
+      summary: Recebimentos e pagamentos, os mais recentes primeiro (financial_title.read)
       parameters:
         - { name: titleId, in: query, required: false, schema: { type: string, format: uuid }, description: 'Só os que alocam neste título' }
         - { name: accountId, in: query, required: false, schema: { type: string, format: uuid } }
@@ -818,8 +939,9 @@ paths:
     post:
       tags: [Recebimentos]
       summary: >-
-        Registra um recebimento — PostSettlement (financial_title.settle). Na mesma transação: bloqueia os títulos em ordem de id,
-        aplica cada alocação contra o saldo, cria a entrada na conta, grava auditoria e o evento SettlementPosted
+        Registra um recebimento ou um pagamento — PostSettlement (financial_title.settle). Na mesma transação: bloqueia os títulos em
+        ordem de id, aplica cada alocação contra o saldo, cria a entrada (recebimento) ou a saída (pagamento) na conta, grava
+        auditoria e o evento SettlementPosted. Título de outra direção: 422 SETTLEMENT_DIRECTION_MISMATCH
       parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody:
         required: true
@@ -844,8 +966,8 @@ paths:
     post:
       tags: [Recebimentos]
       summary: >-
-        Estorna o recebimento inteiro — ReverseSettlement (settlement.reverse), com motivo obrigatório (PD-005). Devolve o saldo
-        aos mesmos títulos e cria a saída inversa na conta; já estornado devolve o estorno existente (INV-ST-6)
+        Estorna o recebimento ou o pagamento inteiro — ReverseSettlement (settlement.reverse), com motivo obrigatório (PD-005).
+        Devolve o saldo aos mesmos títulos e cria o movimento inverso na conta; já estornado devolve o estorno existente (INV-ST-6)
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
@@ -1128,7 +1250,9 @@ paths:
       tags: [Impostos gerenciais]
       summary: >-
         Registra o valor apurado pelo contador e o vencimento — ConfirmTaxPeriod (tax_period.confirm); a anterior fica no histórico.
-        O título a pagar do DAS vem com as contas a pagar; evento TaxPeriodConfirmed (titleId nulo)
+        Na mesma transação cria o título a pagar do DAS (valor, vencimento e competência da conferência; beneficiário Receita
+        Federal — DAS; categoria IMPOSTOS_SIMPLES). Reconferir cancela o DAS anterior sem pagamento e cria outro; DAS com pagamento:
+        422 TAX_DAS_PAID; valor zero não cria título. Evento TaxPeriodConfirmed com o titleId
       parameters: [{ $ref: '#/components/parameters/IfMatch' }]
       requestBody:
         required: true
@@ -1730,9 +1854,9 @@ components:
       type: object
       required: [accountId, effectiveDate, amountCents, allocations]
       properties:
-        direction: { type: string, enum: [RECEIVABLE], default: RECEIVABLE, description: 'Pagamentos entram com as contas a pagar' }
+        direction: { type: string, enum: [RECEIVABLE, PAYABLE], default: RECEIVABLE, description: 'RECEIVABLE: recebimento; PAYABLE: pagamento (Sprint 8)' }
         accountId: { type: string, format: uuid }
-        effectiveDate: { type: string, format: date, description: 'Data do recebimento; não pode ser futura' }
+        effectiveDate: { type: string, format: date, description: 'Data do recebimento ou do pagamento; não pode ser futura' }
         amountCents: { $ref: '#/components/schemas/Cents' }
         currency: { type: string, enum: [BRL], default: BRL }
         allocations:
@@ -1745,18 +1869,18 @@ components:
               titleId: { type: string, format: uuid }
               amountCents: { $ref: '#/components/schemas/Cents' }
               expectedTitleVersion: { type: [string, 'null'], description: 'Versão lida do título; diferente: 412' }
-        creditCents: { type: [string, 'null'], description: 'Só "0": crédito do cliente ainda não é aceito (PD-004)' }
+        creditCents: { type: [string, 'null'], description: 'Só "0": crédito do parceiro ainda não é aceito (PD-004)' }
         notes: { type: [string, 'null'], maxLength: 500 }
     Settlement:
       type: object
       properties:
         id: { type: string, format: uuid }
-        code: { type: string, example: RC00001 }
+        code: { type: string, example: RC00001, description: 'RC00001 (recebimento) ou PG00001 (pagamento)' }
         direction: { type: string, enum: [RECEIVABLE, PAYABLE] }
         accountId: { type: string, format: uuid }
         accountCode: { type: string, example: CT001 }
         accountName: { type: string }
-        customerId: { type: string, format: uuid }
+        customerId: { type: string, format: uuid, description: 'Parceiro: cliente no recebimento, beneficiário no pagamento' }
         customerCode: { type: string }
         customerName: { type: string }
         effectiveDate: { type: string, format: date }
@@ -1850,6 +1974,76 @@ components:
         version: { type: string }
         createdAt: { type: string, format: date-time }
         createdBy: { type: string }
+    Payable:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: CP00001 }
+        supplierId: { type: string, format: uuid }
+        supplierCode: { type: string }
+        supplierName: { type: string }
+        originType: { type: string, enum: [MANUAL, TAX_PERIOD] }
+        originId: { type: string }
+        origin: { type: string, example: 'Manutenção da linha — parcela 1/3' }
+        projectId: { type: [string, 'null'], format: uuid }
+        category: { type: string, example: SERVICOS_TERCEIROS }
+        competence: { type: string, example: '2026-09' }
+        documentNumber: { type: [string, 'null'] }
+        notes: { type: [string, 'null'] }
+        issueDate: { type: string, format: date }
+        dueDate: { type: string, format: date }
+        originalCents: { $ref: '#/components/schemas/Cents' }
+        paidCents: { $ref: '#/components/schemas/Cents' }
+        balanceCents: { $ref: '#/components/schemas/Cents' }
+        status: { type: string, enum: [OPEN, PARTIAL, SETTLED, RENEGOTIATED, CANCELLED] }
+        overdue: { type: boolean, description: 'Condição por data e saldo, não situação' }
+        cancelReason: { type: [string, 'null'] }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+    PayableRequest:
+      type: object
+      required: [supplierId, category, competence, totalCents, installments]
+      properties:
+        supplierId: { type: string, format: uuid, description: 'Fornecedor ativo' }
+        category: { type: string, description: 'Código de uma categoria de despesa ativa', example: SERVICOS_TERCEIROS }
+        competence: { type: string, example: '2026-09', description: 'AAAA-MM' }
+        projectId: { type: [string, 'null'], format: uuid }
+        description: { type: [string, 'null'], maxLength: 150, description: 'Descrição das parcelas; padrão: beneficiário e documento ou categoria' }
+        documentNumber: { type: [string, 'null'], maxLength: 60, description: 'Nota, fatura ou boleto do fornecedor' }
+        issueDate: { type: [string, 'null'], format: date, description: 'Padrão: hoje' }
+        totalCents: { $ref: '#/components/schemas/Cents' }
+        installments:
+          type: array
+          minItems: 1
+          maxItems: 120
+          items:
+            type: object
+            required: [dueDate, amountCents]
+            properties:
+              dueDate: { type: string, format: date }
+              amountCents: { $ref: '#/components/schemas/Cents' }
+        notes: { type: [string, 'null'], maxLength: 500 }
+    FinancialCategory:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: SERVICOS_TERCEIROS }
+        name: { type: string }
+        direction: { type: string, enum: [RECEITA, DESPESA] }
+        status: { type: string, enum: [ATIVO, INATIVO] }
+        system: { type: boolean, description: 'Usada pelo próprio sistema; não é inativada' }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    FinancialCategoryRequest:
+      type: object
+      properties:
+        name: { type: string, maxLength: 100 }
+        direction: { type: string, enum: [RECEITA, DESPESA], default: DESPESA, description: 'Só na criação' }
+        status: { type: [string, 'null'], enum: [ATIVO, INATIVO, null] }
     DocumentLinkRequest:
       type: object
       required: [titleId, amountCents]
@@ -2148,6 +2342,10 @@ components:
               dueDate: { type: string, format: date }
               notes: { type: [string, 'null'] }
               simulationSeq: { type: [integer, 'null'] }
+              titleId: { type: [string, 'null'], format: uuid, description: 'Título a pagar do DAS criado pela conferência' }
+              titleCode: { type: [string, 'null'], example: CP00001 }
+              titleStatus: { type: [string, 'null'], enum: [OPEN, PARTIAL, SETTLED, RENEGOTIATED, CANCELLED, null] }
+              titleBalanceCents: { type: [string, 'null'] }
               createdAt: { type: string, format: date-time }
               createdBy: { type: string }
         closures:

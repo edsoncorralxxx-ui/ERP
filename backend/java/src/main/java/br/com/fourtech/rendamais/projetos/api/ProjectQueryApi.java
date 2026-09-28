@@ -12,4 +12,7 @@ public interface ProjectQueryApi {
     record ProjectView(UUID id, String code, String stage, List<EquipmentView> equipment) { }
 
     Optional<ProjectView> forOrder(UUID orderId);
+
+    /** Projeto pelo id (ex.: projeto de um título a pagar); sem os equipamentos. */
+    Optional<ProjectView> projectById(UUID id);
 }

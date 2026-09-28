@@ -63,7 +63,7 @@ class ReceivableController {
                              @RequestParam(value = "status", required = false) String status,
                              @RequestParam(value = "includeCancelled", defaultValue = "false") boolean includeCancelled) {
         LocalDate today = LocalDate.now(clock.withZone(BUSINESS_ZONE));
-        return service.listReceivables(search, projectId, customerId, filter(status, includeCancelled), today).stream()
+        return service.list(FinancialTitle.Direction.RECEIVABLE, search, projectId, customerId, filter(status, includeCancelled), today).stream()
                 .map(s -> ReceivableDto.of(s, today)).toList();
     }
 

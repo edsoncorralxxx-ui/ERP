@@ -21,4 +21,10 @@ public interface PartnerQueryApi {
 
     /** Parceiro com o papel de cliente; vazio se não existe ou nunca foi cliente. */
     Optional<CustomerRef> customer(UUID id);
+
+    /** Fornecedor com a situação do papel de fornecedor ({@code active}); beneficiário dos títulos a pagar. */
+    record SupplierRef(UUID id, String code, String name, boolean active) { }
+
+    /** Parceiro com o papel de fornecedor; vazio se não existe ou nunca foi fornecedor. */
+    Optional<SupplierRef> supplier(UUID id);
 }

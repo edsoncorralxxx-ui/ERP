@@ -399,6 +399,18 @@
       "sinonimos": ["parcela", "duplicata", "conta"]
     },
     {
+      "id": "CATEGORIA_FINANCEIRA",
+      "termo": "Categoria financeira",
+      "modulo": "financeiro",
+      "significado": "Classificação de receita ou despesa do título (PD-010); o título guarda o código, que não muda",
+      "unidade": null,
+      "granularidade": "categoria",
+      "datas": [],
+      "origem": "Lista semeada na Sprint 8 e cadastro do Administrador",
+      "naoConfundirCom": ["TITULO"],
+      "sinonimos": ["plano de contas", "natureza financeira"]
+    },
+    {
       "id": "RECEBIMENTO",
       "termo": "Recebimento financeiro",
       "modulo": "financeiro",

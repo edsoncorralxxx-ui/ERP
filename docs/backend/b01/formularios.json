@@ -950,7 +950,7 @@
     },
     {
       "id": "pagar",
-      "versao": 1,
+      "versao": 2,
       "nome": "Contas a pagar",
       "tipo": "documento",
       "modulo": "financeiro",
@@ -960,8 +960,10 @@
         {"nome": "codigo", "tipo": "codigo", "obrigatorio": true, "origem": "sistema"},
         {"nome": "beneficiario", "tipo": "ref", "conceito": "FORNECEDOR", "obrigatorio": true, "origem": "referencia"},
         {"nome": "origem", "tipo": "texto", "obrigatorio": true, "origem": "sistema"},
-        {"nome": "categoria", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "categoria", "tipo": "ref", "conceito": "CATEGORIA_FINANCEIRA", "obrigatorio": true, "origem": "referencia"},
         {"nome": "competencia", "tipo": "competencia", "obrigatorio": true, "origem": "usuario"},
+        {"nome": "projeto", "tipo": "ref", "conceito": "PROJETO", "obrigatorio": false, "origem": "referencia"},
+        {"nome": "documento", "tipo": "texto", "obrigatorio": false, "origem": "usuario"},
         {"nome": "vencimento", "tipo": "data", "obrigatorio": true, "origem": "usuario"},
         {"nome": "valorOriginal", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "usuario"},
         {"nome": "pago", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
@@ -969,7 +971,12 @@
       ],
       "classificacoes": ["categoria", "centroResultado", "projeto"],
       "validacoes": [
-        {"regra": "Título manual exige categoria e competência", "pendencia": "PD-010"},
+        {"regra": "Título manual exige categoria de despesa ativa e competência", "pendencia": "PD-010"},
+        {"regra": "Uma parcela = um título; Σ parcelas = total do registro"},
+        {"regra": "Pagamento acima do saldo é recusado", "pendencia": "PD-004"},
+        {"regra": "Estorno é da liquidação inteira", "pendencia": "PD-005"},
+        {"regra": "A conta pode ficar negativa com o pagamento; a tela avisa antes (decisão do PO, Sprint 8)"},
+        {"regra": "Cancelar só título manual sem pagamento; o DAS é substituído pela reconferência do contador"},
         {"regra": "Título originado de compra/repasse/fiscal não é duplicado por documento posterior"}
       ],
       "comandos": [
@@ -1190,8 +1197,8 @@
           "nome": "ConfirmTaxPeriod",
           "permissao": "tax_period.confirm",
           "idempotente": true,
-          "eventos": ["TaxPeriodConfirmed", "FinancialTitleCreated"],
-          "observacao": "O título a pagar do DAS (FinancialTitleCreated) entra com as contas a pagar (decisão do PO na Sprint 7)"
+          "eventos": ["TaxPeriodConfirmed", "FinancialTitleCreated", "FinancialTitleCancelled"],
+          "observacao": "Cria o título a pagar do DAS (Sprint 8); reconferir cancela o DAS sem pagamento e cria outro; DAS com pagamento recusa (TAX_DAS_PAID)"
         },
         {"nome": "CloseTaxPeriod", "permissao": "tax_period.close", "idempotente": true, "eventos": ["TaxPeriodClosed"]},
         {"nome": "ReopenTaxPeriod", "permissao": "tax_period.reopen", "idempotente": true, "eventos": ["TaxPeriodReopened"]}

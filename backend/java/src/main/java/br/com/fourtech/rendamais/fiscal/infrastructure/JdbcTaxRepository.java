@@ -190,12 +190,13 @@ class JdbcTaxRepository implements TaxRepository {
     @Override
     public void insertConfirmation(Confirmation c) {
         jdbc.sql("""
-                insert into accountant_confirmation (id, period_id, seq, amount_cents, due_date, notes, simulation_id, created_at, created_by)
-                values (:id, :p, :seq, :amount, :due, :notes, :sim, :at, :by)
+                insert into accountant_confirmation (id, period_id, seq, amount_cents, due_date, notes, simulation_id, title_id, created_at,
+                       created_by)
+                values (:id, :p, :seq, :amount, :due, :notes, :sim, :title, :at, :by)
                 """)
                 .param("id", c.id()).param("p", c.periodId()).param("seq", c.seq()).param("amount", c.amountCents())
                 .param("due", Date.valueOf(c.dueDate())).param("notes", c.notes()).param("sim", c.simulationId())
-                .param("at", ts(c.createdAt())).param("by", c.createdBy()).update();
+                .param("title", c.titleId()).param("at", ts(c.createdAt())).param("by", c.createdBy()).update();
     }
 
     @Override
@@ -238,7 +239,8 @@ class JdbcTaxRepository implements TaxRepository {
     private static Confirmation confirmation(ResultSet rs, int n) throws SQLException {
         return new Confirmation(rs.getObject("id", UUID.class), rs.getObject("period_id", UUID.class), rs.getInt("seq"),
                 rs.getLong("amount_cents"), rs.getDate("due_date").toLocalDate(), rs.getString("notes"),
-                rs.getObject("simulation_id", UUID.class), instant(rs, "created_at"), rs.getString("created_by"));
+                rs.getObject("simulation_id", UUID.class), rs.getObject("title_id", UUID.class), instant(rs, "created_at"),
+                rs.getString("created_by"));
     }
 
     private static Long longOrNull(ResultSet rs, String col) throws SQLException {

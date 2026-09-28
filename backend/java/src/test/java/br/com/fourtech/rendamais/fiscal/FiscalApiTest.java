@@ -188,7 +188,7 @@ class FiscalApiTest extends CadastrosApiTest {
         assertThat(conta("select count(*) from outbox_event where event_type = 'TaxPeriodClosed'")).isEqualTo(1);
         assertThat(conta("select count(*) from outbox_event where event_type = 'TaxPeriodReopened'")).isEqualTo(1);
         assertThat(jdbc.sql("select payload::text from outbox_event where event_type = 'TaxPeriodConfirmed'").query(String.class).single())
-                .contains("\"confirmedAmountCents\": \"133000\"", "\"titleId\": null");
+                .contains("\"confirmedAmountCents\": \"133000\"", "\"titleId\": \"" + campo(conf.body(), "titleId") + "\"");
     }
 
     @Test
