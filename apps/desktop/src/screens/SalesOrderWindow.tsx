@@ -626,7 +626,7 @@ function Gerado({ pedido, abrir, podeRegistrarNota, registrarNota }: {
 }
 
 /** Dividir o total em parcelas mensais iguais, com o resíduo de centavos na primeira (premissa PD-002). */
-function DialogoDividir({ total, inicio, idBase, onCancelar, onDividir }: {
+export function DialogoDividir({ total, inicio, idBase, onCancelar, onDividir }: {
   total: bigint;
   inicio: string;
   idBase: string;

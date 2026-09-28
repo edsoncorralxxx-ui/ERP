@@ -411,6 +411,49 @@ export type Receivable = {
   createdBy: string;
 };
 
+/** Título a pagar (Sprint 8): manual (`MANUAL`) ou o DAS da conferência do contador (`TAX_PERIOD`). */
+export type Payable = {
+  id: string;
+  code: string;
+  supplierId: string;
+  supplierCode: string;
+  supplierName: string;
+  originType: 'MANUAL' | 'TAX_PERIOD' | string;
+  originId: string;
+  origin: string;
+  projectId: string | null;
+  category: string;
+  competence: string;
+  documentNumber: string | null;
+  notes: string | null;
+  issueDate: string;
+  dueDate: string;
+  originalCents: string;
+  paidCents: string;
+  balanceCents: string;
+  status: TitleStatus;
+  overdue: boolean;
+  cancelReason: string | null;
+  version: string;
+  createdAt: string;
+  createdBy: string;
+};
+
+/** Categoria financeira de receita ou despesa (PD-010); o título guarda o `code`. */
+export type FinancialCategory = {
+  id: string;
+  code: string;
+  name: string;
+  direction: 'RECEITA' | 'DESPESA';
+  status: Situacao;
+  system: boolean;
+  version: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
 export type SettlementStatus = 'POSTED' | 'REVERSED';
 
 export type Settlement = {
@@ -652,8 +695,11 @@ export type TaxSimulation = {
   createdBy: string;
 };
 
+/** Conferência do contador; `titleId` é o título a pagar do DAS que ela criou (Sprint 8), nulo quando o valor é zero. */
 export type TaxConfirmation = {
-  id: string; seq: number; amountCents: string; dueDate: string; notes: string | null; simulationSeq: number | null; createdAt: string; createdBy: string;
+  id: string; seq: number; amountCents: string; dueDate: string; notes: string | null; simulationSeq: number | null;
+  titleId: string | null; titleCode: string | null; titleStatus: TitleStatus | null; titleBalanceCents: string | null;
+  createdAt: string; createdBy: string;
 };
 
 export type TaxClosure = { action: 'FECHAMENTO' | 'REABERTURA'; reason: string | null; revenueCents: string | null; occurredAt: string; actor: string };

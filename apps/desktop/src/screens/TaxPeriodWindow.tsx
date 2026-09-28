@@ -6,6 +6,7 @@ import { useSession } from '../shell/SessionContext';
 import { useWindow } from '../windows/WindowContext';
 import { novaChave } from './comum/Cadastros';
 import { CampoData } from './comum/CampoData';
+import { seloTitulo } from './comum/Selos';
 import { DialogoConflito, DialogoMotivo } from './comum/Dialogos';
 import { tratarFalha } from './comum/Falhas';
 import { GradeHistorico } from './comum/GradeHistorico';
@@ -382,6 +383,8 @@ export function TaxPeriodWindow({ recordKey }: { recordKey: string }) {
                           <th className="num">Valor do contador</th>
                           <th>Vencimento</th>
                           <th>Sobre a simulação</th>
+                          <th aria-label="Abrir DAS" />
+                          <th>DAS a pagar</th>
                           <th>Observações</th>
                           <th>Registrada em</th>
                           <th>Por</th>
@@ -394,6 +397,8 @@ export function TaxPeriodWindow({ recordKey }: { recordKey: string }) {
                             <td className="num">{reais(c.amountCents)}</td>
                             <td>{dataDaApi(c.dueDate)}</td>
                             <td>{c.simulationSeq ? `Simulação ${c.simulationSeq}` : 'Sem simulação'}</td>
+                            <td>{c.titleId && seta(`Abrir DAS ${c.titleCode}`, () => win.open('payable', c.titleId!))}</td>
+                            <td>{c.titleId ? <>{c.titleCode} {seloTitulo(c.titleStatus!)}</> : 'Sem DAS (valor zero)'}</td>
                             <td>{c.notes ?? ''}</td>
                             <td>{dataHora(c.createdAt)}</td>
                             <td>{c.createdBy}</td>

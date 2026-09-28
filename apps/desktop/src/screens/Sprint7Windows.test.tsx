@@ -189,7 +189,7 @@ describe('Competência fiscal', () => {
       if (req.path === '/api/v1/tax-periods/2026-10/confirmations') {
         posts.push(req);
         atual = { ...atual, version: '4', differenceCents: '468', confirmations: [{ id: 'c-1', seq: 1, amountCents: '133000', dueDate: '2026-11-20',
-          notes: null, simulationSeq: 2, createdAt: '2026-09-28T12:10:00Z', createdBy: 'ana' }] };
+          notes: null, simulationSeq: 2, titleId: 'cp-1', titleCode: 'CP00001', titleStatus: 'OPEN', titleBalanceCents: '133000', createdAt: '2026-09-28T12:10:00Z', createdBy: 'ana' }] };
         return resposta(201, atual, { etag: '"4"' });
       }
       if (req.path === '/api/v1/tax-periods/2026-10/closures') {

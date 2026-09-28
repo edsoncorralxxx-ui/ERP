@@ -24,6 +24,10 @@ import { ProposalsWindow } from './screens/ProposalsWindow';
 import { ProposalWindow } from './screens/ProposalWindow';
 import { ReceivablesWindow } from './screens/ReceivablesWindow';
 import { ReceivableWindow } from './screens/ReceivableWindow';
+import { PayablesWindow } from './screens/PayablesWindow';
+import { PayableWindow } from './screens/PayableWindow';
+import { NewPayableWindow } from './screens/NewPayableWindow';
+import { FinancialCategoriesWindow } from './screens/FinancialCategoriesWindow';
 import { SalesOrdersWindow } from './screens/SalesOrdersWindow';
 import { SalesOrderWindow } from './screens/SalesOrderWindow';
 import { ServerStatusWindow } from './screens/ServerStatusWindow';
@@ -64,6 +68,9 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   equipment: { title: 'Equipamento', size: { w: 900, h: 600 } },
   receivables: { title: 'Contas a receber', size: { w: 1160, h: 620 } },
   receivable: { title: 'Título a receber', size: { w: 1000, h: 620 } },
+  payables: { title: 'Contas a pagar', size: { w: 1160, h: 620 } },
+  payable: { title: 'Título a pagar', size: { w: 1000, h: 640 } },
+  'financial-categories': { title: 'Categorias financeiras', size: { w: 900, h: 560 } },
   'bank-accounts': { title: 'Contas financeiras', size: { w: 1000, h: 600 } },
   documents: { title: 'Documentos e faturamento', size: { w: 1160, h: 620 } },
   document: { title: 'Documento de faturamento', size: { w: 1080, h: 660 } },
@@ -426,6 +433,12 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                         <ReceivablesWindow />
                       ) : w.kind === 'receivable' ? (
                         <ReceivableWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'payables' ? (
+                        <PayablesWindow />
+                      ) : w.kind === 'payable' ? (
+                        w.recordKey.startsWith('novo-') ? <NewPayableWindow /> : <PayableWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'financial-categories' ? (
+                        <FinancialCategoriesWindow />
                       ) : w.kind === 'bank-accounts' ? (
                         <BankAccountsWindow />
                       ) : w.kind === 'documents' ? (

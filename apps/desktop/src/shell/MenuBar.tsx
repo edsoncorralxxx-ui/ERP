@@ -89,6 +89,8 @@ export function MenuBar(p: Props) {
         { label: 'Equipamentos', action: () => p.onOpen('equipments') },
         'sep',
         { label: 'Contas a receber', action: () => p.onOpen('receivables') },
+        { label: 'Contas a pagar', action: () => p.onOpen('payables') },
+        { label: 'Categorias financeiras', action: () => p.onOpen('financial-categories') },
         { label: 'Documentos e faturamento', action: () => p.onOpen('documents') },
         { label: 'Notas a emitir', action: () => p.onOpen('to-issue') },
         { label: 'Impostos gerenciais', action: () => p.onOpen('tax-periods') },
