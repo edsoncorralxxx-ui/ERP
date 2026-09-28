@@ -203,6 +203,7 @@ body { background: var(--ground); }
 /* Barra de filtros encostada no topo da grade e Paginação logo abaixo dela, sem borda entre as peças. */
 .rp-jlista__filtros { flex: none; border-bottom: 0; }
 .rp-filtros .rp-jlista__busca { width: 320px; }
+.rp-filtros .rp-contas__extrato { width: 320px; }
 .rp-jlista__grade { flex: 1; min-height: 0; overflow: auto; }
 .rp-jlista__pag { flex: none; }
 .rp-jlista__grade .rp-grid { width: 100%; }

@@ -22,6 +22,9 @@ export type WindowKind =
   | 'project'
   | 'equipments'
   | 'equipment'
+  | 'receivables'
+  | 'receivable'
+  | 'bank-accounts'
   | 'users'
   | 'password';
 export type WindowMode = 'normal' | 'minimized' | 'maximized';

@@ -408,3 +408,65 @@ export type Receivable = {
   createdAt: string;
   createdBy: string;
 };
+
+export type SettlementStatus = 'POSTED' | 'REVERSED';
+
+export type Settlement = {
+  id: string;
+  code: string;
+  direction: 'RECEIVABLE' | 'PAYABLE';
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  customerId: string;
+  customerCode: string;
+  customerName: string;
+  effectiveDate: string;
+  amountCents: string;
+  creditCents: string;
+  allocations: { titleId: string; titleCode: string; label: string; amountCents: string }[];
+  notes: string | null;
+  status: SettlementStatus;
+  reversalReason: string | null;
+  reversalDate: string | null;
+  reversedAt: string | null;
+  reversedBy: string | null;
+  version: string;
+  createdAt: string;
+  createdBy: string;
+};
+
+export type BankAccountKind = 'CAIXA' | 'BANCO';
+
+export type BankAccount = {
+  id: string;
+  code: string;
+  name: string;
+  kind: BankAccountKind;
+  bank: string | null;
+  agency: string | null;
+  accountNumber: string | null;
+  openingCents: string;
+  openingOn: string;
+  balanceCents: string;
+  movements: number;
+  status: Situacao;
+  version: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export type CashMovement = {
+  id: string;
+  effectiveDate: string;
+  amountCents: string;
+  kind: 'SETTLEMENT' | 'SETTLEMENT_REVERSAL';
+  settlementId: string;
+  settlementCode: string;
+  description: string;
+  balanceCents: string;
+  createdAt: string;
+  createdBy: string;
+};

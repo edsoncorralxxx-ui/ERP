@@ -2,7 +2,7 @@
 
 ERP industrial orientado a projetos para a Fourtech/Renda+. App macOS em Electron + React; servidor em Java (Spring Boot) + PostgreSQL; Python para processamento (a partir da sprint de importação).
 
-Situação: **Sprint 4 — proposta → pedido confirmado → projeto, equipamentos e parcelas** (entregue para Review). Funcionam de ponta a ponta (app → servidor → banco): entrar com usuário e senha, perfis Administrador e Consulta, *Clientes e unidades* (com CNPJ por unidade), *Fornecedores*, *Produtos e serviços* (NCM nos produtos, código da LC 116 nos serviços), *Unidades e categorias*, *Oportunidades e propostas* (revisões preservadas, conversão em pedido), *Pedidos e contratos* (parcelas, confirmação que cria o projeto, os equipamentos e as parcelas a receber uma única vez, cancelamento), *Carteira de projetos*, *Detalhe do projeto*, *Equipamentos*, *Usuários e permissões* e *Dados da empresa*, com controle de versão, auditoria e comando que não se duplica. Os demais módulos entram a cada sprint (`docs/scrum/product-backlog.md`).
+Situação: **Sprint 5 — contas a receber: recebimento parcial, estorno e contas financeiras** (entregue para Review). Funcionam de ponta a ponta (app → servidor → banco): entrar com usuário e senha, perfis Administrador e Consulta, *Clientes e unidades* (com CNPJ por unidade), *Fornecedores*, *Produtos e serviços* (NCM nos produtos, código da LC 116 nos serviços), *Unidades e categorias*, *Oportunidades e propostas* (revisões preservadas, conversão em pedido), *Pedidos e contratos* (parcelas, confirmação que cria o projeto, os equipamentos e as parcelas a receber uma única vez, cancelamento), *Carteira de projetos*, *Detalhe do projeto*, *Equipamentos*, *Contas a receber* (receber em partes, estornar, histórico), *Contas financeiras* (caixa e bancos, com extrato), *Usuários e permissões* e *Dados da empresa*, com controle de versão, auditoria e comando que não se duplica. Os demais módulos entram a cada sprint (`docs/scrum/product-backlog.md`).
 
 ## Rodar no seu Mac
 
@@ -87,6 +87,8 @@ A janela do Renda+ ERP abre na tela de login: entre com o administrador criado n
 - *Vendas → Oportunidades e propostas*: proposta com linhas, **Emitir revisão**, **Nova revisão**, **Converter em pedido**, **Registrar perda**.
 - *Vendas → Pedidos e contratos*: pedido com linhas e parcelas (**Dividir o total**), **Confirmar pedido** (cria projeto, equipamentos e parcelas a receber) e **Cancelar pedido**.
 - *Projetos → Carteira de projetos* e *Equipamentos → Equipamentos*: projetos gerados pelos pedidos e equipamentos com número de série.
+- *Financeiro → Contas a receber*: parcelas dos pedidos confirmados; na ficha do título, **Receber** (conta, data e valor; parcial ou total) e **Estornar** com motivo na aba Recebimentos.
+- *Financeiro → Contas financeiras*: o Caixa já vem cadastrado; cadastre as contas bancárias com o saldo inicial e veja o **Extrato** de cada conta.
 
 Atalhos: **Esc** fecha a janela ativa (pergunta antes se houver alterações não salvas); **⌘S** grava; **Alt + letra sublinhada** aciona abas e botões.
 
@@ -124,7 +126,7 @@ python3 tools/b01/verificar_b01.py
 cd apps/desktop && RENDA_E2E_USER=edson RENDA_E2E_PASSWORD='uma-senha-forte' npm run e2e
 ```
 
-Na primeira vez, o roteiro de ponta a ponta precisa do navegador do Playwright: `npx playwright install chromium`. Ele cria clientes, itens, propostas e pedidos de teste no banco em uso — prefira rodá-lo num banco de testes.
+Na primeira vez, o roteiro de ponta a ponta precisa do navegador do Playwright: `npx playwright install chromium`. Ele cria clientes, itens, propostas, pedidos, contas e recebimentos de teste no banco em uso — prefira rodá-lo num banco de testes. No GitHub, o job `e2e` do CI roda os mesmos roteiros num banco vazio a cada push e guarda as capturas de tela.
 
 ### Configurações do servidor
 
