@@ -1,40 +1,31 @@
 package br.com.fourtech.rendamais.financeiro.application;
 
-import br.com.fourtech.rendamais.financeiro.domain.CashMovement;
 import br.com.fourtech.rendamais.financeiro.domain.Settlement;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Porta de persistência das liquidações, das suas alocações e dos movimentos de caixa. */
+/** Porta de persistência das liquidações, alocações e estornos. */
 public interface SettlementRepository {
 
-    /** Título alocado, com código e descrição para a tela. */
-    record TitleRef(UUID id, String code, String label, long amountCents) { }
-
-    /** Liquidação com a conta, o cliente e os títulos pelo nome. */
+    /** Liquidação com os nomes para a tela: conta, cliente e o código de cada título alocado. */
     record Summary(Settlement settlement, String accountCode, String accountName, String counterpartyCode, String counterpartyName,
                    List<TitleRef> titles) { }
 
-    /** Próximo código de recebimento: RC00001. */
-    String nextReceiptCode();
+    record TitleRef(UUID titleId, String code, String label, long amountCents) { }
 
-    /** Grava a liquidação com as alocações. */
+    String nextCode();
+
     void insert(Settlement settlement);
 
-    /** Grava o estorno (situação, motivo, instante, ator e versão). */
-    void markReversed(Settlement settlement);
+    /** Marca como estornada e grava o estorno (INV-ST-6: um por liquidação, também no banco). */
+    void reverse(Settlement reversed, long expectedVersion);
 
-    Optional<Settlement> findByIdForUpdate(UUID id);
+    Optional<Settlement> findForUpdate(UUID id);
 
-    Optional<Summary> findById(UUID id);
+    Optional<Summary> find(UUID id);
 
-    /** Liquidações de um título, de um cliente ou pela busca (código, cliente, título); filtros nulos não filtram. */
-    List<Summary> list(UUID titleId, UUID counterpartyId, String search, boolean includeReversed, int limit);
-
-    void insertCashMovement(CashMovement movement);
-
-    /** Entrada original da liquidação (o movimento que não estorna outro). */
-    Optional<CashMovement> inflowOf(UUID settlementId);
+    /** Liquidações de um título, de uma conta ou todas, as mais recentes primeiro. */
+    List<Summary> list(UUID titleId, UUID accountId, int limit);
 }

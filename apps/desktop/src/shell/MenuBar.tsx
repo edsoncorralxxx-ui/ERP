@@ -70,7 +70,6 @@ export function MenuBar(p: Props) {
         { label: 'Pedidos e contratos', action: () => p.onOpen('orders') },
         { label: 'Carteira de projetos', action: () => p.onOpen('projects') },
         { label: 'Equipamentos', action: () => p.onOpen('equipments') },
-        { label: 'Contas a receber', action: () => p.onOpen('receivables') },
         'sep',
         { label: 'Dados da empresa', action: () => p.onOpen('company-profile') },
         { label: 'Status do servidor', action: () => p.onOpen('server-status') },

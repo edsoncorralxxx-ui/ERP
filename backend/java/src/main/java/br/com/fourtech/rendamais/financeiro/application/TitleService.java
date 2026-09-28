@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,7 +28,7 @@ import java.util.stream.Collectors;
 
 /**
  * Títulos financeiros: emissão e cancelamento pedidos por outros módulos (na transação deles, com auditoria e evento)
- * e as consultas da tela de contas a receber. Recebimento e estorno ficam no {@link SettlementService}.
+ * e as consultas da tela de contas a receber. Recebimentos e estornos ficam no {@link SettlementService}.
  */
 @Service
 public class TitleService implements TitleIssuanceApi, TitleQueryApi {
@@ -112,23 +113,24 @@ public class TitleService implements TitleIssuanceApi, TitleQueryApi {
     }
 
     @Transactional(readOnly = true)
-    public List<FinancialTitleRepository.Summary> listReceivables(String search, UUID projectId, UUID customerId, boolean includeCancelled) {
+    public List<FinancialTitleRepository.Summary> listReceivables(String search, UUID projectId, UUID customerId,
+                                                                  FinancialTitleRepository.Filter filter, LocalDate today) {
         CurrentUserHolder.require(Permissions.FINANCIAL_TITLE_READ);
         return repository.listReceivables(search == null || search.isBlank() ? null : search.strip(), projectId, customerId,
-                includeCancelled, 500);
+                filter, today, 500);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AuditQuery.AuditRecord> history(UUID id) {
+        CurrentUserHolder.require(Permissions.FINANCIAL_TITLE_READ);
+        repository.findById(id).orElseThrow(() -> new NotFoundException("Título não encontrado."));
+        return auditQuery.history(ENTITY, id.toString());
     }
 
     @Transactional(readOnly = true)
     public FinancialTitleRepository.Summary get(UUID id) {
         CurrentUserHolder.require(Permissions.FINANCIAL_TITLE_READ);
         return repository.findById(id).orElseThrow(() -> new NotFoundException("Título não encontrado."));
-    }
-
-    /** Histórico do título: criação, recebimentos, estornos e cancelamento. */
-    @Transactional(readOnly = true)
-    public List<AuditQuery.AuditRecord> history(UUID id) {
-        get(id);
-        return auditQuery.history(ENTITY, id.toString());
     }
 
     static TitleView view(FinancialTitle t) {

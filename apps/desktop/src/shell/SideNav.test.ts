@@ -12,6 +12,7 @@ describe('menu lateral', () => {
       'Carteira de projetos',
       'Clientes e unidades',
       'Contas a receber',
+      'Contas financeiras',
       'Dados da empresa',
       'Detalhe do projeto',
       'Equipamentos',

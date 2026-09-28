@@ -7,7 +7,6 @@ import br.com.fourtech.rendamais.auditoria.api.AuditEntry;
 import br.com.fourtech.rendamais.auditoria.api.AuditQuery;
 import br.com.fourtech.rendamais.auditoria.api.AuditTrail;
 import br.com.fourtech.rendamais.financeiro.domain.BankAccount;
-import br.com.fourtech.rendamais.financeiro.domain.CashMovement;
 import br.com.fourtech.rendamais.financeiro.domain.FinancialTitle;
 import br.com.fourtech.rendamais.financeiro.domain.Settlement;
 import br.com.fourtech.rendamais.kernel.Currency;
@@ -26,8 +25,8 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,17 +35,18 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Recebimentos (docs/backend/13, §4 e §5): PostSettlement distribui um valor recebido numa conta entre títulos a
- * receber, com baixa parcial; ReverseSettlement estorna a liquidação inteira (PD-005). Cada comando, numa transação:
- * títulos bloqueados em ordem de id (INV-ST-3), saldo nunca negativo (INV-FT-1), movimento de caixa, recibo, auditoria
- * (da liquidação e de cada título) e evento.
+ * Recebimentos e estornos (docs/backend/13, §4 e §5). A baixa, numa transação: confere INV-ST-1/2 antes do banco,
+ * bloqueia os títulos em ordem crescente de id (INV-ST-3), aplica cada alocação contra o saldo (INV-FT-1), cria o
+ * movimento de entrada na conta e grava recibo, auditoria e evento. O estorno é total (PD-005): devolve o saldo aos
+ * mesmos títulos, cria o movimento inverso e preserva a liquidação como estornada; estornar de novo devolve o mesmo
+ * estorno (INV-ST-6).
  */
 @Service
 public class SettlementService {
 
     static final String ENTITY = "settlement";
-    /** Datas de negócio (data do recebimento) no fuso da empresa. */
-    static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
+    /** Datas de negócio no fuso da empresa; instantes de auditoria continuam em UTC. */
+    public static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
 
     private final SettlementRepository repository;
     private final FinancialTitleRepository titles;
@@ -69,19 +69,16 @@ public class SettlementService {
         this.clock = clock;
     }
 
-    /** Alocação como chega da API: valores em centavos e versões como texto. */
-    public record AllocationData(String titleId, String amountCents, String expectedTitleVersion) { }
+    /** Corpo do PostSettlement, como chega da API: valores em centavos como texto de inteiro (ADR-006). */
+    public record PostRequest(String direction, String accountId, String effectiveDate, String amountCents, String currency,
+                              List<AllocationRequest> allocations, String creditCents, String notes) { }
 
-    public record PostData(String direction, String accountId, String effectiveDate, String amountCents, List<AllocationData> allocations,
-                           String notes) { }
-
-    private record Parsed(UUID accountId, LocalDate effectiveDate, Money total, List<Settlement.Allocation> allocations,
-                          Map<UUID, Long> expectedVersions, String notes) { }
+    public record AllocationRequest(String titleId, String amountCents, String expectedTitleVersion) { }
 
     @Transactional(readOnly = true)
-    public List<SettlementRepository.Summary> list(UUID titleId, UUID customerId, String search, boolean includeReversed) {
+    public List<SettlementRepository.Summary> list(UUID titleId, UUID accountId) {
         CurrentUserHolder.require(Permissions.FINANCIAL_TITLE_READ);
-        return repository.list(titleId, customerId, search == null || search.isBlank() ? null : search.strip(), includeReversed, 500);
+        return repository.list(titleId, accountId, 500);
     }
 
     @Transactional(readOnly = true)
@@ -97,86 +94,79 @@ public class SettlementService {
         return auditQuery.history(ENTITY, id.toString());
     }
 
-    /**
-     * PostSettlement (direção a receber). A mesma chave devolve o mesmo recebimento; um recebimento acima do saldo é
-     * recusado inteiro, com o saldo atual (INV-FT-1). Dois recebimentos simultâneos no mesmo título se enfileiram no
-     * bloqueio do título: o segundo enxerga o saldo que o primeiro deixou.
-     */
+    /** PostSettlement: registra um recebimento; a mesma chave devolve o mesmo recebimento. */
     @Transactional
-    public SettlementRepository.Summary post(String idempotencyKey, PostData data) {
+    public SettlementRepository.Summary post(String idempotencyKey, PostRequest r) {
         CurrentUser user = CurrentUserHolder.require(Permissions.FINANCIAL_TITLE_SETTLE);
         String key = CommandReceipts.requireKey(idempotencyKey);
-        var done = receipts.claim(user.username(), key, "PostSettlement", data);
+        var done = receipts.claim(user.username(), key, "PostSettlement", r);
         if (done.isPresent()) return view(UUID.fromString(done.get()));
 
-        Parsed p = parse(data);
-        Settlement.validate(p.total(), p.allocations());
-        BankAccount account = accounts.findById(p.accountId()).filter(BankAccount::active).orElseThrow(() ->
-                new RuleViolationException("ACCOUNT_INACTIVE", "Conta inexistente ou inativa.", List.of(new FieldIssue("accountId", "Conta inexistente ou inativa."))));
+        Parsed p = parse(r);
+        Settlement.check(p.total(), p.allocations());
+        BankAccount account = accounts.findForShare(p.accountId()).orElseThrow(() -> new RuleViolationException("SETTLEMENT_INVALID",
+                "Conta financeira não encontrada.", List.of(new FieldIssue("accountId", "Conta não encontrada."))));
+        if (account.status() != BankAccount.Status.ATIVO) {
+            throw new RuleViolationException("ACCOUNT_INACTIVE", "A conta " + account.code() + " — " + account.name()
+                    + " está inativa e não recebe lançamentos.", List.of(new FieldIssue("accountId", "Conta inativa.")));
+        }
 
-        List<UUID> ids = p.allocations().stream().map(Settlement.Allocation::titleId).toList();
+        // INV-ST-3: títulos bloqueados em ordem crescente de id; quem chega depois espera e vê o saldo já baixado.
+        List<UUID> ids = p.allocations().stream().map(Settlement.Allocation::titleId).sorted().toList();
         Map<UUID, FinancialTitle> locked = titles.findByIdsForUpdate(ids).stream()
                 .collect(Collectors.toMap(FinancialTitle::id, Function.identity()));
-        List<FieldIssue> issues = new ArrayList<>();
-        for (int i = 0; i < ids.size(); i++) {
-            FinancialTitle t = locked.get(ids.get(i));
-            if (t == null) issues.add(new FieldIssue("allocations[" + i + "].titleId", "Título não encontrado."));
-            else if (t.direction() != FinancialTitle.Direction.RECEIVABLE) {
-                throw new RuleViolationException("SETTLEMENT_DIRECTION_MISMATCH", "O título " + t.code() + " não é a receber.",
-                        List.of(new FieldIssue("allocations[" + i + "].titleId", "Título a pagar num recebimento.")));
-            }
-        }
-        if (!issues.isEmpty()) throw new RuleViolationException("SETTLEMENT_INVALID", "Corrija os campos indicados.", issues);
-        UUID counterparty = locked.get(ids.get(0)).counterpartyId();
-        for (int i = 0; i < ids.size(); i++) {
-            FinancialTitle t = locked.get(ids.get(i));
-            if (!t.counterpartyId().equals(counterparty)) {
-                issues.add(new FieldIssue("allocations[" + i + "].titleId", "Título de outro cliente: um recebimento vem de um único cliente."));
-            }
-            Long expected = p.expectedVersions().get(t.id());
-            if (expected != null && expected != t.version()) throw new VersionConflictException(TitleService.ENTITY, expected, t.version());
-        }
-        if (!issues.isEmpty()) throw new RuleViolationException("SETTLEMENT_INVALID", "Corrija os campos indicados.", issues);
-
+        UUID counterparty = null;
         Instant now = clock.instant();
         List<FinancialTitle[]> changed = new ArrayList<>();
         for (int i = 0; i < p.allocations().size(); i++) {
             Settlement.Allocation a = p.allocations().get(i);
-            FinancialTitle before = locked.get(a.titleId());
-            try {
-                changed.add(new FinancialTitle[]{before, before.applyAllocation(a.amount(), now, user.username())});
-            } catch (FinancialTitle.InsufficientBalanceException e) {
-                throw new RuleViolationException("INSUFFICIENT_TITLE_BALANCE", e.getMessage(),
-                        List.of(new FieldIssue("allocations[" + i + "].amountCents", "Saldo atual " + e.balance().toBrl() + ".")));
+            FinancialTitle t = locked.get(a.titleId());
+            if (t == null) {
+                throw new RuleViolationException("SETTLEMENT_INVALID", "Título não encontrado.",
+                        List.of(new FieldIssue("allocations[" + i + "].titleId", "Título não encontrado.")));
             }
+            if (t.direction() != p.direction()) {
+                throw new RuleViolationException("SETTLEMENT_DIRECTION_MISMATCH", "O título " + t.code()
+                        + " não é uma conta a receber.", List.of(new FieldIssue("allocations[" + i + "].titleId", "Direção diferente.")));
+            }
+            if (counterparty != null && !counterparty.equals(t.counterpartyId())) {
+                throw new RuleViolationException("SETTLEMENT_INVALID", "Um recebimento é de um só cliente; o título " + t.code()
+                        + " é de outro cliente.", List.of(new FieldIssue("allocations[" + i + "].titleId", "Cliente diferente.")));
+            }
+            counterparty = t.counterpartyId();
+            Long expected = p.expectedVersions().get(i);
+            if (expected != null && expected != t.version()) throw new VersionConflictException(TitleService.ENTITY, expected, t.version());
+            changed.add(new FinancialTitle[]{t, t.applyAllocation(a.amount(), now, user.username())});
         }
 
-        Settlement s = Settlement.post(repository.nextReceiptCode(), FinancialTitle.Direction.RECEIVABLE, account.id(), counterparty,
-                p.effectiveDate(), p.total(), p.allocations(), p.notes(), now, user.username());
+        Settlement s = Settlement.post(repository.nextCode(), p.direction(), account.id(), counterparty, p.effectiveDate(), p.total(),
+                p.allocations(), p.notes(), now, user.username());
         repository.insert(s);
-        changed.forEach(c -> titles.update(c[1]));
-        String titleCodes = changed.stream().map(c -> c[1].code()).collect(Collectors.joining(", "));
-        repository.insertCashMovement(CashMovement.inflow(s, "Recebimento " + s.code() + " — " + titleCodes, now, user.username()));
+        UUID movement = UUID.randomUUID();
+        accounts.insertMovement(movement, account.id(), s.effectiveDate(), s.total().cents(), "SETTLEMENT", s.id(), null,
+                "Recebimento " + s.code(), now, user.username());
+        changed.sort(Comparator.comparing(c -> c[0].id()));
+        for (FinancialTitle[] c : changed) {
+            titles.update(c[1]);
+            titleAudit(user, "FINANCIAL_TITLE_SETTLED", c[0], c[1], null, s);
+        }
 
         Map<String, AuditEntry.Change> changes = new LinkedHashMap<>();
         changes.put("code", new AuditEntry.Change(null, s.code()));
         changes.put("account", new AuditEntry.Change(null, account.code() + " — " + account.name()));
         changes.put("effectiveDate", new AuditEntry.Change(null, s.effectiveDate().toString()));
         changes.put("totalCents", new AuditEntry.Change(null, s.total().centsAsString()));
-        changes.put("titles", new AuditEntry.Change(null, titleCodes));
+        changes.put("titles", new AuditEntry.Change(null, changed.stream().map(c -> c[0].code()).collect(Collectors.joining(", "))));
         audit.record(new AuditEntry(user.username(), "SETTLEMENT_POSTED", ENTITY, s.id().toString(), s.version(), s.notes(), changes,
                 CorrelationId.current()));
-        String receivedOn = s.code() + " de " + s.effectiveDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-        for (FinancialTitle[] c : changed) titleAudit(user, "FINANCIAL_TITLE_SETTLED", c[0], c[1], receivedOn);
-
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("settlementId", s.id().toString());
         payload.put("direction", s.direction().name());
-        payload.put("accountId", s.accountId().toString());
+        payload.put("accountId", account.id().toString());
         payload.put("effectiveDate", s.effectiveDate().toString());
         payload.put("totalCents", s.total().centsAsString());
-        payload.put("allocations", s.allocations().stream()
-                .map(a -> Map.of("titleId", a.titleId().toString(), "amountCents", a.amount().centsAsString())).toList());
+        payload.put("allocations", s.allocations().stream().map(a -> Map.of("titleId", a.titleId().toString(),
+                "amountCents", a.amount().centsAsString())).toList());
         payload.put("creditCents", "0");
         outbox.append("SettlementPosted", ENTITY, s.id().toString(), payload, user.username());
         receipts.complete(user.username(), key, s.id().toString());
@@ -184,14 +174,13 @@ public class SettlementService {
     }
 
     /**
-     * ReverseSettlement: estorno total com motivo. Os saldos voltam pelas mesmas alocações, o movimento de caixa inverso
-     * fica vinculado ao original e a liquidação continua consultável como REVERSED. Estornar de novo devolve o estorno
-     * existente (INV-ST-6). Conciliação ainda não existe; quando existir, liquidação conciliada será recusada (PD-006).
+     * ReverseSettlement: estorno total com motivo. Liquidação já estornada devolve o estorno existente (INV-ST-6). A
+     * conciliação ainda não existe; quando existir, liquidação conciliada será recusada (PD-006, SETTLEMENT_RECONCILED).
      */
     @Transactional
     public SettlementRepository.Summary reverse(UUID id, String reason) {
         CurrentUser user = CurrentUserHolder.require(Permissions.SETTLEMENT_REVERSE);
-        Settlement current = repository.findByIdForUpdate(id).orElseThrow(SettlementService::notFound);
+        Settlement current = repository.findForUpdate(id).orElseThrow(SettlementService::notFound);
         if (current.status() == Settlement.Status.REVERSED) return view(id);
         String why = reason == null ? "" : reason.strip();
         if (why.isEmpty() || why.length() > 500) {
@@ -199,81 +188,106 @@ public class SettlementService {
                     List.of(new FieldIssue("reason", why.isEmpty() ? "Obrigatório." : "Máximo de 500 caracteres.")));
         }
         Instant now = clock.instant();
-        Map<UUID, Money> amounts = current.allocations().stream()
+        LocalDate today = LocalDate.now(clock.withZone(BUSINESS_ZONE));
+        Map<UUID, Money> byTitle = current.allocations().stream()
                 .collect(Collectors.toMap(Settlement.Allocation::titleId, Settlement.Allocation::amount));
-        List<FinancialTitle> locked = titles.findByIdsForUpdate(List.copyOf(amounts.keySet()));
-        for (FinancialTitle before : locked) {
-            FinancialTitle after = before.reverseAllocation(amounts.get(before.id()), now, user.username());
-            titles.update(after);
-            titleAudit(user, "FINANCIAL_TITLE_SETTLEMENT_REVERSED", before, after, current.code() + " estornado: " + why);
+        List<FinancialTitle> locked = titles.findByIdsForUpdate(byTitle.keySet().stream().sorted().toList());
+        List<FinancialTitle[]> changed = new ArrayList<>();
+        for (FinancialTitle t : locked) {
+            changed.add(new FinancialTitle[]{t, t.reverseAllocation(byTitle.get(t.id()), now, user.username())});
         }
-        CashMovement inflow = repository.inflowOf(id).orElseThrow(() -> new IllegalStateException("Liquidação sem movimento de caixa: " + id));
-        CashMovement back = inflow.reversal("Estorno do recebimento " + current.code(), now, user.username());
-        repository.insertCashMovement(back);
-        Settlement reversed = current.reverse(why, now, user.username());
-        repository.markReversed(reversed);
+        UUID original = accounts.settlementMovement(id).orElseThrow(() -> new IllegalStateException("Liquidação sem movimento: " + id));
+        UUID movement = UUID.randomUUID();
+        accounts.insertMovement(movement, current.accountId(), today, current.total().negate().cents(), "SETTLEMENT_REVERSAL", id,
+                original, "Estorno do recebimento " + current.code(), now, user.username());
+        Settlement reversed = current.reverse(new Settlement.Reversal(UUID.randomUUID(), why, today, movement, now, user.username()));
+        repository.reverse(reversed, current.version());
+        for (FinancialTitle[] c : changed) {
+            titles.update(c[1]);
+            titleAudit(user, "FINANCIAL_TITLE_SETTLEMENT_REVERSED", c[0], c[1], why, current);
+        }
         audit.record(new AuditEntry(user.username(), "SETTLEMENT_REVERSED", ENTITY, id.toString(), reversed.version(), why,
-                Map.of("status", new AuditEntry.Change(Settlement.Status.POSTED.name(), Settlement.Status.REVERSED.name())),
-                CorrelationId.current()));
-        outbox.append("SettlementReversed", ENTITY, id.toString(),
-                Map.of("reversalId", back.id().toString(), "settlementId", id.toString(), "reason", why), user.username());
+                Map.of("status", new AuditEntry.Change(current.status().name(), reversed.status().name()),
+                        "reversalDate", new AuditEntry.Change(null, today.toString())), CorrelationId.current()));
+        outbox.append("SettlementReversed", ENTITY, id.toString(), Map.of("reversalId", reversed.reversal().id().toString(),
+                "settlementId", id.toString(), "reason", why), user.username());
         return view(id);
     }
 
-    /** Histórico do título: recebido, saldo e situação antes e depois, com a liquidação no motivo. */
-    private void titleAudit(CurrentUser user, String action, FinancialTitle before, FinancialTitle after, String reason) {
+    private void titleAudit(CurrentUser user, String action, FinancialTitle before, FinancialTitle after, String reason, Settlement s) {
         Map<String, AuditEntry.Change> changes = new LinkedHashMap<>();
+        changes.put("settlement", new AuditEntry.Change(null, s.code()));
         changes.put("receivedCents", new AuditEntry.Change(before.received().centsAsString(), after.received().centsAsString()));
         changes.put("balanceCents", new AuditEntry.Change(before.balance().centsAsString(), after.balance().centsAsString()));
-        if (before.status() != after.status()) changes.put("status", new AuditEntry.Change(before.status().name(), after.status().name()));
+        if (before.status() != after.status()) {
+            changes.put("status", new AuditEntry.Change(before.status().name(), after.status().name()));
+        }
         audit.record(new AuditEntry(user.username(), action, TitleService.ENTITY, after.id().toString(), after.version(), reason, changes,
                 CorrelationId.current()));
     }
 
-    private Parsed parse(PostData d) {
+    private record Parsed(FinancialTitle.Direction direction, UUID accountId, LocalDate effectiveDate, Money total,
+                          List<Settlement.Allocation> allocations, List<Long> expectedVersions, String notes) { }
+
+    /** Formato e campos obrigatórios; as regras entre campos vêm depois (INV-ST-1/2) e, com o banco, as dos títulos. */
+    private Parsed parse(PostRequest r) {
         List<FieldIssue> issues = new ArrayList<>();
-        if (d.direction() != null && !d.direction().isBlank() && !"RECEIVABLE".equals(d.direction().strip())) {
-            issues.add(new FieldIssue("direction", "Nesta fase só há recebimentos (RECEIVABLE); pagamentos entram com o contas a pagar."));
+        FinancialTitle.Direction direction = FinancialTitle.Direction.RECEIVABLE;
+        if (r.direction() != null && !r.direction().isBlank() && !"RECEIVABLE".equals(r.direction().strip())) {
+            throw new RuleViolationException("SETTLEMENT_DIRECTION_MISMATCH",
+                    "Nesta versão só há recebimentos (RECEIVABLE); pagamentos entram com as contas a pagar.",
+                    List.of(new FieldIssue("direction", "Use RECEIVABLE.")));
         }
-        UUID account = uuid(d.accountId(), "accountId", issues);
+        if (r.currency() != null && !r.currency().isBlank() && !"BRL".equals(r.currency().strip())) {
+            issues.add(new FieldIssue("currency", "Só reais (BRL)."));
+        }
+        if (r.creditCents() != null && !r.creditCents().isBlank() && !r.creditCents().strip().matches("0+")) {
+            issues.add(new FieldIssue("creditCents", "Crédito do cliente ainda não é aceito (PD-004): o valor recebido deve fechar com os títulos."));
+        }
+        UUID accountId = uuid(r.accountId(), "accountId", "Informe a conta.", issues);
         LocalDate date = null;
-        if (d.effectiveDate() == null || d.effectiveDate().isBlank()) {
-            issues.add(new FieldIssue("effectiveDate", "Obrigatório."));
+        if (r.effectiveDate() == null || r.effectiveDate().isBlank()) {
+            issues.add(new FieldIssue("effectiveDate", "Informe a data do recebimento."));
         } else {
             try {
-                date = LocalDate.parse(d.effectiveDate().strip());
+                date = LocalDate.parse(r.effectiveDate().strip());
                 if (date.isAfter(LocalDate.now(clock.withZone(BUSINESS_ZONE)))) {
-                    issues.add(new FieldIssue("effectiveDate", "O recebimento não pode ter data futura."));
+                    issues.add(new FieldIssue("effectiveDate", "A data do recebimento não pode ser futura."));
                 }
             } catch (RuntimeException e) {
                 issues.add(new FieldIssue("effectiveDate", "Data inválida."));
             }
         }
-        Money total = cents(d.amountCents(), "amountCents", issues);
+        Money total = cents(r.amountCents(), "amountCents", issues);
+        if (total != null && (total.isZero() || total.isNegative())) issues.add(new FieldIssue("amountCents", "Deve ser maior que zero."));
+        if (r.notes() != null && r.notes().strip().length() > 500) issues.add(new FieldIssue("notes", "Máximo de 500 caracteres."));
         List<Settlement.Allocation> allocations = new ArrayList<>();
-        Map<UUID, Long> versions = new LinkedHashMap<>();
-        List<AllocationData> raw = d.allocations() == null ? List.of() : d.allocations();
+        List<Long> versions = new ArrayList<>();
+        List<AllocationRequest> raw = r.allocations() == null ? List.of() : r.allocations();
         for (int i = 0; i < raw.size(); i++) {
-            AllocationData a = raw.get(i);
-            UUID title = uuid(a == null ? null : a.titleId(), "allocations[" + i + "].titleId", issues);
-            Money amount = cents(a == null ? null : a.amountCents(), "allocations[" + i + "].amountCents", issues);
+            AllocationRequest a = raw.get(i);
+            String f = "allocations[" + i + "]";
+            UUID title = uuid(a == null ? null : a.titleId(), f + ".titleId", "Informe o título.", issues);
+            Money amount = cents(a == null ? null : a.amountCents(), f + ".amountCents", issues);
+            Long version = null;
             if (a != null && a.expectedTitleVersion() != null && !a.expectedTitleVersion().isBlank()) {
-                String v = a.expectedTitleVersion().strip().replace("\"", "");
-                if (!v.matches("\\d{1,18}")) issues.add(new FieldIssue("allocations[" + i + "].expectedTitleVersion", "Versão inválida."));
-                else if (title != null) versions.put(title, Long.parseLong(v));
+                try {
+                    version = Long.parseLong(a.expectedTitleVersion().strip().replace("\"", ""));
+                } catch (NumberFormatException e) {
+                    issues.add(new FieldIssue(f + ".expectedTitleVersion", "Versão inválida."));
+                }
             }
             if (title != null && amount != null) allocations.add(new Settlement.Allocation(title, amount));
+            versions.add(version);
         }
-        if (raw.isEmpty()) issues.add(new FieldIssue("allocations", "Informe ao menos um título."));
-        String notes = d.notes() == null || d.notes().isBlank() ? null : d.notes().strip();
-        if (notes != null && notes.length() > 500) issues.add(new FieldIssue("notes", "Máximo de 500 caracteres."));
         if (!issues.isEmpty()) throw new RuleViolationException("SETTLEMENT_INVALID", "Corrija os campos indicados.", issues);
-        return new Parsed(account, date, total, allocations, versions, notes);
+        String notes = r.notes() == null || r.notes().isBlank() ? null : r.notes().strip();
+        return new Parsed(direction, accountId, date, total, allocations, versions, notes);
     }
 
-    private static UUID uuid(String raw, String field, List<FieldIssue> issues) {
+    private static UUID uuid(String raw, String field, String missing, List<FieldIssue> issues) {
         if (raw == null || raw.isBlank()) {
-            issues.add(new FieldIssue(field, "Obrigatório."));
+            issues.add(new FieldIssue(field, missing));
             return null;
         }
         try {
@@ -285,25 +299,16 @@ public class SettlementService {
     }
 
     private static Money cents(String raw, String field, List<FieldIssue> issues) {
-        if (raw == null || raw.isBlank()) {
-            issues.add(new FieldIssue(field, "Obrigatório."));
-            return null;
-        }
         try {
-            Money m = Money.parseCents(raw.strip(), Currency.BRL);
-            if (m.isNegative() || m.isZero()) {
-                issues.add(new FieldIssue(field, "Informe um valor maior que zero."));
-                return null;
-            }
-            return m;
+            return Money.parseCents(raw == null ? null : raw.strip(), Currency.BRL);
         } catch (IllegalArgumentException e) {
-            issues.add(new FieldIssue(field, "Valor inválido."));
+            issues.add(new FieldIssue(field, "Valor em centavos inválido."));
             return null;
         }
     }
 
     private SettlementRepository.Summary view(UUID id) {
-        return repository.findById(id).orElseThrow(SettlementService::notFound);
+        return repository.find(id).orElseThrow(SettlementService::notFound);
     }
 
     private static NotFoundException notFound() {

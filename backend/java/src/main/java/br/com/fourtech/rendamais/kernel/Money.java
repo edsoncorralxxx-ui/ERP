@@ -6,7 +6,6 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
@@ -60,16 +59,16 @@ public final class Money implements Comparable<Money> {
         return Long.toString(cents);
     }
 
-    /** Valor em reais para mensagens ao usuário: "R$ 23.579,23" (só BRL). */
-    public String toBrl() {
-        if (currency != Currency.BRL) return toString();
-        long abs = Math.abs(cents);
-        String inteiro = String.format(Locale.ROOT, "%,d", abs / 100).replace(',', '.');
-        return (cents < 0 ? "-" : "") + "R$ " + inteiro + "," + String.format(Locale.ROOT, "%02d", abs % 100);
-    }
-
     public BigDecimal toDecimal() {
         return BigDecimal.valueOf(cents, 2);
+    }
+
+    /** Valor para mensagens: R$ 23.579,23 (negativo: -R$ 10,00). Só para reais. */
+    public String toBrl() {
+        long abs = Math.abs(cents);
+        StringBuilder inteiro = new StringBuilder(Long.toString(abs / 100));
+        for (int i = inteiro.length() - 3; i > 0; i -= 3) inteiro.insert(i, '.');
+        return (cents < 0 ? "-" : "") + "R$ " + inteiro + "," + String.format("%02d", abs % 100);
     }
 
     public Money plus(Money other) {

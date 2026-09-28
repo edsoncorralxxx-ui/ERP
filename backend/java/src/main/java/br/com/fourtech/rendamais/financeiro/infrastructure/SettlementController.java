@@ -21,8 +21,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Recebimentos (liquidações a receber): registrar com Idempotency-Key, consultar e estornar com motivo. O estorno é
- * idempotente pela própria liquidação: estornar de novo devolve o estorno existente.
+ * Recebimentos (PostSettlement, com Idempotency-Key) e estornos (ReverseSettlement, idempotente pela liquidação).
+ * Valores em centavos como texto de inteiro (ADR-006).
  */
 @RestController
 @RequestMapping("/api/v1/settlements")
@@ -34,32 +34,22 @@ class SettlementController {
         this.service = service;
     }
 
-    record AllocationDto(String titleId, String titleCode, String titleLabel, String amountCents) { }
+    record AllocationDto(String titleId, String titleCode, String label, String amountCents) { }
 
     record SettlementDto(String id, String code, String direction, String accountId, String accountCode, String accountName,
-                         String customerId, String customerCode, String customerName, LocalDate effectiveDate, String totalCents,
-                         String notes, List<AllocationDto> allocations, String status, String reversalReason, Instant reversedAt,
-                         String reversedBy, String version, Instant createdAt, String createdBy) {
+                         String customerId, String customerCode, String customerName, LocalDate effectiveDate, String amountCents,
+                         String creditCents, List<AllocationDto> allocations, String notes, String status, String reversalReason,
+                         LocalDate reversalDate, Instant reversedAt, String reversedBy, String version, Instant createdAt,
+                         String createdBy) {
         static SettlementDto of(SettlementRepository.Summary v) {
             Settlement s = v.settlement();
-            var r = s.reversal();
+            Settlement.Reversal r = s.reversal();
             return new SettlementDto(s.id().toString(), s.code(), s.direction().name(), s.accountId().toString(), v.accountCode(),
                     v.accountName(), s.counterpartyId().toString(), v.counterpartyCode(), v.counterpartyName(), s.effectiveDate(),
-                    s.total().centsAsString(), s.notes(),
-                    v.titles().stream().map(t -> new AllocationDto(t.id().toString(), t.code(), t.label(), Long.toString(t.amountCents()))).toList(),
-                    s.status().name(), r == null ? null : r.reason(), r == null ? null : r.at(), r == null ? null : r.by(),
-                    Long.toString(s.version()), s.createdAt(), s.createdBy());
-        }
-    }
-
-    record AllocationRequest(String titleId, String amountCents, String expectedTitleVersion) { }
-
-    record PostRequest(String direction, String accountId, String effectiveDate, String amountCents, List<AllocationRequest> allocations,
-                       String notes) {
-        SettlementService.PostData toData() {
-            return new SettlementService.PostData(direction, accountId, effectiveDate, amountCents, allocations == null ? List.of()
-                    : allocations.stream().map(a -> a == null ? null
-                    : new SettlementService.AllocationData(a.titleId(), a.amountCents(), a.expectedTitleVersion())).toList(), notes);
+                    s.total().centsAsString(), "0", v.titles().stream().map(t -> new AllocationDto(t.titleId().toString(), t.code(),
+                    t.label(), Long.toString(t.amountCents()))).toList(), s.notes(), s.status().name(),
+                    r == null ? null : r.reason(), r == null ? null : r.effectiveDate(), r == null ? null : r.at(),
+                    r == null ? null : r.by(), Long.toString(s.version()), s.createdAt(), s.createdBy());
         }
     }
 
@@ -67,10 +57,8 @@ class SettlementController {
 
     @GetMapping
     List<SettlementDto> list(@RequestParam(value = "titleId", required = false) UUID titleId,
-                             @RequestParam(value = "customerId", required = false) UUID customerId,
-                             @RequestParam(value = "search", required = false) String search,
-                             @RequestParam(value = "includeReversed", defaultValue = "true") boolean includeReversed) {
-        return service.list(titleId, customerId, search, includeReversed).stream().map(SettlementDto::of).toList();
+                             @RequestParam(value = "accountId", required = false) UUID accountId) {
+        return service.list(titleId, accountId).stream().map(SettlementDto::of).toList();
     }
 
     @GetMapping("/{id}")
@@ -80,8 +68,8 @@ class SettlementController {
 
     @PostMapping
     ResponseEntity<SettlementDto> post(@RequestHeader(value = "Idempotency-Key", required = false) String key,
-                                       @RequestBody PostRequest body) {
-        return respond(HttpStatus.CREATED, service.post(key, body.toData()));
+                                       @RequestBody SettlementService.PostRequest body) {
+        return respond(HttpStatus.CREATED, service.post(key, body));
     }
 
     @PostMapping("/{id}/reversals")

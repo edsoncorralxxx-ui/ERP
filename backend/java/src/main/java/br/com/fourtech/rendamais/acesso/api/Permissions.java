@@ -31,8 +31,8 @@ public final class Permissions {
     public static final String FINANCIAL_TITLE_SETTLE = "financial_title.settle";
     /** Estornar recebimento (ReverseSettlement). */
     public static final String SETTLEMENT_REVERSE = "settlement.reverse";
-    /** Cadastrar contas financeiras (caixa e bancos). */
-    public static final String BANK_ACCOUNT_MANAGE = "bank_account.manage";
+    /** Cadastrar e alterar contas financeiras (caixa e bancos). */
+    public static final String BANK_ACCOUNT_ADMIN = "bank_account.admin";
     public static final String USER_ADMIN = "user.admin";
 
     private Permissions() { }

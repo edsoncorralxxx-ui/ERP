@@ -57,17 +57,16 @@ jobs:
       - run: npm run build
 
   e2e:
-    # Ação da retrospectiva da Sprint 4: os roteiros Playwright (apps/desktop/e2e) rodam no CI contra o servidor real,
-    # com banco vazio e o primeiro administrador criado pelo próprio servidor.
-    name: Roteiro de ponta a ponta (Playwright, servidor real)
+    name: Roteiro de ponta a ponta (Playwright contra o servidor real)
     runs-on: ubuntu-latest
+    needs: [servidor, app]
     services:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: renda
           POSTGRES_USER: renda
           POSTGRES_PASSWORD: renda
+          POSTGRES_DB: renda
         ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U renda" --health-interval 5s --health-timeout 5s --health-retries 20
@@ -82,40 +81,31 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
+      - name: Servidor (banco vazio, administrador inicial)
+        working-directory: backend/java
+        run: |
+          ./mvnw -B -q -DskipTests package
+          RENDA_BOOTSTRAP_ADMIN_USER="$RENDA_E2E_USER" RENDA_BOOTSTRAP_ADMIN_PASSWORD="$RENDA_E2E_PASSWORD" \
+            nohup java -jar target/renda-erp-server-0.1.0-SNAPSHOT.jar > "$RUNNER_TEMP/servidor.log" 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8080/api/v1/status && exit 0
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/servidor.log"
+          exit 1
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - name: Empacotar o servidor
-        working-directory: backend/java
-        run: ./mvnw -B -DskipTests package
-      - name: Subir o servidor
-        working-directory: backend/java
-        env:
-          RENDA_BOOTSTRAP_ADMIN_USER: admin
-          RENDA_BOOTSTRAP_ADMIN_PASSWORD: senha-e2e-renda-ci
-        run: |
-          nohup java -jar target/renda-erp-server-*.jar > "$RUNNER_TEMP/servidor.log" 2>&1 &
-          for i in $(seq 1 60); do
-            curl -sf http://127.0.0.1:8080/api/v1/status && exit 0
-            sleep 2
-          done
-          cat "$RUNNER_TEMP/servidor.log"
-          exit 1
-      - name: Instalar o app e o Chromium
+      - name: Roteiros das sprints no Chromium
         working-directory: apps/desktop
         run: |
           npm ci
           npx playwright install --with-deps chromium
-      - name: Rodar os roteiros
-        working-directory: apps/desktop
-        env:
-          RENDA_E2E_EVIDENCIAS: ${{ runner.temp }}/evidencias
-        run: |
-          mkdir -p "$RENDA_E2E_EVIDENCIAS"
-          npm run e2e
-      - name: Guardar evidências e o log do servidor
+          mkdir -p "$RUNNER_TEMP/evidencias"
+          RENDA_E2E_EVIDENCIAS="$RUNNER_TEMP/evidencias" npm run e2e
+      - name: Evidências e log do servidor
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -123,5 +113,4 @@ jobs:
           path: |
             ${{ runner.temp }}/evidencias
             ${{ runner.temp }}/servidor.log
-            apps/desktop/test-results
           if-no-files-found: ignore

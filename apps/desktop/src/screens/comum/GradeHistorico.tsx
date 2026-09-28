@@ -11,8 +11,7 @@ const ROTULO: Record<string, string> = {
   lines: 'Linhas', totalCents: 'Total', contractDate: 'Contratação', promisedDate: 'Prazo prometido', notes: 'Observações',
   installments: 'Parcelas', proposal: 'Proposta', order: 'Pedido', project: 'Projeto', equipment: 'Equipamentos', titles: 'Parcelas a receber',
   snapshotHash: 'Retrato da confirmação', name: 'Nome', stage: 'Estágio', model: 'Modelo', serialNumber: 'Nº de série',
-  origin: 'Origem', dueDate: 'Vencimento', originalCents: 'Valor', receivedCents: 'Recebido', balanceCents: 'Saldo',
-  account: 'Conta', effectiveDate: 'Data do recebimento', bank: 'Banco', openingCents: 'Saldo de abertura', openingOn: 'Abertura',
+  origin: 'Origem', dueDate: 'Vencimento', originalCents: 'Valor',
 };
 const ACAO: Record<string, string> = {
   PARTNER_REGISTERED: 'Cadastro', PARTNER_UPDATED: 'Alteração', PARTNER_DEACTIVATED: 'Inativação', PARTNER_ROLE_ENABLED: 'Novo papel',
@@ -21,15 +20,12 @@ const ACAO: Record<string, string> = {
   PROPOSAL_REVISION_CREATED: 'Nova revisão', PROPOSAL_LOST: 'Perda', PROPOSAL_WON: 'Ganho (convertida em pedido)',
   SALES_ORDER_DRAFTED: 'Cadastro', SALES_ORDER_UPDATED: 'Alteração', SALES_ORDER_CONFIRMED: 'Confirmação', SALES_ORDER_CANCELLED: 'Cancelamento',
   PROJECT_CREATED: 'Criação', PROJECT_CLOSED: 'Encerramento', EQUIPMENT_CREATED: 'Criação', EQUIPMENT_UPDATED: 'Alteração',
-  EQUIPMENT_CANCELLED: 'Cancelamento', FINANCIAL_TITLE_CREATED: 'Criação', FINANCIAL_TITLE_CANCELLED: 'Cancelamento',
-  FINANCIAL_TITLE_SETTLED: 'Recebimento', FINANCIAL_TITLE_SETTLEMENT_REVERSED: 'Estorno de recebimento', SETTLEMENT_POSTED: 'Recebimento',
-  SETTLEMENT_REVERSED: 'Estorno', BANK_ACCOUNT_REGISTERED: 'Cadastro',
+  EQUIPMENT_CANCELLED: 'Cancelamento',
 };
 const VALOR: Record<string, string> = {
   ATIVO: 'Ativo', INATIVO: 'Inativo', MATERIAL: 'Produto', SERVICO: 'Serviço', ABERTA: 'Aberta', GANHA: 'Ganha', PERDIDA: 'Perdida',
   RASCUNHO: 'Rascunho', EMITIDA: 'Emitida', DRAFT: 'Rascunho', CONFIRMED: 'Confirmado', CANCELLED: 'Cancelado', PLANEJADO: 'Planejado',
-  ENCERRADO: 'Encerrado', CANCELADO: 'Cancelado', OPEN: 'Em aberto', PARTIAL: 'Parcial', SETTLED: 'Liquidado', POSTED: 'Registrado',
-  REVERSED: 'Estornado',
+  ENCERRADO: 'Encerrado', CANCELADO: 'Cancelado', OPEN: 'Em aberto',
 };
 
 /** Valores em centavos (campos terminados em Cents) aparecem em reais; datas AAAA-MM-DD em DD/MM/AAAA. */

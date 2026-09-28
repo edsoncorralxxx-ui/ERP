@@ -409,24 +409,8 @@ export type Receivable = {
   createdBy: string;
 };
 
-// ───────────── Sprint 5: recebimentos, estornos e contas ─────────────
-
-/** Conta financeira (caixa ou banco) com o saldo atual: abertura + movimentos de caixa. */
-export type BankAccount = {
-  id: string;
-  code: string;
-  name: string;
-  bank: string | null;
-  openingCents: string;
-  openingOn: string;
-  balanceCents: string;
-  status: Situacao;
-  version: string;
-};
-
 export type SettlementStatus = 'POSTED' | 'REVERSED';
 
-/** Recebimento (liquidação): o valor que entrou numa conta, distribuído entre títulos do mesmo cliente. */
 export type Settlement = {
   id: string;
   code: string;
@@ -438,14 +422,51 @@ export type Settlement = {
   customerCode: string;
   customerName: string;
   effectiveDate: string;
-  totalCents: string;
+  amountCents: string;
+  creditCents: string;
+  allocations: { titleId: string; titleCode: string; label: string; amountCents: string }[];
   notes: string | null;
-  allocations: { titleId: string; titleCode: string; titleLabel: string; amountCents: string }[];
   status: SettlementStatus;
   reversalReason: string | null;
+  reversalDate: string | null;
   reversedAt: string | null;
   reversedBy: string | null;
   version: string;
+  createdAt: string;
+  createdBy: string;
+};
+
+export type BankAccountKind = 'CAIXA' | 'BANCO';
+
+export type BankAccount = {
+  id: string;
+  code: string;
+  name: string;
+  kind: BankAccountKind;
+  bank: string | null;
+  agency: string | null;
+  accountNumber: string | null;
+  openingCents: string;
+  openingOn: string;
+  balanceCents: string;
+  movements: number;
+  status: Situacao;
+  version: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export type CashMovement = {
+  id: string;
+  effectiveDate: string;
+  amountCents: string;
+  kind: 'SETTLEMENT' | 'SETTLEMENT_REVERSAL';
+  settlementId: string;
+  settlementCode: string;
+  description: string;
+  balanceCents: string;
   createdAt: string;
   createdBy: string;
 };

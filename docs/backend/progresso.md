@@ -7,8 +7,8 @@ Registro da execução real do roteiro B01–B16. Desde 25/09/2026 o trabalho se
 | B01 — Fundação de domínio, semântica e OOP | Entregue para revisão | 2026-09-25 | `10-b01-fundacao.md`; `python3 tools/b01/verificar_b01.py` → OK; 12 testes do verificador passando | Revisão do usuário; aceite/ajuste de ADR-004, PD-002, PD-007 |
 | B02 — Base executável, contratos e persistência | Em execução (Sprints 1 e 2: kernel, plataforma, arquitetura, CI, recibo de comando, outbox, fatos operacionais, OpenAPI) | 2026-09-25 | `docs/scrum/sprints/sprint-01.md`, `sprint-02.md` | Worker Python (US-207) na sprint de importação |
 | B03 — Acesso, cadastros e metadados | Em execução (Sprints 2 e 3: sessões, perfis, permissões, clientes, fornecedores, materiais e serviços, unidades e categorias) | 2026-09-25 | `docs/scrum/sprints/sprint-02.md`, `sprint-03.md` | Contas e categorias financeiras (PD-010) |
-| B05 — Comercial e primeiro fluxo transacional | Em execução (Sprint 4: propostas com revisões, pedidos, confirmação com projeto, equipamentos e títulos a receber, cancelamento) | 2026-09-27 | `docs/scrum/sprints/sprint-04.md` | Aditivo |
-| B06 — Financeiro, conciliação e caixa | Em execução (Sprint 5: recebimento com baixa parcial, estorno total, contas e movimentos de caixa, tela Contas a receber) | 2026-09-28 | `docs/scrum/sprints/sprint-05.md` | Documentos e faturamento (Sprint 6); crédito PD-004; conciliação |
+| B05 — Comercial e primeiro fluxo transacional | Em execução (Sprint 4: propostas com revisões, pedidos, confirmação com projeto, equipamentos e títulos a receber, cancelamento; Sprint 5: baixa parcial e estorno) | 2026-09-27 | `docs/scrum/sprints/sprint-04.md`, `sprint-05.md` | Aditivo; documentos e faturamento (Sprint 6) |
+| B06 — Financeiro, conciliação e caixa | Em execução (Sprint 5: recebimentos com alocações, estorno total, contas financeiras, movimentos de caixa e extrato) | 2026-09-28 | `docs/scrum/sprints/sprint-05.md` | Crédito do cliente (PD-004), ajustes, renegociação, contas a pagar, conciliação (PD-006), fluxo de caixa |
 | B04, B07–B16 | Planejado | — | — | Conforme dependências do roteiro |
 
 ## Registro
@@ -49,9 +49,10 @@ Registro da execução real do roteiro B01–B16. Desde 25/09/2026 o trabalho se
 - App: Oportunidades e propostas, Pedidos e contratos, Carteira de projetos, Detalhe do projeto, Equipamentos; componentes Seleção (lista suspensa do design system, em todas as telas) e Campo de data.
 - Verificação: 74 testes no servidor, 58 no app, verificador B01; roteiro Playwright versionado (`apps/desktop/e2e/`) contra o servidor real.
 
-### 2026-09-28 — Sprint 5 (B05/B06 parciais)
+### 2026-09-28 — Sprint 5 (B05/B06 recebimentos)
 
-- Planning: premissas B01 para PD-004 (excedente recusado) e PD-005 (estorno total); contas financeiras mínimas com o Caixa criado pela migração.
-- Servidor: liquidação (`Settlement`) com alocações, movimentos de caixa e estorno; saldo do título derivado das alocações não estornadas; contas financeiras; migração V9; permissões `financial_title.settle`, `settlement.reverse`, `bank_account.manage`; OpenAPI.
-- App: Contas a receber e Título a receber (registrar recebimento, estornar, histórico).
-- CI: job `e2e` roda os roteiros Playwright contra o servidor real.
+- Planning: objetivo do roteiro; premissas B01 para PD-004 (recusar excedente), PD-005 (estorno total) e PD-006 (sem conciliação ainda); PD-009: receber, estornar e manter contas só no Administrador, a confirmar na Review.
+- Servidor: liquidação (`Settlement`) com alocações, bloqueio dos títulos em ordem de id, saldo do título sob bloqueio, estorno total idempotente pela liquidação, contas financeiras (caixa semeado) e movimentos de caixa com extrato; migração V9; OpenAPI.
+- App: Contas a receber, Título a receber (Receber, Estornar, Recebimentos, Histórico), Contas financeiras (Contas e Extrato); seta para o título nas parcelas do pedido e do projeto.
+- Verificação: 81 testes no servidor (inclui as duas baixas concorrentes do B01), 64 no app, verificador B01; roteiros Playwright das Sprints 4 e 5 contra o servidor real e agora também no CI (job `e2e`).
+

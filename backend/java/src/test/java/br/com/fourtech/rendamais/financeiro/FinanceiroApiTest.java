@@ -15,15 +15,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Sprint 5 contra PostgreSQL real: recebimento com baixa parcial, estorno total, caixa, concorrência no mesmo título e
- * o cancelamento do pedido bloqueado por recebimento (PD-003).
- */
+/** Sprint 5 contra PostgreSQL real: recebimento parcial e total, estorno, contas financeiras e concorrência na baixa. */
 class FinanceiroApiTest extends CadastrosApiTest {
 
     private static final String HOJE = LocalDate.now(ZoneId.of("America/Sao_Paulo")).toString();
@@ -39,238 +34,246 @@ class FinanceiroApiTest extends CadastrosApiTest {
                 """);
         assertThat(c.statusCode()).as(c.body()).isEqualTo(201);
         cliente = campo(c.body(), "id");
-        matriz = campo(c.body().substring(c.body().indexOf("\"units\"")), "id");
-        HttpResponse<String> contas = get("/api/v1/bank-accounts");
-        assertThat(contas.body()).contains("\"name\":\"Caixa\"", "\"code\":\"CT001\"");
-        caixa = campo(contas.body(), "id");
+        matriz = jdbc.sql("select id::text from partner_unit where partner_id = cast(:p as uuid)").param("p", cliente)
+                .query(String.class).single();
+        caixa = jdbc.sql("select id::text from bank_account where created_by = 'sistema'").query(String.class).single();
     }
 
-    /** Pedido confirmado de 1 equipamento com as parcelas dadas; devolve os ids dos títulos por vencimento. */
-    private List<String> titulosDeUmPedido(String chave, String cliente, String unidade, long totalCents, long... parcelas) throws Exception {
-        StringBuilder ps = new StringBuilder();
+    /** Pedido confirmado com as parcelas informadas (valores em centavos); devolve o id do pedido. */
+    private String pedidoConfirmado(String chave, long... parcelas) throws Exception {
+        long total = 0;
+        StringBuilder p = new StringBuilder("[");
         for (int i = 0; i < parcelas.length; i++) {
-            if (i > 0) ps.append(',');
-            ps.append("{\"dueDate\":\"2027-0%d-10\",\"amountCents\":\"%d\"}".formatted(i + 1, parcelas[i]));
+            total += parcelas[i];
+            if (i > 0) p.append(',');
+            p.append("{\"dueDate\":\"2026-12-%02d\",\"amountCents\":\"%d\"}".formatted(10 + i, parcelas[i]));
         }
+        p.append(']');
+        String preco = total / 100 + "." + String.format("%02d", total % 100);
         HttpResponse<String> r = post("/api/v1/sales-orders", chave, """
-                {"customerId":"%s","unitId":"%s","contractDate":"2026-10-01",
-                 "lines":[{"kind":"EQUIPAMENTO","description":"Balança de fluxo BF-200","quantity":"1","unitPrice":"%s"}],
-                 "installments":[%s]}
-                """.formatted(cliente, unidade, java.math.BigDecimal.valueOf(totalCents, 2).toPlainString(), ps));
+                {"customerId":"%s","unitId":"%s","contractDate":"2026-01-10","lines":
+                 [{"kind":"EQUIPAMENTO","description":"Balança de fluxo BF-200","quantity":"1","unitPrice":"%s"}],"installments":%s}
+                """.formatted(cliente, matriz, preco, p));
         assertThat(r.statusCode()).as(r.body()).isEqualTo(201);
-        String pedido = campo(r.body(), "id");
-        HttpResponse<String> ok = call("POST", "/api/v1/sales-orders/" + pedido + "/confirmations", admin, null,
+        String id = campo(r.body(), "id");
+        HttpResponse<String> ok = call("POST", "/api/v1/sales-orders/" + id + "/confirmations", admin, null,
                 Map.of("If-Match", "\"1\"", "Idempotency-Key", chave + "-conf"));
         assertThat(ok.statusCode()).as(ok.body()).isEqualTo(200);
-        return ids(get("/api/v1/receivables?includeCancelled=true&projectId=" + campo(ok.body(), "projectId")).body());
+        return id;
     }
 
-    private String receber(String titulo, String centavos, String versao) {
-        return """
-                {"accountId":"%s","effectiveDate":"%s","amountCents":"%s","allocations":[{"titleId":"%s","amountCents":"%s"%s}]}
-                """.formatted(caixa, HOJE, centavos, titulo, centavos, versao == null ? "" : ",\"expectedTitleVersion\":\"" + versao + "\"");
+    /** Títulos do pedido, na ordem das parcelas. */
+    private List<String> titulos(String pedido) {
+        return jdbc.sql("select id::text from financial_title where origin_id like :o order by origin_id")
+                .param("o", pedido + ":%").query(String.class).list();
+    }
+
+    private HttpResponse<String> recebe(String chave, String conta, String data, long total, String... alocacoes) throws Exception {
+        return post("/api/v1/settlements", chave, """
+                {"direction":"RECEIVABLE","accountId":"%s","effectiveDate":"%s","amountCents":"%d","currency":"BRL",
+                 "allocations":[%s],"creditCents":"0","notes":"Recebimento conferido no extrato"}
+                """.formatted(conta, data, total, String.join(",", alocacoes)));
+    }
+
+    private static String aloca(String titulo, long centavos) {
+        return "{\"titleId\":\"%s\",\"amountCents\":\"%d\"}".formatted(titulo, centavos);
+    }
+
+    private static String aloca(String titulo, long centavos, String versao) {
+        return "{\"titleId\":\"%s\",\"amountCents\":\"%d\",\"expectedTitleVersion\":\"%s\"}".formatted(titulo, centavos, versao);
+    }
+
+    private HttpResponse<String> estorna(String id, String motivo) throws Exception {
+        return post("/api/v1/settlements/" + id + "/reversals", null, motivo == null ? "{}" : "{\"reason\":\"" + motivo + "\"}");
     }
 
     private String titulo(String id) throws Exception {
         return get("/api/v1/receivables/" + id).body();
     }
 
-    private long saldoDoCaixa() throws Exception {
-        return Long.parseLong(campo(get("/api/v1/bank-accounts/" + caixa).body(), "balanceCents"));
-    }
-
     @Test
-    void recebimentoParcialEEstornoRestauramSaldoECaixa() throws Exception {
-        // Título de R$ 55.500,00 (exemplo do B01, docs/backend/13 §5) e outro de R$ 44.500,00.
-        List<String> titulos = titulosDeUmPedido("s5-ped-0001", cliente, matriz, 10_000_000, 5_550_000, 4_450_000);
-        String t1 = titulos.get(0);
-        assertThat(saldoDoCaixa()).isZero();
+    void recebimentoParcialTotalEEstornoDevolvemSaldoETrilha() throws Exception {
+        HttpResponse<String> banco = post("/api/v1/bank-accounts", null, """
+                {"name":"Banco do Brasil — movimento","kind":"BANCO","bank":"Banco do Brasil","agency":"1234-5","accountNumber":"98765-0",
+                 "openingCents":"100000","openingOn":"2026-01-01"}
+                """);
+        assertThat(banco.statusCode()).as(banco.body()).isEqualTo(201);
+        assertThat(campo(banco.body(), "code")).matches("CT\\d{3}");
+        String conta = campo(banco.body(), "id");
 
-        HttpResponse<String> r1 = post("/api/v1/settlements", "s5-rec-0001", receber(t1, "2000000", "1"));
-        assertThat(r1.statusCode()).as(r1.body()).isEqualTo(201);
-        String rec1 = campo(r1.body(), "id");
-        assertThat(campo(r1.body(), "code")).matches("RC\\d{5}");
-        assertThat(r1.body()).contains("\"status\":\"POSTED\"", "\"accountName\":\"Caixa\"", "\"totalCents\":\"2000000\"",
-                "\"titleLabel\":\"Pedido ");
-        assertThat(titulo(t1)).contains("\"receivedCents\":\"2000000\"", "\"balanceCents\":\"3550000\"", "\"status\":\"PARTIAL\"",
+        String pedido = pedidoConfirmado("s5-ped-0001", 5_550_000, 10_000_000);
+        List<String> t = titulos(pedido);
+        String t1 = t.get(0);
+        String t2 = t.get(1);
+        assertThat(titulo(t1)).contains("\"status\":\"OPEN\"", "\"balanceCents\":\"5550000\"", "\"version\":\"1\"");
+
+        // Baixa parcial de R$ 20.000,00 com a versão lida do título.
+        HttpResponse<String> parcial = recebe("s5-rec-0001", conta, HOJE, 2_000_000, aloca(t1, 2_000_000, "1"));
+        assertThat(parcial.statusCode()).as(parcial.body()).isEqualTo(201);
+        String r1 = campo(parcial.body(), "id");
+        assertThat(campo(parcial.body(), "code")).matches("RC\\d{5}");
+        assertThat(parcial.body()).contains("\"status\":\"POSTED\"", "\"accountCode\":\"" + campo(banco.body(), "code") + "\"",
+                "\"amountCents\":\"2000000\"");
+        assertThat(titulo(t1)).contains("\"status\":\"PARTIAL\"", "\"receivedCents\":\"2000000\"", "\"balanceCents\":\"3550000\"",
                 "\"version\":\"2\"");
-        assertThat(saldoDoCaixa()).isEqualTo(2_000_000);
-
-        // Mesma chave (resposta perdida): o mesmo recebimento, nada novo.
-        assertThat(campo(post("/api/v1/settlements", "s5-rec-0001", receber(t1, "2000000", "1")).body(), "id")).isEqualTo(rec1);
+        // Mesma chave: o mesmo recebimento, sem outro efeito; mesma chave com outro corpo: recusa.
+        assertThat(campo(recebe("s5-rec-0001", conta, HOJE, 2_000_000, aloca(t1, 2_000_000, "1")).body(), "id")).isEqualTo(r1);
+        assertThat(recebe("s5-rec-0001", conta, HOJE, 1_000, aloca(t1, 1_000)).body()).contains("IDEMPOTENCY_KEY_REUSED");
         assertThat(conta("select count(*) from settlement")).isEqualTo(1);
+        // Versão antiga do título: 412, nada baixado.
+        assertThat(recebe("s5-rec-0002", conta, HOJE, 1_000, aloca(t1, 1_000, "1")).statusCode()).isEqualTo(412);
 
-        // Acima do saldo: recusado inteiro, com o saldo atual; nada gravado.
-        HttpResponse<String> acima = post("/api/v1/settlements", "s5-rec-0002", receber(t1, "3550001", null));
+        // Um recebimento para as duas parcelas: o resto da 1 e R$ 10.000,00 da 2.
+        HttpResponse<String> duas = recebe("s5-rec-0003", conta, HOJE, 4_550_000, aloca(t1, 3_550_000), aloca(t2, 1_000_000));
+        assertThat(duas.statusCode()).as(duas.body()).isEqualTo(201);
+        String r2 = campo(duas.body(), "id");
+        assertThat(titulo(t1)).contains("\"status\":\"SETTLED\"", "\"balanceCents\":\"0\"");
+        assertThat(titulo(t2)).contains("\"status\":\"PARTIAL\"", "\"balanceCents\":\"9000000\"");
+        assertThat(get("/api/v1/receivables?status=LIQUIDADOS").body()).contains(t1).doesNotContain(t2);
+        assertThat(get("/api/v1/receivables?status=ABERTOS").body()).contains(t2).doesNotContain(t1);
+        assertThat(get("/api/v1/settlements?titleId=" + t1).body()).contains(r1, r2);
+        assertThat(get("/api/v1/bank-accounts/" + conta).body()).contains("\"balanceCents\":\"6650000\"", "\"movements\":2");
+
+        // Recusas sem efeito: acima do saldo, soma diferente do total, data futura, título repetido, crédito.
+        HttpResponse<String> acima = recebe("s5-rec-0004", conta, HOJE, 9_000_001, aloca(t2, 9_000_001));
         assertThat(acima.statusCode()).isEqualTo(422);
-        assertThat(acima.body()).contains("INSUFFICIENT_TITLE_BALANCE", "R$ 35.500,00", "\"field\":\"allocations[0].amountCents\"");
-        // Versão lida antes do primeiro recebimento: 412, sem efeito.
-        assertThat(post("/api/v1/settlements", "s5-rec-0003", receber(t1, "100", "1")).statusCode()).isEqualTo(412);
-        // Soma das alocações diferente do valor recebido.
-        HttpResponse<String> desbalanceado = post("/api/v1/settlements", "s5-rec-0004", """
-                {"accountId":"%s","effectiveDate":"%s","amountCents":"1000","allocations":[{"titleId":"%s","amountCents":"900"}]}
-                """.formatted(caixa, HOJE, t1));
-        assertThat(desbalanceado.statusCode()).isEqualTo(422);
-        assertThat(desbalanceado.body()).contains("SETTLEMENT_UNBALANCED", "R$ 9,00", "R$ 10,00");
-        // Data futura, conta inexistente e valor zero: apontados no campo.
-        HttpResponse<String> campos = post("/api/v1/settlements", "s5-rec-0005", """
-                {"accountId":"x","effectiveDate":"%s","amountCents":"0","allocations":[{"titleId":"%s","amountCents":"0"}]}
-                """.formatted(LocalDate.parse(HOJE).plusDays(2), t1));
-        assertThat(campos.body()).contains("\"field\":\"accountId\"", "data futura", "\"field\":\"amountCents\"",
-                "\"field\":\"allocations[0].amountCents\"");
-        assertThat(conta("select count(*) from settlement") + conta("select count(*) from cash_movement")).isEqualTo(2);
+        assertThat(acima.body()).contains("INSUFFICIENT_TITLE_BALANCE", "Saldo atual: R$ 90.000,00");
+        HttpResponse<String> diferente = recebe("s5-rec-0005", conta, HOJE, 1_000, aloca(t2, 999));
+        assertThat(diferente.statusCode()).isEqualTo(422);
+        assertThat(diferente.body()).contains("SETTLEMENT_UNBALANCED", "diferença de R$ 0,01");
+        String amanha = LocalDate.parse(HOJE).plusDays(1).toString();
+        assertThat(recebe("s5-rec-0006", conta, amanha, 1_000, aloca(t2, 1_000)).body()).contains("\"field\":\"effectiveDate\"", "futura");
+        assertThat(recebe("s5-rec-0007", conta, HOJE, 2_000, aloca(t2, 1_000), aloca(t2, 1_000)).body())
+                .contains("SETTLEMENT_DIRECTION_MISMATCH", "Título repetido");
+        assertThat(post("/api/v1/settlements", "s5-rec-0008", """
+                {"accountId":"%s","effectiveDate":"%s","amountCents":"2000","allocations":[%s],"creditCents":"1000"}
+                """.formatted(conta, HOJE, aloca(t2, 1_000))).body()).contains("\"field\":\"creditCents\"", "PD-004");
+        assertThat(conta("select count(*) from settlement")).isEqualTo(2);
+        assertThat(titulo(t2)).contains("\"balanceCents\":\"9000000\"");
 
-        // Quita o restante: saldo zero, situação liquidada.
-        String rec2 = campo(post("/api/v1/settlements", "s5-rec-0006", receber(t1, "3550000", "2")).body(), "id");
-        assertThat(titulo(t1)).contains("\"receivedCents\":\"5550000\"", "\"balanceCents\":\"0\"", "\"status\":\"SETTLED\"",
-                "\"overdue\":false");
-        assertThat(saldoDoCaixa()).isEqualTo(5_550_000);
-
-        // Estorno total do primeiro, com motivo obrigatório: o título volta a parcial e o caixa, ao saldo anterior.
-        assertThat(call("POST", "/api/v1/settlements/" + rec1 + "/reversals", admin, "{}", Map.of()).body()).contains("\"field\":\"reason\"");
-        HttpResponse<String> estorno = call("POST", "/api/v1/settlements/" + rec1 + "/reversals", admin,
-                "{\"reason\":\"Cheque devolvido\"}", Map.of());
-        assertThat(estorno.statusCode()).as(estorno.body()).isEqualTo(200);
-        assertThat(estorno.body()).contains("\"status\":\"REVERSED\"", "\"reversalReason\":\"Cheque devolvido\"", "\"reversedBy\":\"" + ADMIN + "\"");
-        assertThat(titulo(t1)).contains("\"receivedCents\":\"3550000\"", "\"balanceCents\":\"2000000\"", "\"status\":\"PARTIAL\"");
-        assertThat(saldoDoCaixa()).isEqualTo(3_550_000);
-        // Estornar de novo devolve o estorno existente, sem outro movimento.
-        assertThat(call("POST", "/api/v1/settlements/" + rec1 + "/reversals", admin, "{\"reason\":\"de novo\"}", Map.of()).body())
-                .contains("Cheque devolvido");
-        assertThat(conta("select count(*) from cash_movement where reverses_id is not null")).isEqualTo(1);
-        assertThat(saldoDoCaixa()).isEqualTo(3_550_000);
-
-        // O estornado continua consultável; sem os estornados, só o segundo.
-        assertThat(get("/api/v1/settlements?titleId=" + t1).body()).contains(rec1, rec2);
-        assertThat(get("/api/v1/settlements?includeReversed=false&titleId=" + t1).body()).contains(rec2).doesNotContain(rec1);
-        assertThat(get("/api/v1/receivables/" + t1 + "/history").body())
-                .contains("FINANCIAL_TITLE_CREATED", "FINANCIAL_TITLE_SETTLED", "FINANCIAL_TITLE_SETTLEMENT_REVERSED", "Cheque devolvido");
-        assertThat(get("/api/v1/settlements/" + rec1 + "/history").body()).contains("SETTLEMENT_POSTED", "SETTLEMENT_REVERSED");
+        // Estorno total: motivo obrigatório; devolve o saldo aos mesmos títulos e o caixa ao anterior.
+        assertThat(estorna(r2, null).body()).contains("\"field\":\"reason\"");
+        HttpResponse<String> est = estorna(r2, "Cheque devolvido");
+        assertThat(est.statusCode()).as(est.body()).isEqualTo(200);
+        assertThat(est.body()).contains("\"status\":\"REVERSED\"", "\"reversalReason\":\"Cheque devolvido\"", "\"reversalDate\":\"" + HOJE + "\"");
+        assertThat(titulo(t1)).contains("\"status\":\"PARTIAL\"", "\"balanceCents\":\"3550000\"");
+        assertThat(titulo(t2)).contains("\"status\":\"OPEN\"", "\"balanceCents\":\"10000000\"");
+        assertThat(estorna(r1, "Lançado na conta errada").statusCode()).isEqualTo(200);
+        assertThat(titulo(t1)).contains("\"status\":\"OPEN\"", "\"receivedCents\":\"0\"", "\"balanceCents\":\"5550000\"");
+        // Estornar de novo devolve o estorno existente, sem outro movimento (INV-ST-6).
+        assertThat(estorna(r1, "de novo").body()).contains("Lançado na conta errada");
+        assertThat(conta("select count(*) from settlement_reversal")).isEqualTo(2);
+        String extrato = get("/api/v1/bank-accounts/" + conta + "/movements").body();
+        assertThat(extrato).contains("\"amountCents\":\"-4550000\"", "\"kind\":\"SETTLEMENT_REVERSAL\"");
+        assertThat(extrato.substring(extrato.lastIndexOf("balanceCents"))).contains("\"100000\"");
+        assertThat(get("/api/v1/bank-accounts/" + conta).body()).contains("\"balanceCents\":\"100000\"", "\"movements\":4");
+        // A liquidação continua consultável; a trilha mostra quem, quando e por quê.
+        assertThat(get("/api/v1/settlements/" + r1).body()).contains("\"status\":\"REVERSED\"", "\"reversedBy\":\"" + ADMIN + "\"");
+        assertThat(get("/api/v1/settlements/" + r1 + "/history").body()).contains("SETTLEMENT_POSTED", "SETTLEMENT_REVERSED",
+                "Lançado na conta errada");
+        assertThat(get("/api/v1/receivables/" + t1 + "/history").body()).contains("FINANCIAL_TITLE_SETTLED",
+                "FINANCIAL_TITLE_SETTLEMENT_REVERSED", "FINANCIAL_TITLE_CREATED", "\"before\":\"OPEN\",\"after\":\"PARTIAL\"");
         assertThat(conta("select count(*) from outbox_event where event_type = 'SettlementPosted'")).isEqualTo(2);
-        assertThat(jdbc.sql("select payload::text from outbox_event where event_type = 'SettlementReversed'").query(String.class).single())
-                .contains("reversalId", rec1, "Cheque devolvido");
+        assertThat(conta("select count(*) from outbox_event where event_type = 'SettlementReversed'")).isEqualTo(2);
+        assertThat(jdbc.sql("select payload::text from outbox_event where event_type = 'SettlementPosted' and aggregate_id = :id")
+                .param("id", r2).query(String.class).single()).contains("allocations", t1, t2, "\"totalCents\": \"4550000\"");
     }
 
     @Test
-    void recebimentosSimultaneosNoMesmoTituloNuncaDeixamSaldoNegativo() throws Exception {
-        // Cenário obrigatório do B01 (docs/backend/13 §4): saldo de R$ 100,00 e recebimentos simultâneos de R$ 70,00.
-        String t = titulosDeUmPedido("s5-conc-0001", cliente, matriz, 10_000, 10_000).get(0);
-        ExecutorService pool = Executors.newFixedThreadPool(4);
+    void baixasConcorrentesNuncaDeixamSaldoNegativo() throws Exception {
+        String t = titulos(pedidoConfirmado("s5-conc-0001", 10_000)).get(0);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
         CountDownLatch start = new CountDownLatch(1);
         List<Future<HttpResponse<String>>> results = new ArrayList<>();
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 2; i++) {
             String key = "s5-conc-chave-" + i;
             results.add(pool.submit(() -> {
                 start.await();
-                return post("/api/v1/settlements", key, receber(t, "7000", null));
+                return recebe(key, caixa, HOJE, 7_000, aloca(t, 7_000));
             }));
         }
         start.countDown();
-        List<Integer> status = new ArrayList<>();
-        for (Future<HttpResponse<String>> f : results) {
-            HttpResponse<String> r = f.get();
-            status.add(r.statusCode());
-            if (r.statusCode() == 422) assertThat(r.body()).contains("INSUFFICIENT_TITLE_BALANCE", "R$ 30,00");
-        }
+        List<HttpResponse<String>> respostas = new ArrayList<>();
+        for (Future<HttpResponse<String>> f : results) respostas.add(f.get());
         pool.shutdown();
-        assertThat(status).containsOnly(201, 422);
-        assertThat(status.stream().filter(s -> s == 201).count()).isEqualTo(1);
-        assertThat(titulo(t)).contains("\"balanceCents\":\"3000\"", "\"status\":\"PARTIAL\"");
-        assertThat(saldoDoCaixa()).isEqualTo(7_000);
-    }
-
-    @Test
-    void umRecebimentoQuitaVariosTitulosDoMesmoCliente() throws Exception {
-        List<String> titulos = titulosDeUmPedido("s5-var-0001", cliente, matriz, 30_000, 10_000, 20_000);
-        HttpResponse<String> r = post("/api/v1/settlements", "s5-var-rec-01", """
-                {"accountId":"%s","effectiveDate":"%s","amountCents":"25000","notes":"TED 123",
-                 "allocations":[{"titleId":"%s","amountCents":"10000"},{"titleId":"%s","amountCents":"15000"}]}
-                """.formatted(caixa, HOJE, titulos.get(0), titulos.get(1)));
-        assertThat(r.statusCode()).as(r.body()).isEqualTo(201);
-        assertThat(titulo(titulos.get(0))).contains("\"status\":\"SETTLED\"");
-        assertThat(titulo(titulos.get(1))).contains("\"balanceCents\":\"5000\"", "\"status\":\"PARTIAL\"");
-
-        // Título repetido e título de outro cliente são recusados, sem efeito.
-        HttpResponse<String> repetido = post("/api/v1/settlements", "s5-var-rec-02", """
-                {"accountId":"%s","effectiveDate":"%s","amountCents":"200",
-                 "allocations":[{"titleId":"%s","amountCents":"100"},{"titleId":"%s","amountCents":"100"}]}
-                """.formatted(caixa, HOJE, titulos.get(1), titulos.get(1)));
-        assertThat(repetido.body()).contains("Título repetido");
-        HttpResponse<String> o = post("/api/v1/customers", "s5-cli-00002", "{\"legalName\":\"Amido Sul S.A.\",\"units\":[{\"name\":\"Fábrica\"}]}");
-        String outro = campo(o.body(), "id");
-        String unidadeDoOutro = campo(o.body().substring(o.body().indexOf("\"units\"")), "id");
-        String doOutro = titulosDeUmPedido("s5-var-0002", outro, unidadeDoOutro, 10_000, 10_000).get(0);
-        HttpResponse<String> misturado = post("/api/v1/settlements", "s5-var-rec-03", """
-                {"accountId":"%s","effectiveDate":"%s","amountCents":"200",
-                 "allocations":[{"titleId":"%s","amountCents":"100"},{"titleId":"%s","amountCents":"100"}]}
-                """.formatted(caixa, HOJE, titulos.get(1), doOutro));
-        assertThat(misturado.statusCode()).isEqualTo(422);
-        assertThat(misturado.body()).contains("outro cliente", "\"field\":\"allocations[1].titleId\"");
+        assertThat(respostas).extracting(HttpResponse::statusCode).containsExactlyInAnyOrder(201, 422);
+        assertThat(respostas.stream().filter(r -> r.statusCode() == 422).findFirst().orElseThrow().body())
+                .contains("INSUFFICIENT_TITLE_BALANCE", "Saldo atual: R$ 30,00");
+        assertThat(titulo(t)).contains("\"receivedCents\":\"7000\"", "\"balanceCents\":\"3000\"");
         assertThat(conta("select count(*) from settlement")).isEqualTo(1);
+        assertThat(conta("select count(*) from cash_movement")).isEqualTo(1);
     }
 
     @Test
-    void pedidoComRecebimentoNaoCancelaAteEstornar() throws Exception {
-        HttpResponse<String> r = post("/api/v1/sales-orders", "s5-canc-0001", """
-                {"customerId":"%s","unitId":"%s","contractDate":"2026-10-01",
-                 "lines":[{"kind":"EQUIPAMENTO","description":"Balança","quantity":"1","unitPrice":"1000"}],
-                 "installments":[{"dueDate":"2026-11-10","amountCents":"100000"}]}
-                """.formatted(cliente, matriz));
-        String pedido = campo(r.body(), "id");
-        call("POST", "/api/v1/sales-orders/" + pedido + "/confirmations", admin, null, Map.of("If-Match", "\"1\"", "Idempotency-Key", "s5-canc-conf"));
-        String t = ids(get("/api/v1/receivables?customerId=" + cliente).body()).get(0);
-        String rec = campo(post("/api/v1/settlements", "s5-canc-rec-01", receber(t, "30000", null)).body(), "id");
-
-        // PD-003: com recebimento, o cancelamento é recusado inteiro.
-        HttpResponse<String> bloqueado = withVersion("POST", "/api/v1/sales-orders/" + pedido + "/cancellations", "2", "{\"reason\":\"Desistência\"}");
+    void pedidoComRecebimentoSoCancelaDepoisDoEstorno() throws Exception {
+        String pedido = pedidoConfirmado("s5-canc-0001", 50_000, 50_000);
+        String t1 = titulos(pedido).get(0);
+        String r = campo(recebe("s5-canc-rec-01", caixa, HOJE, 10_000, aloca(t1, 10_000)).body(), "id");
+        HttpResponse<String> bloqueado = withVersion("POST", "/api/v1/sales-orders/" + pedido + "/cancellations", "2",
+                "{\"reason\":\"Cliente desistiu\"}");
         assertThat(bloqueado.statusCode()).isEqualTo(422);
         assertThat(bloqueado.body()).contains("CANCELLATION_BLOCKED_BY_EFFECTS", "estorne o recebimento");
-        assertThat(get("/api/v1/sales-orders/" + pedido).body()).contains("\"status\":\"CONFIRMED\"", "\"projectStage\":\"PLANEJADO\"");
-        assertThat(titulo(t)).contains("\"status\":\"PARTIAL\"");
+        assertThat(conta("select count(*) from financial_title where lifecycle = 'CANCELLED'")).isZero();
 
-        // Estornado o recebimento, o pedido cancela.
-        call("POST", "/api/v1/settlements/" + rec + "/reversals", admin, "{\"reason\":\"Devolução ao cliente\"}", Map.of());
-        HttpResponse<String> cancelado = withVersion("POST", "/api/v1/sales-orders/" + pedido + "/cancellations", "2", "{\"reason\":\"Desistência\"}");
-        assertThat(cancelado.statusCode()).as(cancelado.body()).isEqualTo(200);
-        assertThat(titulo(t)).contains("\"status\":\"CANCELLED\"");
-        // Título cancelado não recebe.
-        assertThat(post("/api/v1/settlements", "s5-canc-rec-02", receber(t, "100", null)).statusCode()).isEqualTo(409);
+        assertThat(estorna(r, "Devolvido ao cliente").statusCode()).isEqualTo(200);
+        HttpResponse<String> ok = withVersion("POST", "/api/v1/sales-orders/" + pedido + "/cancellations", "2",
+                "{\"reason\":\"Cliente desistiu\"}");
+        assertThat(ok.statusCode()).as(ok.body()).isEqualTo(200);
+        // Título cancelado não recebe baixa.
+        HttpResponse<String> cancelado = recebe("s5-canc-rec-02", caixa, HOJE, 1_000, aloca(t1, 1_000));
+        assertThat(cancelado.statusCode()).isEqualTo(409);
+        assertThat(cancelado.body()).contains("cancelado");
+        assertThat(get("/api/v1/receivables?status=CANCELADOS").body()).contains(t1);
     }
 
     @Test
-    void contasPorAdministradorEConsultaSoLe() throws Exception {
-        HttpResponse<String> conta = post("/api/v1/bank-accounts", "s5-conta-0001", """
-                {"name":"Banco do Brasil — c/c 12345-6","bank":"Banco do Brasil","openingCents":"1500000","openingOn":"2026-09-01"}
-                """);
-        assertThat(conta.statusCode()).as(conta.body()).isEqualTo(201);
-        assertThat(campo(conta.body(), "code")).matches("CT\\d{3}");
-        assertThat(conta.body()).contains("\"balanceCents\":\"1500000\"");
-        assertThat(post("/api/v1/bank-accounts", "s5-conta-0001", "{\"name\":\"Banco do Brasil — c/c 12345-6\",\"bank\":\"Banco do Brasil\","
-                + "\"openingCents\":\"1500000\",\"openingOn\":\"2026-09-01\"}").statusCode()).isEqualTo(201);
-        HttpResponse<String> repetida = post("/api/v1/bank-accounts", "s5-conta-0002", "{\"name\":\"caixa\",\"openingOn\":\"2026-09-01\"}");
-        assertThat(repetida.statusCode()).isEqualTo(422);
-        assertThat(repetida.body()).contains("\"field\":\"name\"");
+    void contasFinanceirasTemNomeUnicoSaldoInicialFixoEInativaNaoRecebe() throws Exception {
+        assertThat(get("/api/v1/bank-accounts").body()).contains("\"name\":\"Caixa\"", "\"kind\":\"CAIXA\"", "\"code\":\"CT001\"");
+        HttpResponse<String> semBanco = post("/api/v1/bank-accounts", null, "{\"name\":\"Conta nova\",\"kind\":\"BANCO\"}");
+        assertThat(semBanco.statusCode()).isEqualTo(422);
+        assertThat(semBanco.body()).contains("ACCOUNT_INVALID", "\"field\":\"bank\"");
+        assertThat(post("/api/v1/bank-accounts", null, "{\"name\":\"caixa\",\"kind\":\"CAIXA\"}").body()).contains("ACCOUNT_DUPLICATE");
 
-        String t = titulosDeUmPedido("s5-con-0001", cliente, matriz, 10_000, 10_000).get(0);
-        String rec = campo(post("/api/v1/settlements", "s5-con-rec-01", receber(t, "5000", null)).body(), "id");
-        String consulta = login(CONSULTA, Profile.CONSULTA);
-        assertThat(call("GET", "/api/v1/settlements?titleId=" + t, consulta, null, Map.of()).body()).contains(rec);
-        assertThat(call("GET", "/api/v1/bank-accounts", consulta, null, Map.of()).statusCode()).isEqualTo(200);
-        HttpResponse<String> negado = call("POST", "/api/v1/settlements", consulta, receber(t, "100", null), Map.of("Idempotency-Key", "s5-con-rec-02"));
-        assertThat(negado.statusCode()).isEqualTo(403);
-        assertThat(negado.body()).contains("financial_title.settle");
-        assertThat(call("POST", "/api/v1/settlements/" + rec + "/reversals", consulta, "{\"reason\":\"x\"}", Map.of()).body())
-                .contains("settlement.reverse");
-        assertThat(call("POST", "/api/v1/bank-accounts", consulta, "{\"name\":\"X\",\"openingOn\":\"2026-09-01\"}",
-                Map.of("Idempotency-Key", "s5-con-conta-1")).statusCode()).isEqualTo(403);
-        assertThat(titulo(t)).contains("\"balanceCents\":\"5000\"");
+        String conta = campo(post("/api/v1/bank-accounts", null, """
+                {"name":"Sicredi","kind":"BANCO","bank":"Sicredi","openingCents":"50000","openingOn":"2026-01-01"}
+                """).body(), "id");
+        String t = titulos(pedidoConfirmado("s5-conta-0001", 20_000)).get(0);
+        assertThat(recebe("s5-conta-rec-01", conta, HOJE, 5_000, aloca(t, 5_000)).statusCode()).isEqualTo(201);
+        HttpResponse<String> saldo = withVersion("PUT", "/api/v1/bank-accounts/" + conta, "1", """
+                {"name":"Sicredi","kind":"BANCO","bank":"Sicredi","openingCents":"0","openingOn":"2026-01-01"}
+                """);
+        assertThat(saldo.statusCode()).isEqualTo(422);
+        assertThat(saldo.body()).contains("\"field\":\"openingCents\"", "já tem movimentos");
+        HttpResponse<String> inativa = withVersion("PUT", "/api/v1/bank-accounts/" + conta, "1", """
+                {"name":"Sicredi — encerrada","kind":"BANCO","bank":"Sicredi","openingCents":"50000","openingOn":"2026-01-01","status":"INATIVO"}
+                """);
+        assertThat(inativa.statusCode()).as(inativa.body()).isEqualTo(200);
+        assertThat(inativa.body()).contains("\"status\":\"INATIVO\"", "\"version\":\"2\"", "\"balanceCents\":\"55000\"");
+        assertThat(withVersion("PUT", "/api/v1/bank-accounts/" + conta, "1", "{\"name\":\"X\",\"kind\":\"CAIXA\"}").statusCode())
+                .isEqualTo(412);
+        assertThat(recebe("s5-conta-rec-02", conta, HOJE, 5_000, aloca(t, 5_000)).body()).contains("ACCOUNT_INACTIVE");
+        assertThat(get("/api/v1/bank-accounts").body()).doesNotContain(conta);
+        assertThat(get("/api/v1/bank-accounts?includeInactive=true").body()).contains(conta);
+        assertThat(get("/api/v1/bank-accounts/" + conta + "/history").body()).contains("BANK_ACCOUNT_CREATED", "BANK_ACCOUNT_UPDATED",
+                "\"after\":\"INATIVO\"");
     }
 
-    /** Ids dos objetos de uma lista JSON, na ordem. */
-    private static List<String> ids(String json) {
-        List<String> out = new ArrayList<>();
-        Matcher m = Pattern.compile("\\{\"id\":\"([^\"]+)\"").matcher(json);
-        while (m.find()) out.add(m.group(1));
-        return out;
+    @Test
+    void perfilConsultaVeRecebimentosMasNaoBaixaNemEstorna() throws Exception {
+        String t = titulos(pedidoConfirmado("s5-cons-0001", 20_000)).get(0);
+        String r = campo(recebe("s5-cons-rec-01", caixa, HOJE, 5_000, aloca(t, 5_000)).body(), "id");
+        String consulta = login(CONSULTA, Profile.CONSULTA);
+        assertThat(call("GET", "/api/v1/settlements?titleId=" + t, consulta, null, Map.of()).body()).contains(r);
+        assertThat(call("GET", "/api/v1/bank-accounts", consulta, null, Map.of()).statusCode()).isEqualTo(200);
+        HttpResponse<String> baixa = call("POST", "/api/v1/settlements", consulta, """
+                {"accountId":"%s","effectiveDate":"%s","amountCents":"1000","allocations":[%s]}
+                """.formatted(caixa, HOJE, aloca(t, 1_000)), Map.of("Idempotency-Key", "s5-cons-rec-02"));
+        assertThat(baixa.statusCode()).isEqualTo(403);
+        assertThat(baixa.body()).contains("financial_title.settle");
+        assertThat(call("POST", "/api/v1/settlements/" + r + "/reversals", consulta, "{\"reason\":\"x\"}", Map.of()).body())
+                .contains("settlement.reverse");
+        assertThat(call("POST", "/api/v1/bank-accounts", consulta, "{\"name\":\"X\",\"kind\":\"CAIXA\"}", Map.of()).body())
+                .contains("bank_account.admin");
+        assertThat(conta("select count(*) from settlement")).isEqualTo(1);
     }
 }

@@ -48,14 +48,16 @@ public abstract class IntegrationTest {
     }
 
     /**
-     * Apaga recebimentos e contas criadas pelos testes (Sprint 5), pedidos, propostas, projetos, equipamentos e títulos
-     * (Sprint 4), que referenciam parceiros e itens. O caixa criado pela migração fica.
+     * Apaga recebimentos, estornos, movimentos e contas criadas nos testes (Sprint 5) e pedidos, propostas, projetos,
+     * equipamentos e títulos (Sprint 4), que referenciam parceiros e itens.
      */
     protected void limpaDocumentos() {
+        jdbc.sql("delete from settlement_reversal").update();
         jdbc.sql("delete from cash_movement").update();
         jdbc.sql("delete from settlement_allocation").update();
         jdbc.sql("delete from settlement").update();
         jdbc.sql("delete from bank_account where created_by <> 'sistema'").update();
+        jdbc.sql("update bank_account set status = 'ATIVO'").update();
         jdbc.sql("delete from financial_title").update();
         jdbc.sql("delete from equipment").update();
         jdbc.sql("delete from project").update();

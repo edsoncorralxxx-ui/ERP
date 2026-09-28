@@ -7,7 +7,6 @@ import br.com.fourtech.rendamais.kernel.RuleViolationException;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -15,15 +14,15 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Liquidação (formulário "receber", comando PostSettlement): um valor que entrou numa conta numa data, distribuído entre
- * títulos da mesma direção. A soma das alocações é sempre o total (INV-ST-1; crédito e componentes explícitos ficam
- * para a PD-004). O estorno é total (PD-005) e preserva a liquidação como REVERSED (INV-ST-4).
+ * Liquidação (docs/backend/12, §4): um recebimento numa conta, numa data, repartido entre títulos. O total é a soma
+ * exata das alocações (INV-ST-1) e cada título aparece uma vez, na mesma direção (INV-ST-2). O estorno é total
+ * (PD-005): a liquidação continua consultável como REVERSED, com motivo, data, ator e o movimento de caixa inverso.
+ * Crédito do parceiro e componentes explícitos (juros, tarifas) ficam para depois (PD-004).
  */
 public final class Settlement {
 
     public enum Status { POSTED, REVERSED }
 
-    /** Parte do total aplicada a um título. */
     public record Allocation(UUID titleId, Money amount) {
         public Allocation {
             Objects.requireNonNull(titleId);
@@ -31,8 +30,7 @@ public final class Settlement {
         }
     }
 
-    /** Estorno registrado: quando, quem e por quê. */
-    public record Reversal(String reason, Instant at, String by) { }
+    public record Reversal(UUID id, String reason, LocalDate effectiveDate, UUID cashMovementId, Instant at, String by) { }
 
     private final UUID id;
     private final String code;
@@ -43,6 +41,7 @@ public final class Settlement {
     private final Money total;
     private final List<Allocation> allocations;
     private final String notes;
+    private final Status status;
     private final Reversal reversal;
     private final long version;
     private final Instant createdAt;
@@ -51,8 +50,8 @@ public final class Settlement {
     private final String updatedBy;
 
     public Settlement(UUID id, String code, FinancialTitle.Direction direction, UUID accountId, UUID counterpartyId,
-                      LocalDate effectiveDate, Money total, List<Allocation> allocations, String notes, Reversal reversal,
-                      long version, Instant createdAt, String createdBy, Instant updatedAt, String updatedBy) {
+                      LocalDate effectiveDate, Money total, List<Allocation> allocations, String notes, Status status,
+                      Reversal reversal, long version, Instant createdAt, String createdBy, Instant updatedAt, String updatedBy) {
         this.id = Objects.requireNonNull(id);
         this.code = Objects.requireNonNull(code);
         this.direction = Objects.requireNonNull(direction);
@@ -62,6 +61,7 @@ public final class Settlement {
         this.total = Objects.requireNonNull(total);
         this.allocations = List.copyOf(allocations);
         this.notes = notes;
+        this.status = Objects.requireNonNull(status);
         this.reversal = reversal;
         this.version = version;
         this.createdAt = createdAt;
@@ -71,52 +71,49 @@ public final class Settlement {
     }
 
     /**
-     * Nova liquidação. Confere antes de tocar os títulos: total positivo, ao menos uma alocação, cada título uma vez e
-     * com valor positivo (INV-ST-2) e Σ alocações = total (INV-ST-1). Os problemas vêm todos juntos, por campo.
+     * Nova liquidação. Confere INV-ST-1 (Σ alocações = total, sem diferença que suma) e INV-ST-2 (título uma vez só);
+     * as alocações contra o saldo de cada título são conferidas pelo serviço, com os títulos bloqueados.
      */
     public static Settlement post(String code, FinancialTitle.Direction direction, UUID accountId, UUID counterpartyId,
-                                  LocalDate effectiveDate, Money total, List<Allocation> allocations, String notes,
-                                  Instant now, String actor) {
-        validate(total, allocations);
-        String cleanNotes = notes == null || notes.isBlank() ? null : notes.strip();
+                                  LocalDate effectiveDate, Money total, List<Allocation> allocations, String notes, Instant now,
+                                  String actor) {
+        check(total, allocations);
         return new Settlement(UUID.randomUUID(), code, direction, accountId, counterpartyId, effectiveDate, total, allocations,
-                cleanNotes, null, 1, now, actor, now, actor);
+                notes, Status.POSTED, null, 1, now, actor, now, actor);
     }
 
-    /** INV-ST-1 e INV-ST-2, sem tocar o banco: o serviço confere antes de bloquear os títulos. */
-    public static void validate(Money total, List<Allocation> allocations) {
-        List<FieldIssue> issues = new ArrayList<>();
-        if (total.currency() != Currency.BRL || total.isNegative() || total.isZero()) {
-            issues.add(new FieldIssue("amountCents", "Informe um valor maior que zero."));
+    /** INV-ST-1 e INV-ST-2, conferidos antes de tocar o banco. */
+    public static void check(Money total, List<Allocation> allocations) {
+        if (allocations.isEmpty()) {
+            throw new RuleViolationException("SETTLEMENT_INVALID", "Informe ao menos um título a receber.",
+                    List.of(new FieldIssue("allocations", "Obrigatório.")));
         }
-        if (allocations.isEmpty()) issues.add(new FieldIssue("allocations", "Informe ao menos um título."));
         Set<UUID> seen = new HashSet<>();
         Money sum = Money.zero(Currency.BRL);
         for (int i = 0; i < allocations.size(); i++) {
             Allocation a = allocations.get(i);
-            if (!seen.add(a.titleId())) issues.add(new FieldIssue("allocations[" + i + "].titleId", "Título repetido na liquidação."));
-            if (a.amount().isNegative() || a.amount().isZero()) {
-                issues.add(new FieldIssue("allocations[" + i + "].amountCents", "Informe um valor maior que zero."));
-            } else {
-                sum = sum.plus(a.amount());
+            if (!seen.add(a.titleId())) {
+                throw new RuleViolationException("SETTLEMENT_DIRECTION_MISMATCH", "Cada título aparece uma vez só no recebimento.",
+                        List.of(new FieldIssue("allocations[" + i + "].titleId", "Título repetido.")));
             }
+            if (a.amount().isNegative() || a.amount().isZero()) {
+                throw new RuleViolationException("SETTLEMENT_INVALID", "O valor de cada título deve ser maior que zero.",
+                        List.of(new FieldIssue("allocations[" + i + "].amountCents", "Deve ser maior que zero.")));
+            }
+            sum = sum.plus(a.amount());
         }
-        if (!issues.isEmpty()) throw new RuleViolationException("SETTLEMENT_INVALID", "Corrija os campos indicados.", issues);
         if (!sum.equals(total)) {
-            String msg = "A soma das alocações (" + sum.toBrl() + ") difere do valor recebido (" + total.toBrl() + ").";
-            throw new RuleViolationException("SETTLEMENT_UNBALANCED", msg, List.of(new FieldIssue("amountCents", msg)));
+            throw new RuleViolationException("SETTLEMENT_UNBALANCED", "O total recebido (" + total.toBrl()
+                    + ") difere da soma dos títulos (" + sum.toBrl() + "); diferença de " + total.minus(sum).toBrl() + ".",
+                    List.of(new FieldIssue("amountCents", "Diferença de " + total.minus(sum).toBrl() + ".")));
         }
     }
 
-    /** Estorno total com motivo. Estornar de novo devolve o estorno existente (INV-ST-6): quem chama confere antes. */
-    public Settlement reverse(String reason, Instant now, String actor) {
-        if (reversal != null) return this;
+    /** Estorno total: preserva a liquidação como REVERSED. Estornar de novo é tratado pelo serviço (INV-ST-6). */
+    public Settlement reverse(Reversal r) {
+        if (status == Status.REVERSED) throw new IllegalStateException("Liquidação " + code + " já estornada.");
         return new Settlement(id, code, direction, accountId, counterpartyId, effectiveDate, total, allocations, notes,
-                new Reversal(reason, now, actor), version + 1, createdAt, createdBy, now, actor);
-    }
-
-    public Status status() {
-        return reversal == null ? Status.POSTED : Status.REVERSED;
+                Status.REVERSED, r, version + 1, createdAt, createdBy, r.at(), r.by());
     }
 
     public UUID id() { return id; }
@@ -128,6 +125,7 @@ public final class Settlement {
     public Money total() { return total; }
     public List<Allocation> allocations() { return allocations; }
     public String notes() { return notes; }
+    public Status status() { return status; }
     public Reversal reversal() { return reversal; }
     public long version() { return version; }
     public Instant createdAt() { return createdAt; }
