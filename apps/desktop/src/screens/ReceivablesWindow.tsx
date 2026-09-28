@@ -32,7 +32,7 @@ export function ReceivablesWindow() {
       placeholder="Título, cliente ou pedido"
       carregar={carregar}
       evento={TITULOS_ALTERADOS}
-      abrir={(id) => win.open('receivable', id)}
+      abrir={(id, sequencia) => win.open('receivable', id, sequencia)}
       rotuloLinha={(t) => `Abrir título ${t.code}`}
       situacoes={[
         { valor: 'ATIVOS', rotulo: 'Todos, sem cancelados' },

@@ -37,7 +37,7 @@ export function ItemsWindow() {
       placeholder="Código, descrição, NCM ou código de serviço"
       carregar={carregar}
       evento={ITENS_ALTERADOS}
-      abrir={(id) => win.open('item', id)}
+      abrir={(id, sequencia) => win.open('item', id, sequencia)}
       rotuloLinha={(i) => `Abrir ${i.description}`}
       novo={novo}
       colunas={[

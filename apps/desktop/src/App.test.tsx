@@ -184,4 +184,48 @@ describe('moldura do aplicativo', () => {
     await user.click(screen.getByRole('button', { name: 'Fechar log' }));
     expect(screen.queryByRole('log')).not.toBeInTheDocument();
   });
+
+  it('Anterior e Próximo registro andam pela lista de onde a ficha foi aberta, na barra de ferramentas e no menu Dados', async () => {
+    const cliente = (id: string, code: string, legalName: string) => ({
+      id, code, legalName, tradeName: null, cnpj: null, cnpjFormatted: null, group: null, status: 'ATIVO', units: [], supplier: false, contacts: [],
+      version: '1', createdAt: '2026-09-25T12:00:00Z', createdBy: 'ana', updatedAt: null, updatedBy: null,
+    });
+    const clientes = [cliente('c-1', 'C00001', 'Alfa Ltda.'), cliente('c-2', 'C00002', 'Beta Ltda.'), cliente('c-3', 'C00003', 'Gama Ltda.')];
+    servidor((req) => {
+      const ok = (body: unknown) => ({ status: 200, headers: { etag: '"1"' }, body: JSON.stringify(body) });
+      if (req.path === '/api/v1/customers?status=ATIVO') {
+        return ok(clientes.map((c) => ({ id: c.id, code: c.code, legalName: c.legalName, tradeName: null, cnpjFormatted: null, city: null, state: null, units: 0, status: 'ATIVO' })));
+      }
+      const c = clientes.find((x) => req.path === `/api/v1/customers/${x.id}`);
+      return c ? ok(c) : undefined;
+    });
+    const user = await entrar();
+    // Sem ficha ativa, as ferramentas de navegação ficam indisponíveis.
+    expect(screen.getByRole('button', { name: 'Próximo registro' })).toBeDisabled();
+    const gaveta = screen.getByRole('complementary', { name: 'Módulos' });
+    await user.click(within(gaveta).getByRole('button', { name: /Clientes e unidades/ }));
+    await user.click(await screen.findByRole('link', { name: 'Abrir Beta Ltda.' }));
+    const ficha = await screen.findByRole('dialog', { name: 'Cliente' });
+    await waitFor(() => expect(within(ficha).getByLabelText('Código')).toHaveValue('C00002'));
+
+    await user.click(screen.getByRole('button', { name: 'Próximo registro' }));
+    await waitFor(() => expect(within(screen.getByRole('dialog', { name: 'Cliente' })).getByLabelText('Código')).toHaveValue('C00003'));
+    expect(screen.getAllByRole('dialog', { name: 'Cliente' })).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: 'Próximo registro' }));
+    expect(await screen.findByText('Você já está no último registro')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('menuitem', { name: 'Dados' }));
+    await user.click(screen.getByRole('menuitem', { name: /Primeiro registro/ }));
+    await waitFor(() => expect(within(screen.getByRole('dialog', { name: 'Cliente' })).getByLabelText('Código')).toHaveValue('C00001'));
+    // Atalho ⌥⌘→: próximo registro.
+    await user.keyboard('{Meta>}{Alt>}{ArrowRight}{/Alt}{/Meta}');
+    await waitFor(() => expect(within(screen.getByRole('dialog', { name: 'Cliente' })).getByLabelText('Código')).toHaveValue('C00002'));
+
+    // Com alterações não gravadas, não sai do registro.
+    const razao = within(screen.getByRole('dialog', { name: 'Cliente' })).getByLabelText('Razão social');
+    await user.type(razao, ' S.A.');
+    await user.click(screen.getByRole('button', { name: 'Registro anterior' }));
+    expect(await screen.findByText('Grave ou descarte as alterações antes de ir para outro registro (NAV-001)')).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog', { name: 'Cliente' })).getByLabelText('Código')).toHaveValue('C00002');
+  });
 });

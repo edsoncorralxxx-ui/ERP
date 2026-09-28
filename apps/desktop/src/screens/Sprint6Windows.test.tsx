@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { setTransport, type TransportRequest, type TransportResponse } from '../api/client';
-import type { BusinessDocument, OrderInvoicing, Receivable, SessionUser, TitleInvoicing } from '../api/types';
+import type { BusinessDocument, DocumentLineKind, OrderInvoicing, Receivable, SessionUser, TitleInvoicing } from '../api/types';
 import { competenciaDaApi, competenciaParaApi, definirHojeDoServidor, hojeIso } from '../format';
 import { SessionContext, sessionOf } from '../shell/SessionContext';
 import { escolher } from '../test/selecao';
@@ -31,7 +31,7 @@ function abrir(janela: ReactNode, user: SessionUser = ADMIN) {
 }
 
 const nota: BusinessDocument = {
-  id: 'd-1', code: 'DF00001', direction: 'SAIDA', customerId: 'c-1', customerCode: 'C00001', customerName: 'Fecularia Vale Ltda.',
+  id: 'd-1', code: 'DF00001', direction: 'SAIDA', kind: 'PRODUTO', customerId: 'c-1', customerCode: 'C00001', customerName: 'Fecularia Vale Ltda.',
   orderId: 'o-1', orderCode: 'PV00001', series: '1',
   number: '1234', issueDate: '2026-09-28', competence: '2026-09', totalCents: '9250000', linkedCents: '0', unlinkedCents: '9250000',
   lines: [{ seq: 1, description: 'Balança de fluxo BF-200', kind: 'PRODUTO', amountCents: '9250000' }], links: [], notes: null, operationNature: null,
@@ -74,26 +74,34 @@ describe('Datas de negócio e competência', () => {
   });
 });
 
-/** Pedido PV00001 pelo caixa: R$ 20.000,00 recebidos na parcela 1, sem nota; proposta para {@code valor}. */
-const pedidoCaixa = (valor = '2000000', extra: Partial<OrderInvoicing> = {}): OrderInvoicing => {
-  const v = BigInt(valor);
-  const produto = (v * 10000000n) / 15550000n + (v === 2000000n ? 1n : v === 1000000n ? 1n : 0n);
-  return {
-    id: 'o-1', orderCode: 'PV00001', orderStatus: 'CONFIRMED', customerId: 'c-1', customerCode: 'C00001', customerName: 'Fecularia Vale Ltda.',
-    projectId: 'pj-1', totalCents: '15550000', receivedCents: '2000000', invoicedCents: '0', toIssueCents: '2000000', beyondReceivedCents: '0',
-    proposedCents: valor, productCents: produto.toString(), serviceCents: (v - produto).toString(),
-    parcels: [
-      { titleId: 't-1', titleCode: 'CR00001', label: 'Pedido PV00001 — parcela 1/2', dueDate: '2026-10-10', titleStatus: 'PARTIAL', originalCents: '5550000',
-        receivedCents: '2000000', invoicedCents: '0', toIssueCents: '2000000', proposedCents: valor },
-      { titleId: 't-2', titleCode: 'CR00002', label: 'Pedido PV00001 — parcela 2/2', dueDate: '2026-11-10', titleStatus: 'OPEN', originalCents: '10000000',
-        receivedCents: '0', invoicedCents: '0', toIssueCents: '0', proposedCents: '0' },
-    ],
-    lines: [
-      { seq: 1, description: 'Balança de fluxo BF-200', kind: 'PRODUTO', amountCents: produto.toString() },
-      { seq: 2, description: 'Instalação e comissionamento', kind: 'SERVICO', amountCents: (v - produto).toString() },
-    ],
-    ...extra,
-  };
+/**
+ * Pedido PV00001 pelo caixa: R$ 20.000,00 recebidos na parcela 1, sem nota — R$ 12.861,74 de produto e R$ 7.138,26 de
+ * serviço a emitir (notas separadas, Sprint 7); proposta do tipo {@code kind} para {@code valor}.
+ */
+const pedidoCaixa = (valor = '1286174', kind: DocumentLineKind = 'PRODUTO', extra: Partial<OrderInvoicing> = {}): OrderInvoicing => ({
+  id: 'o-1', orderCode: 'PV00001', orderStatus: 'CONFIRMED', customerId: 'c-1', customerCode: 'C00001', customerName: 'Fecularia Vale Ltda.',
+  projectId: 'pj-1', totalCents: '15550000', receivedCents: '2000000', invoicedCents: '0', toIssueCents: '2000000', beyondReceivedCents: '0',
+  productCents: '1286174', serviceCents: '713826',
+  product: { orderCents: '10000000', receivedCents: '1286174', invoicedCents: '0', toIssueCents: '1286174' },
+  service: { orderCents: '5550000', receivedCents: '713826', invoicedCents: '0', toIssueCents: '713826' },
+  kind, proposedCents: valor,
+  parcels: [
+    { titleId: 't-1', titleCode: 'CR00001', label: 'Pedido PV00001 — parcela 1/2', dueDate: '2026-10-10', titleStatus: 'PARTIAL', originalCents: '5550000',
+      receivedCents: '2000000', invoicedCents: '0', toIssueCents: '2000000', proposedCents: valor },
+    { titleId: 't-2', titleCode: 'CR00002', label: 'Pedido PV00001 — parcela 2/2', dueDate: '2026-11-10', titleStatus: 'OPEN', originalCents: '10000000',
+      receivedCents: '0', invoicedCents: '0', toIssueCents: '0', proposedCents: '0' },
+  ],
+  lines: kind === 'PRODUTO'
+    ? [{ seq: 1, description: 'Balança de fluxo BF-200', kind: 'PRODUTO', amountCents: valor }]
+    : [{ seq: 1, description: 'Instalação e comissionamento', kind: 'SERVICO', amountCents: valor }],
+  ...extra,
+});
+
+/** Proposta do pedido o-1 pela consulta (`kind` e `amountCents`), como o servidor monta. */
+const propostaDa = (path: string) => {
+  const q = new URL(path, 'http://x').searchParams;
+  const kind = (q.get('kind') ?? 'PRODUTO') as DocumentLineKind;
+  return pedidoCaixa(q.get('amountCents') ?? (kind === 'SERVICO' ? '713826' : '1286174'), kind);
 };
 
 describe('Documento de faturamento pelo caixa', () => {
@@ -105,7 +113,7 @@ describe('Documento de faturamento pelo caixa', () => {
       if (req.path === '/api/v1/invoicing/orders?status=A_EMITIR') return resposta(200, [pedidoCaixa()]);
       if (req.path.startsWith('/api/v1/invoicing/orders/o-1')) {
         propostas.push(req.path);
-        return resposta(200, pedidoCaixa(req.path.endsWith('=1000000') ? '1000000' : '2000000'));
+        return resposta(200, propostaDa(req.path));
       }
       if (req.path === '/api/v1/documents' && req.method === 'POST') {
         posts.push(req);
@@ -113,24 +121,34 @@ describe('Documento de faturamento pelo caixa', () => {
           falhaDeRede = false;
           throw new Error('rede caiu');
         }
-        return resposta(201, { ...nota, totalCents: '1000000', linkedCents: '1000000', unlinkedCents: '0', version: '2' }, { etag: '"2"' });
+        return resposta(201, { ...nota, kind: 'SERVICO', totalCents: '500000', linkedCents: '500000', unlinkedCents: '0', version: '2' }, { etag: '"2"' });
       }
       return naoAchou();
     });
     const win = abrir(<DocumentWindow recordKey="novo-1:o-1" />);
     const user = userEvent.setup();
-    // O pedido já vem escolhido: cliente, recebido, a emitir e a nota proposta.
+    // O pedido já vem escolhido: cliente, recebido, a emitir e a nota de produto proposta (só o equipamento).
     await waitFor(() => expect(screen.getByLabelText('A emitir')).toHaveValue('R$ 20.000,00'));
     expect(screen.getByLabelText('Cliente')).toHaveValue('C00001 — Fecularia Vale Ltda.');
-    expect(screen.getByLabelText('Valor da nota')).toHaveValue('20.000,00');
+    expect(screen.getByRole('combobox', { name: 'Tipo da nota' })).toHaveTextContent('Produto (NF-e)');
+    expect(screen.getByLabelText('A emitir do tipo')).toHaveValue('R$ 12.861,74');
+    expect(screen.getByLabelText('Valor da nota')).toHaveValue('12.861,74');
     expect(screen.getByRole('table', { name: 'Linhas da nota' })).toHaveTextContent('Balança de fluxo BF-200ProdutoR$ 12.861,74');
+    expect(screen.getByRole('table', { name: 'Linhas da nota' })).not.toHaveTextContent('Instalação');
+    expect(screen.getByText(/Emita a NF-e de R\$ 12\.861,74 no portal da SEFAZ/)).toBeInTheDocument();
+    // Nota de serviço: só a instalação, com o a emitir de serviço.
+    await escolher(user, screen.getByRole('combobox', { name: 'Tipo da nota' }), 'Serviço (NFS-e)');
+    await waitFor(() => expect(screen.getByLabelText('Valor da nota')).toHaveValue('7.138,26'));
+    expect(propostas).toContain('/api/v1/invoicing/orders/o-1?kind=SERVICO');
+    expect(screen.getByLabelText('A emitir do tipo')).toHaveValue('R$ 7.138,26');
     expect(screen.getByRole('table', { name: 'Linhas da nota' })).toHaveTextContent('Instalação e comissionamentoServiçoR$ 7.138,26');
+    expect(screen.getByText(/Emita a NFS-e de R\$ 7\.138,26 no portal da prefeitura/)).toBeInTheDocument();
     // Nota parcial: o servidor refaz a proposta para o valor digitado.
     await user.clear(screen.getByLabelText('Valor da nota'));
-    await user.type(screen.getByLabelText('Valor da nota'), '10.000');
+    await user.type(screen.getByLabelText('Valor da nota'), '5.000');
     await user.click(screen.getByRole('tab', { name: /Parcelas/ }));
-    await waitFor(() => expect(screen.getByLabelText('Soma das parcelas nesta nota')).toHaveTextContent('R$ 10.000,00'));
-    expect(propostas).toContain('/api/v1/invoicing/orders/o-1?amountCents=1000000');
+    await waitFor(() => expect(screen.getByLabelText('Soma das parcelas nesta nota')).toHaveTextContent('R$ 5.000,00'));
+    expect(propostas).toContain('/api/v1/invoicing/orders/o-1?kind=SERVICO&amountCents=500000');
     expect(screen.getByRole('table', { name: 'Parcelas do pedido' })).toHaveTextContent('CR00001');
     await user.type(screen.getByLabelText('Nº da nota'), '1234');
     const emissao = screen.getByLabelText('Emissão', { selector: 'input' });
@@ -143,32 +161,37 @@ describe('Documento de faturamento pelo caixa', () => {
     expect(posts).toHaveLength(2);
     expect(posts[0].headers?.['Idempotency-Key']).toBe(posts[1].headers?.['Idempotency-Key']);
     expect(JSON.parse(posts[1].body!)).toEqual({
-      direction: 'SAIDA', orderId: 'o-1', series: '1', number: '1234', issueDate: '2026-09-28', competence: '2026-09', amountCents: '1000000', notes: null,
+      direction: 'SAIDA', orderId: 'o-1', kind: 'SERVICO', series: '1', number: '1234', issueDate: '2026-09-28', competence: '2026-09',
+      amountCents: '500000', notes: null,
     });
-    expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Documento DF00001 (nota nº 1234) adicionado com sucesso: R$ 10.000,00 faturados no pedido PV00001' });
+    expect(win.notify).toHaveBeenCalledWith({
+      tone: 'sucesso', text: 'Documento DF00001 (nota de serviço nº 1234) adicionado com sucesso: R$ 5.000,00 faturados no pedido PV00001',
+    });
     expect(screen.getByRole('tab', { name: /Vínculos/ })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('aponta no valor da nota o que passa do recebido e não deixa registrar pedido sem nada a emitir', async () => {
+  it('aponta no valor da nota o que passa do a emitir do tipo e não deixa registrar pedido sem nada a emitir', async () => {
     setTransport(async (req) => {
       if (req.path === '/api/v1/invoicing/orders?status=A_EMITIR') return resposta(200, [pedidoCaixa()]);
-      if (req.path === '/api/v1/invoicing/orders/o-1?amountCents=2000001') {
-        return resposta(422, { code: 'DOCUMENT_EXCEEDS_RECEIVED', message: 'O valor passa do recebido sem nota do pedido PV00001 (R$ 20.000,00).',
-          details: [{ field: 'amountCents', message: 'A emitir do pedido: R$ 20.000,00.' }] });
+      if (req.path === '/api/v1/invoicing/orders/o-1?kind=PRODUTO&amountCents=1286175') {
+        return resposta(422, { code: 'DOCUMENT_EXCEEDS_RECEIVED', message: 'O valor passa do recebido de produto sem nota do pedido PV00001 (R$ 12.861,74).',
+          details: [{ field: 'amountCents', message: 'A emitir de produto: R$ 12.861,74.' }] });
       }
-      if (req.path === '/api/v1/invoicing/orders/o-1') return resposta(200, pedidoCaixa());
-      if (req.path === '/api/v1/invoicing/orders/o-2') {
-        return resposta(200, pedidoCaixa('0', { id: 'o-2', orderCode: 'PV00002', receivedCents: '0', toIssueCents: '0', lines: [], parcels: [] }));
+      if (req.path.startsWith('/api/v1/invoicing/orders/o-1')) return resposta(200, propostaDa(req.path));
+      if (req.path.startsWith('/api/v1/invoicing/orders/o-2')) {
+        const zero = { orderCents: '0', receivedCents: '0', invoicedCents: '0', toIssueCents: '0' };
+        return resposta(200, pedidoCaixa('0', 'PRODUTO', { id: 'o-2', orderCode: 'PV00002', receivedCents: '0', toIssueCents: '0', lines: [],
+          parcels: [], productCents: '0', serviceCents: '0', product: { ...zero, orderCents: '100' }, service: zero }));
       }
       return naoAchou();
     });
     abrir(<DocumentWindow recordKey="novo-1:o-1" />);
     const user = userEvent.setup();
-    await waitFor(() => expect(screen.getByLabelText('Valor da nota')).toHaveValue('20.000,00'));
+    await waitFor(() => expect(screen.getByLabelText('Valor da nota')).toHaveValue('12.861,74'));
     await user.clear(screen.getByLabelText('Valor da nota'));
-    await user.type(screen.getByLabelText('Valor da nota'), '20.000,01');
+    await user.type(screen.getByLabelText('Valor da nota'), '12.861,75');
     await user.tab();
-    expect(await screen.findByText('A emitir do pedido: R$ 20.000,00.')).toBeInTheDocument();
+    expect(await screen.findByText('A emitir de produto: R$ 12.861,74.')).toBeInTheDocument();
     expect(screen.getByLabelText('Valor da nota')).toHaveAttribute('aria-invalid', 'true');
 
     abrir(<DocumentWindow recordKey="novo-2:o-2" />);
@@ -248,6 +271,8 @@ describe('Notas a emitir', () => {
     const grade = await screen.findByRole('table', { name: 'Notas a emitir' });
     await waitFor(() => expect(grade).toHaveTextContent('PV00001'));
     expect(grade).toHaveTextContent('R$ 20.000,00');
+    expect(grade).toHaveTextContent('R$ 12.861,74');
+    expect(grade).toHaveTextContent('R$ 7.138,26');
     expect(grade).toHaveTextContent('A emitir');
     expect(screen.getByText('A emitir da lista: R$ 20.000,00')).toBeInTheDocument();
     await user.click(screen.getByRole('link', { name: 'Registrar nota do pedido PV00001' }));

@@ -189,3 +189,36 @@ export const somarMeses = (iso: string, meses: number): string => {
   alvo.setUTCDate(Math.min(d, ultimo));
   return alvo.toISOString().slice(0, 10);
 };
+
+// ───────────── Alíquotas (Sprint 7) ─────────────
+
+/** Move a vírgula decimal de um decimal não negativo com ponto ("7.8") `casas` posições para a direita (ou esquerda, se negativo). */
+const moverVirgula = (dec: string, casas: number): string => {
+  const [i, f = ''] = dec.split('.');
+  let digitos = i + f;
+  let ponto = i.length + casas;
+  if (ponto < 0) {
+    digitos = '0'.repeat(-ponto) + digitos;
+    ponto = 0;
+  }
+  if (ponto > digitos.length) digitos = digitos.padEnd(ponto, '0');
+  const inteiro = digitos.slice(0, ponto).replace(/^0+(?=\d)/, '') || '0';
+  const fracao = digitos.slice(ponto).replace(/0+$/, '');
+  return fracao ? `${inteiro}.${fracao}` : inteiro;
+};
+
+/** Alíquota da API como fração ("0.05820000") em percentual com 2 a 4 casas: `5,82%`. */
+export const percentual = (fracao: string | null | undefined): string => {
+  if (fracao === null || fracao === undefined || !/^\d+(\.\d+)?$/.test(fracao)) return '';
+  const p = moverVirgula(fracao, 2);
+  const [i, f = ''] = p.split('.');
+  const casas = f.length > 4 ? f.slice(0, 4) : f.padEnd(2, '0');
+  return `${i},${casas}%`;
+};
+
+/** Percentual digitado ("7,80" ou "7,8%") como a fração que a API espera ("0.078"); o que não é número volta como veio. */
+export const percentualParaFracao = (texto: string): string => {
+  const t = texto.replace('%', '').trim();
+  const d = decimalParaApi(t);
+  return d !== null && /^\d+(\.\d+)?$/.test(d) ? moverVirgula(d, -2) : t;
+};

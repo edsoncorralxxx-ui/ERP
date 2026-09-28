@@ -28,6 +28,9 @@ export type WindowKind =
   | 'documents'
   | 'document'
   | 'to-issue'
+  | 'tax-periods'
+  | 'tax-period'
+  | 'tax-parameters'
   | 'users'
   | 'password';
 export type WindowMode = 'normal' | 'minimized' | 'maximized';
@@ -45,6 +48,8 @@ export type AppWindow = Rect & {
   /** Modo anterior à minimização, para restaurar corretamente uma janela maximizada. */
   prevMode?: Exclude<WindowMode, 'minimized'>;
   dirty: boolean;
+  /** Registros da lista de onde a ficha veio, na ordem da tela: o caminho do Anterior e do Próximo. */
+  sequence?: string[];
 };
 
 export type WindowState = { windows: AppWindow[]; activeId: string | null; nextZ: number; seq: number };
@@ -58,7 +63,17 @@ const CASCADE_STEP = 28;
 export const initialWindowState: WindowState = { windows: [], activeId: null, nextZ: 1, seq: 1 };
 
 export type WindowAction =
-  | { type: 'open'; kind: WindowKind; recordKey: string; title: string; size: { w: number; h: number }; bounds: Bounds; maximized?: boolean }
+  | {
+      type: 'open';
+      kind: WindowKind;
+      recordKey: string;
+      title: string;
+      size: { w: number; h: number };
+      bounds: Bounds;
+      maximized?: boolean;
+      sequence?: string[];
+    }
+  | { type: 'navigate'; id: string; recordKey: string; sequence?: string[] }
   | { type: 'focus'; id: string }
   | { type: 'move'; id: string; x: number; y: number; bounds: Bounds }
   | { type: 'resize'; id: string; w: number; h: number; bounds: Bounds }
@@ -95,7 +110,13 @@ export function windowReducer(state: WindowState, action: WindowAction): WindowS
   switch (action.type) {
     case 'open': {
       const existing = state.windows.find((w) => w.kind === action.kind && w.recordKey === action.recordKey);
-      if (existing) return activate(state, existing.id);
+      if (existing) {
+        // Reaberta de uma lista: passa a andar pela sequência dessa lista.
+        const withSequence = action.sequence
+          ? { ...state, windows: state.windows.map((w) => (w.id === existing.id ? { ...w, sequence: action.sequence } : w)) }
+          : state;
+        return activate(withSequence, existing.id);
+      }
       const offset = (state.windows.length % 8) * CASCADE_STEP;
       const size = clampRect({ x: 0, y: 0, ...action.size }, action.bounds);
       // Abre inteira dentro da área: a cascata recua quando a janela não cabe à direita ou embaixo.
@@ -114,11 +135,24 @@ export function windowReducer(state: WindowState, action: WindowAction): WindowS
         mode: action.maximized ? 'maximized' : 'normal',
         restore: action.maximized ? rect : undefined,
         dirty: false,
+        sequence: action.sequence,
       };
       return { windows: [...state.windows, win], activeId: win.id, nextZ: state.nextZ + 1, seq: state.seq + 1 };
     }
     case 'focus':
       return state.windows.some((w) => w.id === action.id) ? activate(state, action.id) : state;
+    case 'navigate': {
+      // Registro anterior/próximo: a mesma janela passa a mostrar o outro registro. Se ele já está aberto em outra
+      // janela, essa vem à frente (um registro, uma janela).
+      const current = state.windows.find((w) => w.id === action.id);
+      if (!current) return state;
+      const other = state.windows.find((w) => w.id !== action.id && w.kind === current.kind && w.recordKey === action.recordKey);
+      if (other) return activate(state, other.id);
+      const windows = state.windows.map((w) =>
+        w.id === action.id ? { ...w, recordKey: action.recordKey, sequence: action.sequence ?? w.sequence, dirty: false } : w,
+      );
+      return activate({ ...state, windows }, action.id);
+    }
     case 'move':
       return {
         ...state,

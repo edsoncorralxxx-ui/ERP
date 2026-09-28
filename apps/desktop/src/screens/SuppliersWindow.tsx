@@ -32,7 +32,7 @@ export function SuppliersWindow() {
       placeholder="Código, razão social, nome fantasia ou CNPJ"
       carregar={carregar}
       evento={FORNECEDORES_ALTERADOS}
-      abrir={(id) => win.open('supplier', id)}
+      abrir={(id, sequencia) => win.open('supplier', id, sequencia)}
       rotuloLinha={(f) => `Abrir ${f.legalName}`}
       novo={novo}
       colunas={[

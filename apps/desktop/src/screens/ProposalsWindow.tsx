@@ -33,7 +33,7 @@ export function ProposalsWindow() {
       placeholder="Número, título ou cliente"
       carregar={carregar}
       evento={PROPOSTAS_ALTERADAS}
-      abrir={(id) => win.open('proposal', id)}
+      abrir={(id, sequencia) => win.open('proposal', id, sequencia)}
       rotuloLinha={(p) => `Abrir proposta ${p.code}`}
       novo={novo}
       situacoes={[

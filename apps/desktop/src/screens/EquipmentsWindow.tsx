@@ -23,7 +23,7 @@ export function EquipmentsWindow() {
       placeholder="Código, modelo, série, projeto ou cliente"
       carregar={carregar}
       evento={EQUIPAMENTOS_ALTERADOS}
-      abrir={(id) => win.open('equipment', id)}
+      abrir={(id, sequencia) => win.open('equipment', id, sequencia)}
       rotuloLinha={(e) => `Abrir equipamento ${e.code}`}
       situacoes={[
         { valor: 'ATIVO', rotulo: 'Ativos' },

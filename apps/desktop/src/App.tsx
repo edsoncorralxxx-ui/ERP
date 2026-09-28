@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { api, setUnauthorizedHandler } from './api/client';
 import type { CompanyProfile, SessionUser } from './api/types';
 import { CatalogWindow } from './screens/CatalogWindow';
@@ -15,6 +15,9 @@ import { BankAccountsWindow } from './screens/BankAccountsWindow';
 import { DocumentsWindow } from './screens/DocumentsWindow';
 import { DocumentWindow } from './screens/DocumentWindow';
 import { ToIssueWindow } from './screens/ToIssueWindow';
+import { TaxParametersWindow } from './screens/TaxParametersWindow';
+import { TaxPeriodsWindow } from './screens/TaxPeriodsWindow';
+import { TaxPeriodWindow } from './screens/TaxPeriodWindow';
 import { ProjectsWindow } from './screens/ProjectsWindow';
 import { ProjectWindow } from './screens/ProjectWindow';
 import { ProposalsWindow } from './screens/ProposalsWindow';
@@ -37,6 +40,7 @@ import { Toolbar } from './shell/Toolbar';
 import { useConnection } from './shell/useConnection';
 import { WindowContext, type WindowApi, type WindowCommands } from './windows/WindowContext';
 import { WindowFrame } from './windows/WindowFrame';
+import { destino, navegavel, SEQUENCIA_PADRAO, type Passo } from './windows/navegacao';
 import { initialWindowState, windowReducer, type Bounds, type WindowKind } from './windows/windowManager';
 
 const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } }> = {
@@ -64,6 +68,9 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   documents: { title: 'Documentos e faturamento', size: { w: 1160, h: 620 } },
   document: { title: 'Documento de faturamento', size: { w: 1080, h: 660 } },
   'to-issue': { title: 'Notas a emitir', size: { w: 1180, h: 600 } },
+  'tax-periods': { title: 'Impostos gerenciais', size: { w: 1180, h: 620 } },
+  'tax-period': { title: 'Competência fiscal', size: { w: 1120, h: 680 } },
+  'tax-parameters': { title: 'Parâmetros fiscais', size: { w: 900, h: 660 } },
   users: { title: 'Usuários e permissões', size: { w: 980, h: 560 } },
   password: { title: 'Alteração de senha', size: { w: 520, h: 330 } },
 };
@@ -172,12 +179,14 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
 
   // O cockpit abre maximizado, como no protótipo; reabrir qualquer janela só a traz à frente.
   const open = useCallback(
-    (kind: WindowKind, recordKey = 'singleton') => {
-      dispatch({ type: 'open', kind, recordKey, title: KINDS[kind].title, size: KINDS[kind].size, bounds: bounds(), maximized: kind === 'cockpit' });
+    (kind: WindowKind, recordKey = 'singleton', sequence?: string[]) => {
+      dispatch({
+        type: 'open', kind, recordKey, title: KINDS[kind].title, size: KINDS[kind].size, bounds: bounds(), maximized: kind === 'cockpit', sequence,
+      });
     },
     [bounds],
   );
-  const openKind = useCallback((kind: WindowKind, recordKey?: string) => open(kind, recordKey), [open]);
+  const openKind = useCallback((kind: WindowKind, recordKey?: string, sequence?: string[]) => open(kind, recordKey, sequence), [open]);
   const openCockpit = useCallback(() => open('cockpit'), [open]);
 
   // Reajusta as janelas quando a área de trabalho muda de tamanho (gaveta abrindo/fechando, janela nativa).
@@ -200,6 +209,46 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
     if (activeSave) void activeSave();
   }, [activeSave]);
 
+  /**
+   * Primeiro, Anterior, Próximo e Último registro na ficha ativa: anda pela lista de onde ela foi aberta (ou pela lista
+   * completa do tipo, se veio de uma seta). Com alterações não gravadas, não sai do registro.
+   */
+  const podeNavegar = !!active && navegavel(active.kind);
+  const navegar = useCallback(
+    async (passo: Passo) => {
+      const w = active;
+      if (!w || !navegavel(w.kind)) return;
+      if (w.dirty) {
+        notify({ tone: 'aviso', text: 'Grave ou descarte as alterações antes de ir para outro registro (NAV-001)' });
+        return;
+      }
+      let sequence = w.sequence;
+      if (!sequence) {
+        try {
+          sequence = await SEQUENCIA_PADRAO[w.kind]!(w.recordKey);
+        } catch (e) {
+          const x = e as { message?: string; code?: string };
+          notify({ tone: 'erro', text: `${x.message ?? 'Falha ao carregar a lista'} (${x.code ?? 'NAV-002'})` });
+          return;
+        }
+      }
+      const alvo = destino(sequence, w.recordKey, passo);
+      if (!alvo) {
+        const inicio = passo === 'primeiro' || passo === 'anterior';
+        notify({ tone: 'info', text: inicio ? 'Você já está no primeiro registro' : 'Você já está no último registro' });
+        return;
+      }
+      dispatch({ type: 'navigate', id: w.id, recordKey: alvo, sequence });
+    },
+    [active, notify],
+  );
+  const navegacao = useMemo(
+    () => (podeNavegar
+      ? { primeiro: () => void navegar('primeiro'), anterior: () => void navegar('anterior'), proximo: () => void navegar('proximo'), ultimo: () => void navegar('ultimo') }
+      : {}),
+    [podeNavegar, navegar],
+  );
+
   const requestClose = useCallback(
     (id: string) => {
       const w = state.windows.find((x) => x.id === id);
@@ -221,9 +270,15 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const passo: Record<string, Passo> = { ArrowUp: 'primeiro', ArrowLeft: 'anterior', ArrowRight: 'proximo', ArrowDown: 'ultimo' };
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         saveActive();
+      } else if ((e.metaKey || e.ctrlKey) && e.altKey && passo[e.key]) {
+        // ⌥⌘ + setas: registro primeiro, anterior, próximo e último (menu Dados).
+        if (document.querySelector('.rp-modal, .rp-login-sobre')) return;
+        e.preventDefault();
+        if (podeNavegar) void navegar(passo[e.key]);
       } else if (e.key === 'Escape' && !e.defaultPrevented) {
         // Caixa de mensagem ou login por cima: o Esc é deles. Lista suspensa e calendário já tratam o próprio Esc.
         if (document.querySelector('.rp-modal, .rp-login-sobre')) return;
@@ -238,7 +293,7 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [saveActive, drawer.open, active, requestClose]);
+  }, [saveActive, drawer.open, active, requestClose, podeNavegar, navegar]);
 
   const windowsKey = state.windows.map((w) => `${w.id}:${w.dirty}`).join('|');
   const apis = useMemo(() => {
@@ -279,11 +334,16 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
           onTile={() => dispatch({ type: 'tile', bounds: bounds() })}
           onFocus={(id) => dispatch({ type: 'focus', id })}
           onToggleDrawer={() => setDrawer((d) => ({ ...d, open: !d.open }))}
+          canNavigate={podeNavegar}
+          onNavigate={(passo) => void navegar(passo)}
+          canNew={!!activeNew}
+          onNew={() => activeNew?.()}
         />
         <Toolbar
           actions={{
             bloquear: lock,
             novo: activeNew,
+            ...navegacao,
             ajuda: () => open('server-status'),
             consulta: openCockpit,
           }}
@@ -325,6 +385,8 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                     onToggleMaximize={() => dispatch({ type: 'toggleMaximize', id: w.id })}
                     onClose={() => requestClose(w.id)}
                   >
+                    {/* A chave troca com o registro: ir ao anterior ou ao próximo monta a ficha de novo, já com o outro registro. */}
+                    <Fragment key={w.recordKey}>
                     {apis[w.id] &&
                       (w.kind === 'company-profile' ? (
                         <CompanyProfileWindow />
@@ -372,6 +434,12 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                         <DocumentWindow recordKey={w.recordKey} />
                       ) : w.kind === 'to-issue' ? (
                         <ToIssueWindow />
+                      ) : w.kind === 'tax-periods' ? (
+                        <TaxPeriodsWindow />
+                      ) : w.kind === 'tax-period' ? (
+                        <TaxPeriodWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'tax-parameters' ? (
+                        <TaxParametersWindow />
                       ) : w.kind === 'users' ? (
                         <UsersWindow />
                       ) : w.kind === 'password' ? (
@@ -379,6 +447,7 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                       ) : (
                         <ServerStatusWindow connection={connection} />
                       ))}
+                    </Fragment>
                   </WindowFrame>
                 </WindowContext.Provider>
               ))}

@@ -84,6 +84,7 @@ const WINDOWS: Record<string, WindowKind> = {
   'conciliacao:CONTAS': 'bank-accounts',
   'documentos:': 'documents',
   'documentos:A_EMITIR': 'to-issue',
+  'impostos:': 'tax-periods',
 };
 
 /** Permissão de leitura que cada janela exige; sem ela o item aparece, mas não abre. */
@@ -101,6 +102,7 @@ const NEEDS: Partial<Record<WindowKind, string>> = {
   'bank-accounts': 'financial_title.read',
   documents: 'document.read',
   'to-issue': 'document.read',
+  'tax-periods': 'tax.read',
   'company-profile': 'company.read',
 };
 

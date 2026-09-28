@@ -33,7 +33,7 @@ export function CustomersWindow() {
       placeholder="Código, razão social, nome fantasia ou CNPJ"
       carregar={carregar}
       evento={CLIENTES_ALTERADOS}
-      abrir={(id) => win.open('customer', id)}
+      abrir={(id, sequencia) => win.open('customer', id, sequencia)}
       rotuloLinha={(c) => `Abrir ${c.legalName}`}
       novo={novo}
       colunas={[

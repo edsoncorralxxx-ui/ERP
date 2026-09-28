@@ -84,4 +84,26 @@ describe('gerenciador de janelas', () => {
     const s = run(open('a'), open('b'), { type: 'setDirty', id: 'w1', dirty: true });
     expect(s.windows.map((w) => w.dirty)).toEqual([true, false]);
   });
+
+  it('ir a outro registro troca o registro da mesma janela e guarda a sequência', () => {
+    const abrirCliente = (recordKey: string, sequence?: string[]): WindowAction => ({
+      type: 'open', kind: 'customer', recordKey, title: 'Cliente', size: { w: 600, h: 400 }, bounds, sequence,
+    });
+    let s = run(abrirCliente('c-1', ['c-1', 'c-2', 'c-3']));
+    const id = s.windows[0].id;
+    s = windowReducer(s, { type: 'setDirty', id, dirty: true });
+    s = windowReducer(s, { type: 'navigate', id, recordKey: 'c-2' });
+    expect(s.windows).toHaveLength(1);
+    expect(s.windows[0]).toMatchObject({ id, recordKey: 'c-2', sequence: ['c-1', 'c-2', 'c-3'], dirty: false });
+    // O registro de destino já aberto em outra janela: ela vem à frente e esta não muda.
+    s = windowReducer(s, abrirCliente('c-3'));
+    const outra = s.windows[1].id;
+    s = windowReducer(s, { type: 'focus', id });
+    s = windowReducer(s, { type: 'navigate', id, recordKey: 'c-3' });
+    expect(s.activeId).toBe(outra);
+    expect(s.windows.find((w) => w.id === id)?.recordKey).toBe('c-2');
+    // Reabrir de uma lista passa a usar a sequência dessa lista.
+    s = windowReducer(s, abrirCliente('c-2', ['c-2', 'c-9']));
+    expect(s.windows.find((w) => w.id === id)?.sequence).toEqual(['c-2', 'c-9']);
+  });
 });

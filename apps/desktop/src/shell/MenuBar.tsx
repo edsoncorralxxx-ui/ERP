@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { api } from '../api/client';
+import type { Passo } from '../windows/navegacao';
 import type { AppWindow, WindowKind } from '../windows/windowManager';
 
 type Props = {
@@ -15,6 +16,11 @@ type Props = {
   onTile: () => void;
   onFocus: (id: string) => void;
   onToggleDrawer: () => void;
+  /** Ficha ativa anda entre registros (Primeiro, Anterior, Próximo, Último). */
+  canNavigate: boolean;
+  onNavigate: (passo: Passo) => void;
+  canNew: boolean;
+  onNew: () => void;
 };
 
 type Item = { label: string; kbd?: string; disabled?: boolean; selected?: boolean; action?: () => void } | 'sep';
@@ -53,7 +59,18 @@ export function MenuBar(p: Props) {
     },
     { id: 'editar', label: (<><u>E</u>ditar</>), items: PROXIMAS },
     { id: 'exibir', label: (<>E<u>x</u>ibir</>), items: [{ label: 'Menu lateral', action: p.onToggleDrawer }] },
-    { id: 'dados', label: (<><u>D</u>ados</>), items: PROXIMAS },
+    {
+      id: 'dados',
+      label: (<><u>D</u>ados</>),
+      items: [
+        { label: 'Novo', disabled: !p.canNew, action: p.onNew },
+        'sep',
+        { label: 'Primeiro registro', kbd: '⌥⌘↑', disabled: !p.canNavigate, action: () => p.onNavigate('primeiro') },
+        { label: 'Registro anterior', kbd: '⌥⌘←', disabled: !p.canNavigate, action: () => p.onNavigate('anterior') },
+        { label: 'Próximo registro', kbd: '⌥⌘→', disabled: !p.canNavigate, action: () => p.onNavigate('proximo') },
+        { label: 'Último registro', kbd: '⌥⌘↓', disabled: !p.canNavigate, action: () => p.onNavigate('ultimo') },
+      ],
+    },
     { id: 'irpara', label: (<><u>I</u>r para</>), items: PROXIMAS },
     {
       id: 'modulos',
@@ -70,6 +87,11 @@ export function MenuBar(p: Props) {
         { label: 'Pedidos e contratos', action: () => p.onOpen('orders') },
         { label: 'Carteira de projetos', action: () => p.onOpen('projects') },
         { label: 'Equipamentos', action: () => p.onOpen('equipments') },
+        'sep',
+        { label: 'Contas a receber', action: () => p.onOpen('receivables') },
+        { label: 'Documentos e faturamento', action: () => p.onOpen('documents') },
+        { label: 'Notas a emitir', action: () => p.onOpen('to-issue') },
+        { label: 'Impostos gerenciais', action: () => p.onOpen('tax-periods') },
         'sep',
         { label: 'Dados da empresa', action: () => p.onOpen('company-profile') },
         { label: 'Status do servidor', action: () => p.onOpen('server-status') },

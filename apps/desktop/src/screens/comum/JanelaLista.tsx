@@ -42,7 +42,13 @@ type Props<T extends { id: string; status?: string }> = {
   carregar: (busca: string, situacao: Situacao) => Promise<T[]>;
   /** Evento global que pede para recarregar (as fichas avisam depois de gravar). */
   evento: string;
-  abrir: (id: string) => void;
+  /** Outros eventos que também pedem para recarregar (ex.: notas alteradas mudam a receita das competências). */
+  eventos?: string[];
+  /**
+   * Abre a ficha da linha; `sequencia` são os ids da lista como está na tela (busca, situação e filtros aplicados), para
+   * a ficha andar pelo registro anterior e pelo próximo.
+   */
+  abrir: (id: string, sequencia: string[]) => void;
   /** Rótulo acessível da seta de cada linha. */
   rotuloLinha: (linha: T) => string;
   novo?: () => void;
@@ -92,11 +98,13 @@ export function JanelaLista<T extends { id: string; status?: string }>(p: Props<
     return () => clearTimeout(t);
   }, [busca, situacao, recarregar]);
 
+  const eventos = [p.evento, ...(p.eventos ?? [])].join('|');
   useEffect(() => {
     const r = () => void recarregar(busca, situacao);
-    window.addEventListener(p.evento, r);
-    return () => window.removeEventListener(p.evento, r);
-  }, [busca, situacao, recarregar, p.evento]);
+    const nomes = eventos.split('|');
+    nomes.forEach((n) => window.addEventListener(n, r));
+    return () => nomes.forEach((n) => window.removeEventListener(n, r));
+  }, [busca, situacao, recarregar, eventos]);
 
   useEffect(() => win.registerCommands({ novo: p.novo }), [p.novo, win]);
 
@@ -176,7 +184,7 @@ export function JanelaLista<T extends { id: string; status?: string }>(p: Props<
               </thead>
               <tbody>
                 {visiveis.map((l, i) => (
-                  <tr key={l.id} aria-selected={sel === l.id} onClick={() => setSel(l.id)} onDoubleClick={() => p.abrir(l.id)}>
+                  <tr key={l.id} aria-selected={sel === l.id} onClick={() => setSel(l.id)} onDoubleClick={() => p.abrir(l.id, visiveis.map((v) => v.id))}>
                     <td className="rownum">{i}</td>
                     <td>
                       <span
@@ -185,8 +193,8 @@ export function JanelaLista<T extends { id: string; status?: string }>(p: Props<
                         tabIndex={0}
                         aria-label={p.rotuloLinha(l)}
                         title={p.rotuloLinha(l)}
-                        onClick={() => p.abrir(l.id)}
-                        onKeyDown={(e) => e.key === 'Enter' && p.abrir(l.id)}
+                        onClick={() => p.abrir(l.id, visiveis.map((v) => v.id))}
+                        onKeyDown={(e) => e.key === 'Enter' && p.abrir(l.id, visiveis.map((v) => v.id))}
                       />
                     </td>
                     {p.colunas.map((c) => (

@@ -18,6 +18,7 @@ describe('menu lateral', () => {
       'Documentos e faturamento',
       'Equipamentos',
       'Fornecedores',
+      'Impostos gerenciais',
       'Notas a emitir',
       'Oportunidades e propostas',
       'Pedidos e contratos',

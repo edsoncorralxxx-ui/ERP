@@ -25,7 +25,7 @@ export const seloCaixa = (o: Pick<OrderInvoicing, 'toIssueCents' | 'beyondReceiv
 
 /**
  * Janela de lista "Notas a emitir" (regime de caixa, decisão do PO na Review da Sprint 6): os pedidos confirmados com
- * recebimento que ainda não tem nota, com quanto é produto e quanto é serviço. A seta abre a nota nova já com o pedido,
+ * recebimento que ainda não tem nota, com quanto é produto (NF-e) e quanto é serviço (NFS-e) — notas separadas, Sprint 7. A seta abre a nota nova já com o pedido,
  * para registrar a nota depois de emiti-la no portal da SEFAZ ou da prefeitura.
  */
 export function ToIssueWindow() {
@@ -54,8 +54,8 @@ export function ToIssueWindow() {
         { titulo: 'Recebido', num: true, valor: (o) => reais(o.receivedCents) },
         { titulo: 'Faturado', num: true, valor: (o) => reais(o.invoicedCents) },
         { titulo: 'A emitir', num: true, valor: (o) => reais(o.toIssueCents) },
-        { titulo: 'Produto', num: true, valor: (o) => reais(o.productCents) },
-        { titulo: 'Serviço', num: true, valor: (o) => reais(o.serviceCents) },
+        { titulo: 'Produto (NF-e)', num: true, valor: (o) => reais(o.productCents) },
+        { titulo: 'Serviço (NFS-e)', num: true, valor: (o) => reais(o.serviceCents) },
       ]}
     />
   );

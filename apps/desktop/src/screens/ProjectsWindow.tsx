@@ -22,7 +22,7 @@ export function ProjectsWindow() {
       placeholder="Código, nome, pedido ou cliente"
       carregar={carregar}
       evento={PEDIDOS_ALTERADOS}
-      abrir={(id) => win.open('project', id)}
+      abrir={(id, sequencia) => win.open('project', id, sequencia)}
       rotuloLinha={(p) => `Abrir projeto ${p.code}`}
       situacoes={[
         { valor: 'ABERTOS', rotulo: 'Em andamento' },

@@ -43,7 +43,7 @@ export function DocumentsWindow() {
       placeholder="Número da nota, código ou cliente"
       carregar={carregar}
       evento={DOCUMENTOS_ALTERADOS}
-      abrir={(id) => win.open('document', id)}
+      abrir={(id, sequencia) => win.open('document', id, sequencia)}
       rotuloLinha={(d) => `Abrir documento ${d.code}`}
       novo={novo}
       situacoes={[

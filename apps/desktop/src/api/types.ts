@@ -496,6 +496,8 @@ export type BusinessDocument = {
   id: string;
   code: string;
   direction: 'SAIDA' | 'ENTRADA';
+  /** Pelas linhas; MISTO só nas notas registradas antes das notas separadas (Sprint 7). */
+  kind: DocumentLineKind | 'MISTO';
   customerId: string;
   customerCode: string;
   customerName: string;
@@ -543,6 +545,9 @@ export type TitleInvoicing = {
 };
 
 /** Pedido visto pelo caixa: recebido, faturado, a emitir e a nota proposta (linhas e parcelas). */
+/** Um tipo da nota no pedido: total das linhas, recebido proporcional, faturado e a emitir. */
+export type InvoicingKind = { orderCents: string; receivedCents: string; invoicedCents: string; toIssueCents: string };
+
 export type OrderInvoicing = {
   id: string;
   orderCode: string;
@@ -556,12 +561,123 @@ export type OrderInvoicing = {
   invoicedCents: string;
   toIssueCents: string;
   beyondReceivedCents: string;
-  proposedCents: string;
+  /** A emitir de produto e de serviço (o recebido se reparte na proporção do pedido). */
   productCents: string;
   serviceCents: string;
+  product: InvoicingKind;
+  service: InvoicingKind;
+  /** Tipo da nota proposta. */
+  kind: DocumentLineKind;
+  proposedCents: string;
   parcels: {
     titleId: string; titleCode: string; label: string; dueDate: string; titleStatus: TitleStatus; originalCents: string;
     receivedCents: string; invoicedCents: string; toIssueCents: string; proposedCents: string;
   }[];
   lines: { seq: number; description: string; kind: DocumentLineKind; amountCents: string }[];
+};
+
+// ───────────── Fiscal gerencial (Sprint 7) ─────────────
+
+export type TaxPeriodStatus = 'ABERTA' | 'FECHADA';
+
+/** Linha da lista Impostos gerenciais: receita das notas, última simulação, valor do contador e diferença. */
+export type TaxPeriodSummary = {
+  competence: string;
+  status: TaxPeriodStatus;
+  version: string;
+  revenueKnown: boolean;
+  productRevenueCents: string;
+  serviceRevenueCents: string;
+  revenueCents: string;
+  documentCount: number;
+  simulationResult: 'CALCULADA' | 'NAO_CALCULAVEL' | null;
+  simulationCents: string | null;
+  confirmedCents: string | null;
+  dueDate: string | null;
+  differenceCents: string | null;
+};
+
+export type TaxBracket = { upToCents: string; rate: string; deductionCents: string };
+
+/** Revisão dos parâmetros do Simples Nacional; alíquotas como fração ("0.078"). */
+export type TaxParameters = {
+  id: string;
+  revision: number;
+  regime: 'SIMPLES_NACIONAL';
+  validFrom: string;
+  productAnnex: string;
+  serviceAnnex: string;
+  brackets: Record<DocumentLineKind, TaxBracket[]>;
+  source: string;
+  notes: string | null;
+  createdAt: string;
+  createdBy: string;
+};
+
+/** Memória do cálculo gravada com a simulação. */
+export type TaxSimulationMemory = {
+  competence: string;
+  parameterRevision: number | null;
+  parameterValidFrom: string | null;
+  parameterSource: string | null;
+  rbt12Cents: string | null;
+  rbt12Origin: 'CALCULADO' | 'INFORMADO' | null;
+  rbt12Months: { competence: string; cents: string }[];
+  rbt12Missing: string[];
+  informedRbt12Cents: string | null;
+  productRevenueCents: string;
+  serviceRevenueCents: string;
+  reasons: string[];
+  warnings: string[];
+  kinds: {
+    kind: DocumentLineKind; annex: string; bracket: number; nominalRate: string; deductionCents: string; effectiveRate: string;
+    revenueCents: string; taxCents: string;
+  }[];
+};
+
+export type TaxSimulation = {
+  id: string;
+  seq: number;
+  result: 'CALCULADA' | 'NAO_CALCULAVEL';
+  parameterRevision: number | null;
+  rbt12Cents: string | null;
+  rbt12Origin: 'CALCULADO' | 'INFORMADO' | null;
+  productRevenueCents: string;
+  serviceRevenueCents: string;
+  productTaxCents: string | null;
+  serviceTaxCents: string | null;
+  totalTaxCents: string | null;
+  memory: TaxSimulationMemory;
+  createdAt: string;
+  createdBy: string;
+};
+
+export type TaxConfirmation = {
+  id: string; seq: number; amountCents: string; dueDate: string; notes: string | null; simulationSeq: number | null; createdAt: string; createdBy: string;
+};
+
+export type TaxClosure = { action: 'FECHAMENTO' | 'REABERTURA'; reason: string | null; revenueCents: string | null; occurredAt: string; actor: string };
+
+/** Ficha da competência: receita, notas, RBT12, parâmetros vigentes, simulações, conferências e fechamentos. */
+export type TaxPeriod = {
+  competence: string;
+  status: TaxPeriodStatus;
+  version: string;
+  revenueKnown: boolean;
+  productRevenueCents: string;
+  serviceRevenueCents: string;
+  revenueCents: string;
+  documents: {
+    id: string; code: string; kind: DocumentLineKind | 'MISTO'; series: string; number: string; issueDate: string; customerCode: string;
+    customerName: string; orderCode: string | null; productCents: string; serviceCents: string; totalCents: string;
+  }[];
+  rbt12: {
+    calculatedCents: string | null; informedCents: string | null; informedBy: string | null; informedNotes: string | null;
+    usedCents: string | null; usedOrigin: 'CALCULADO' | 'INFORMADO' | null; missing: string[];
+  };
+  parameters: TaxParameters | null;
+  simulations: TaxSimulation[];
+  confirmations: TaxConfirmation[];
+  closures: TaxClosure[];
+  differenceCents: string | null;
 };

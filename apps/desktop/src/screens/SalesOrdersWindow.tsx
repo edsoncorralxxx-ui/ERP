@@ -33,7 +33,7 @@ export function SalesOrdersWindow() {
       placeholder="Número, cliente ou unidade"
       carregar={carregar}
       evento={PEDIDOS_ALTERADOS}
-      abrir={(id) => win.open('order', id)}
+      abrir={(id, sequencia) => win.open('order', id, sequencia)}
       rotuloLinha={(o) => `Abrir pedido ${o.code}`}
       novo={novo}
       situacoes={[

@@ -17,8 +17,11 @@ export type WindowApi = {
   /** Mensagem na linha de status do aplicativo (padrão do design system para sucesso e erro). */
   notify: (message: StatusMessage) => void;
   requestClose: () => void;
-  /** Abre (ou traz à frente) outra janela: é o destino das setas de link. */
-  open: (kind: WindowKind, recordKey?: string) => void;
+  /**
+   * Abre (ou traz à frente) outra janela: é o destino das setas de link. `sequencia` são os registros da lista de onde a
+   * ficha foi aberta, na ordem da tela, para as ferramentas Primeiro, Anterior, Próximo e Último registro.
+   */
+  open: (kind: WindowKind, recordKey?: string, sequencia?: string[]) => void;
 };
 
 export const WindowContext = createContext<WindowApi | null>(null);

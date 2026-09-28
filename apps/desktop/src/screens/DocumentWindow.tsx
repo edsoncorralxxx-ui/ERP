@@ -15,7 +15,16 @@ import { DOCUMENTOS_ALTERADOS, seloDocumento } from './DocumentsWindow';
 import { TITULOS_ALTERADOS } from './ReceivablesWindow';
 
 type Tab = 'linhas' | 'parcelas' | 'vinculos' | 'classificacao' | 'historico';
-type Form = { orderId: string; series: string; number: string; issueDate: string; competence: string; amount: string; notes: string };
+type Form = {
+  orderId: string;
+  kind: DocumentLineKind | '';
+  series: string;
+  number: string;
+  issueDate: string;
+  competence: string;
+  amount: string;
+  notes: string;
+};
 
 export const NATUREZA: Record<OperationNature, string> = {
   VENDA_PRODUCAO: 'Venda de produção própria',
@@ -26,17 +35,28 @@ export const NATUREZA: Record<OperationNature, string> = {
 
 const TIPO: Record<DocumentLineKind, string> = { PRODUTO: 'Produto', SERVICO: 'Serviço' };
 
+/** Tipo da nota (notas separadas, decisão do PO na Sprint 7): produto sai em NF-e, serviço em NFS-e. */
+export const TIPO_NOTA: Record<DocumentLineKind | 'MISTO', string> = {
+  PRODUTO: 'Produto (NF-e)',
+  SERVICO: 'Serviço (NFS-e)',
+  MISTO: 'Produto e serviço',
+};
+
+/** A emitir do tipo escolhido na nota proposta. */
+const aEmitirDoTipo = (o: OrderInvoicing, kind: DocumentLineKind) => (kind === 'SERVICO' ? o.service : o.product).toIssueCents;
+
 /** A chave `novo-3:<pedido>` abre a nota nova já com o pedido escolhido (seta da lista Notas a emitir e do pedido). */
 const pedidoDaChave = (recordKey: string) => (recordKey.startsWith('novo-') && recordKey.includes(':') ? recordKey.slice(recordKey.indexOf(':') + 1) : '');
 
 const vazio = (orderId = ''): Form => {
   const hoje = hojeIso();
-  return { orderId, series: '1', number: '', issueDate: dataDaApi(hoje), competence: competenciaDaApi(hoje), amount: '', notes: '' };
+  return { orderId, kind: '', series: '1', number: '', issueDate: dataDaApi(hoje), competence: competenciaDaApi(hoje), amount: '', notes: '' };
 };
 
 const toRequest = (f: Form) => ({
   direction: 'SAIDA',
   orderId: f.orderId || null,
+  kind: f.kind || null,
   series: f.series.trim(),
   number: f.number.trim(),
   issueDate: dataParaApi(f.issueDate),
@@ -90,7 +110,7 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
   const somenteLeitura = !adicao || !can('document.register') || !can('document.link');
   const ativo = doc?.status === 'ATIVO';
   const original = useMemo(() => vazio(pedidoDaChave(recordKey)), [recordKey]);
-  const alterado = useMemo(() => adicao && !somenteLeitura && JSON.stringify({ ...form, amount: '' }) !== JSON.stringify(original),
+  const alterado = useMemo(() => adicao && !somenteLeitura && JSON.stringify({ ...form, amount: '', kind: '' }) !== JSON.stringify(original),
     [form, original, adicao, somenteLeitura]);
 
   useEffect(() => win.setDirty(alterado), [alterado, win]);
@@ -134,17 +154,23 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
       .catch((e: ApiError) => winRef.current.notify({ tone: 'erro', text: `${e.message} (${e.code})` }));
   }, [adicao, somenteLeitura]);
 
-  /** Proposta do servidor para o pedido e o valor (vazio = todo o a emitir); o valor volta formatado. */
-  const propor = useCallback(async (orderId: string, valor?: string) => {
+  /**
+   * Proposta do servidor para o pedido, o tipo (vazio = o servidor escolhe: produto, se houver produto a emitir) e o
+   * valor (vazio = todo o a emitir do tipo); o tipo e o valor voltam preenchidos.
+   */
+  const propor = useCallback(async (orderId: string, kind: DocumentLineKind | '', valor?: string) => {
     if (!orderId) {
       setProposta(null);
       return;
     }
     const cents = valor ? centavosParaApi(valor) : null;
+    const q = new URLSearchParams();
+    if (kind) q.set('kind', kind);
+    if (cents && /^\d+$/.test(cents)) q.set('amountCents', cents);
     try {
-      const r = await api.get<OrderInvoicing>(`/api/v1/invoicing/orders/${orderId}${cents && /^\d+$/.test(cents) ? `?amountCents=${cents}` : ''}`);
+      const r = await api.get<OrderInvoicing>(`/api/v1/invoicing/orders/${orderId}${q.size ? `?${q.toString()}` : ''}`);
       setProposta(r.data);
-      setForm((f) => (f.orderId === orderId ? { ...f, amount: centavos(r.data.proposedCents) } : f));
+      setForm((f) => (f.orderId === orderId ? { ...f, kind: r.data.kind, amount: centavos(r.data.proposedCents) } : f));
       setErros((m) => {
         const { amountCents: _a, orderId: _o, ...resto } = m;
         return resto;
@@ -158,8 +184,8 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
   }, []);
 
   useEffect(() => {
-    if (adicao && form.orderId) void propor(form.orderId);
-  }, [form.orderId]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (adicao && form.orderId) void propor(form.orderId, form.kind);
+  }, [form.orderId, form.kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (tab !== 'historico' || !id || historico !== null) return;
@@ -186,7 +212,7 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
       setTab('vinculos');
       winRef.current.notify({
         tone: 'sucesso',
-        text: `Documento ${r.data.code} (nota nº ${r.data.number}) adicionado com sucesso: ${reais(r.data.totalCents)} faturados no pedido ${r.data.orderCode}`,
+        text: `Documento ${r.data.code} (nota de ${r.data.kind === 'SERVICO' ? 'serviço' : 'produto'} nº ${r.data.number}) adicionado com sucesso: ${reais(r.data.totalCents)} faturados no pedido ${r.data.orderCode}`,
       });
       avisar();
       return true;
@@ -211,7 +237,7 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
     }
   };
 
-  const podeGravar = adicao && !gravando && !somenteLeitura && !!form.orderId && !!proposta && BigInt(proposta.toIssueCents) > 0n;
+  const podeGravar = adicao && !gravando && !somenteLeitura && !!form.orderId && !!proposta && BigInt(aEmitirDoTipo(proposta, proposta.kind)) > 0n;
   const podeCancelar = !!doc && ativo && can('document.cancel');
   useEffect(() => win.registerCommands({ save: podeGravar ? gravar : undefined }), [podeGravar, gravar, win]);
 
@@ -259,6 +285,10 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
   const linhas = doc ? doc.lines : proposta?.lines ?? [];
   const total = doc ? doc.totalCents : proposta?.proposedCents ?? '0';
   const semNada = adicao && !!proposta && BigInt(proposta.toIssueCents) === 0n;
+  const semNadaDoTipo = adicao && !!proposta && !semNada && BigInt(aEmitirDoTipo(proposta, proposta.kind)) === 0n;
+  const tiposDoPedido = proposta
+    ? (['PRODUTO', 'SERVICO'] as DocumentLineKind[]).filter((k) => BigInt((k === 'SERVICO' ? proposta.service : proposta.product).orderCents) > 0n)
+    : [];
 
   const tabs: [Tab, ReactNode, boolean][] = adicao
     ? [
@@ -295,10 +325,20 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
                   </span>
                 ) : (
                   <Selecao id={fid('pedido')} className={classeCampo} valor={form.orderId} disabled={somenteLeitura} aria-invalid={!!erros.orderId}
-                    onChange={(v) => set({ orderId: v, amount: '' })}
+                    onChange={(v) => set({ orderId: v, kind: '', amount: '' })}
                     opcoes={[{ valor: '', rotulo: pedidos.length || form.orderId ? 'Escolha o pedido' : 'Nenhum pedido com recebimento sem nota' }, ...opcoesPedidos]} />
                 )}
                 {erroDe('orderId')}
+                <label className="rp-label" htmlFor={fid('tipo')}>Tipo da nota</label>
+                <span className="rp-req" aria-hidden="true">*</span>
+                {doc ? (
+                  <input id={fid('tipo')} className="rp-field rp-field--readonly" readOnly value={TIPO_NOTA[doc.kind]} />
+                ) : (
+                  <Selecao id={fid('tipo')} className={classeCampo} valor={form.kind} disabled={somenteLeitura || !proposta} aria-invalid={!!erros.kind}
+                    onChange={(v) => set({ kind: v as DocumentLineKind, amount: '' })}
+                    opcoes={proposta ? tiposDoPedido.map((k) => ({ valor: k, rotulo: TIPO_NOTA[k] })) : [{ valor: '', rotulo: 'Escolha o pedido' }]} />
+                )}
+                {erroDe('kind')}
                 <span className="rp-label">Cliente</span>
                 <span />
                 <span className="rp-ficha__ref">
@@ -349,10 +389,13 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
                     <input className="rp-field rp-field--readonly rp-field--num" readOnly aria-label="Já faturado" value={reais(proposta?.invoicedCents ?? '0')} />
                     <span className="rp-label">A emitir</span>
                     <input className="rp-field rp-field--readonly rp-field--num" readOnly aria-label="A emitir" value={reais(proposta?.toIssueCents ?? '0')} />
+                    <span className="rp-label">{proposta?.kind === 'SERVICO' ? 'A emitir de serviço' : 'A emitir de produto'}</span>
+                    <input className="rp-field rp-field--readonly rp-field--num" readOnly aria-label="A emitir do tipo"
+                      value={reais(proposta ? aEmitirDoTipo(proposta, proposta.kind) : '0')} />
                     <label className="rp-label" htmlFor={fid('valor')}>Valor da nota</label>
                     <input id={fid('valor')} className={`${classeCampo} rp-field--num`} value={form.amount} maxLength={20} inputMode="decimal"
                       readOnly={somenteLeitura || !proposta} aria-invalid={!!erros.amountCents} onChange={(e) => set({ amount: e.target.value })}
-                      onBlur={() => form.orderId && void propor(form.orderId, form.amount)} />
+                      onBlur={() => form.orderId && void propor(form.orderId, form.kind, form.amount)} />
                     {erros.amountCents && (
                       <>
                         <span />
@@ -386,10 +429,19 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
                 <i className="rp-ico rp-ico-status-aviso" aria-hidden="true" /> O pedido {proposta!.orderCode} não tem recebimento sem nota: a nota só fatura o que já foi recebido.
               </p>
             )}
-            {adicao && proposta && !semNada && (
+            {semNadaDoTipo && (
               <p className="rp-janela-mdi__aviso rp-ficha__nota">
-                <i className="rp-ico rp-ico-status-info" aria-hidden="true" /> Emita a nota de {reais(proposta.proposedCents)} no portal (produto {reais(proposta.productCents)},
-                serviço {reais(proposta.serviceCents)}) e registre aqui o número, a série e a emissão.
+                <i className="rp-ico rp-ico-status-aviso" aria-hidden="true" /> O pedido {proposta!.orderCode} não tem recebimento de{' '}
+                {proposta!.kind === 'SERVICO' ? 'serviço' : 'produto'} sem nota. Escolha o outro tipo.
+              </p>
+            )}
+            {adicao && proposta && !semNada && !semNadaDoTipo && (
+              <p className="rp-janela-mdi__aviso rp-ficha__nota">
+                <i className="rp-ico rp-ico-status-info" aria-hidden="true" />{' '}
+                {proposta.kind === 'SERVICO'
+                  ? `Emita a NFS-e de ${reais(proposta.proposedCents)} no portal da prefeitura`
+                  : `Emita a NF-e de ${reais(proposta.proposedCents)} no portal da SEFAZ`}{' '}
+                e registre aqui o número, a série e a emissão. A emitir no pedido: produto {reais(proposta.productCents)}, serviço {reais(proposta.serviceCents)}.
               </p>
             )}
 
