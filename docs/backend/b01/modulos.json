@@ -140,7 +140,7 @@
       "id": "fiscal",
       "nome": "Fiscal gerencial",
       "responsabilidade": "Competências, receita classificada, parâmetros com vigência, histórico importado, simulação, confirmação do contador, fechamento",
-      "dependsOn": ["kernel", "plataforma", "documentos", "financeiro"]
+      "dependsOn": ["kernel", "acesso", "auditoria", "plataforma", "documentos", "financeiro"]
     },
     {
       "id": "analitico",

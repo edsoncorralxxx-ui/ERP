@@ -134,7 +134,11 @@
         {"rotulo": "Notas a emitir", "tela": "documentos", "secao": "A_EMITIR", "fase": "Sprint 6 · B06", "implementado": true}
       ]
     },
-    {"nome": "Fiscal", "icone": "fiscal", "itens": [{"rotulo": "Impostos gerenciais", "tela": "impostos", "fase": "Sprint 7 · B10"}]},
+    {
+      "nome": "Fiscal",
+      "icone": "fiscal",
+      "itens": [{"rotulo": "Impostos gerenciais", "tela": "impostos", "fase": "Sprint 7 · B10", "implementado": true}]
+    },
     {"nome": "Custos", "icone": "custos", "itens": [{"rotulo": "Custos e resultado", "tela": "custos", "fase": "B08–B10"}]},
     {
       "nome": "Contabilidade / Controladoria",

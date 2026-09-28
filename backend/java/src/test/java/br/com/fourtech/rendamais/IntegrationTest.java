@@ -52,6 +52,12 @@ public abstract class IntegrationTest {
      * equipamentos e títulos (Sprint 4), que referenciam parceiros e itens.
      */
     protected void limpaDocumentos() {
+        // Fiscal (Sprint 7): competências, simulações, conferências, fechamentos e revisões criadas nos testes.
+        jdbc.sql("delete from tax_period_closure").update();
+        jdbc.sql("delete from accountant_confirmation").update();
+        jdbc.sql("delete from tax_simulation").update();
+        jdbc.sql("delete from tax_period").update();
+        jdbc.sql("delete from tax_parameter_revision where revision > 1").update();
         jdbc.sql("delete from document_title_invoicing").update();
         jdbc.sql("delete from document_title_link").update();
         jdbc.sql("delete from document_line").update();

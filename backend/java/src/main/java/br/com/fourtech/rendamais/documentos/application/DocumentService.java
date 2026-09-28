@@ -7,6 +7,7 @@ import br.com.fourtech.rendamais.auditoria.api.AuditEntry;
 import br.com.fourtech.rendamais.auditoria.api.AuditQuery;
 import br.com.fourtech.rendamais.auditoria.api.AuditTrail;
 import br.com.fourtech.rendamais.comercial.api.SalesOrderQueryApi;
+import br.com.fourtech.rendamais.documentos.api.CompetenceLockGuard;
 import br.com.fourtech.rendamais.documentos.domain.BusinessDocument;
 import br.com.fourtech.rendamais.documentos.domain.InvoiceProposal;
 import br.com.fourtech.rendamais.financeiro.api.TitleQueryApi;
@@ -64,9 +65,12 @@ public class DocumentService {
     private final Outbox outbox;
     private final CommandReceipts receipts;
     private final Clock clock;
+    /** Trava de competência fechada, implementada pelo fiscal (vazia se o módulo não estiver presente). */
+    private final List<CompetenceLockGuard> competenceLocks;
 
     public DocumentService(DocumentRepository repository, TitleQueryApi titles, SalesOrderQueryApi orders, AuditTrail audit,
-                           AuditQuery auditQuery, Outbox outbox, CommandReceipts receipts, Clock clock) {
+                           AuditQuery auditQuery, Outbox outbox, CommandReceipts receipts, Clock clock,
+                           List<CompetenceLockGuard> competenceLocks) {
         this.repository = repository;
         this.titles = titles;
         this.orders = orders;
@@ -75,13 +79,14 @@ public class DocumentService {
         this.outbox = outbox;
         this.receipts = receipts;
         this.clock = clock;
+        this.competenceLocks = List.copyOf(competenceLocks);
     }
 
     /**
      * Corpo do RegisterDocument, como chega da API: o pedido, os dados da nota emitida e, se for menor que o a emitir do
      * pedido, o valor da nota; valores em centavos como texto de inteiro (ADR-006). Linhas e vínculos vêm do pedido.
      */
-    public record RegisterRequest(String direction, String orderId, String series, String number, String issueDate,
+    public record RegisterRequest(String direction, String orderId, String kind, String series, String number, String issueDate,
                                   String competence, String amountCents, String notes) { }
 
     public record LinkRequest(String titleId, String amountCents) { }
@@ -100,11 +105,20 @@ public class DocumentService {
 
     /**
      * Pedido visto pelo caixa: recebido, faturado, a emitir (recebido sem nota), faturado além do recebido (depois de um
-     * estorno) e a nota proposta para o valor pedido (o a emitir, por padrão).
+     * estorno) e a nota proposta para o valor pedido (o a emitir, por padrão). Notas separadas (Sprint 7): o recebido é
+     * repartido entre produto e serviço na proporção do pedido, e cada tipo tem o seu faturado e o seu a emitir; a nota
+     * proposta é do tipo {@code kind}.
      */
     public record OrderInvoicing(SalesOrderQueryApi.OrderRef order, List<ParcelInvoicing> parcels, long receivedCents,
-                                 long invoicedCents, long toIssueCents, long beyondReceivedCents, long proposedCents,
-                                 InvoiceProposal.Result proposal) { }
+                                 long invoicedCents, long toIssueCents, long beyondReceivedCents, KindSplit product, KindSplit service,
+                                 BusinessDocument.LineKind kind, long proposedCents, InvoiceProposal.Result proposal) {
+        public KindSplit of(BusinessDocument.LineKind k) {
+            return k == BusinessDocument.LineKind.SERVICO ? service : product;
+        }
+    }
+
+    /** Um tipo da nota no pedido: total das linhas, recebido (proporcional), faturado e a emitir. */
+    public record KindSplit(long orderCents, long receivedCents, long invoicedCents, long toIssueCents) { }
 
     @Transactional(readOnly = true)
     public List<DocumentRepository.Summary> list(String search, DocumentRepository.Filter filter, YearMonth competence, UUID customerId) {
@@ -158,39 +172,89 @@ public class DocumentService {
         List<UUID> ids = refs.stream().flatMap(o -> o.titleIds().stream()).toList();
         Map<UUID, TitleView> byId = byId(titles.byIds(ids));
         Map<UUID, Long> invoiced = repository.invoiced(ids);
-        return refs.stream().map(o -> orderInvoicing(o, byId, invoiced, null))
+        Map<UUID, Map<BusinessDocument.LineKind, Long>> byKind = repository.invoicedByKind(refs.stream().map(SalesOrderQueryApi.OrderRef::id).toList());
+        return refs.stream().map(o -> orderInvoicing(o, byId, invoiced, byKind.getOrDefault(o.id(), Map.of()), null, null))
                 .filter(o -> !onlyToIssue || o.toIssueCents() > 0).toList();
     }
 
-    /** Um pedido visto pelo caixa, com a nota proposta para {@code amountCents} (o a emitir, se vazio). */
+    /**
+     * Um pedido visto pelo caixa, com a nota proposta do tipo {@code kind} (Produto, se houver produto a emitir) para
+     * {@code amountCents} (o a emitir do tipo, se vazio).
+     */
     @Transactional(readOnly = true)
-    public OrderInvoicing order(UUID orderId, String amountCents) {
+    public OrderInvoicing order(UUID orderId, String kind, String amountCents) {
         CurrentUserHolder.require(Permissions.DOCUMENT_READ);
         SalesOrderQueryApi.OrderRef o = confirmedOrder(orderId);
+        BusinessDocument.LineKind k = kind == null || kind.isBlank() ? null : kind(kind, o);
         Map<UUID, TitleView> byId = byId(titles.byIds(o.titleIds()));
-        OrderInvoicing all = orderInvoicing(o, byId, repository.invoiced(o.titleIds()), null);
-        return orderInvoicing(o, byId, repository.invoiced(o.titleIds()), amount(amountCents, all.toIssueCents(), o));
+        Map<BusinessDocument.LineKind, Long> byKind = repository.invoicedByKind(List.of(o.id())).getOrDefault(o.id(), Map.of());
+        OrderInvoicing all = orderInvoicing(o, byId, repository.invoiced(o.titleIds()), byKind, k, null);
+        return orderInvoicing(o, byId, repository.invoiced(o.titleIds()), byKind, all.kind(),
+                amount(amountCents, all.of(all.kind()).toIssueCents(), all.kind(), o));
     }
 
-    private OrderInvoicing orderInvoicing(SalesOrderQueryApi.OrderRef o, Map<UUID, TitleView> byId, Map<UUID, Long> invoiced, Long amount) {
+    private OrderInvoicing orderInvoicing(SalesOrderQueryApi.OrderRef o, Map<UUID, TitleView> byId, Map<UUID, Long> invoiced,
+                                          Map<BusinessDocument.LineKind, Long> invoicedByKind, BusinessDocument.LineKind kind, Long amount) {
         List<TitleView> ts = o.titleIds().stream().map(byId::get).filter(Objects::nonNull)
                 .sorted(java.util.Comparator.comparing(TitleView::dueDate).thenComparing(TitleView::code)).toList();
         List<InvoiceProposal.Parcel> parcels = ts.stream()
                 .map(t -> new InvoiceProposal.Parcel(t.id(), toIssue(t, invoiced.getOrDefault(t.id(), 0L)))).toList();
         long toIssue = InvoiceProposal.toIssue(parcels);
-        long proposed = amount == null ? toIssue : amount;
-        InvoiceProposal.Result proposal = InvoiceProposal.of(proposed, parcels, lines(o));
-        Map<UUID, Long> perTitle = proposal.links().stream()
-                .collect(Collectors.toMap(BusinessDocument.LinkRequest::titleId, l -> l.amount().cents()));
         long received = ts.stream().filter(t -> !"CANCELLED".equals(t.status())).mapToLong(TitleView::receivedCents).sum();
         long done = ts.stream().mapToLong(t -> invoiced.getOrDefault(t.id(), 0L)).sum();
+        long productTotal = kindTotal(o, BusinessDocument.LineKind.PRODUTO);
+        long serviceTotal = kindTotal(o, BusinessDocument.LineKind.SERVICO);
+        long productReceived = InvoiceProposal.productShare(received, productTotal, serviceTotal);
+        KindSplit product = split(productTotal, productReceived, invoicedByKind.getOrDefault(BusinessDocument.LineKind.PRODUTO, 0L), toIssue);
+        KindSplit service = split(serviceTotal, received - productReceived,
+                invoicedByKind.getOrDefault(BusinessDocument.LineKind.SERVICO, 0L), toIssue);
+        // Sem tipo pedido: Produto, se houver produto a emitir (ou se o pedido não tiver serviço a emitir).
+        BusinessDocument.LineKind k = kind != null ? kind
+                : product.toIssueCents() > 0 || (service.toIssueCents() == 0 && productTotal > 0)
+                ? BusinessDocument.LineKind.PRODUTO : BusinessDocument.LineKind.SERVICO;
+        long proposed = amount == null ? (k == BusinessDocument.LineKind.SERVICO ? service : product).toIssueCents() : amount;
+        InvoiceProposal.Result proposal = InvoiceProposal.of(proposed, parcels, lines(o, k));
+        Map<UUID, Long> perTitle = proposal.links().stream()
+                .collect(Collectors.toMap(BusinessDocument.LinkRequest::titleId, l -> l.amount().cents()));
         List<ParcelInvoicing> views = ts.stream().map(t -> new ParcelInvoicing(t, invoiced.getOrDefault(t.id(), 0L),
                 toIssue(t, invoiced.getOrDefault(t.id(), 0L)), perTitle.getOrDefault(t.id(), 0L))).toList();
-        return new OrderInvoicing(o, views, received, done, toIssue, Math.max(0, done - received), proposed, proposal);
+        return new OrderInvoicing(o, views, received, done, toIssue, Math.max(0, done - received), product, service, k, proposed, proposal);
     }
 
-    private static List<InvoiceProposal.OrderLine> lines(SalesOrderQueryApi.OrderRef o) {
-        return o.lines().stream().map(l -> new InvoiceProposal.OrderLine(l.kind(), l.description(), l.totalCents())).toList();
+    /** A emitir de um tipo: recebido do tipo − faturado do tipo, nunca acima do a emitir do pedido. */
+    private static KindSplit split(long total, long received, long invoiced, long orderToIssue) {
+        return new KindSplit(total, received, invoiced, Math.min(orderToIssue, Math.max(0, received - invoiced)));
+    }
+
+    private static long kindTotal(SalesOrderQueryApi.OrderRef o, BusinessDocument.LineKind kind) {
+        return o.lines().stream().filter(l -> l.totalCents() > 0 && InvoiceProposal.kindOf(l.kind()) == kind)
+                .mapToLong(SalesOrderQueryApi.LineRef::totalCents).sum();
+    }
+
+    /** Linhas do pedido do tipo da nota: a nota de produto só leva produto, e a de serviço só serviço. */
+    private static List<InvoiceProposal.OrderLine> lines(SalesOrderQueryApi.OrderRef o, BusinessDocument.LineKind kind) {
+        return o.lines().stream().filter(l -> InvoiceProposal.kindOf(l.kind()) == kind)
+                .map(l -> new InvoiceProposal.OrderLine(l.kind(), l.description(), l.totalCents())).toList();
+    }
+
+    /** Tipo pedido para a nota; o pedido precisa ter linha desse tipo. */
+    private static BusinessDocument.LineKind kind(String raw, SalesOrderQueryApi.OrderRef o) {
+        BusinessDocument.LineKind k;
+        try {
+            k = BusinessDocument.LineKind.valueOf(raw.strip().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new RuleViolationException("DOCUMENT_INVALID", "Tipo da nota inválido.",
+                    List.of(new FieldIssue("kind", "Use PRODUTO ou SERVICO.")));
+        }
+        if (kindTotal(o, k) == 0) {
+            throw new RuleViolationException("DOCUMENT_INVALID", "O pedido " + o.code() + " não tem " + label(k) + ".",
+                    List.of(new FieldIssue("kind", "O pedido não tem " + label(k) + ".")));
+        }
+        return k;
+    }
+
+    private static String label(BusinessDocument.LineKind k) {
+        return k == BusinessDocument.LineKind.SERVICO ? "serviço" : "produto";
     }
 
     private SalesOrderQueryApi.OrderRef confirmedOrder(UUID orderId) {
@@ -198,8 +262,8 @@ public class DocumentService {
                 "Pedido não encontrado ou não confirmado.", List.of(new FieldIssue("orderId", "Escolha um pedido confirmado."))));
     }
 
-    /** Valor pedido para a nota: vazio é o a emitir; maior que zero e até o a emitir do pedido. */
-    private static long amount(String raw, long toIssue, SalesOrderQueryApi.OrderRef o) {
+    /** Valor pedido para a nota: vazio é o a emitir do tipo; maior que zero e até o a emitir do tipo no pedido. */
+    private static long amount(String raw, long toIssue, BusinessDocument.LineKind kind, SalesOrderQueryApi.OrderRef o) {
         if (raw == null || raw.isBlank()) return toIssue;
         List<FieldIssue> issues = new ArrayList<>();
         Money m = cents(raw, "amountCents", issues);
@@ -209,9 +273,9 @@ public class DocumentService {
                     List.of(new FieldIssue("amountCents", "Deve ser maior que zero.")));
         }
         if (m.cents() > toIssue) {
-            throw new RuleViolationException("DOCUMENT_EXCEEDS_RECEIVED", "O valor de " + m.toBrl() + " passa do recebido sem nota do pedido "
-                    + o.code() + " (" + brl(toIssue) + "). A nota só fatura o que já foi recebido.",
-                    List.of(new FieldIssue("amountCents", "A emitir do pedido: " + brl(toIssue) + ".")));
+            throw new RuleViolationException("DOCUMENT_EXCEEDS_RECEIVED", "O valor de " + m.toBrl() + " passa do recebido de " + label(kind)
+                    + " sem nota do pedido " + o.code() + " (" + brl(toIssue) + "). A nota só fatura o que já foi recebido.",
+                    List.of(new FieldIssue("amountCents", "A emitir de " + label(kind) + ": " + brl(toIssue) + ".")));
         }
         return m.cents();
     }
@@ -230,19 +294,32 @@ public class DocumentService {
 
         Parsed p = parse(r);
         SalesOrderQueryApi.OrderRef order = confirmedOrder(p.orderId());
+        // Tipo informado que o pedido não tem: recusado antes de olhar o a emitir.
+        if (p.kind() != null && !p.kind().isBlank()) kind(p.kind(), order);
         duplicate(p.series(), p.number(), order.customerId());
+        competenceLocks.forEach(g -> g.checkOpen(p.competence(), "registrar a nota"));
         // O a emitir é lido com as parcelas bloqueadas: outra nota do mesmo pedido espera esta terminar.
         List<TitleView> before = titles.byIds(order.titleIds());
         Map<UUID, Long> invoiced = repository.lockInvoicing(before.stream()
                 .collect(Collectors.toMap(TitleView::id, TitleView::originalCents)));
-        OrderInvoicing now = orderInvoicing(order, byId(titles.byIds(order.titleIds())), invoiced, null);
+        // Relido com as parcelas bloqueadas: o faturado por tipo das notas simultâneas do mesmo pedido já está aqui.
+        Map<BusinessDocument.LineKind, Long> byKind = repository.invoicedByKind(List.of(order.id())).getOrDefault(order.id(), Map.of());
+        Map<UUID, TitleView> locked = byId(titles.byIds(order.titleIds()));
+        OrderInvoicing now = orderInvoicing(order, locked, invoiced, byKind, null, null);
         if (now.toIssueCents() == 0) {
             throw new RuleViolationException("DOCUMENT_EXCEEDS_RECEIVED", "O pedido " + order.code()
                     + " não tem recebimento sem nota: a nota só fatura o que já foi recebido.",
                     List.of(new FieldIssue("orderId", "Nada a emitir neste pedido.")));
         }
-        long amount = amount(p.amountCents(), now.toIssueCents(), order);
-        InvoiceProposal.Result proposal = orderInvoicing(order, byId(titles.byIds(order.titleIds())), invoiced, amount).proposal();
+        BusinessDocument.LineKind kind = resolveKind(p.kind(), order);
+        long kindToIssue = now.of(kind).toIssueCents();
+        if (kindToIssue == 0) {
+            throw new RuleViolationException("DOCUMENT_EXCEEDS_RECEIVED", "O pedido " + order.code() + " não tem recebimento de "
+                    + label(kind) + " sem nota: a nota só fatura o que já foi recebido.",
+                    List.of(new FieldIssue("kind", "Nada a emitir de " + label(kind) + " neste pedido.")));
+        }
+        long amount = amount(p.amountCents(), kindToIssue, kind, order);
+        InvoiceProposal.Result proposal = orderInvoicing(order, locked, invoiced, byKind, kind, amount).proposal();
         Instant at = clock.instant();
         BusinessDocument d = BusinessDocument.register(repository.nextCode(), BusinessDocument.Direction.SAIDA, order.customerId(),
                 order.id(), p.series(), p.number(), p.issueDate(), p.competence(), proposal.lines(), p.notes(), at, user.username());
@@ -259,6 +336,7 @@ public class DocumentService {
         changes.put("number", new AuditEntry.Change(null, "Série " + d.series() + " nº " + d.number()));
         changes.put("customer", new AuditEntry.Change(null, customerLabel));
         changes.put("order", new AuditEntry.Change(null, order.code()));
+        changes.put("kind", new AuditEntry.Change(null, d.kind()));
         changes.put("issueDate", new AuditEntry.Change(null, d.issueDate().toString()));
         changes.put("competence", new AuditEntry.Change(null, d.competence().toString()));
         changes.put("totalCents", new AuditEntry.Change(null, d.total().centsAsString()));
@@ -272,6 +350,7 @@ public class DocumentService {
         payload.put("issueDate", d.issueDate().toString());
         payload.put("competence", d.competence().toString());
         payload.put("totalCents", d.total().centsAsString());
+        payload.put("kind", d.kind());
         payload.put("lines", d.lines().stream().map(l -> Map.of("description", l.description(), "kind", l.kind().name(),
                 "amountCents", l.amount().centsAsString())).toList());
         outbox.append("DocumentRegistered", ENTITY, d.id().toString(), payload, user.username());
@@ -390,6 +469,7 @@ public class DocumentService {
         if (current.status() == BusinessDocument.Status.CANCELADO) return view(id);
         if (current.version() != expectedVersion) throw new VersionConflictException(ENTITY, expectedVersion, current.version());
         String why = reason(reason, "Informe o motivo do cancelamento.");
+        competenceLocks.forEach(g -> g.checkOpen(current.competence(), "cancelar a nota"));
         BusinessDocument cancelled = current.cancel(why, clock.instant(), user.username());
         unlinkTitles(user, current, current.activeLinks(), why);
         repository.update(cancelled, current.version());
@@ -472,6 +552,21 @@ public class DocumentService {
         return view(id);
     }
 
+    /**
+     * Tipo da nota (notas separadas, decisão do PO na Sprint 7): obrigatório quando o pedido tem produto e serviço; num
+     * pedido de um tipo só, é esse tipo.
+     */
+    private static BusinessDocument.LineKind resolveKind(String raw, SalesOrderQueryApi.OrderRef o) {
+        if (raw != null && !raw.isBlank()) return kind(raw, o);
+        boolean product = kindTotal(o, BusinessDocument.LineKind.PRODUTO) > 0;
+        boolean service = kindTotal(o, BusinessDocument.LineKind.SERVICO) > 0;
+        if (product && service) {
+            throw new RuleViolationException("DOCUMENT_INVALID", "Escolha o tipo da nota: produto (NF-e) ou serviço (NFS-e).",
+                    List.of(new FieldIssue("kind", "Escolha Produto ou Serviço.")));
+        }
+        return service ? BusinessDocument.LineKind.SERVICO : BusinessDocument.LineKind.PRODUTO;
+    }
+
     private void duplicate(String series, String number, UUID customer) {
         repository.findActiveNumber(BusinessDocument.Direction.SAIDA, customer, series, number).ifPresent(code -> {
             throw new RuleViolationException("DOCUMENT_DUPLICATE", "A nota série " + series + " nº " + number
@@ -485,8 +580,8 @@ public class DocumentService {
                 .map(l -> Map.of("titleId", l.titleId().toString(), "amountCents", l.amount().centsAsString())).toList());
     }
 
-    private record Parsed(UUID orderId, String series, String number, LocalDate issueDate, YearMonth competence, String amountCents,
-                          String notes) { }
+    private record Parsed(UUID orderId, String kind, String series, String number, LocalDate issueDate, YearMonth competence,
+                          String amountCents, String notes) { }
 
     /** Formato e campos obrigatórios; as regras com o pedido e as parcelas vêm depois. */
     private Parsed parse(RegisterRequest r) {
@@ -528,7 +623,7 @@ public class DocumentService {
         if (r.notes() != null && r.notes().strip().length() > 500) issues.add(new FieldIssue("notes", "Máximo de 500 caracteres."));
         if (!issues.isEmpty()) throw new RuleViolationException("DOCUMENT_INVALID", "Corrija os campos indicados.", issues);
         String notes = r.notes() == null || r.notes().isBlank() ? null : r.notes().strip();
-        return new Parsed(order, series.toUpperCase(java.util.Locale.ROOT), number, issue, competence, r.amountCents(), notes);
+        return new Parsed(order, r.kind(), series.toUpperCase(java.util.Locale.ROOT), number, issue, competence, r.amountCents(), notes);
     }
 
     private static List<BusinessDocument.LinkRequest> links(List<LinkRequest> raw, List<FieldIssue> issues) {

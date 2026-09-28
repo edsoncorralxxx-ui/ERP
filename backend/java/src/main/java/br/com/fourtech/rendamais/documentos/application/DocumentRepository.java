@@ -55,6 +55,9 @@ public interface DocumentRepository {
     /** Faturado atual das parcelas (zero para as que nunca tiveram vínculo). */
     Map<UUID, Long> invoiced(List<UUID> titleIds);
 
+    /** Faturado de cada pedido por tipo da linha (Σ linhas das notas ativas do pedido), para as notas separadas. */
+    Map<UUID, Map<BusinessDocument.LineKind, Long>> invoicedByKind(List<UUID> orderIds);
+
     /** Vínculos ativos das parcelas, de documentos ativos. */
     List<TitleLink> activeLinks(List<UUID> titleIds);
 }

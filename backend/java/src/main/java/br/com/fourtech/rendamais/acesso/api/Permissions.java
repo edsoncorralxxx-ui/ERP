@@ -40,6 +40,17 @@ public final class Permissions {
     public static final String DOCUMENT_LINK = "document.link";
     public static final String DOCUMENT_CLASSIFY = "document.classify";
     public static final String DOCUMENT_CANCEL = "document.cancel";
+    /** Ver competências, simulações, conferências e parâmetros fiscais (Sprint 7). */
+    public static final String TAX_READ = "tax.read";
+    /** Criar revisão dos parâmetros do Simples Nacional. */
+    public static final String TAX_PARAMETER_ADMIN = "tax_parameter.admin";
+    /** Simular a competência (RecordTaxSimulation). */
+    public static final String TAX_PERIOD_SIMULATE = "tax_period.simulate";
+    /** Informar o RBT12 e registrar a conferência do contador (ConfirmTaxPeriod). */
+    public static final String TAX_PERIOD_CONFIRM = "tax_period.confirm";
+    public static final String TAX_PERIOD_CLOSE = "tax_period.close";
+    /** Reabrir competência fechada, com motivo. */
+    public static final String TAX_PERIOD_REOPEN = "tax_period.reopen";
     public static final String USER_ADMIN = "user.admin";
 
     private Permissions() { }

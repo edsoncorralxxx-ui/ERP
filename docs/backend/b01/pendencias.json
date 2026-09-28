@@ -119,7 +119,8 @@
       "premissaB01": "Simulação indisponível (NOT_CALCULABLE) sem parâmetros confirmados",
       "bloqueia": "B10 fiscal",
       "responsavel": "Contador + financeiro",
-      "adr": "ADR-011"
+      "adr": "ADR-011",
+      "resposta": "Respondida pelo PO no planning da Sprint 7 (28/09/2026): Simples Nacional, produto no Anexo II e serviço no Anexo III, com as faixas da planilha FOURTECH (revisão 1, vigência 09/2026); receita pelas notas por competência; o Renda+ começa do zero, então o RBT12 é o informado pelo contador até haver 12 meses de notas"
     },
     {
       "id": "PD-014",

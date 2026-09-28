@@ -89,12 +89,18 @@ class DocumentosApiTest extends CadastrosApiTest {
         return campo(r.body(), "id");
     }
 
-    /** Registra a nota do pedido; {@code valor} nulo = todo o recebido sem nota. */
+    /** Registra a nota do pedido (tipo do pedido, se tiver um só); {@code valor} nulo = todo o recebido sem nota. */
     private HttpResponse<String> registra(String chave, String pedido, String numero, Long valor) throws Exception {
+        return registra(chave, pedido, null, numero, valor);
+    }
+
+    /** Registra a nota do tipo PRODUTO ou SERVICO (nulo = sem tipo); {@code valor} nulo = todo o a emitir do tipo. */
+    private HttpResponse<String> registra(String chave, String pedido, String tipo, String numero, Long valor) throws Exception {
         return post("/api/v1/documents", chave, """
-                {"direction":"SAIDA","orderId":"%s","series":"1","number":"%s","issueDate":"%s","competence":"%s",%s
+                {"direction":"SAIDA","orderId":"%s",%s"series":"1","number":"%s","issueDate":"%s","competence":"%s",%s
                  "notes":"NF-e emitida no portal da SEFAZ"}
-                """.formatted(pedido, numero, HOJE, COMPETENCIA, valor == null ? "" : "\"amountCents\":\"" + valor + "\","));
+                """.formatted(pedido, tipo == null ? "" : "\"kind\":\"" + tipo + "\",", numero, HOJE, COMPETENCIA,
+                valor == null ? "" : "\"amountCents\":\"" + valor + "\","));
     }
 
     private String faturado(String... titulos) throws Exception {
@@ -139,55 +145,76 @@ class DocumentosApiTest extends CadastrosApiTest {
         assertThat(nada.statusCode()).isEqualTo(422);
         assertThat(nada.body()).contains("DOCUMENT_EXCEEDS_RECEIVED", "não tem recebimento sem nota");
 
-        // Recebidos R$ 20.000,00 da parcela 1: o pedido aparece com R$ 20.000,00 a emitir, repartidos entre produto e serviço.
+        // Recebidos R$ 20.000,00 da parcela 1: o pedido aparece com R$ 20.000,00 a emitir, repartidos entre produto e serviço
+        // na proporção do pedido (notas separadas, Sprint 7).
         String r1 = recebe("s6-rec-0001", t1, 2_000_000);
         String aEmitir = get("/api/v1/invoicing/orders").body();
         assertThat(aEmitir).contains(pedido, "\"receivedCents\":\"2000000\"", "\"invoicedCents\":\"0\"", "\"toIssueCents\":\"2000000\"",
-                "\"productCents\":\"1286174\"", "\"serviceCents\":\"713826\"");
+                "\"productCents\":\"1286174\"", "\"serviceCents\":\"713826\"",
+                "\"product\":{\"orderCents\":\"10000000\",\"receivedCents\":\"1286174\",\"invoicedCents\":\"0\",\"toIssueCents\":\"1286174\"}");
+        // A nota proposta é de um tipo só: a de produto leva só o equipamento; a de serviço, só a instalação.
         String proposta = get("/api/v1/invoicing/orders/" + pedido + "?amountCents=1000000").body();
-        assertThat(proposta).contains("\"proposedCents\":\"1000000\"", "\"proposedCents\":\"0\"",
-                "\"description\":\"Balança de fluxo BF-200\",\"kind\":\"PRODUTO\",\"amountCents\":\"643087\"",
-                "\"description\":\"Instalação e comissionamento\",\"kind\":\"SERVICO\",\"amountCents\":\"356913\"");
+        assertThat(proposta).contains("\"kind\":\"PRODUTO\"", "\"proposedCents\":\"1000000\"",
+                "\"description\":\"Balança de fluxo BF-200\",\"kind\":\"PRODUTO\",\"amountCents\":\"1000000\"")
+                .doesNotContain("Instalação e comissionamento");
+        String propostaServico = get("/api/v1/invoicing/orders/" + pedido + "?kind=SERVICO").body();
+        assertThat(propostaServico).contains("\"kind\":\"SERVICO\"", "\"proposedCents\":\"713826\"",
+                "\"description\":\"Instalação e comissionamento\",\"kind\":\"SERVICO\",\"amountCents\":\"713826\"")
+                .doesNotContain("Balança de fluxo BF-200");
 
-        // Acima do recebido sem nota: recusado com o a emitir do pedido.
-        HttpResponse<String> acima = registra("s6-doc-0001", pedido, "1234", 2_000_001L);
+        // Pedido com produto e serviço exige o tipo; acima do a emitir do tipo é recusado com o a emitir dele.
+        HttpResponse<String> semTipo = registra("s6-doc-0001", pedido, "1234", null);
+        assertThat(semTipo.statusCode()).isEqualTo(422);
+        assertThat(semTipo.body()).contains("DOCUMENT_INVALID", "\"field\":\"kind\"");
+        HttpResponse<String> acima = registra("s6-doc-0011", pedido, "PRODUTO", "1234", 1_286_175L);
         assertThat(acima.statusCode()).isEqualTo(422);
-        assertThat(acima.body()).contains("DOCUMENT_EXCEEDS_RECEIVED", "\"field\":\"amountCents\"", "A emitir do pedido: R$ 20.000,00.");
+        assertThat(acima.body()).contains("DOCUMENT_EXCEEDS_RECEIVED", "\"field\":\"amountCents\"", "A emitir de produto: R$ 12.861,74.");
 
-        // A nota do recebido: linhas e vínculo montados pelo sistema; o saldo a receber não muda.
-        HttpResponse<String> nf = registra("s6-doc-0002", pedido, "1234", null);
+        // A nota de produto e a de serviço do mesmo recebimento: linhas e vínculo montados pelo sistema; o saldo a receber não muda.
+        HttpResponse<String> nf = registra("s6-doc-0002", pedido, "PRODUTO", "1234", null);
         assertThat(nf.statusCode()).as(nf.body()).isEqualTo(201);
         String d1 = campo(nf.body(), "id");
         assertThat(campo(nf.body(), "code")).matches("DF\\d{5}");
-        assertThat(nf.body()).contains("\"orderId\":\"" + pedido + "\"", "\"orderCode\":\"PV", "\"totalCents\":\"2000000\"",
-                "\"linkedCents\":\"2000000\"", "\"unlinkedCents\":\"0\"", "\"competence\":\"" + COMPETENCIA + "\"",
-                "\"kind\":\"PRODUTO\",\"amountCents\":\"1286174\"", "\"kind\":\"SERVICO\",\"amountCents\":\"713826\"",
-                "\"titleId\":\"" + t1 + "\"");
-        assertThat(campo(registra("s6-doc-0002", pedido, "1234", null).body(), "id")).isEqualTo(d1);
-        assertThat(registra("s6-doc-0002", pedido, "1234", 1L).body()).contains("IDEMPOTENCY_KEY_REUSED");
+        assertThat(nf.body()).contains("\"kind\":\"PRODUTO\",\"customerId\"", "\"orderId\":\"" + pedido + "\"", "\"orderCode\":\"PV",
+                "\"totalCents\":\"1286174\"", "\"linkedCents\":\"1286174\"", "\"unlinkedCents\":\"0\"", "\"competence\":\"" + COMPETENCIA + "\"",
+                "\"kind\":\"PRODUTO\",\"amountCents\":\"1286174\"", "\"titleId\":\"" + t1 + "\"").doesNotContain("\"kind\":\"SERVICO\"");
+        assertThat(campo(registra("s6-doc-0002", pedido, "PRODUTO", "1234", null).body(), "id")).isEqualTo(d1);
+        assertThat(registra("s6-doc-0002", pedido, "PRODUTO", "1234", 1L).body()).contains("IDEMPOTENCY_KEY_REUSED");
+        assertThat(get("/api/v1/invoicing/orders").body()).contains(pedido, "\"productCents\":\"0\"", "\"serviceCents\":\"713826\"");
+        assertThat(registra("s6-doc-0012", pedido, "PRODUTO", "1237", null).body()).contains("DOCUMENT_EXCEEDS_RECEIVED",
+                "não tem recebimento de produto sem nota");
+        HttpResponse<String> nfs = registra("s6-doc-0013", pedido, "SERVICO", "5001", null);
+        assertThat(nfs.statusCode()).as(nfs.body()).isEqualTo(201);
+        assertThat(nfs.body()).contains("\"kind\":\"SERVICO\",\"customerId\"", "\"totalCents\":\"713826\"", "\"titleId\":\"" + t1 + "\"");
         assertThat(get("/api/v1/receivables/" + t1).body()).contains("\"balanceCents\":\"3550000\"");
         assertThat(get("/api/v1/invoicing/orders").body()).doesNotContain(pedido);
         assertThat(registra("s6-doc-0003", pedido, "1235", null).body()).contains("não tem recebimento sem nota");
+        // Pedido só de equipamento não tem nota de serviço.
+        assertThat(registra("s6-doc-0014", pedidoSimples("s6-ped-0003", 10_000), "SERVICO", "5009", null).body())
+                .contains("DOCUMENT_INVALID", "\"field\":\"kind\"", "não tem serviço");
 
         // Mesmo número, série e cliente: recusado apontando o documento existente (zeros à esquerda não contam).
         recebe("s6-rec-0002", t1, 3_550_000);
-        HttpResponse<String> repetida = registra("s6-doc-0004", pedido, "01234", null);
+        HttpResponse<String> repetida = registra("s6-doc-0004", pedido, "PRODUTO", "01234", null);
         assertThat(repetida.statusCode()).isEqualTo(422);
         assertThat(repetida.body()).contains("DOCUMENT_DUPLICATE", "\"field\":\"number\"", campo(nf.body(), "code"));
 
-        // Recebidos o resto da parcela 1 e R$ 10.000,00 da parcela 2: uma nota parcial de R$ 30.000,00 vai à parcela mais antiga.
+        // Recebidos o resto da parcela 1 e R$ 10.000,00 da parcela 2 (R$ 65.500,00 no pedido): a emitir de produto
+        // R$ 29.260,45 e de serviço R$ 16.239,55. Uma nota de produto parcial de R$ 20.000,00 vai à parcela mais antiga.
         String r3 = recebe("s6-rec-0003", t2, 1_000_000);
-        assertThat(get("/api/v1/invoicing/orders").body()).contains("\"toIssueCents\":\"4550000\"");
-        HttpResponse<String> parcial = registra("s6-doc-0005", pedido, "1235", 3_000_000L);
+        assertThat(get("/api/v1/invoicing/orders").body()).contains("\"toIssueCents\":\"4550000\"", "\"productCents\":\"2926045\"",
+                "\"serviceCents\":\"1623955\"");
+        HttpResponse<String> parcial = registra("s6-doc-0005", pedido, "PRODUTO", "1235", 2_000_000L);
         assertThat(parcial.statusCode()).as(parcial.body()).isEqualTo(201);
         assertThat(parcial.body()).contains("\"titleId\":\"" + t1 + "\"").doesNotContain("\"titleId\":\"" + t2 + "\"");
-        HttpResponse<String> resto = registra("s6-doc-0006", pedido, "1236", null);
+        assertThat(registra("s6-doc-0015", pedido, "PRODUTO", "1236", null).statusCode()).isEqualTo(201);
+        HttpResponse<String> resto = registra("s6-doc-0006", pedido, "SERVICO", "5002", null);
         assertThat(resto.statusCode()).as(resto.body()).isEqualTo(201);
         String d3 = campo(resto.body(), "id");
-        assertThat(resto.body()).contains("\"totalCents\":\"1550000\"", "\"titleId\":\"" + t1 + "\",\"titleCode\"", "\"titleId\":\"" + t2 + "\"");
+        assertThat(resto.body()).contains("\"totalCents\":\"1623955\"", "\"titleId\":\"" + t1 + "\",\"titleCode\"", "\"titleId\":\"" + t2 + "\"");
         String fat = faturado(t1, t2);
         assertThat(fat).contains("\"invoicedCents\":\"5550000\",\"toInvoiceCents\":\"0\",\"toIssueCents\":\"0\"",
-                "\"invoicedCents\":\"1000000\",\"toInvoiceCents\":\"9000000\",\"toIssueCents\":\"0\"", "\"number\":\"1236\"");
+                "\"invoicedCents\":\"1000000\",\"toInvoiceCents\":\"9000000\",\"toIssueCents\":\"0\"", "\"number\":\"5002\"");
 
         // Vínculo manual também respeita o caixa: desfeito o da parcela 2, a parcela de outro pedido sem recebimento é recusada.
         String vinculoT2 = jdbc.sql("select id::text from document_title_link where document_id = cast(:d as uuid) and title_id = cast(:t as uuid)")
@@ -208,18 +235,19 @@ class DocumentosApiTest extends CadastrosApiTest {
         assertThat(religa.statusCode()).as(religa.body()).isEqualTo(200);
         assertThat(withVersion("POST", "/api/v1/documents/" + d3 + "/links", "4", "{\"links\":[]}").statusCode()).isEqualTo(422);
 
-        // Cancelar a nota 1236: o recebido volta a ficar sem nota e o pedido volta à lista a emitir.
+        // Cancelar a nota 5002: o recebido de serviço volta a ficar sem nota e o pedido volta à lista a emitir.
         HttpResponse<String> canc = withVersion("POST", "/api/v1/documents/" + d3 + "/cancellations", "4",
                 "{\"reason\":\"Valor digitado errado\"}");
         assertThat(canc.statusCode()).as(canc.body()).isEqualTo(200);
         assertThat(canc.body()).contains("\"status\":\"CANCELADO\"", "\"linkedCents\":\"0\"");
         assertThat(withVersion("POST", "/api/v1/documents/" + d3 + "/cancellations", "4", "{\"reason\":\"de novo\"}").body())
                 .contains("Valor digitado errado");
-        assertThat(get("/api/v1/invoicing/orders").body()).contains(pedido, "\"toIssueCents\":\"1550000\"");
+        assertThat(get("/api/v1/invoicing/orders").body()).contains(pedido, "\"toIssueCents\":\"1623955\"", "\"productCents\":\"0\"",
+                "\"serviceCents\":\"1623955\"");
         assertThat(get("/api/v1/documents?status=CANCELADOS").body()).contains(d3).doesNotContain(d1);
         assertThat(get("/api/v1/documents?competence=" + COMPETENCIA).body()).contains(d1).doesNotContain(d3);
         // O número da nota cancelada fica livre para o registro correto.
-        assertThat(registra("s6-doc-0007", pedido, "1236", null).statusCode()).isEqualTo(201);
+        assertThat(registra("s6-doc-0007", pedido, "SERVICO", "5002", null).statusCode()).isEqualTo(201);
 
         // Estorno de recebimento já faturado é permitido; o pedido mostra o faturado além do recebido.
         assertThat(post("/api/v1/settlements/" + r1 + "/reversals", null, "{\"reason\":\"Cheque devolvido\"}").statusCode()).isEqualTo(200);
@@ -229,12 +257,12 @@ class DocumentosApiTest extends CadastrosApiTest {
         // Histórico na nota e na parcela; eventos com o pedido.
         assertThat(get("/api/v1/documents/" + d1 + "/history").body()).contains("DOCUMENT_REGISTERED", "DOCUMENT_LINKED_TO_TITLES");
         assertThat(get("/api/v1/receivables/" + t1 + "/history").body()).contains("FINANCIAL_TITLE_DOCUMENT_LINKED", "nº 1234");
-        assertThat(conta("select count(*) from outbox_event where event_type = 'DocumentRegistered'")).isEqualTo(4);
+        assertThat(conta("select count(*) from outbox_event where event_type = 'DocumentRegistered'")).isEqualTo(6);
         assertThat(conta("select count(*) from outbox_event where event_type = 'DocumentCancelled'")).isEqualTo(1);
         assertThat(conta("select count(*) from outbox_event where event_type = 'DocumentLinkRemoved'")).isEqualTo(1);
         assertThat(jdbc.sql("select payload::text from outbox_event where event_type = 'DocumentRegistered' and aggregate_id = :id")
-                .param("id", d1).query(String.class).single()).contains("\"totalCents\": \"2000000\"", "\"orderId\": \"" + pedido + "\"",
-                "\"direction\": \"SAIDA\"");
+                .param("id", d1).query(String.class).single()).contains("\"totalCents\": \"1286174\"", "\"orderId\": \"" + pedido + "\"",
+                "\"direction\": \"SAIDA\"", "\"kind\": \"PRODUTO\"");
         faturadoConfereComVinculos();
     }
 
@@ -284,7 +312,7 @@ class DocumentosApiTest extends CadastrosApiTest {
         pool.shutdown();
         assertThat(respostas).extracting(HttpResponse::statusCode).containsExactlyInAnyOrder(201, 422);
         assertThat(respostas.stream().filter(r -> r.statusCode() == 422).findFirst().orElseThrow().body())
-                .contains("DOCUMENT_EXCEEDS_RECEIVED", "A emitir do pedido: R$ 30,00.");
+                .contains("DOCUMENT_EXCEEDS_RECEIVED", "A emitir de produto: R$ 30,00.");
         assertThat(conta("select count(*) from business_document")).isEqualTo(1);
         assertThat(conta("select count(*) from document_title_link")).isEqualTo(1);
         faturadoConfereComVinculos();

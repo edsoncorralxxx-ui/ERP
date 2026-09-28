@@ -250,4 +250,11 @@ public final class BusinessDocument {
     public String createdBy() { return createdBy; }
     public Instant updatedAt() { return updatedAt; }
     public String updatedBy() { return updatedBy; }
+
+    /** Tipo da nota pelas linhas: PRODUTO, SERVICO ou MISTO (notas registradas antes das notas separadas da Sprint 7). */
+    public String kind() {
+        boolean product = lines.stream().anyMatch(l -> l.kind() == LineKind.PRODUTO);
+        boolean service = lines.stream().anyMatch(l -> l.kind() == LineKind.SERVICO);
+        return product && service ? "MISTO" : service ? LineKind.SERVICO.name() : LineKind.PRODUTO.name();
+    }
 }

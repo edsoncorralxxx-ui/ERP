@@ -45,14 +45,14 @@ class DocumentController {
     record LinkDto(String id, String titleId, String titleCode, String titleLabel, String amountCents, String status,
                    String removedReason, Instant removedAt, String removedBy, Instant createdAt, String createdBy) { }
 
-    record DocumentDto(String id, String code, String direction, String customerId, String customerCode, String customerName,
+    record DocumentDto(String id, String code, String direction, String kind, String customerId, String customerCode, String customerName,
                        String orderId, String orderCode, String series, String number, LocalDate issueDate, String competence, String totalCents, String linkedCents,
                        String unlinkedCents, List<LineDto> lines, List<LinkDto> links, String notes, String operationNature,
                        String projectId, String projectCode, int classificationRevision, String status, String cancelReason,
                        String version, Instant createdAt, String createdBy, Instant updatedAt, String updatedBy) {
         static DocumentDto of(DocumentRepository.Summary s) {
             BusinessDocument d = s.document();
-            return new DocumentDto(d.id().toString(), d.code(), d.direction().name(), d.partnerId().toString(), s.partnerCode(),
+            return new DocumentDto(d.id().toString(), d.code(), d.direction().name(), d.kind(), d.partnerId().toString(), s.partnerCode(),
                     s.partnerName(), d.orderId() == null ? null : d.orderId().toString(), s.orderCode(), d.series(), d.number(), d.issueDate(), d.competence().toString(), d.total().centsAsString(),
                     d.linked().centsAsString(), d.unlinked().centsAsString(),
                     d.lines().stream().map(l -> new LineDto(l.seq(), l.description(), l.kind().name(), l.amount().centsAsString())).toList(),
@@ -88,18 +88,30 @@ class DocumentController {
 
     record ProposedLineDto(int seq, String description, String kind, String amountCents) { }
 
-    /** Pedido visto pelo caixa: recebido, faturado, a emitir e a nota proposta (linhas e parcelas). */
+    /** Um tipo da nota no pedido: total das linhas, recebido (proporcional), faturado e a emitir. */
+    record KindDto(String orderCents, String receivedCents, String invoicedCents, String toIssueCents) {
+        static KindDto of(DocumentService.KindSplit k) {
+            return new KindDto(Long.toString(k.orderCents()), Long.toString(k.receivedCents()), Long.toString(k.invoicedCents()),
+                    Long.toString(k.toIssueCents()));
+        }
+    }
+
+    /**
+     * Pedido visto pelo caixa: recebido, faturado, a emitir, o a emitir de produto ({@code productCents}) e de serviço
+     * ({@code serviceCents}), o detalhe de cada tipo e a nota proposta do tipo {@code kind} (linhas e parcelas).
+     */
     record OrderInvoicingDto(String id, String orderCode, String orderStatus, String customerId, String customerCode, String customerName,
                              String projectId, String totalCents, String receivedCents, String invoicedCents, String toIssueCents,
-                             String beyondReceivedCents, String proposedCents, String productCents, String serviceCents,
-                             List<ParcelDto> parcels, List<ProposedLineDto> lines) {
+                             String beyondReceivedCents, String productCents, String serviceCents, KindDto product, KindDto service,
+                             String kind, String proposedCents, List<ParcelDto> parcels, List<ProposedLineDto> lines) {
         static OrderInvoicingDto of(DocumentService.OrderInvoicing o) {
             var r = o.order();
             return new OrderInvoicingDto(r.id().toString(), r.code(), r.status(), r.customerId().toString(), r.customerCode(),
                     r.customerName(), r.projectId() == null ? null : r.projectId().toString(), Long.toString(r.totalCents()),
                     Long.toString(o.receivedCents()), Long.toString(o.invoicedCents()), Long.toString(o.toIssueCents()),
-                    Long.toString(o.beyondReceivedCents()), Long.toString(o.proposedCents()), Long.toString(o.proposal().productCents()),
-                    Long.toString(o.proposal().serviceCents()),
+                    Long.toString(o.beyondReceivedCents()), Long.toString(o.product().toIssueCents()),
+                    Long.toString(o.service().toIssueCents()), KindDto.of(o.product()), KindDto.of(o.service()), o.kind().name(),
+                    Long.toString(o.proposedCents()),
                     o.parcels().stream().map(p -> new ParcelDto(p.title().id().toString(), p.title().code(), p.title().label(),
                             p.title().dueDate(), p.title().status(), Long.toString(p.title().originalCents()),
                             Long.toString(p.title().receivedCents()), Long.toString(p.invoicedCents()), Long.toString(p.toIssueCents()),
@@ -190,10 +202,14 @@ class DocumentController {
         return service.orders(search, onlyToIssue).stream().map(OrderInvoicingDto::of).toList();
     }
 
-    /** Um pedido visto pelo caixa, com a nota proposta para {@code amountCents} (o a emitir, se vazio). */
+    /**
+     * Um pedido visto pelo caixa, com a nota proposta do tipo {@code kind} (PRODUTO ou SERVICO; Produto, se houver) para
+     * {@code amountCents} (o a emitir do tipo, se vazio).
+     */
     @GetMapping("/invoicing/orders/{orderId}")
-    OrderInvoicingDto order(@PathVariable UUID orderId, @RequestParam(value = "amountCents", required = false) String amountCents) {
-        return OrderInvoicingDto.of(service.order(orderId, amountCents));
+    OrderInvoicingDto order(@PathVariable UUID orderId, @RequestParam(value = "kind", required = false) String kind,
+                            @RequestParam(value = "amountCents", required = false) String amountCents) {
+        return OrderInvoicingDto.of(service.order(orderId, kind, amountCents));
     }
 
     private static ResponseEntity<DocumentDto> respond(HttpStatus status, DocumentRepository.Summary s) {

@@ -196,6 +196,24 @@ class JdbcDocumentRepository implements DocumentRepository {
     }
 
     @Override
+    public Map<UUID, Map<BusinessDocument.LineKind, Long>> invoicedByKind(List<UUID> orderIds) {
+        Map<UUID, Map<BusinessDocument.LineKind, Long>> out = new HashMap<>();
+        if (orderIds.isEmpty()) return out;
+        jdbc.sql("""
+                select d.order_id, l.kind, sum(l.amount_cents) as cents
+                  from business_document d join document_line l on l.document_id = d.id
+                 where d.order_id in (:ids) and d.status = 'ATIVO'
+                 group by d.order_id, l.kind
+                """)
+                .param("ids", orderIds)
+                .query(rs -> {
+                    out.computeIfAbsent(rs.getObject("order_id", UUID.class), k -> new HashMap<>())
+                            .put(BusinessDocument.LineKind.valueOf(rs.getString("kind")), rs.getLong("cents"));
+                });
+        return out;
+    }
+
+    @Override
     public List<TitleLink> activeLinks(List<UUID> titleIds) {
         if (titleIds.isEmpty()) return List.of();
         return jdbc.sql("""
