@@ -9,6 +9,7 @@ import br.com.fourtech.rendamais.financeiro.api.TitleCancellationGuard;
 import br.com.fourtech.rendamais.financeiro.api.TitleIssuanceApi;
 import br.com.fourtech.rendamais.financeiro.api.TitleQueryApi;
 import br.com.fourtech.rendamais.financeiro.domain.FinancialTitle;
+import br.com.fourtech.rendamais.kernel.InvalidStateException;
 import br.com.fourtech.rendamais.kernel.NotFoundException;
 import br.com.fourtech.rendamais.plataforma.eventos.Outbox;
 import br.com.fourtech.rendamais.plataforma.web.CorrelationId;
@@ -98,11 +99,27 @@ public class TitleService implements TitleIssuanceApi, TitleQueryApi {
         List<FinancialTitle> titles = repository.findByOriginForUpdate(originType, originIds);
         // Confere todos antes de cancelar qualquer um: ou cancela tudo, ou nada.
         List<FinancialTitle> active = titles.stream().filter(t -> t.lifecycle() != FinancialTitle.Lifecycle.CANCELLED).toList();
-        List<FinancialTitle> cancelled = active.stream().map(t -> t.cancel(reason, now, actor)).toList();
-        // Efeitos de outros módulos (nota vinculada) também impedem, com os títulos já bloqueados.
+        // Junta todos os efeitos que impedem (recebimento aqui; nota vinculada nos outros módulos, com os títulos já
+        // bloqueados), para a recusa listar tudo o que o usuário precisa desfazer.
+        List<String> blocked = new ArrayList<>();
+        List<FinancialTitle> cancelled = new ArrayList<>();
+        for (FinancialTitle t : active) {
+            try {
+                cancelled.add(t.cancel(reason, now, actor));
+            } catch (InvalidStateException e) {
+                blocked.add(e.getMessage());
+            }
+        }
         List<TitleCancellationGuard.Cancelling> refs = active.stream()
                 .map(t -> new TitleCancellationGuard.Cancelling(t.id(), t.code(), t.original().cents())).toList();
-        if (!refs.isEmpty()) guards.forEach(g -> g.checkCancellable(refs));
+        for (TitleCancellationGuard g : refs.isEmpty() ? List.<TitleCancellationGuard>of() : guards) {
+            try {
+                g.checkCancellable(refs);
+            } catch (InvalidStateException e) {
+                blocked.add(e.getMessage());
+            }
+        }
+        if (!blocked.isEmpty()) throw new InvalidStateException(String.join(" ", blocked));
         for (FinancialTitle t : cancelled) {
             repository.update(t);
             audit.record(new AuditEntry(actor, "FINANCIAL_TITLE_CANCELLED", ENTITY, t.id().toString(), t.version(), reason,

@@ -9,6 +9,7 @@ import { novaChave, useClientes, useItens, useUnidades } from './comum/Cadastros
 import { CampoData } from './comum/CampoData';
 import { DialogoConflito, DialogoMotivo } from './comum/Dialogos';
 import { tratarFalha } from './comum/Falhas';
+import { somaFaturamento, useFaturamento } from './comum/Faturamento';
 import { GradeHistorico } from './comum/GradeHistorico';
 import { GradeLinhas, linhaDaApi, linhaParaApi, totalDasLinhas, type LinhaForm } from './comum/GradeLinhas';
 import { Selecao } from './comum/Selecao';
@@ -506,6 +507,9 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
 
 /** O que a confirmação gerou: projeto, equipamentos e parcelas a receber, cada um com a seta para a sua ficha. */
 function Gerado({ pedido, abrir }: { pedido: SalesOrder; abrir: (kind: 'project' | 'equipment' | 'receivable', id: string) => void }) {
+  const ids = pedido.titles.map((t) => t.id);
+  const faturamento = useFaturamento(ids);
+  const ativos = pedido.titles.filter((t) => t.status !== 'CANCELLED').map((t) => t.id);
   const seta = (rotulo: string, fn: () => void) => (
     <span className="rp-link" role="link" tabIndex={0} aria-label={rotulo} title={rotulo} onClick={fn} onKeyDown={(e) => e.key === 'Enter' && fn()} />
   );
@@ -561,6 +565,8 @@ function Gerado({ pedido, abrir }: { pedido: SalesOrder; abrir: (kind: 'project'
               <th>Competência</th>
               <th className="num">Valor</th>
               <th className="num">Saldo</th>
+              {faturamento && <th className="num">Faturado</th>}
+              {faturamento && <th className="num">A faturar</th>}
               <th>Situação</th>
             </tr>
           </thead>
@@ -575,6 +581,8 @@ function Gerado({ pedido, abrir }: { pedido: SalesOrder; abrir: (kind: 'project'
                 <td>{t.competence.slice(5)}/{t.competence.slice(0, 4)}</td>
                 <td className="num">{reais(t.originalCents)}</td>
                 <td className="num">{reais(t.balanceCents)}</td>
+                {faturamento && <td className="num">{reais(faturamento.get(t.id)?.invoicedCents ?? '0')}</td>}
+                {faturamento && <td className="num">{reais(faturamento.get(t.id)?.toInvoiceCents ?? '0')}</td>}
                 <td>{seloTitulo(t.status)}</td>
               </tr>
             ))}
@@ -584,6 +592,8 @@ function Gerado({ pedido, abrir }: { pedido: SalesOrder; abrir: (kind: 'project'
               <td colSpan={6}>Total</td>
               <td className="num">{reais(pedido.titles.reduce((s, t) => s + BigInt(t.originalCents), 0n).toString())}</td>
               <td className="num">{reais(pedido.titles.reduce((s, t) => s + BigInt(t.balanceCents), 0n).toString())}</td>
+              {faturamento && <td className="num" aria-label="Faturado do pedido">{reais(somaFaturamento(faturamento, ativos, 'invoicedCents'))}</td>}
+              {faturamento && <td className="num" aria-label="A faturar do pedido">{reais(somaFaturamento(faturamento, ativos, 'toInvoiceCents'))}</td>}
               <td />
             </tr>
           </tfoot>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import type { ServerStatus } from '../api/types';
+import { definirHojeDoServidor } from '../format';
 
 /** Uma verificação do servidor: quando, se respondeu e em quanto tempo. */
 export type Check = { at: Date; ok: boolean; ms: number };
@@ -24,6 +25,7 @@ export function useConnection(intervalMs = 10_000): Connection {
         const { data } = await api.get<ServerStatus>('/api/v1/status');
         const at = new Date();
         const ms = Math.round(performance.now() - start);
+        definirHojeDoServidor(data.businessDate);
         if (alive) setConn((c) => ({ state: 'online', status: data, checkedAt: at, history: [...c.history, { at, ok: true, ms }].slice(-MAX_HISTORY) }));
       } catch {
         const at = new Date();

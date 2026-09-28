@@ -108,6 +108,10 @@ body { background: var(--ground); }
 /* Caixa de mensagem modal: bloqueia o fundo sem escurecê-lo (sem cores fora dos tokens). */
 .rp-modal { position: fixed; inset: 0; z-index: 50; display: grid; place-content: center; }
 .rp-modal .rp-msgbox { width: 460px; max-width: calc(100vw - 32px); box-shadow: var(--shadow-window); }
+.rp-modal .rp-msgbox--larga { width: 900px; }
+.rp-msgbox--larga .rp-window-body > div { flex: 1; min-width: 0; }
+/* Grade de parcelas na caixa Vincular parcelas. */
+.rp-vincular { max-height: 280px; margin: var(--space-3) 0 var(--space-2); }
 
 /* Janelas minimizadas: botões com a barra de título, embaixo à esquerda da área de trabalho (protótipo Mock). */
 /* Fica atrás das janelas abertas (que começam no nível 1), como a faixa de minimizadas do cliente clássico. */

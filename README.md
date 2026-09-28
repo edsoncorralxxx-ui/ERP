@@ -2,7 +2,7 @@
 
 ERP industrial orientado a projetos para a Fourtech/Renda+. App macOS em Electron + React; servidor em Java (Spring Boot) + PostgreSQL; Python para processamento (a partir da sprint de importação).
 
-Situação: **Sprint 5 — contas a receber: recebimento parcial, estorno e contas financeiras** (entregue para Review). Funcionam de ponta a ponta (app → servidor → banco): entrar com usuário e senha, perfis Administrador e Consulta, *Clientes e unidades* (com CNPJ por unidade), *Fornecedores*, *Produtos e serviços* (NCM nos produtos, código da LC 116 nos serviços), *Unidades e categorias*, *Oportunidades e propostas* (revisões preservadas, conversão em pedido), *Pedidos e contratos* (parcelas, confirmação que cria o projeto, os equipamentos e as parcelas a receber uma única vez, cancelamento), *Carteira de projetos*, *Detalhe do projeto*, *Equipamentos*, *Contas a receber* (receber em partes, estornar, histórico), *Contas financeiras* (caixa e bancos, com extrato), *Usuários e permissões* e *Dados da empresa*, com controle de versão, auditoria e comando que não se duplica. Os demais módulos entram a cada sprint (`docs/scrum/product-backlog.md`).
+Situação: **Sprint 6 — documentos e faturamento vinculados às parcelas** (entregue para Review). Funcionam de ponta a ponta (app → servidor → banco): entrar com usuário e senha, perfis Administrador e Consulta, *Clientes e unidades* (com CNPJ por unidade), *Fornecedores*, *Produtos e serviços* (NCM nos produtos, código da LC 116 nos serviços), *Unidades e categorias*, *Oportunidades e propostas* (revisões preservadas, conversão em pedido), *Pedidos e contratos* (parcelas, confirmação que cria o projeto, os equipamentos e as parcelas a receber uma única vez, cancelamento), *Carteira de projetos*, *Detalhe do projeto*, *Equipamentos*, *Contas a receber* (receber em partes, estornar, histórico), *Contas financeiras* (caixa e bancos, com extrato), *Documentos e faturamento* (nota emitida fora do Renda+ vinculada às parcelas, sem criar cobrança), *Usuários e permissões* e *Dados da empresa*, com controle de versão, auditoria e comando que não se duplica. Os demais módulos entram a cada sprint (`docs/scrum/product-backlog.md`).
 
 ## Rodar no seu Mac
 
@@ -89,6 +89,7 @@ A janela do Renda+ ERP abre na tela de login: entre com o administrador criado n
 - *Projetos → Carteira de projetos* e *Equipamentos → Equipamentos*: projetos gerados pelos pedidos e equipamentos com número de série.
 - *Financeiro → Contas a receber*: parcelas dos pedidos confirmados; na ficha do título, **Receber** (conta, data e valor; parcial ou total) e **Estornar** com motivo na aba Recebimentos.
 - *Financeiro → Contas financeiras*: o Caixa já vem cadastrado; cadastre as contas bancárias com o saldo inicial e veja o **Extrato** de cada conta.
+- *Faturamento → Documentos e faturamento*: registre a nota emitida no portal da SEFAZ ou da prefeitura (**Novo**: cliente, número, série, emissão, linhas) e use **Vincular parcelas** para dizer quais parcelas ela fatura; o pedido, o projeto e o título mostram o faturado e o que falta faturar. **Desfazer** um vínculo e **Cancelar documento** pedem motivo.
 
 Atalhos: **Esc** fecha a janela ativa (pergunta antes se houver alterações não salvas); **⌘S** grava; **Alt + letra sublinhada** aciona abas e botões.
 

@@ -203,6 +203,12 @@ class DocumentosApiTest extends CadastrosApiTest {
         assertThat(desfeito.body()).contains("\"linkedCents\":\"5550000\"", "\"unlinkedCents\":\"3700000\"", "\"version\":\"3\"");
         assertThat(faturado(t2)).contains("\"invoicedCents\":\"0\",\"toInvoiceCents\":\"10000000\"");
 
+        // Com recebimento e nota vinculada, a recusa do cancelamento do pedido lista os dois efeitos.
+        HttpResponse<String> bloqueado = withVersion("POST", "/api/v1/sales-orders/" + pedido + "/cancellations", "2",
+                "{\"reason\":\"Cliente desistiu\"}");
+        assertThat(bloqueado.statusCode()).isEqualTo(422);
+        assertThat(bloqueado.body()).contains("CANCELLATION_BLOCKED_BY_EFFECTS", "estorne o recebimento", "vinculada à nota nº 1234");
+
         assertThat(conta("select count(*) from outbox_event where event_type = 'DocumentRegistered'")).isEqualTo(3);
         assertThat(conta("select count(*) from outbox_event where event_type = 'DocumentLinkedToTitles'")).isEqualTo(2);
         assertThat(conta("select count(*) from outbox_event where event_type = 'DocumentCancelled'")).isEqualTo(1);

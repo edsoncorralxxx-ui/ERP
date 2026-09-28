@@ -3,6 +3,7 @@ import { api, type ApiError } from '../api/client';
 import type { Equipment, HistoryEntry, Project, Receivable } from '../api/types';
 import { dataDaApi, dataHora, reais } from '../format';
 import { useWindow } from '../windows/WindowContext';
+import { somaFaturamento, useFaturamento } from './comum/Faturamento';
 import { GradeHistorico } from './comum/GradeHistorico';
 import { ESTAGIO, seloEquipamento, seloEstagio, seloTitulo } from './comum/Selos';
 
@@ -58,6 +59,7 @@ export function ProjectWindow({ recordKey }: { recordKey: string }) {
     <span className="rp-link" role="link" tabIndex={0} aria-label={rotulo} title={rotulo} onClick={fn} onKeyDown={(e) => e.key === 'Enter' && fn()} />
   );
   const ativos = (titulos ?? []).filter((t) => t.status !== 'CANCELLED');
+  const faturamento = useFaturamento((titulos ?? []).map((t) => t.id));
   const tabs: [Tab, ReactNode][] = [
     ['equipamentos', <span><u>E</u>quipamentos ({equipamentos?.length ?? 0})</span>],
     ['receber', <span>Parcelas a <u>r</u>eceber ({ativos.length})</span>],
@@ -170,6 +172,8 @@ export function ProjectWindow({ recordKey }: { recordKey: string }) {
                         <th className="num">Valor</th>
                         <th className="num">Recebido</th>
                         <th className="num">Saldo</th>
+                        {faturamento && <th className="num">Faturado</th>}
+                        {faturamento && <th className="num">A faturar</th>}
                         <th>Situação</th>
                       </tr>
                     </thead>
@@ -187,6 +191,8 @@ export function ProjectWindow({ recordKey }: { recordKey: string }) {
                           <td className="num">{reais(t.originalCents)}</td>
                           <td className="num">{reais(t.receivedCents)}</td>
                           <td className="num">{reais(t.balanceCents)}</td>
+                          {faturamento && <td className="num">{reais(faturamento.get(t.id)?.invoicedCents ?? '0')}</td>}
+                          {faturamento && <td className="num">{reais(faturamento.get(t.id)?.toInvoiceCents ?? '0')}</td>}
                           <td>{seloTitulo(t.status)}</td>
                         </tr>
                       ))}
@@ -197,6 +203,8 @@ export function ProjectWindow({ recordKey }: { recordKey: string }) {
                         <td className="num">{reais(ativos.reduce((s, t) => s + BigInt(t.originalCents), 0n).toString())}</td>
                         <td className="num">{reais(ativos.reduce((s, t) => s + BigInt(t.receivedCents), 0n).toString())}</td>
                         <td className="num">{reais(ativos.reduce((s, t) => s + BigInt(t.balanceCents), 0n).toString())}</td>
+                        {faturamento && <td className="num">{reais(somaFaturamento(faturamento, ativos.map((t) => t.id), 'invoicedCents'))}</td>}
+                        {faturamento && <td className="num">{reais(somaFaturamento(faturamento, ativos.map((t) => t.id), 'toInvoiceCents'))}</td>}
                         <td />
                       </tr>
                     </tfoot>

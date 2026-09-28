@@ -4,6 +4,8 @@ export type ServerStatus = {
   serverVersion: string;
   database: 'UP' | 'DOWN';
   serverTime: string;
+  /** Hoje no fuso da empresa (Sprint 6); o app usa como sugestão nos campos de data. */
+  businessDate?: string;
 };
 
 export type Address = {
@@ -469,4 +471,69 @@ export type CashMovement = {
   balanceCents: string;
   createdAt: string;
   createdBy: string;
+};
+
+export type DocumentStatus = 'ATIVO' | 'CANCELADO';
+export type DocumentLineKind = 'PRODUTO' | 'SERVICO';
+export type OperationNature = 'VENDA_PRODUCAO' | 'VENDA_MERCADORIA' | 'PRESTACAO_SERVICO' | 'REMESSA';
+
+export type DocumentLink = {
+  id: string;
+  titleId: string;
+  titleCode: string | null;
+  titleLabel: string | null;
+  amountCents: string;
+  status: 'ATIVO' | 'DESFEITO';
+  removedReason: string | null;
+  removedAt: string | null;
+  removedBy: string | null;
+  createdAt: string;
+  createdBy: string;
+};
+
+/** Documento fiscal registrado (nota emitida fora do Renda+), com linhas e vínculos às parcelas. */
+export type BusinessDocument = {
+  id: string;
+  code: string;
+  direction: 'SAIDA' | 'ENTRADA';
+  customerId: string;
+  customerCode: string;
+  customerName: string;
+  series: string;
+  number: string;
+  issueDate: string;
+  competence: string;
+  totalCents: string;
+  linkedCents: string;
+  unlinkedCents: string;
+  lines: { seq: number; description: string; kind: DocumentLineKind; amountCents: string }[];
+  links: DocumentLink[];
+  notes: string | null;
+  operationNature: OperationNature | null;
+  projectId: string | null;
+  projectCode: string | null;
+  classificationRevision: number;
+  status: DocumentStatus;
+  cancelReason: string | null;
+  version: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+/** Faturado e a faturar de uma parcela, com as notas vinculadas. */
+export type TitleInvoicing = {
+  titleId: string;
+  titleCode: string;
+  label: string;
+  dueDate: string;
+  titleStatus: TitleStatus;
+  projectId: string | null;
+  originalCents: string;
+  receivedCents: string;
+  balanceCents: string;
+  invoicedCents: string;
+  toInvoiceCents: string;
+  documents: { documentId: string; documentCode: string; series: string; number: string; issueDate: string; amountCents: string }[];
 };

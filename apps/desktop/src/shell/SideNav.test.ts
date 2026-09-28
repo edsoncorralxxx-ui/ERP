@@ -15,6 +15,7 @@ describe('menu lateral', () => {
       'Contas financeiras',
       'Dados da empresa',
       'Detalhe do projeto',
+      'Documentos e faturamento',
       'Equipamentos',
       'Fornecedores',
       'Oportunidades e propostas',

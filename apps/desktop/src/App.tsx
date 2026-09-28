@@ -12,6 +12,8 @@ import { EquipmentWindow } from './screens/EquipmentWindow';
 import { ItemsWindow } from './screens/ItemsWindow';
 import { ItemWindow } from './screens/ItemWindow';
 import { BankAccountsWindow } from './screens/BankAccountsWindow';
+import { DocumentsWindow } from './screens/DocumentsWindow';
+import { DocumentWindow } from './screens/DocumentWindow';
 import { ProjectsWindow } from './screens/ProjectsWindow';
 import { ProjectWindow } from './screens/ProjectWindow';
 import { ProposalsWindow } from './screens/ProposalsWindow';
@@ -58,6 +60,8 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   receivables: { title: 'Contas a receber', size: { w: 1160, h: 620 } },
   receivable: { title: 'Título a receber', size: { w: 1000, h: 620 } },
   'bank-accounts': { title: 'Contas financeiras', size: { w: 1000, h: 600 } },
+  documents: { title: 'Documentos e faturamento', size: { w: 1160, h: 620 } },
+  document: { title: 'Documento de faturamento', size: { w: 1080, h: 660 } },
   users: { title: 'Usuários e permissões', size: { w: 980, h: 560 } },
   password: { title: 'Alteração de senha', size: { w: 520, h: 330 } },
 };
@@ -360,6 +364,10 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                         <ReceivableWindow recordKey={w.recordKey} />
                       ) : w.kind === 'bank-accounts' ? (
                         <BankAccountsWindow />
+                      ) : w.kind === 'documents' ? (
+                        <DocumentsWindow />
+                      ) : w.kind === 'document' ? (
+                        <DocumentWindow recordKey={w.recordKey} />
                       ) : w.kind === 'users' ? (
                         <UsersWindow />
                       ) : w.kind === 'password' ? (

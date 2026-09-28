@@ -25,6 +25,8 @@ export type WindowKind =
   | 'receivables'
   | 'receivable'
   | 'bank-accounts'
+  | 'documents'
+  | 'document'
   | 'users'
   | 'password';
 export type WindowMode = 'normal' | 'minimized' | 'maximized';

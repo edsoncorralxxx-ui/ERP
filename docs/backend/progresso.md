@@ -8,7 +8,7 @@ Registro da execução real do roteiro B01–B16. Desde 25/09/2026 o trabalho se
 | B02 — Base executável, contratos e persistência | Em execução (Sprints 1 e 2: kernel, plataforma, arquitetura, CI, recibo de comando, outbox, fatos operacionais, OpenAPI) | 2026-09-25 | `docs/scrum/sprints/sprint-01.md`, `sprint-02.md` | Worker Python (US-207) na sprint de importação |
 | B03 — Acesso, cadastros e metadados | Em execução (Sprints 2 e 3: sessões, perfis, permissões, clientes, fornecedores, materiais e serviços, unidades e categorias) | 2026-09-25 | `docs/scrum/sprints/sprint-02.md`, `sprint-03.md` | Contas e categorias financeiras (PD-010) |
 | B05 — Comercial e primeiro fluxo transacional | Em execução (Sprint 4: propostas com revisões, pedidos, confirmação com projeto, equipamentos e títulos a receber, cancelamento; Sprint 5: baixa parcial e estorno) | 2026-09-27 | `docs/scrum/sprints/sprint-04.md`, `sprint-05.md` | Aditivo; documentos e faturamento (Sprint 6) |
-| B06 — Financeiro, conciliação e caixa | Em execução (Sprint 5: recebimentos com alocações, estorno total, contas financeiras, movimentos de caixa e extrato) | 2026-09-28 | `docs/scrum/sprints/sprint-05.md` | Crédito do cliente (PD-004), ajustes, renegociação, contas a pagar, conciliação (PD-006), fluxo de caixa |
+| B06 — Financeiro, conciliação e caixa | Em execução (Sprint 5: recebimentos com alocações, estorno total, contas financeiras, movimentos de caixa e extrato; Sprint 6: documentos de saída vinculados às parcelas, faturado e a faturar) | 2026-09-28 | `docs/scrum/sprints/sprint-05.md`, `sprint-06.md` | Crédito do cliente (PD-004), ajustes, renegociação, contas a pagar e documentos de entrada, conciliação (PD-006), fluxo de caixa |
 | B04, B07–B16 | Planejado | — | — | Conforme dependências do roteiro |
 
 ## Registro
@@ -56,3 +56,9 @@ Registro da execução real do roteiro B01–B16. Desde 25/09/2026 o trabalho se
 - App: Contas a receber, Título a receber (Receber, Estornar, Recebimentos, Histórico), Contas financeiras (Contas e Extrato); seta para o título nas parcelas do pedido e do projeto.
 - Verificação: 81 testes no servidor (inclui as duas baixas concorrentes do B01), 64 no app, verificador B01; roteiros Playwright das Sprints 4 e 5 contra o servidor real e agora também no CI (job `e2e`).
 
+### 2026-09-28 — Sprint 6 (B06 documentos e faturamento)
+
+- Planning aprovado pelo PO: premissa B01 para PD-023 (vínculo com valor por parcela, limitado ao valor da parcela e independente do recebimento); cancelar nota e desfazer vínculo; PD-009: registrar, vincular, classificar e cancelar só no Administrador, a confirmar na Review.
+- Servidor: módulo `documentos` (nota de saída, linhas, vínculos às parcelas com o documento e as parcelas bloqueados em ordem de id, cancelamento, classificação, faturado por parcela); porta `TitleCancellationGuard` no financeiro, implementada por documentos, para o pedido faturado não cancelar; `/status` com o dia de negócio; migração V10; OpenAPI.
+- App: Documentos e faturamento (lista e ficha com Linhas, Vínculos, Classificação e Histórico; Vincular parcelas); Faturado e A faturar no pedido, no projeto e no título a receber.
+- Verificação: 86 testes no servidor (inclui dois vínculos simultâneos numa parcela), 72 no app, verificador B01; roteiros Playwright das Sprints 4, 5 e 6 contra o servidor real, o da Sprint 6 conferindo pela API cada nota criada pela tela.

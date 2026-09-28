@@ -112,10 +112,38 @@ export const normalizarData = (texto: string): string => {
   return iso && /^\d{4}-\d{2}-\d{2}$/.test(iso) ? dataDaApi(iso) : texto;
 };
 
-/** Data de hoje (fuso do computador) no formato da API. */
-export const hojeIso = (): string => {
+/** Dia de negócio informado pelo servidor (fuso da empresa), com o dia do computador em que foi lido. */
+let doServidor: { data: string; lidoEm: string } | null = null;
+
+const hojeDoComputador = (): string => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+/** Guarda o dia de negócio devolvido por `/api/v1/status` (ou esquece, com nulo). */
+export const definirHojeDoServidor = (iso: string | null | undefined): void => {
+  doServidor = iso && /^\d{4}-\d{2}-\d{2}$/.test(iso) ? { data: iso, lidoEm: hojeDoComputador() } : null;
+};
+
+/**
+ * Data de hoje no formato da API: o dia de negócio do servidor (fuso de São Paulo, o mesmo que confere "não futura")
+ * enquanto o computador estiver no mesmo dia em que o leu; sem ele, o dia do computador.
+ */
+export const hojeIso = (): string => {
+  const local = hojeDoComputador();
+  return doServidor && doServidor.lidoEm === local ? doServidor.data : local;
+};
+
+/** Competência `AAAA-MM` da data da API, mostrada como `MM/AAAA`. */
+export const competenciaDaApi = (iso: string | null | undefined): string => (iso && /^\d{4}-\d{2}/.test(iso) ? `${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '');
+
+/** Competência digitada (`MM/AAAA` ou `M/AAAA`) no formato da API; o que não é competência volta como está. */
+export const competenciaParaApi = (texto: string): string => {
+  const t = texto.trim();
+  const m = /^(\d{1,2})\/(\d{4})$/.exec(t);
+  if (!m) return t;
+  const mes = Number(m[1]);
+  return mes >= 1 && mes <= 12 ? `${m[2]}-${String(mes).padStart(2, '0')}` : t;
 };
 
 const ESCALA = 1_000_000n;

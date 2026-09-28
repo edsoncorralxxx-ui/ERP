@@ -34,7 +34,7 @@ class InvoicedTitleGuard implements TitleCancellationGuard {
         if (blocked.isEmpty()) return;
         Map<UUID, List<DocumentRepository.TitleLink>> links = repository.activeLinks(blocked.stream().map(Cancelling::titleId).toList())
                 .stream().collect(Collectors.groupingBy(DocumentRepository.TitleLink::titleId));
-        String detail = blocked.stream().map(t -> "a parcela " + t.code() + " está vinculada " + links.getOrDefault(t.titleId(), List.of())
+        String detail = blocked.stream().map(t -> "A parcela " + t.code() + " está vinculada " + links.getOrDefault(t.titleId(), List.of())
                         .stream().map(l -> "à nota nº " + l.number() + " (" + l.documentCode() + ")").collect(Collectors.joining(" e ")))
                 .collect(Collectors.joining("; "));
         throw new InvalidStateException(detail + "; cancele a nota ou desfaça o vínculo antes.");

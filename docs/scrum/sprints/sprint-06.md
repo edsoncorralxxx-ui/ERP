@@ -1,6 +1,6 @@
 # Sprint 6 — Documentos e faturamento vinculados às parcelas
 
-Situação: **Planejamento — aguardando aprovação do PO** (28/09/2026). Proposta montada a partir do roteiro de sprints (`../product-backlog.md`), do contrato do formulário `documentos` do B01 e da retrospectiva da Sprint 5. As regras de negócio pendentes seguem as premissas do B01, listadas abaixo para aceite ou ajuste antes de começar.
+Situação: **Entregue para Review** (28/09/2026). Planning aprovado pelo PO em 28/09/2026 ("aprovado, implemente a sprint 6"), com as decisões propostas abaixo; as regras de negócio pendentes seguem as premissas do B01, para aceite ou ajuste na Review.
 
 ## Objetivo
 
@@ -79,9 +79,41 @@ Automático: `cd apps/desktop && npm run e2e` (servidor rodando; ver README) —
 - **Número da nota**: se houver mais de um emissor (matriz/filial), a unicidade precisa incluir o CNPJ emitente — confirmar na abertura da sprint.
 - Dados reais de notas antigas ficam para a migração (B12); nesta sprint só entram notas novas.
 
-## Perguntas para o PO antes de começar
+## Perguntas do planning
 
-1. Aceita a premissa do PD-023 (limite pelo valor da parcela, independente do recebimento)?
-2. Cancelar nota e desfazer vínculo entram nesta sprint?
-3. Registrar e vincular notas fica só com o Administrador, ou já criamos o perfil Financeiro?
-4. A empresa emite notas com mais de um CNPJ ou série?
+O PO aprovou o planning sem responder item a item; a sprint seguiu as propostas, que continuam abertas para a Review:
+
+1. PD-023: limite pelo valor da parcela, independente do recebimento — **adotado**.
+2. Cancelar nota e desfazer vínculo — **entraram**.
+3. Registrar, vincular, classificar e cancelar notas — **só o Administrador**; Consulta vê.
+4. Mais de um CNPJ emitente — **não tratado**: número único por cliente, série e número entre as notas ativas (a nota cancelada libera o número para o registro correto). Se houver filial emitente, a unicidade passa a incluir o CNPJ.
+
+## Review — evidências
+
+| Item | Resultado | Evidência |
+|---|---|---|
+| S6-01 Registrar | Pronto | `DocumentosApiTest.notaVinculadaAsParcelasMostraFaturadoSemMudarOSaldo`: nota `DF` idempotente (mesma chave → o mesmo documento; outro corpo → `IDEMPOTENCY_KEY_REUSED`); número repetido — inclusive com zeros à esquerda — → `DOCUMENT_DUPLICATE` apontando o código; evento `DocumentRegistered` com o payload do catálogo. `registroConfereCamposClienteDaParcelaEClassificacao`: série, número, emissão futura, competência inválida, linha sem descrição/tipo/valor e sem linhas, todos apontados no campo; duas linhas (Produto e Serviço) somam o total |
+| S6-02 Vincular (PD-023) | Pronto | Mesmo teste: a nota de R$ 92.500,00 fatura a parcela 1 inteira (já parcialmente recebida) e R$ 37.000,00 da parcela 2; o saldo a receber e a versão dos títulos não mudam; R$ 63.000,01 → `LINK_EXCEEDS_TITLE` "A faturar da parcela: R$ 63.000,00."; acima do total da nota → `LINK_EXCEEDS_DOCUMENT`; versão velha → 412; parcela de outro cliente recusada; mesma parcela duas vezes na nota recusada |
+| S6-03 Vínculos simultâneos | Pronto | `vinculosSimultaneosNaMesmaParcelaNaoPassamDoValor`: duas notas vinculando R$ 70,00 ao mesmo tempo numa parcela de R$ 100,00 → uma 200 e uma 422 com "A faturar da parcela: R$ 30,00."; um vínculo só. Barreiras no banco: `invoiced_cents <= limit_cents` por parcela e `linked_cents <= total_cents` por nota |
+| S6-04 Cancelar e desfazer | Pronto | Motivo obrigatório; cancelar libera os vínculos (preservados como desfeitos, com motivo) e repetir devolve o mesmo; nota cancelada → 409 ao vincular; o número fica livre; desfazer um vínculo devolve o a faturar da parcela; trilha na nota e na parcela; eventos `DocumentCancelled` e `DocumentLinkRemoved` |
+| S6-05 Pedido faturado | Pronto | `pedidoFaturadoSoCancelaDepoisDeCancelarANota`: cancelar pedido com nota vinculada → `CANCELLATION_BLOCKED_BY_EFFECTS` "vinculada à nota nº 900", nenhum título cancelado; depois de cancelar a nota, o pedido cancela; parcela cancelada não recebe vínculo. Com recebimento **e** nota, a recusa lista os dois efeitos. O financeiro recusa pela porta `TitleCancellationGuard`, implementada por documentos (sem dependência nova do financeiro) |
+| S6-06 Classificar | Pronto | Natureza obrigatória; projeto só o de uma parcela vinculada; reclassificar gera a revisão 2; evento `DocumentClassified` com a revisão |
+| S6-07 Telas | Pronto | `Sprint6Windows.test.tsx` (8 testes): registro com a competência da emissão e **a mesma chave reenviada depois de queda de rede**; Vincular parcelas com a sugestão por vencimento, a parcela cancelada fora e a recusa apontada na parcela; desfazer e cancelar com motivo e a versão lida; classificação; Consulta sem botões; Título a receber com Faturado, A faturar e a aba Faturamento com a seta para a nota. Pedido e Detalhe do projeto ganharam as colunas Faturado e A faturar |
+| S6-08 Contratos | Pronto | Migração V10; `docs/backend/api/openapi.yaml` (+8 rotas; `OpenApiContractTest` passa); permissões `document.*` nos perfis; erros `DOCUMENT_INVALID`, `DOCUMENT_DUPLICATE`, `LINK_EXCEEDS_DOCUMENT`, `LINK_EXCEEDS_TITLE` no catálogo; comandos `RemoveDocumentLink` e `CancelDocument` e seus eventos no B01; `menu.json` com Documentos e faturamento implementado; `ArchitectureTest` passa (documentos → financeiro só pelas APIs públicas); verificador B01 OK |
+| S6-09 Roteiro com conferência pela API | Pronto | `apps/desktop/e2e/sprint-06.e2e.ts` executado aqui no Chromium contra o servidor real (banco vazio), junto com os das Sprints 4 e 5: 3 roteiros passando. Cada nota criada pela tela é conferida pela API (documento, vínculos, faturado das parcelas e saldo) |
+| S6-10 Dívidas da Sprint 5 | Pronto | (a) `/api/v1/status` devolve `businessDate` (fuso de São Paulo) e o app usa esse dia nos campos de data enquanto o computador estiver no mesmo dia; (b) conferência recebido do título = Σ alocações de recebimentos não estornados, e movimentos de caixa por recebimento, nos testes do financeiro; conferência equivalente para o faturado das parcelas e o vinculado das notas |
+
+Testes executados: servidor **86** (PostgreSQL 16 real; eram 81), app **72** (eram 64), typecheck e build do app e do Electron, verificador B01 + 15 testes, roteiros Playwright das Sprints 4, 5 e 6.
+
+**Não verificado aqui:** o app dentro do Electron no macOS (ambiente Linux sem tela).
+
+**Limitações conhecidas:**
+- O faturado de cada parcela é mantido numa tabela própria (sob bloqueio) além dos vínculos; as duas fontes são gravadas na mesma transação e conferidas nos testes, mas ainda não há rotina de conferência em produção.
+- A tela Vincular parcelas mostra as parcelas do cliente, de todos os pedidos; não filtra por pedido.
+- A lista de documentos soma o faturado da lista visível (até 500 notas); o painel de faturamento por competência (IND-005) entra com os indicadores.
+
+## Retrospectiva
+
+- Funcionou: a porta `TitleCancellationGuard` resolveu o bloqueio do cancelamento do pedido sem o financeiro depender de documentos, e o teste concorrente escrito antes da tela garantiu o bloqueio por parcela desde o primeiro commit.
+- Melhorar: o roteiro Playwright achou uma recusa que listava só o primeiro efeito (recebimento) e escondia a nota vinculada; a recusa agora lista todos. Vale conferir as mensagens de recusa com mais de uma causa já nos testes do servidor.
+- Ação: na Sprint 7 (fiscal gerencial), a competência das notas desta sprint alimenta a receita por competência; conferir no roteiro que o total por competência bate com a lista de documentos.

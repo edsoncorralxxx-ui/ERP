@@ -1,5 +1,5 @@
 import type { HistoryEntry } from '../../api/types';
-import { dataDaApi, dataHora, reais } from '../../format';
+import { competenciaDaApi, dataDaApi, dataHora, reais } from '../../format';
 
 const ROTULO: Record<string, string> = {
   code: 'Código', legalName: 'Razão social', tradeName: 'Nome fantasia', cnpj: 'CNPJ', group: 'Grupo', status: 'Situação',
@@ -12,6 +12,9 @@ const ROTULO: Record<string, string> = {
   installments: 'Parcelas', proposal: 'Proposta', order: 'Pedido', project: 'Projeto', equipment: 'Equipamentos', titles: 'Parcelas a receber',
   snapshotHash: 'Retrato da confirmação', name: 'Nome', stage: 'Estágio', model: 'Modelo', serialNumber: 'Nº de série',
   origin: 'Origem', dueDate: 'Vencimento', originalCents: 'Valor',
+  receivedCents: 'Recebido', balanceCents: 'Saldo', settlement: 'Recebimento', account: 'Conta', effectiveDate: 'Data', reversalDate: 'Data do estorno',
+  number: 'Nota', customer: 'Cliente', issueDate: 'Emissão', competence: 'Competência', linkedCents: 'Vinculado', links: 'Vínculos',
+  operationNature: 'Natureza da operação', classificationRevision: 'Revisão da classificação', document: 'Documento', invoiced: 'Faturado',
 };
 const ACAO: Record<string, string> = {
   PARTNER_REGISTERED: 'Cadastro', PARTNER_UPDATED: 'Alteração', PARTNER_DEACTIVATED: 'Inativação', PARTNER_ROLE_ENABLED: 'Novo papel',
@@ -21,17 +24,23 @@ const ACAO: Record<string, string> = {
   SALES_ORDER_DRAFTED: 'Cadastro', SALES_ORDER_UPDATED: 'Alteração', SALES_ORDER_CONFIRMED: 'Confirmação', SALES_ORDER_CANCELLED: 'Cancelamento',
   PROJECT_CREATED: 'Criação', PROJECT_CLOSED: 'Encerramento', EQUIPMENT_CREATED: 'Criação', EQUIPMENT_UPDATED: 'Alteração',
   EQUIPMENT_CANCELLED: 'Cancelamento',
+  FINANCIAL_TITLE_CREATED: 'Criação', FINANCIAL_TITLE_SETTLED: 'Recebimento', FINANCIAL_TITLE_SETTLEMENT_REVERSED: 'Estorno de recebimento',
+  FINANCIAL_TITLE_CANCELLED: 'Cancelamento', FINANCIAL_TITLE_DOCUMENT_LINKED: 'Nota vinculada', FINANCIAL_TITLE_DOCUMENT_UNLINKED: 'Vínculo com nota desfeito',
+  DOCUMENT_REGISTERED: 'Registro', DOCUMENT_LINKED_TO_TITLES: 'Vínculo com parcelas', DOCUMENT_LINK_REMOVED: 'Vínculo desfeito',
+  DOCUMENT_CANCELLED: 'Cancelamento', DOCUMENT_CLASSIFIED: 'Classificação',
 };
 const VALOR: Record<string, string> = {
   ATIVO: 'Ativo', INATIVO: 'Inativo', MATERIAL: 'Produto', SERVICO: 'Serviço', ABERTA: 'Aberta', GANHA: 'Ganha', PERDIDA: 'Perdida',
   RASCUNHO: 'Rascunho', EMITIDA: 'Emitida', DRAFT: 'Rascunho', CONFIRMED: 'Confirmado', CANCELLED: 'Cancelado', PLANEJADO: 'Planejado',
-  ENCERRADO: 'Encerrado', CANCELADO: 'Cancelado', OPEN: 'Em aberto',
+  ENCERRADO: 'Encerrado', CANCELADO: 'Cancelado', OPEN: 'Em aberto', PARTIAL: 'Parcial', SETTLED: 'Liquidado', DESFEITO: 'Desfeito',
+  VENDA_PRODUCAO: 'Venda de produção própria', VENDA_MERCADORIA: 'Venda de mercadoria', PRESTACAO_SERVICO: 'Prestação de serviço', REMESSA: 'Remessa',
 };
 
-/** Valores em centavos (campos terminados em Cents) aparecem em reais; datas AAAA-MM-DD em DD/MM/AAAA. */
+/** Valores em centavos (campos terminados em Cents) aparecem em reais; datas AAAA-MM-DD em DD/MM/AAAA; competência em MM/AAAA. */
 const texto = (v: string | null, campo = '') => {
   if (v === null) return '';
   if (campo.endsWith('Cents') && /^-?\d+$/.test(v)) return reais(v);
+  if (campo === 'competence' && /^\d{4}-\d{2}$/.test(v)) return competenciaDaApi(v);
   if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return dataDaApi(v);
   return VALOR[v] ?? v;
 };

@@ -9,12 +9,13 @@ import { useWindow } from '../windows/WindowContext';
 import { CampoData } from './comum/CampoData';
 import { novaChave } from './comum/Cadastros';
 import { DialogoMotivo } from './comum/Dialogos';
+import { useFaturamento } from './comum/Faturamento';
 import { GradeHistorico } from './comum/GradeHistorico';
 import { Selecao } from './comum/Selecao';
 import { CONTAS_ALTERADAS } from './BankAccountsWindow';
 import { seloReceber, TITULOS_ALTERADOS } from './ReceivablesWindow';
 
-type Tab = 'geral' | 'recebimentos' | 'historico';
+type Tab = 'geral' | 'recebimentos' | 'faturamento' | 'historico';
 
 const seloRecebimento = (s: Settlement['status']) => (
   <span className={`rp-badge ${s === 'POSTED' ? 'rp-badge--aprovado' : 'rp-badge--cancelado'}`}>{s === 'POSTED' ? 'Registrado' : 'Estornado'}</span>
@@ -37,6 +38,7 @@ export function ReceivableWindow({ recordKey }: { recordKey: string }) {
   const [erroCarga, setErroCarga] = useState<string | null>(null);
   const [recebendo, setRecebendo] = useState(false);
   const [estornar, setEstornar] = useState<Settlement | null>(null);
+  const faturamento = useFaturamento([recordKey])?.get(recordKey) ?? null;
 
   const carregar = useCallback(async () => {
     setErroCarga(null);
@@ -89,7 +91,7 @@ export function ReceivableWindow({ recordKey }: { recordKey: string }) {
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (recebendo || estornar) return;
     if (e.altKey) {
-      const alvo: Record<string, Tab> = { g: 'geral', r: 'recebimentos', h: 'historico' };
+      const alvo: Record<string, Tab> = { g: 'geral', r: 'recebimentos', f: 'faturamento', h: 'historico' };
       const t = alvo[e.key.toLowerCase()];
       if (t) {
         e.preventDefault();
@@ -117,6 +119,7 @@ export function ReceivableWindow({ recordKey }: { recordKey: string }) {
   const tabs: [Tab, ReactNode][] = [
     ['geral', <span><u>G</u>eral</span>],
     ['recebimentos', <span><u>R</u>ecebimentos</span>],
+    ...(faturamento ? [['faturamento', <span><u>F</u>aturamento ({faturamento.documents.length})</span>] as [Tab, ReactNode]] : []),
     ['historico', <span><u>H</u>istórico</span>],
   ];
 
@@ -168,6 +171,8 @@ export function ReceivableWindow({ recordKey }: { recordKey: string }) {
                   {campo('Valor original', reais(titulo.originalCents), 'rp-field--num rp-field--curto')}
                   {campo('Recebido', reais(titulo.receivedCents), 'rp-field--num rp-field--curto')}
                   {campo('Saldo', reais(titulo.balanceCents), 'rp-field--num rp-field--curto')}
+                  {faturamento && campo('Faturado', reais(faturamento.invoicedCents), 'rp-field--num rp-field--curto')}
+                  {faturamento && campo('A faturar', reais(faturamento.toInvoiceCents), 'rp-field--num rp-field--curto')}
                   {campo('Categoria', titulo.category === 'RECEITA_VENDA' ? 'Receita de venda' : titulo.category)}
                   {titulo.projectId && (
                     <>
@@ -229,6 +234,40 @@ export function ReceivableWindow({ recordKey }: { recordKey: string }) {
                     </tbody>
                   </table>
                   {baixas?.length === 0 && <p className="rp-jlista__vazio">Nenhum recebimento registrado neste título.</p>}
+                </div>
+              ) : tab === 'faturamento' && faturamento ? (
+                <div className="rp-grid-rolagem rp-rolagem rp-ficha__grade">
+                  <table className="rp-grid rp-janela-mdi__grade" aria-label="Notas vinculadas ao título">
+                    <thead>
+                      <tr>
+                        <th className="rownum">#</th>
+                        <th aria-label="Abrir" />
+                        <th>Documento</th>
+                        <th>Nota</th>
+                        <th>Emissão</th>
+                        <th className="num">Valor vinculado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {faturamento.documents.map((d, i) => (
+                        <tr key={d.documentId} onDoubleClick={() => win.open('document', d.documentId)}>
+                          <td className="rownum">{i + 1}</td>
+                          <td>{seta(`Abrir documento ${d.documentCode}`, () => win.open('document', d.documentId))}</td>
+                          <td>{d.documentCode}</td>
+                          <td>{`Nº ${d.number} / série ${d.series}`}</td>
+                          <td>{dataDaApi(d.issueDate)}</td>
+                          <td className="num">{reais(d.amountCents)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td colSpan={5}>Faturado</td>
+                        <td className="num">{reais(faturamento.invoicedCents)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                  {faturamento.documents.length === 0 && <p className="rp-jlista__vazio">Nenhuma nota vinculada a este título.</p>}
                 </div>
               ) : (
                 <GradeHistorico historico={historico} rotulo="Histórico do título" />
