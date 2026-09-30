@@ -28,9 +28,10 @@
   --tab-active: #9db8db;
   --tab: #cfdceb;
   --tab-border: #a3bcd2;
-  --grid-header: #e4eef7;
+  --grid-header: #e7eaf0;
   --grid-row: #ffffff;
-  --grid-row-selected: #fcd97e;
+  --grid-rownum: #d8e0e6;
+  --grid-row-selected: #fee08b;
   --grid-row-alt: #e4edf6;
   --grid-rule: #c1c8d3;
   --window-border: #50658c;
