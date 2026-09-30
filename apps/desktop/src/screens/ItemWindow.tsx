@@ -8,6 +8,7 @@ import { DialogoConflito, DialogoInativar } from './comum/Dialogos';
 import { GradeHistorico } from './comum/GradeHistorico';
 import { Selecao } from './comum/Selecao';
 import { ITENS_ALTERADOS } from './ItemsWindow';
+import { CampoDinheiro } from './comum/CampoDinheiro';
 
 type Tab = 'geral' | 'conversoes' | 'historico';
 type Conversao = { id: string | null; fromUom: string; factor: string };
@@ -368,14 +369,13 @@ export function ItemWindow({ recordKey }: { recordKey: string }) {
                     ]}
                   />
                   {erroDe('categoryId')}
-                  <label className="rp-label" htmlFor={fid('custo')}>Custo de referência (R$)</label>
+                  <label className="rp-label" htmlFor={fid('custo')}>Custo de referência</label>
                   <span />
-                  <input
+                  <CampoDinheiro
                     id={fid('custo')}
                     className={`${classeCampo} rp-field--num rp-field--curto`}
                     value={form.referenceCost}
                     maxLength={20}
-                    inputMode="decimal"
                     readOnly={somenteLeitura}
                     aria-invalid={!!erros.referenceCost}
                     onChange={(e) => set({ referenceCost: e.target.value })}

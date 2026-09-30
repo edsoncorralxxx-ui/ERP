@@ -8,6 +8,7 @@ import { novaChave } from './comum/Cadastros';
 import { tratarFalha } from './comum/Falhas';
 import { Selecao } from './comum/Selecao';
 import { IMPOSTOS_ALTERADOS } from './TaxPeriodsWindow';
+import { CampoDinheiro } from './comum/CampoDinheiro';
 
 const TIPOS: [DocumentLineKind, string][] = [
   ['PRODUTO', 'Produto'],
@@ -198,11 +199,11 @@ export function TaxParametersWindow() {
                           <tr key={i}>
                             <td className="rownum">{i + 1}ª</td>
                             <td className="num">{i === 0 ? 'R$ 0,00' : erro ? <span className="rp-campo-erro">{erro}</span> : ''}</td>
-                            <td><input className="rp-field rp-field--num rp-field--adicao" aria-label={`${nome}: limite da ${i + 1}ª faixa`} value={f.ate}
+                            <td><CampoDinheiro className="rp-field rp-field--num rp-field--adicao" aria-label={`${nome}: limite da ${i + 1}ª faixa`} value={f.ate}
                               aria-invalid={!!erros[`${campo}.upToCents`]} onChange={(e) => setFaixa(k, i, { ate: e.target.value })} /></td>
                             <td><input className="rp-field rp-field--num rp-field--adicao" aria-label={`${nome}: alíquota da ${i + 1}ª faixa`} value={f.aliquota}
                               aria-invalid={!!erros[`${campo}.rate`]} onChange={(e) => setFaixa(k, i, { aliquota: e.target.value })} /></td>
-                            <td><input className="rp-field rp-field--num rp-field--adicao" aria-label={`${nome}: parcela a deduzir da ${i + 1}ª faixa`} value={f.deducao}
+                            <td><CampoDinheiro className="rp-field rp-field--num rp-field--adicao" aria-label={`${nome}: parcela a deduzir da ${i + 1}ª faixa`} value={f.deducao}
                               aria-invalid={!!erros[`${campo}.deductionCents`]} onChange={(e) => setFaixa(k, i, { deducao: e.target.value })} /></td>
                           </tr>
                         );

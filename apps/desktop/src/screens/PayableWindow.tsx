@@ -14,6 +14,7 @@ import { DialogoConflito, DialogoMotivo } from './comum/Dialogos';
 import { GradeHistorico } from './comum/GradeHistorico';
 import { Selecao } from './comum/Selecao';
 import { PAGAR_ALTERADOS, seloPagar } from './PayablesWindow';
+import { CampoDinheiro } from './comum/CampoDinheiro';
 
 type Tab = 'geral' | 'pagamentos' | 'historico';
 
@@ -454,7 +455,7 @@ export function DialogoPagamento({ titulo, idBase, onCancelar, onPago, notify }:
         <CampoData id={fid('data')} rotulo="Data do pagamento" valor={data} onChange={setData} invalido={!!erros.effectiveDate} className="rp-field rp-field--curto" />
         {erro('effectiveDate')}
         <label className="rp-label" htmlFor={fid('valor')}>Valor</label>
-        <input id={fid('valor')} className="rp-field rp-field--num rp-field--curto" value={valor} maxLength={20} inputMode="decimal" aria-invalid={!!erros.amountCents}
+        <CampoDinheiro id={fid('valor')} className="rp-field rp-field--num rp-field--curto" value={valor} maxLength={20} aria-invalid={!!erros.amountCents}
           onChange={(e) => (setValor(e.target.value), setErros({}))}
           onBlur={() => {
             const c = centavosParaApi(valor);

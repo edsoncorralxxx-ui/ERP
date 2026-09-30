@@ -2,6 +2,7 @@ import type { KeyboardEvent } from 'react';
 import type { ItemSummary, SalesLine, TipoLinha } from '../../api/types';
 import { Selecao } from './Selecao';
 import { brutoDaLinha, centavos, centavosParaApi, decimalDaApi, decimalParaApi, reais } from '../../format';
+import { CampoDinheiro } from './CampoDinheiro';
 
 /** Linha como o usuário edita: números no padrão brasileiro; o servidor confere e calcula de novo. */
 export type LinhaForm = { id: string | null; kind: TipoLinha; itemId: string; description: string; quantity: string; unitPrice: string; discount: string };
@@ -129,12 +130,12 @@ export function GradeLinhas({ linhas, onChange, itens, somenteLeitura, adicao, e
                   </td>
                   <td className="calc">{l.kind === 'EQUIPAMENTO' ? 'UN' : item?.uom ?? ''}</td>
                   <td>
-                    <input className="rp-field rp-field--num" value={l.unitPrice} maxLength={20} inputMode="decimal" readOnly={somenteLeitura}
+                    <CampoDinheiro className="rp-field rp-field--num" value={l.unitPrice} maxLength={20} casas={6} readOnly={somenteLeitura}
                       aria-label={`Preço unitário da linha ${i + 1}`} aria-invalid={!!erro(i, 'unitPrice')} title={erro(i, 'unitPrice')}
                       onChange={(e) => set(i, { unitPrice: e.target.value })} />
                   </td>
                   <td>
-                    <input className="rp-field rp-field--num" value={l.discount} maxLength={20} inputMode="decimal" readOnly={somenteLeitura}
+                    <CampoDinheiro className="rp-field rp-field--num" value={l.discount} maxLength={20} readOnly={somenteLeitura}
                       aria-label={`Desconto da linha ${i + 1}`} aria-invalid={!!erro(i, 'discountCents')} title={erro(i, 'discountCents')}
                       onChange={(e) => set(i, { discount: e.target.value })}
                       onBlur={() => {

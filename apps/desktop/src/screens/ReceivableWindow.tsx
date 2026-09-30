@@ -14,6 +14,7 @@ import { GradeHistorico } from './comum/GradeHistorico';
 import { Selecao } from './comum/Selecao';
 import { CONTAS_ALTERADAS } from './BankAccountsWindow';
 import { seloReceber, TITULOS_ALTERADOS } from './ReceivablesWindow';
+import { CampoDinheiro } from './comum/CampoDinheiro';
 
 type Tab = 'geral' | 'recebimentos' | 'faturamento' | 'historico';
 
@@ -422,7 +423,7 @@ function DialogoRecebimento({ titulo, idBase, onCancelar, onRecebido, notify }: 
         <CampoData id={fid('data')} rotulo="Data do recebimento" valor={data} onChange={setData} invalido={!!erros.effectiveDate} className="rp-field rp-field--curto" />
         {erro('effectiveDate')}
         <label className="rp-label" htmlFor={fid('valor')}>Valor</label>
-        <input id={fid('valor')} className="rp-field rp-field--num rp-field--curto" value={valor} maxLength={20} inputMode="decimal" aria-invalid={!!erros.amountCents}
+        <CampoDinheiro id={fid('valor')} className="rp-field rp-field--num rp-field--curto" value={valor} maxLength={20} aria-invalid={!!erros.amountCents}
           onChange={(e) => (setValor(e.target.value), setErros({}))}
           onBlur={() => {
             const c = centavosParaApi(valor);
