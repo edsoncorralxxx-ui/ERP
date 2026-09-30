@@ -284,7 +284,7 @@
   background: linear-gradient(#ffffff, #e3e9f2); border: 1px solid var(--window-border); border-radius: 2px; }
 .rp-winctl button:hover { background: var(--button-top); border-color: var(--button-border); }
 .rp-winctl button:last-child:hover { background: var(--status-error); color: var(--on-dark); border-color: #9c1f10; }
-.rp-appbar .rp-toolbar { background: #fdfdfd; }
+.rp-appbar .rp-toolbar { background: var(--chrome); }
 .rp-apphead { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 16px; background: var(--ground); }
 .rp-apphead .rp-search { width: 44%; min-width: 260px; }
 .rp-appbody { min-height: 120px; background: var(--ground); }
@@ -390,7 +390,7 @@
 
 /* Barra de filtros */
 .rp-filtros { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; padding: var(--space-2) var(--space-3);
-  background: var(--grid-header); border: 1px solid var(--grid-rule); }
+  background: var(--surface-form); border: 1px solid var(--grid-rule); }
 .rp-filtros label { display: inline-flex; align-items: center; gap: 5px; color: var(--ink-muted); }
 .rp-filtros .rp-field { width: 120px; }
 .rp-filtros .rp-btn { height: 22px; min-width: 70px; }
@@ -404,7 +404,7 @@
 
 /* Paginação */
 .rp-pag { display: flex; align-items: center; gap: 4px; padding: var(--space-2) var(--space-3);
-  background: var(--grid-header); border: 1px solid var(--grid-rule); border-top: 0; }
+  background: var(--surface-form); border: 1px solid var(--grid-rule); border-top: 0; }
 .rp-pag button { min-width: 24px; height: 22px; padding: 0 6px; font: inherit; cursor: pointer;
   background: linear-gradient(var(--button-top), var(--button) 55%); border: 1px solid var(--button-border); border-radius: var(--radius-sm);
   transition: background-color .15s ease; }
