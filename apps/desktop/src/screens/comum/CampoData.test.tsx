@@ -16,7 +16,7 @@ function Teste({ inicial = '', onEnter = () => {} }: { inicial?: string; onEnter
 }
 
 describe('Campo de data', () => {
-  it('o calendário aparece à esquerda, dentro do campo, só quando se começa a digitar', async () => {
+  it('o calendário aparece à direita, dentro do campo, só quando se começa a digitar', async () => {
     const user = userEvent.setup();
     render(<Teste />);
     const campo = screen.getByLabelText('Vencimento');
