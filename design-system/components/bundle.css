@@ -79,7 +79,7 @@
 .rp-grid td { height: var(--row-grid); padding: 0 var(--space-2); border-right: 1px solid var(--grid-rule);
   border-bottom: 1px solid var(--grid-row-alt); white-space: nowrap; }
 .rp-grid td.num, .rp-grid th.num { text-align: right; }
-.rp-grid td.rownum { color: var(--ink-muted); background: var(--grid-header); }
+.rp-grid td.rownum { color: var(--ink-muted); background: var(--grid-rownum); }
 .rp-grid tr[aria-selected=true] td { background: var(--grid-row-selected); }
 .rp-grid tfoot td { background: var(--field-readonly); border-top: 1px solid var(--grid-rule); }
 
