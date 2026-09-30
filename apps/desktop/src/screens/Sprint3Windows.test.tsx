@@ -105,7 +105,7 @@ describe('Produto ou serviço', () => {
     expect(screen.getByRole('checkbox', { name: 'Controla estoque' })).toBeChecked();
     await escolher(user, screen.getByLabelText('Unidade de medida'), 'M — Metro');
     await escolher(user, screen.getByLabelText('Categoria'), 'Chapas');
-    await user.type(screen.getByLabelText('Custo de referência (R$)'), '1.234,5');
+    await user.type(screen.getByLabelText('Custo de referência'), '1.234,5');
     await user.type(screen.getByLabelText('NCM'), '72161000');
     await user.tab();
     expect(screen.getByLabelText('NCM')).toHaveValue('7216.10.00');
@@ -120,7 +120,7 @@ describe('Produto ou serviço', () => {
     expect(body).toMatchObject({ nature: 'MATERIAL', uom: 'M', categoryId: 'cat-1', stockControlled: true, referenceCost: '1234.50', ncm: '7216.10.00', serviceCode: null, conversions: [{ fromUom: 'BR', factor: '6' }] });
     expect(posts[0].headers?.['Idempotency-Key']).toBeTruthy();
     await user.click(screen.getByRole('tab', { name: /Geral/ }));
-    expect(screen.getByLabelText('Custo de referência (R$)')).toHaveValue('1.234,50');
+    expect(screen.getByLabelText('Custo de referência')).toHaveValue('1.234,50');
     expect(screen.getByRole('radio', { name: 'Serviço' })).toBeDisabled();
   });
 });

@@ -10,6 +10,7 @@ import { useCategorias } from './comum/Categorias';
 import { Selecao } from './comum/Selecao';
 import { PAGAR_ALTERADOS, seloPagar } from './PayablesWindow';
 import { DialogoDividir } from './SalesOrderWindow';
+import { CampoDinheiro } from './comum/CampoDinheiro';
 
 type Parcela = { dueDate: string; amount: string };
 type Form = {
@@ -182,7 +183,7 @@ export function NewPayableWindow() {
           </div>
           <div className={`rp-form rp-ficha__situacao${emAdicao ? ' rp-form--adicao' : ''}`}>
             <label className="rp-label rp-label--req" htmlFor={fid('total')}>Total</label>
-            <input id={fid('total')} className={`${classeCampo} rp-field--num`} value={form.total} maxLength={20} inputMode="decimal" readOnly={somenteLeitura}
+            <CampoDinheiro id={fid('total')} className={`${classeCampo} rp-field--num`} value={form.total} maxLength={20} readOnly={somenteLeitura}
               aria-invalid={!!erros.totalCents} onChange={(e) => set({ total: e.target.value })}
               onBlur={() => {
                 const c = emCentavos(form.total);
@@ -264,7 +265,7 @@ export function NewPayableWindow() {
                           invalido={!!erros[`installments[${i}].dueDate`]} onChange={(v) => setParcela(i, { dueDate: v })} />
                       </td>
                       <td>
-                        <input className="rp-field rp-field--num" value={p.amount} maxLength={20} inputMode="decimal" readOnly={somenteLeitura}
+                        <CampoDinheiro className="rp-field rp-field--num" value={p.amount} maxLength={20} readOnly={somenteLeitura}
                           aria-label={`Valor da parcela ${i + 1}`} aria-invalid={!!erros[`installments[${i}].amountCents`]}
                           onChange={(e) => setParcela(i, { amount: e.target.value })}
                           onBlur={() => {

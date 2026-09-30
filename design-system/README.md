@@ -6,7 +6,7 @@ O Renda+ ERP é um aplicativo de gestão denso, no estilo desktop: muitas janela
 - Botões são verbos curtos ou nomes de objeto: OK, Cancelar, Copiar para, Chamados de serviço relacionados, Atividade. Sem frases, sem ícones em botões.
 - Fale com o usuário na segunda pessoa ("você"), de forma simples e uma vez só: "Bem-vindo, {nome}. Você está no cockpit inicial da {empresa}."
 - Abreviações do domínio são bem-vindas: NF, CNPJ, Nº, Ref., Cód., C/R, C/P.
-- Números no padrão brasileiro: duas casas, ponto de milhar e vírgula decimal (`R$ 23.579,23`); datas `DD/MM/AAAA`. Use o estilo `numeric`, alinhado à direita.
+- Números no padrão brasileiro: duas casas, ponto de milhar e vírgula decimal (`R$ 23.579,23`); datas `DD/MM/AAAA`. Use o estilo `numeric`, alinhado à direita. Campo editável de dinheiro é o **Campo de dinheiro**: "R$" dentro do campo e calculadora com `=` (`=2+2` e Enter põe `4,00`).
 - Erros na barra de status: o que aconteceu, depois o código e o id — "Nenhum registro correspondente encontrado (ODBC -2028) [Mensagem 131-183]". Sucesso: objeto e número — "Pedido de venda 1.284 adicionado com sucesso".
 - Conteúdo gerado por IA é sempre identificado (ícone `ia-*` ou selo "IA"), traz o grau de confiança e pede conferência antes de aplicar.
 - Sem emoji, sem pontos de exclamação.
@@ -41,7 +41,7 @@ O Renda+ ERP é um aplicativo de gestão denso, no estilo desktop: muitas janela
 
 Biblioteca própria de 16px em SVG, nos grupos de ativos Ferramentas, Módulos, Pastas, IA e Status, e como classes CSS: `<i class="rp-ico rp-ico-NOME"></i>`; versão branca para o azul do menu: `rp-ico-w-NOME`.
 
-- **Ferramentas**: no estilo da barra superior clássica — contorno azul-ardósia `#3b4d70`, preenchimento em degradê branco → azul-acinzentado, páginas com canto dobrado, cor só como acento (cadeado dourado, aviso laranja, mover e binóculo azuis, estrela laranja do novo). Mesma ordem e funções da barra original: visualizar, imprimir, e-mail, SMS, fax, exportar planilha/Word/PDF, mover, bloquear, buscar, novo, primeiro/anterior/próximo/último, filtro, ordenar, documento-base/destino, lucro bruto, meios de pagamento, editar, configurações, consulta, alertas, calendário, ajuda. Ferramentas indisponíveis ficam em cinza esmaecido.
+- **Ferramentas**: no estilo da barra superior clássica — contorno azul-ardósia `#3b4d70`, preenchimento em degradê branco → azul-acinzentado, páginas com canto dobrado, cor só como acento (cadeado dourado, aviso laranja, mover e binóculo azuis, estrela laranja do novo). Mesma ordem e funções da barra original: visualizar, imprimir, e-mail, SMS, fax, exportar planilha/Word/PDF, mover, bloquear, buscar, novo, primeiro/anterior/próximo/último, filtro, ordenar, documento-base/destino, lucro bruto, meios de pagamento, editar, configurações, consulta, alertas, calendário, calculadora, ajuda. Ferramentas indisponíveis ficam em cinza esmaecido.
 - **Módulos**: um ícone por módulo, em branco no menu lateral.
 - **Pastas**: pasta, pasta aberta, formulário e relatório para a vista Arrastar e relacionar.
 - **IA**: todo ícone de IA leva a faísca dourada de quatro pontas; a faísca não aparece em nenhum outro ícone.

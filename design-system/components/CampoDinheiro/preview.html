@@ -1,0 +1,17 @@
+<!-- @dsCard group="Entradas" height=200 -->
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Campo de dinheiro</title>
+<style>body{margin:0;padding:16px;background:var(--surface-form)}</style></head>
+<body class="rp">
+<div class="rp-form rp-form--req" style="grid-template-columns:140px 14px 200px">
+  <span class="rp-label">Valor</span><span class="rp-req">*</span>
+  <span class="rp-dinheiro"><span class="rp-dinheiro-simbolo">R$</span><input class="rp-field rp-field--num" value="23.579,23"></span>
+  <span class="rp-label">Desconto</span><span></span>
+  <span class="rp-dinheiro"><span class="rp-dinheiro-simbolo">R$</span><input class="rp-field rp-field--num" value=""></span>
+  <span class="rp-label">Parcela (calculando)</span><span></span>
+  <span class="rp-dinheiro rp-dinheiro--calc"><span class="rp-dinheiro-simbolo">R$</span><input class="rp-field rp-field--num rp-field--active" value="=23.579,23/3"><i class="rp-ico rp-ico-calculadora rp-dinheiro-calc"></i></span>
+  <span class="rp-label">Saldo da conta</span><span></span>
+  <input class="rp-field rp-field--num rp-field--readonly" readonly value="R$ 7.859,74">
+</div>
+<div style="color:var(--ink-muted);margin-top:10px">Digite "=" no campo para abrir a calculadora; Enter põe o resultado, Esc cancela.</div>
+</body></html>

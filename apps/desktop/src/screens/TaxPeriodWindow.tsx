@@ -13,6 +13,7 @@ import { GradeHistorico } from './comum/GradeHistorico';
 import { DOCUMENTOS_ALTERADOS } from './DocumentsWindow';
 import { TIPO_NOTA } from './DocumentWindow';
 import { IMPOSTOS_ALTERADOS, seloCompetencia } from './TaxPeriodsWindow';
+import { CampoDinheiro } from './comum/CampoDinheiro';
 
 type Tab = 'receitas' | 'simulacao' | 'rbt12' | 'conferencia' | 'historico';
 
@@ -350,7 +351,7 @@ export function TaxPeriodWindow({ recordKey }: { recordKey: string }) {
                   {podeConferir && !p.rbt12.calculatedCents && (
                     <div className="rp-form rp-form--adicao" aria-label="Informar RBT12">
                       <label className="rp-label rp-label--req" htmlFor={fid('rbt12')}>RBT12 do PGDAS-D</label>
-                      <input id={fid('rbt12')} className="rp-field rp-field--num" inputMode="decimal" maxLength={20} value={rbt12.valor} aria-invalid={!!erros.amountCents}
+                      <CampoDinheiro id={fid('rbt12')} className="rp-field rp-field--num" maxLength={20} value={rbt12.valor} aria-invalid={!!erros.amountCents}
                         onChange={(e) => setRbt12((r) => ({ ...r, valor: e.target.value }))} />
                       {erroDe('amountCents')}
                       <label className="rp-label rp-label--req" htmlFor={fid('rbt12por')}>Informado por</label>
@@ -410,7 +411,7 @@ export function TaxPeriodWindow({ recordKey }: { recordKey: string }) {
                   {podeConferir && (
                     <div className="rp-form rp-form--adicao" aria-label="Registrar conferência">
                       <label className="rp-label rp-label--req" htmlFor={fid('confvalor')}>Valor do contador</label>
-                      <input id={fid('confvalor')} className="rp-field rp-field--num" inputMode="decimal" maxLength={20} value={conf.valor}
+                      <CampoDinheiro id={fid('confvalor')} className="rp-field rp-field--num" maxLength={20} value={conf.valor}
                         aria-invalid={!!erros.amountCents} onChange={(e) => setConf((c) => ({ ...c, valor: e.target.value }))} />
                       {erroDe('amountCents')}
                       <label className="rp-label rp-label--req" htmlFor={fid('confvenc')}>Vencimento</label>

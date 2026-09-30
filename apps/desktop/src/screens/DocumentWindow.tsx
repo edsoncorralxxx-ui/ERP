@@ -13,6 +13,7 @@ import { GradeHistorico } from './comum/GradeHistorico';
 import { Selecao } from './comum/Selecao';
 import { DOCUMENTOS_ALTERADOS, seloDocumento } from './DocumentsWindow';
 import { TITULOS_ALTERADOS } from './ReceivablesWindow';
+import { CampoDinheiro } from './comum/CampoDinheiro';
 
 type Tab = 'linhas' | 'parcelas' | 'vinculos' | 'classificacao' | 'historico';
 type Form = {
@@ -393,7 +394,7 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
                     <input className="rp-field rp-field--readonly rp-field--num" readOnly aria-label="A emitir do tipo"
                       value={reais(proposta ? aEmitirDoTipo(proposta, proposta.kind) : '0')} />
                     <label className="rp-label" htmlFor={fid('valor')}>Valor da nota</label>
-                    <input id={fid('valor')} className={`${classeCampo} rp-field--num`} value={form.amount} maxLength={20} inputMode="decimal"
+                    <CampoDinheiro id={fid('valor')} className={`${classeCampo} rp-field--num`} value={form.amount} maxLength={20}
                       readOnly={somenteLeitura || !proposta} aria-invalid={!!erros.amountCents} onChange={(e) => set({ amount: e.target.value })}
                       onBlur={() => form.orderId && void propor(form.orderId, form.kind, form.amount)} />
                     {erros.amountCents && (

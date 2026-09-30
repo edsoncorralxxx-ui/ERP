@@ -16,6 +16,7 @@ import { Selecao } from './comum/Selecao';
 import { ESTAGIO, seloEquipamento, seloPedido, seloTitulo } from './comum/Selos';
 import { novoDocumento } from './DocumentsWindow';
 import { PEDIDOS_ALTERADOS } from './SalesOrdersWindow';
+import { CampoDinheiro } from './comum/CampoDinheiro';
 
 type Tab = 'linhas' | 'parcelas' | 'gerado' | 'historico';
 type Parcela = { dueDate: string; amount: string; milestone: string };
@@ -382,7 +383,7 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
                                 invalido={!!erros[`installments[${i}].dueDate`]} onChange={(v) => setParcela(i, { dueDate: v })} />
                             </td>
                             <td>
-                              <input className="rp-field rp-field--num" value={p.amount} maxLength={20} inputMode="decimal" readOnly={somenteLeitura}
+                              <CampoDinheiro className="rp-field rp-field--num" value={p.amount} maxLength={20} readOnly={somenteLeitura}
                                 aria-label={`Valor da parcela ${i + 1}`} aria-invalid={!!erros[`installments[${i}].amountCents`]}
                                 onChange={(e) => setParcela(i, { amount: e.target.value })}
                                 onBlur={() => {

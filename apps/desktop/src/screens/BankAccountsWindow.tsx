@@ -10,6 +10,7 @@ import { novaChave } from './comum/Cadastros';
 import { CampoData } from './comum/CampoData';
 import { DialogoMotivo } from './comum/Dialogos';
 import { Selecao } from './comum/Selecao';
+import { CampoDinheiro } from './comum/CampoDinheiro';
 
 /** Avisado depois de um recebimento ou estorno, que mudam o saldo das contas. */
 export const CONTAS_ALTERADAS = 'renda:contas-alteradas';
@@ -234,8 +235,8 @@ export function BankAccountsWindow() {
                 {texto('accountNumber', 'Conta', 30)}
                 <label className="rp-label" htmlFor={fid('opening')}>Saldo inicial</label>
                 <span />
-                <input id={fid('opening')} className={`rp-field rp-field--num rp-field--curto${saldoFixo ? ' rp-field--readonly' : ''}`} readOnly={saldoFixo} maxLength={20}
-                  inputMode="decimal" value={form.opening} aria-invalid={!!erros.openingCents} onChange={(e) => setForm({ ...form, opening: e.target.value })}
+                <CampoDinheiro id={fid('opening')} className={`rp-field rp-field--num rp-field--curto${saldoFixo ? ' rp-field--readonly' : ''}`} readOnly={saldoFixo} maxLength={20}
+                  value={form.opening} aria-invalid={!!erros.openingCents} onChange={(e) => setForm({ ...form, opening: e.target.value })}
                   onBlur={() => {
                     const negativo = form.opening.trim().startsWith('-');
                     const c = centavosParaApi(form.opening.replace(/^-\s*/, ''));
@@ -469,7 +470,7 @@ function DialogoTransferencia({ contas, origemInicial, idBase, notify, onCancela
         <CampoData id={fid('data')} rotulo="Data da transferência" valor={data} onChange={setData} invalido={!!erros.effectiveDate} className="rp-field rp-field--curto" />
         {erro('effectiveDate')}
         <label className="rp-label" htmlFor={fid('valor')}>Valor</label>
-        <input id={fid('valor')} className="rp-field rp-field--num rp-field--curto" value={valor} maxLength={20} inputMode="decimal" aria-invalid={!!erros.amountCents}
+        <CampoDinheiro id={fid('valor')} className="rp-field rp-field--num rp-field--curto" value={valor} maxLength={20} aria-invalid={!!erros.amountCents}
           onChange={(e) => (setValor(e.target.value), setErros({}))}
           onBlur={() => {
             const c = centavosParaApi(valor);
