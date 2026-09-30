@@ -1,10 +1,10 @@
 /* Renda+ ERP — tokens. Gerado por scripts/build-tokens.mjs a partir de tokens.json; não edite à mão. */
 :root {
   /* Cor */
-  --ground: #fcfcfc;
-  --chrome: #f9fafd;
-  --surface-form: #eef3f7;
-  --surface-panel: #f1f4f7;
+  --ground: #ffffff;
+  --chrome: #ffffff;
+  --surface-form: #ffffff;
+  --surface-panel: #ffffff;
   --panel-head: #e9ecf1;
   --rail: #e1e4e6;
   --rail-selected: #5a85d2;
@@ -29,7 +29,7 @@
   --tab: #cfdceb;
   --tab-border: #a3bcd2;
   --grid-header: #e4eef7;
-  --grid-row: #eef3f7;
+  --grid-row: #ffffff;
   --grid-row-alt: #e4edf6;
   --grid-rule: #c1c8d3;
   --window-border: #50658c;

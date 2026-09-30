@@ -180,18 +180,23 @@ export function NewPayableWindow() {
               onChange={(e) => set({ description: e.target.value })} />
             {erroDe('description')}
           </div>
-          <div className={`rp-form rp-form--req rp-ficha__situacao${emAdicao ? ' rp-form--adicao' : ''}`}>
-            <label className="rp-label" htmlFor={fid('total')}>Total</label>
-            <span className="rp-req" aria-hidden="true">*</span>
+          <div className={`rp-form rp-ficha__situacao${emAdicao ? ' rp-form--adicao' : ''}`}>
+            <label className="rp-label rp-label--req" htmlFor={fid('total')}>Total</label>
             <input id={fid('total')} className={`${classeCampo} rp-field--num`} value={form.total} maxLength={20} inputMode="decimal" readOnly={somenteLeitura}
               aria-invalid={!!erros.totalCents} onChange={(e) => set({ total: e.target.value })}
               onBlur={() => {
                 const c = emCentavos(form.total);
                 if (c !== null) set({ total: centavos(c.toString()) });
               }} />
-            {erroDe('totalCents')}
+            {erros.totalCents && (
+              <>
+                <span />
+                <span className="rp-campo-erro">
+                  <i className="rp-ico rp-ico-status-erro" aria-hidden="true" /> {erros.totalCents}
+                </span>
+              </>
+            )}
             <label className="rp-label" htmlFor={fid('obs')}>Observação</label>
-            <span />
             <input id={fid('obs')} className={classeCampo} value={form.notes} maxLength={500} readOnly={somenteLeitura} onChange={(e) => set({ notes: e.target.value })} />
           </div>
         </div>
