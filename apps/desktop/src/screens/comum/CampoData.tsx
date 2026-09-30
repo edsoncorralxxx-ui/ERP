@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { avaliarData, ehContaDeData } from '../../calculadora';
 import { dataDaApi, dataParaApi, hojeIso, normalizarData } from '../../format';
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
 /**
  * Campo de data do design system: `DD/MM/AAAA`, digitação livre normalizada ao sair (`20/09/26`, `200926`,
- * `20-09-2026`) e o calendário (semana começando na segunda, Hoje e Limpar; Esc fecha sem alterar).
+ * `20-09-2026`), o calendário no ícone dentro do campo (semana começando na segunda, Hoje e Limpar; Esc fecha sem
+ * alterar) e a conta de datas: `=19/05/2026+90du`, `=hoje+30dc`, `=+1m` — Enter ou sair do campo põe a data, Esc
+ * volta à de antes.
  */
 export function CampoData({ id, valor, onChange, somenteLeitura, className, invalido, rotulo }: {
   id: string;
@@ -22,6 +25,9 @@ export function CampoData({ id, valor, onChange, somenteLeitura, className, inva
   const base = atual && /^\d{4}-\d{2}-\d{2}$/.test(atual) ? atual : hojeIso();
   const [mes, setMes] = useState<[number, number]>([Number(base.slice(0, 4)), Number(base.slice(5, 7)) - 1]);
   const caixa = useRef<HTMLSpanElement>(null);
+  const conta = ehContaDeData(valor);
+  const antes = useRef(valor);
+  if (!conta) antes.current = valor;
 
   useEffect(() => {
     if (!aberto) return;
@@ -48,28 +54,50 @@ export function CampoData({ id, valor, onChange, somenteLeitura, className, inva
   const semanas = Array.from({ length: 6 }, (_, i) => dias.slice(i * 7, i * 7 + 7));
   const hoje = hojeIso();
   const mover = (delta: number) => setMes(([a, mm]) => [a + Math.floor((mm + delta) / 12), (((mm + delta) % 12) + 12) % 12]);
+  /** Resolve a conta de datas; conta inválida fica no campo (com "=", sair do campo volta à data de antes). */
+  const calcular = (): boolean => {
+    const iso = dataParaApi(antes.current);
+    const r = avaliarData(valor, iso && /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null, hojeIso());
+    if (r) onChange(dataDaApi(r));
+    return r !== null;
+  };
   const teclas = (e: KeyboardEvent) => {
     if (e.key === 'Escape' && aberto) {
       e.stopPropagation();
       e.preventDefault();
       setAberto(false);
+    } else if (!conta && !somenteLeitura && e.key === '=' && e.target instanceof HTMLInputElement) {
+      // "=" começa uma conta nova, guardando a data que estava no campo como ponto de partida.
+      e.preventDefault();
+      onChange('=');
+    } else if (conta && (e.key === 'Enter' || e.key === 'Escape') && e.target instanceof HTMLInputElement) {
+      // Enter e Esc são da conta: não confirmam nem fecham a janela.
+      e.stopPropagation();
+      e.preventDefault();
+      if (e.key === 'Escape') onChange(antes.current);
+      else calcular();
     }
+  };
+  const saida = () => {
+    if (!conta) return onChange(normalizarData(valor));
+    if (!calcular() && valor.trim().startsWith('=')) onChange(antes.current);
   };
 
   return (
-    <span className="rp-campo rp-campo-data" ref={caixa} onKeyDown={teclas}>
+    <span className="rp-campo rp-campo--icone rp-campo-data" ref={caixa} onKeyDown={teclas}>
       <input
         id={id}
         className={className ?? 'rp-field'}
         value={valor}
-        maxLength={10}
+        maxLength={40}
         placeholder="DD/MM/AAAA"
         readOnly={somenteLeitura}
         aria-invalid={invalido}
+        title={conta ? 'Conta de datas: Enter põe a data, Esc cancela (dc dias corridos, du dias úteis, s semanas, m meses, a anos)' : undefined}
         onChange={(e) => onChange(e.target.value)}
-        onBlur={() => onChange(normalizarData(valor))}
+        onBlur={saida}
       />
-      <button type="button" className="rp-campo-btn" title="Abrir calendário" aria-label={`Abrir calendário${rotulo ? ` de ${rotulo}` : ''}`} disabled={somenteLeitura} onClick={() => (aberto ? setAberto(false) : abrir())}>
+      <button type="button" className="rp-campo-icone" title="Abrir calendário" aria-label={`Abrir calendário${rotulo ? ` de ${rotulo}` : ''}`} disabled={somenteLeitura} onClick={() => (aberto ? setAberto(false) : abrir())}>
         <i className="rp-ico rp-ico-calendario" aria-hidden="true" />
       </button>
       {aberto && (

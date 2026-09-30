@@ -6,7 +6,7 @@ O Renda+ ERP é um aplicativo de gestão denso, no estilo desktop: muitas janela
 - Botões são verbos curtos ou nomes de objeto: OK, Cancelar, Copiar para, Chamados de serviço relacionados, Atividade. Sem frases, sem ícones em botões.
 - Fale com o usuário na segunda pessoa ("você"), de forma simples e uma vez só: "Bem-vindo, {nome}. Você está no cockpit inicial da {empresa}."
 - Abreviações do domínio são bem-vindas: NF, CNPJ, Nº, Ref., Cód., C/R, C/P.
-- Números no padrão brasileiro: duas casas, ponto de milhar e vírgula decimal (`R$ 23.579,23`); datas `DD/MM/AAAA`. Use o estilo `numeric`, alinhado à direita. Campo editável de dinheiro é o **Campo de dinheiro**: "R$" dentro do campo e calculadora com `=` (`=2+2` e Enter põe `4,00`).
+- Números no padrão brasileiro: duas casas, ponto de milhar e vírgula decimal (`R$ 23.579,23`); datas `DD/MM/AAAA`. Use o estilo `numeric`, alinhado à direita. Campo editável de dinheiro é o **Campo de dinheiro**: "R$" dentro do campo e o ícone de calculadora sempre à direita; `=2+2` e Enter põe `4,00`. O **Campo de data** traz o calendário dentro do campo e faz conta de datas: `=19/05/2026+90du` (`dc` dias corridos, `du` dias úteis, `s` semanas, `m` meses, `a` anos).
 - Erros na barra de status: o que aconteceu, depois o código e o id — "Nenhum registro correspondente encontrado (ODBC -2028) [Mensagem 131-183]". Sucesso: objeto e número — "Pedido de venda 1.284 adicionado com sucesso".
 - Conteúdo gerado por IA é sempre identificado (ícone `ia-*` ou selo "IA"), traz o grau de confiança e pede conferência antes de aplicar.
 - Sem emoji, sem pontos de exclamação.

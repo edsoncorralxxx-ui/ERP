@@ -13,7 +13,7 @@ describe('Campo de dinheiro', () => {
   it('mostra R$ dentro do campo', () => {
     render(<Teste inicial="10,00" />);
     expect(screen.getByText('R$')).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: 'Calculadora' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Calculadora de Valor' })).toBeEnabled();
   });
 
   it('"=" abre a calculadora e Enter põe o resultado sem confirmar a janela', async () => {
@@ -24,10 +24,8 @@ describe('Campo de dinheiro', () => {
     await user.click(campo);
     await user.keyboard('=');
     expect(campo).toHaveValue('=');
-    expect(screen.getByRole('img', { name: 'Calculadora' })).toBeInTheDocument();
     await user.keyboard('2+2{Enter}');
     expect(campo).toHaveValue('4,00');
-    expect(screen.queryByRole('img', { name: 'Calculadora' })).toBeNull();
     expect(onEnter).not.toHaveBeenCalled();
     await user.keyboard('{Enter}');
     expect(onEnter).toHaveBeenCalledOnce();
@@ -56,11 +54,23 @@ describe('Campo de dinheiro', () => {
     expect(campo).toHaveValue('1.500,00');
   });
 
+  it('o ícone de calculadora começa a conta', async () => {
+    const user = userEvent.setup();
+    render(<Teste inicial="10,00" />);
+    await user.click(screen.getByRole('button', { name: 'Calculadora de Valor' }));
+    const campo = screen.getByLabelText('Valor');
+    expect(campo).toHaveFocus();
+    expect(campo).toHaveValue('=');
+    await user.keyboard('7*3{Enter}');
+    expect(campo).toHaveValue('21,00');
+  });
+
   it('campo somente leitura não abre a calculadora', async () => {
     const user = userEvent.setup();
     render(<CampoDinheiro aria-label="Valor" value="5,00" readOnly onChange={() => {}} />);
     await user.click(screen.getByLabelText('Valor'));
     await user.keyboard('=');
     expect(screen.getByLabelText('Valor')).toHaveValue('5,00');
+    expect(screen.getByRole('button', { name: 'Calculadora de Valor' })).toBeDisabled();
   });
 });

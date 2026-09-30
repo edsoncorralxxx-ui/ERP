@@ -8,9 +8,9 @@ const digitar = (el: HTMLInputElement, texto: string) => {
 };
 
 /**
- * Campo de dinheiro do design system: o `input.rp-field` de sempre com "R$" dentro, à esquerda, e a calculadora.
- * Digitar "=" começa uma conta (o ícone de calculadora aparece à direita); Enter ou sair do campo põe o resultado,
- * Esc volta ao valor de antes. Aceita os mesmos atributos do `input`; `casas` é o máximo de casas do resultado.
+ * Campo de dinheiro do design system: o `input.rp-field` de sempre com "R$" dentro, à esquerda, e o ícone de
+ * calculadora sempre à direita. Digitar "=" (ou clicar no ícone) começa uma conta; Enter ou sair do campo põe o
+ * resultado, Esc volta ao valor de antes. Aceita os mesmos atributos do `input`; `casas` é o máximo de casas do resultado.
  */
 export function CampoDinheiro({ casas = 2, className, value, maxLength, onKeyDown, onBlur, ...resto }: InputHTMLAttributes<HTMLInputElement> & {
   value: string;
@@ -49,6 +49,12 @@ export function CampoDinheiro({ casas = 2, className, value, maxLength, onKeyDow
     onKeyDown?.(e);
   };
 
+  const abrirConta = () => {
+    const el = campo.current!;
+    el.focus();
+    if (!calc) digitar(el, '=');
+  };
+
   const saida = (e: FocusEvent<HTMLInputElement>) => {
     if (!calc) return onBlur?.(e);
     if (!calcular()) digitar(e.currentTarget, antes.current);
@@ -69,7 +75,11 @@ export function CampoDinheiro({ casas = 2, className, value, maxLength, onKeyDow
         onKeyDown={teclas}
         onBlur={saida}
       />
-      {calc && <i className="rp-ico rp-ico-calculadora rp-dinheiro-calc" role="img" aria-label="Calculadora" />}
+      <button type="button" className="rp-campo-icone" tabIndex={-1} title="Calculadora: digite = e a conta; Enter põe o resultado"
+        aria-label={`Calculadora${resto['aria-label'] ? ` de ${resto['aria-label']}` : ''}`} disabled={!editavel}
+        onMouseDown={(e) => e.preventDefault()} onClick={abrirConta}>
+        <i className="rp-ico rp-ico-calculadora" aria-hidden="true" />
+      </button>
     </span>
   );
 }
