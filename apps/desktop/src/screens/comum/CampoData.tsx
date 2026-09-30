@@ -84,7 +84,7 @@ export function CampoData({ id, valor, onChange, somenteLeitura, className, inva
   };
 
   return (
-    <span className="rp-campo rp-campo--icone rp-campo-data" ref={caixa} onKeyDown={teclas}>
+    <span className={`rp-campo rp-campo--icone rp-campo-data${className?.split(' ').includes('rp-field--curto') ? ' rp-field--curto' : ''}`} ref={caixa} onKeyDown={teclas}>
       <input
         id={id}
         className={className ?? 'rp-field'}

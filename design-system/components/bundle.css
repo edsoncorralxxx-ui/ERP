@@ -191,7 +191,7 @@
 
 /* Caixa de mensagem */
 .rp-msgbox .rp-window-body { display: flex; gap: 14px; align-items: flex-start; }
-.rp-msgbox .rp-ico { width: 32px; height: 32px; flex: none; }
+.rp-msgbox .rp-window-body > .rp-ico { width: 32px; height: 32px; flex: none; }
 .rp-msgbox .rp-window-foot { justify-content: flex-end; }
 
 /* Indicador (KPI) */
@@ -360,7 +360,7 @@
 .rp-campo--icone > .rp-field { padding-right: calc(var(--icon) + var(--space-2)); }
 .rp-campo-icone { position: absolute; right: var(--space-1); top: 50%; transform: translateY(-50%); width: var(--icon); height: var(--icon);
   padding: 0; border: 0; background: transparent; display: grid; place-content: center; cursor: pointer; }
-.rp-campo-icone .rp-ico { vertical-align: 0; }
+.rp-campo-icone .rp-ico { width: var(--icon); height: var(--icon); vertical-align: 0; }
 .rp-campo-icone:disabled { cursor: default; opacity: .45; }
 
 /* Calendário do campo de data */
