@@ -66,8 +66,13 @@ export function Selecao({ valor, opcoes, onChange, id, className, disabled, titl
       const alvo = e.target as Node;
       if (!campo.current?.contains(alvo) && !lista.current?.contains(alvo)) fechar(false);
     };
+    // Rolagem de quem contém o campo (ex.: a caixa de mensagem que rola até o campo focado): a lista acompanha o campo e
+    // só fecha se ele sair da tela.
     const rolou = (e: Event) => {
-      if (!lista.current?.contains(e.target as Node)) fechar(false);
+      if (lista.current?.contains(e.target as Node)) return;
+      const r = campo.current?.getBoundingClientRect();
+      if (e.type === 'scroll' && r && r.bottom > 0 && r.top < window.innerHeight) posicionar();
+      else fechar(false);
     };
     document.addEventListener('mousedown', fora);
     window.addEventListener('scroll', rolou, true);
@@ -80,8 +85,13 @@ export function Selecao({ valor, opcoes, onChange, id, className, disabled, titl
   }, [aberta]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Mantém a opção em destaque visível.
+  // Rola só a própria lista: scrollIntoView também rolaria a janela por trás, e essa rolagem fecharia a lista.
   useLayoutEffect(() => {
-    if (aberta) lista.current?.querySelector<HTMLElement>(`[data-i="${ativa}"]`)?.scrollIntoView?.({ block: 'nearest' });
+    const l = lista.current;
+    const el = aberta ? l?.querySelector<HTMLElement>(`[data-i="${ativa}"]`) : null;
+    if (!l || !el) return;
+    if (el.offsetTop < l.scrollTop) l.scrollTop = el.offsetTop;
+    else if (el.offsetTop + el.offsetHeight > l.scrollTop + l.clientHeight) l.scrollTop = el.offsetTop + el.offsetHeight - l.clientHeight;
   }, [aberta, ativa]);
 
   const proxima = (de: number, passo: number) => {

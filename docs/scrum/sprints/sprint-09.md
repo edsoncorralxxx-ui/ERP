@@ -1,6 +1,6 @@
 # Sprint 9 — Fluxo de caixa e transferência entre contas
 
-Situação: **Em execução**. Planning aprovado pelo PO em 30/09/2026 ("aprovado"), com as cinco respostas como propostas (tabela abaixo).
+Situação: **Entregue para Review** (30/09/2026). Planning aprovado pelo PO em 30/09/2026 ("aprovado"), com as cinco respostas como propostas (tabela abaixo).
 
 ## Objetivo
 
@@ -76,3 +76,34 @@ Conciliação e importação de extrato (Sprint 10); cenários e simulações; d
 
 - **Previsto parece compromisso**: a grade separa realizado e previsto em linhas diferentes e a coluna Em atraso mostra o que já venceu.
 - **Movimento de caixa sem liquidação**: a transferência é o primeiro movimento que não vem de recebimento ou pagamento; o extrato, o saldo e os testes das Sprints 5 e 8 continuam no CI.
+
+## Review — evidências
+
+| Item | Resultado | Evidência |
+|---|---|---|
+| S9-01 Transferência entre contas | Pronto | Migração V14. `FluxoDeCaixaApiTest.transferenciaMudaAsContasMasNaoOTotalEEstornaInteira`: campos obrigatórios, origem = destino, data futura e conta inativa recusados; R$ 5.000,00 do Banco para o Caixa: cada conta muda e o total não; a mesma chave devolve a mesma transferência; o extrato mostra a saída e a entrada; estorno com motivo devolve os dois saldos e estornar de novo não muda nada; eventos `TransferPosted` e `TransferReversed`; Consulta → 403 |
+| S9-02 Saldo realizado (IND-009) | Pronto | `GET /bank-accounts/balances?date=`: por conta e total; na véspera a transferência ainda não existe |
+| S9-03 Fluxo de caixa | Pronto | `fluxoComOsNumerosDoPlanningRealizadoEPrevistoSeparados`: o exemplo do planning — R$ 30.000,00 no fim do mês corrente, R$ 35.500,00 a receber (os R$ 20.000,00 recebidos não reaparecem) e R$ 2.335,00 a pagar no mês seguinte (R$ 63.165,00), R$ 1.000,00 no outro (R$ 62.165,00); meses encadeados; filtro por conta (realizado com a transferência, previsto da empresa) e por categoria (saldo inicial zero); horizonte padrão de 10 meses; mais de 24 → `CASH_FLOW_INVALID` |
+| S9-04 Composição | Pronto | Para cada mês e cada coluna (saldo inicial, realizado, em atraso, previsto), sem filtro, com conta e com categoria, a soma da composição é o valor da grade. `titulosVencidosEntramNaColunaEmAtrasoDoMesCorrente`: vencido de ontem em Em atraso, no saldo do mês corrente e no saldo inicial de um horizonte só futuro |
+| S9-05 Pendências | Pronto | `PendenciasDoCaixaTest`: competência encerrada sem conferência vira pendência no mês seguinte, com a categoria do DAS; a conferida não; antes do início da receita, nada. O fiscal informa pela porta `CashFlowPendingSource` (sem dependência circular; `ArchitectureTest` passa) |
+| S9-06 Contratos | Pronto | `openapi.yaml` com `/transfers`, `/bank-accounts/balances`, `/cash-flow` e `/cash-flow/composition` (`OpenApiContractTest` passa); `transfer.post` no Administrador; evento `TransferReversed` e comando `ReverseTransfer` no B01; `menu.json` com *Fluxo de caixa* implementado; verificador B01 OK |
+| S9-07 Telas | Pronto | `Sprint9Windows.test.tsx` (6 testes): Transferir com a mesma chave depois de queda de rede, saldo da origem depois e aviso de saldo negativo; mesma conta nos dois lados recusada; estorno pelo extrato com motivo; Consulta sem Transferir nem Estornar; fluxo com a coluna Em atraso, pendências, composição com setas; filtros de conta e período |
+| S9-08 Roteiro de ponta a ponta | Pronto | `apps/desktop/e2e/sprint-09.e2e.ts` no Chromium contra o servidor real, com contas, categoria e fornecedor próprios de cada execução: transferência pela tela com o total conferido pela API; fluxo pela categoria com R$ 2.335,00 e R$ 1.000,00 e o saldo final de −R$ 3.335,00; composição conferida pela API; realizado da conta de destino; estorno pelo extrato. Passa com o banco vazio e **em execuções repetidas no mesmo banco** |
+
+Testes executados: servidor **104** (PostgreSQL 16 real; eram 100), app **99** (eram 93), typecheck, build, verificador B01 + testes, roteiros Playwright das Sprints 4 a 9 (banco vazio: 6 passando).
+
+**Corrigido junto:** a Seleção (lista suspensa do design system) fechava sozinha quando a caixa de mensagem que a contém rolava até o campo focado — acontecia no diálogo Transferir, que tem mais campos. Agora a lista acompanha o campo e só fecha se ele sair da tela; a opção em destaque rola só dentro da lista.
+
+**Não verificado aqui:** o app dentro do Electron no macOS.
+
+**Limitações conhecidas:**
+- Com o filtro de conta, o previsto continua o da empresa (os títulos não têm conta); a tela avisa.
+- O saldo final não abre composição (é o saldo inicial mais as linhas do mês, todas clicáveis); o saldo inicial abre a composição no primeiro mês e no corrente.
+- O roteiro da Sprint 4 ainda falha às vezes quando roda de novo num banco já usado (tarefa à parte, anterior a esta sprint); os da Sprint 5 a 9 passaram em três execuções seguidas no mesmo banco.
+
+## Retrospectiva
+
+- Funcionou: calcular cada valor da grade somando as mesmas linhas da composição garantiu por construção que a composição confere; o teste percorre todas as células.
+- Funcionou: a porta `CashFlowPendingSource` repetiu o desenho das Sprints 6 e 7 e trouxe a pendência fiscal sem o financeiro depender do fiscal.
+- Melhorar: o componente Seleção só tinha sido exercitado em janelas que não rolam; o problema apareceu no primeiro diálogo com mais campos. Rodar o roteiro duas vezes (ação da Sprint 8) ajudou a separar o que era do roteiro e o que era do componente.
+- Ação: na Sprint 10 (conciliação), antes de começar, decidir com o PO onde roda o processamento do arquivo de extrato (serviço Java ou o worker Python do planejamento) e ter um extrato OFX real do banco da empresa como exemplo.

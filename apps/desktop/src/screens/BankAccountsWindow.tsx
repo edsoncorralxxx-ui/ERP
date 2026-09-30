@@ -82,7 +82,8 @@ export function BankAccountsWindow() {
     setMovimentos(null);
     Promise.all([
       api.get<CashMovement[]>(`/api/v1/bank-accounts/${extrato}/movements`),
-      api.get<Transfer[]>(`/api/v1/transfers?accountId=${extrato}`),
+      // As transferências só servem para o botão Estornar; sem elas o extrato continua aparecendo.
+      api.get<Transfer[]>(`/api/v1/transfers?accountId=${extrato}`).catch(() => ({ data: [] as Transfer[] })),
     ])
       .then(([m, t]) => {
         setMovimentos(m.data);
