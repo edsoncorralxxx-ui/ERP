@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CampoDinheiro } from './CampoDinheiro';
 
@@ -13,7 +13,19 @@ describe('Campo de dinheiro', () => {
   it('mostra R$ dentro do campo', () => {
     render(<Teste inicial="10,00" />);
     expect(screen.getByText('R$')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Calculadora de Valor' })).toBeEnabled();
+  });
+
+  it('a calculadora aparece à esquerda só quando se começa a digitar', async () => {
+    const user = userEvent.setup();
+    render(<><Teste inicial="10,00" /><button>Outro</button></>);
+    const campo = screen.getByLabelText('Valor');
+    await user.click(campo);
+    expect(screen.queryByRole('button', { name: 'Calculadora de Valor' })).toBeNull();
+    await user.keyboard('5');
+    expect(screen.getByRole('button', { name: 'Calculadora de Valor' })).toBeInTheDocument();
+    expect(campo.parentElement).toHaveClass('rp-campo--com-icone');
+    await user.tab();
+    expect(screen.queryByRole('button', { name: 'Calculadora de Valor' })).toBeNull();
   });
 
   it('"=" abre a calculadora e Enter põe o resultado sem confirmar a janela', async () => {
@@ -57,8 +69,11 @@ describe('Campo de dinheiro', () => {
   it('o ícone de calculadora começa a conta', async () => {
     const user = userEvent.setup();
     render(<Teste inicial="10,00" />);
-    await user.click(screen.getByRole('button', { name: 'Calculadora de Valor' }));
     const campo = screen.getByLabelText('Valor');
+    await user.click(campo);
+    // Mostra o ícone como se tivesse digitado, sem o texto que o user-event guarda da própria digitação.
+    fireEvent.input(campo);
+    await user.click(screen.getByRole('button', { name: 'Calculadora de Valor' }));
     expect(campo).toHaveFocus();
     expect(campo).toHaveValue('=');
     await user.keyboard('7*3{Enter}');
@@ -71,6 +86,6 @@ describe('Campo de dinheiro', () => {
     await user.click(screen.getByLabelText('Valor'));
     await user.keyboard('=');
     expect(screen.getByLabelText('Valor')).toHaveValue('5,00');
-    expect(screen.getByRole('button', { name: 'Calculadora de Valor' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Calculadora de Valor' })).toBeNull();
   });
 });

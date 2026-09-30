@@ -16,9 +16,26 @@ function Teste({ inicial = '', onEnter = () => {} }: { inicial?: string; onEnter
 }
 
 describe('Campo de data', () => {
-  it('tem o ícone de calendário dentro do campo', () => {
+  it('o calendário aparece à esquerda, dentro do campo, só quando se começa a digitar', async () => {
+    const user = userEvent.setup();
     render(<Teste />);
-    expect(screen.getByRole('button', { name: 'Abrir calendário de Vencimento' })).toHaveClass('rp-campo-icone');
+    const campo = screen.getByLabelText('Vencimento');
+    expect(screen.queryByRole('button', { name: 'Abrir calendário de Vencimento' })).toBeNull();
+    await user.click(campo);
+    await user.keyboard('1');
+    const icone = screen.getByRole('button', { name: 'Abrir calendário de Vencimento' });
+    expect(icone).toHaveClass('rp-campo-icone');
+    await user.click(icone);
+    expect(screen.getByRole('dialog', { name: 'Calendário' })).toBeInTheDocument();
+    expect(campo).toHaveFocus();
+  });
+
+  it('Alt+↓ abre o calendário pelo teclado', async () => {
+    const user = userEvent.setup();
+    render(<Teste />);
+    await user.click(screen.getByLabelText('Vencimento'));
+    await user.keyboard('{Alt>}{ArrowDown}{/Alt}');
+    expect(screen.getByRole('dialog', { name: 'Calendário' })).toBeInTheDocument();
   });
 
   it('Enter resolve a conta de datas sem confirmar a janela', async () => {
