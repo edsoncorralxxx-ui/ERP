@@ -66,7 +66,7 @@ body { background: var(--ground); }
 .rp-menubar > div > span:hover, .rp-menubar > div > span[aria-expanded=true] { background: var(--field-active); outline: 1px solid var(--gold-light); }
 .rp-tab:not([aria-selected=true]):not([aria-disabled=true]):hover { background: var(--tab-active); } /* azul do design system (Abas), não o amarelo de ação */
 .rp-grid tbody tr:hover td, .rp-grid tbody tr:hover td.rownum { background: var(--field-note); }
-.rp-grid tbody tr[aria-selected=true]:hover td { background: var(--field-active); }
+.rp-grid tbody tr[aria-selected=true]:hover td { background: var(--grid-row-selected); }
 .rp-cockpit-list div:hover { background: var(--field-active); }
 .rp-rolagem::-webkit-scrollbar-thumb:hover { background: linear-gradient(90deg, var(--field-note), var(--gold-light)); }
 
@@ -229,8 +229,8 @@ body { background: var(--ground); }
 .rp-ficha__antes { color: var(--ink-muted); }
 /* Campo dentro da caixa de mensagem (motivo, nova senha). */
 .rp-msgbox__form { grid-template-columns: auto 260px; column-gap: var(--space-3); margin-top: var(--space-3); }
-.rp-grid--edicao .rp-field[aria-invalid=true] { background: var(--field-note); box-shadow: inset 0 -2px 0 var(--status-error); }
-.rp-form--adicao.rp-grid--edicao td .rp-field { background: var(--field-note); }
+.rp-grid--edicao .rp-field[aria-invalid=true] { background: var(--field); box-shadow: inset 0 -2px 0 var(--status-error); }
+.rp-form--adicao.rp-grid--edicao td .rp-field { background: var(--field); }
 .rp-tab[aria-disabled=true] { opacity: .55; cursor: default; }
 
 /* Usuários e permissões. */

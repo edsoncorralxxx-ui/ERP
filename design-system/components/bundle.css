@@ -80,7 +80,7 @@
   border-bottom: 1px solid var(--grid-row-alt); white-space: nowrap; }
 .rp-grid td.num, .rp-grid th.num { text-align: right; }
 .rp-grid td.rownum { color: var(--ink-muted); background: var(--grid-header); }
-.rp-grid tr[aria-selected=true] td { background: var(--grid-row-alt); }
+.rp-grid tr[aria-selected=true] td { background: var(--grid-row-selected); }
 .rp-grid tfoot td { background: var(--field-readonly); border-top: 1px solid var(--grid-rule); }
 
 /* Painel de módulos */
@@ -339,7 +339,7 @@
 /* Grade: realce suave da linha sob o mouse */
 .rp-grid tbody tr td { transition: background-color .15s ease; }
 .rp-grid tbody tr:hover td { background: var(--grid-header); cursor: default; }
-.rp-grid tbody tr[aria-selected=true]:hover td { background: var(--grid-row-alt); }
+.rp-grid tbody tr[aria-selected=true]:hover td { background: var(--grid-row-selected); }
 .rp-grid tbody tr:hover td.rownum { background: var(--field-readonly); }
 .rp-grid tbody tr:hover .rp-link { filter: brightness(1.08); }
 
@@ -373,8 +373,7 @@
 .rp-lista { background: var(--field); border: 1px solid var(--field-border); box-shadow: var(--shadow-inset-field); overflow: auto; }
 .rp-lista div { height: var(--row-grid); display: flex; align-items: center; gap: 6px; padding: 0 var(--space-2); cursor: pointer; }
 .rp-lista div:hover { background: var(--field-active); }
-.rp-lista div[aria-selected=true] { background: var(--nav-selected); color: var(--on-dark); }
-.rp-lista div[aria-selected=true] .rp-ico { filter: brightness(0) invert(1); }
+.rp-lista div[aria-selected=true] { background: var(--grid-row-selected); color: var(--ink); }
 .rp-lista-dupla { display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--space-3); align-items: center; }
 .rp-lista-mover { display: grid; gap: 4px; }
 .rp-lista-mover .rp-btn { min-width: 34px; height: 22px; padding: 0; }
@@ -450,7 +449,7 @@
 
 /* ===== Fidelidade ao cliente clássico ===== */
 /* Formulário em modo de adição: todo campo editável fica amarelo-claro */
-.rp-form--adicao .rp-field, .rp-field--adicao { background: var(--field-note); }
+.rp-form--adicao .rp-field, .rp-field--adicao { background: var(--field); }
 .rp-form--adicao .rp-field[readonly], .rp-form--adicao .rp-field--readonly { background: var(--field-readonly); }
 .rp-form--adicao .rp-field:focus, .rp-form--adicao .rp-field--active { background: var(--field-active); }
 
