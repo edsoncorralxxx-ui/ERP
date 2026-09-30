@@ -9,7 +9,7 @@ const digitar = (el: HTMLInputElement, texto: string) => {
 
 /**
  * Campo de dinheiro do design system: o `input.rp-field` de sempre com "R$" dentro, à esquerda. O ícone de calculadora
- * aparece à esquerda, dentro do campo, quando se começa a digitar, e some ao sair. Digitar "=" (ou clicar no ícone)
+ * aparece à direita, dentro do campo, quando se começa a digitar, e some ao sair. Digitar "=" (ou clicar no ícone)
  * começa uma conta; Enter ou sair do campo põe o resultado, Esc volta ao valor de antes. Aceita os mesmos atributos do `input`; `casas` é o máximo de casas do resultado.
  */
 export function CampoDinheiro({ casas = 2, className, value, maxLength, onKeyDown, onBlur, onInput, ...resto }: InputHTMLAttributes<HTMLInputElement> & {

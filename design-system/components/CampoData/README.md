@@ -1,6 +1,6 @@
-Campo de data com o ícone de calendário dentro do campo, à esquerda — o formato de data do sistema é sempre `DD/MM/AAAA`.
+Campo de data com o ícone de calendário dentro do campo, à direita — o formato de data do sistema é sempre `DD/MM/AAAA`.
 
-- Marcação: `.rp-campo.rp-campo--icone` > `input.rp-field` + `button.rp-campo-icone` com o ícone `calendario`. O ícone só aparece quando se começa a digitar (e enquanto o calendário está aberto): aí o contêiner ganha `rp-campo--com-icone` e o ícone entra dentro do campo, à esquerda; ao sair do campo ele some. Campo somente leitura não mostra o ícone.
+- Marcação: `.rp-campo.rp-campo--icone` > `input.rp-field` + `button.rp-campo-icone` com o ícone `calendario`. O ícone só aparece quando se começa a digitar (e enquanto o calendário está aberto): aí o contêiner ganha `rp-campo--com-icone` e o ícone entra dentro do campo, à direita; ao sair do campo ele some. Campo somente leitura não mostra o ícone.
 - Pelo teclado, Alt+↓ ou F4 abre o calendário mesmo sem o ícone à vista.
 - O calendário `.rp-cal` abre ancorado ao campo, semana começando na segunda; o dia escolhido em `nav-selected`, o dia de hoje com contorno `gold`, dias de outro mês em `titlebar-inactive`.
 - O rodapé traz "Hoje" e "Limpar"; Esc fecha sem alterar e Enter confirma o dia em foco.
