@@ -369,6 +369,13 @@
       "consumidores": []
     },
     {
+      "type": "TransferReversed",
+      "produtor": "financeiro",
+      "conceito": "TRANSFERENCIA",
+      "payload": ["transferId", "reason"],
+      "consumidores": []
+    },
+    {
       "type": "StatementImported",
       "produtor": "financeiro",
       "conceito": "CONCILIACAO",

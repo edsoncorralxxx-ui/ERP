@@ -27,6 +27,7 @@ export type WindowKind =
   | 'payables'
   | 'payable'
   | 'financial-categories'
+  | 'cash-flow'
   | 'bank-accounts'
   | 'documents'
   | 'document'

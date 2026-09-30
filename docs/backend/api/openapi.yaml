@@ -3,7 +3,7 @@ info:
   title: Renda+ ERP — API do servidor
   version: v1
   description: |
-    Contrato da API usada pelo app do Mac (Sprints 1 a 8).
+    Contrato da API usada pelo app do Mac (Sprints 1 a 9).
     Regras gerais:
     - Toda rota exige sessão (`Authorization: Bearer <token>`), exceto `GET /api/v1/status` e `POST /api/v1/session` (ADR-005).
       Sem sessão válida: 401 `UNAUTHENTICATED`. Perfil sem a permissão: 403 `FORBIDDEN` (a negativa fica na auditoria).
@@ -36,6 +36,9 @@ info:
       competência obrigatórias — PD-010). O pagamento é a mesma liquidação dos recebimentos com `direction` PAYABLE: saída na
       conta (que pode ficar negativa), excedente recusado, estorno total. A conferência do contador cria o título do DAS; reconferir
       cancela o DAS sem pagamento e cria outro; DAS com pagamento: 422 `TAX_DAS_PAID`.
+    - Caixa (Sprint 9): transferência entre contas próprias (`Idempotency-Key`; saída e entrada vinculadas, total inalterado;
+      estorno total). Fluxo de caixa mês a mês com realizado e previsto separados e a composição de cada valor, que soma
+      exatamente o valor da grade. Pendências (obrigação sem título, ex.: competência fiscal sem conferência) vêm sem valor.
     - Erros sempre no formato `ApiError`, em português, com `correlationId` (cabeçalho `X-Correlation-Id` é aceito e devolvido).
 servers:
   - url: http://localhost:8080
@@ -57,6 +60,8 @@ tags:
   - name: Categorias financeiras
   - name: Recebimentos
   - name: Contas financeiras
+  - name: Transferências
+  - name: Fluxo de caixa
   - name: Documentos e faturamento
   - name: Impostos gerenciais
 
@@ -1044,6 +1049,120 @@ paths:
         '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
         '404': { $ref: '#/components/responses/Erro' }
 
+  /api/v1/bank-accounts/balances:
+    get:
+      tags: [Contas financeiras]
+      summary: Saldo realizado de cada conta e o total numa data — IND-009 (financial_title.read); transferências se anulam no total
+      parameters:
+        - { name: date, in: query, required: false, schema: { type: string, format: date }, description: 'Padrão: hoje' }
+      responses:
+        '200':
+          description: Saldos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  date: { type: string, format: date }
+                  totalCents: { $ref: '#/components/schemas/Cents' }
+                  accounts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        accountId: { type: string, format: uuid }
+                        code: { type: string }
+                        name: { type: string }
+                        status: { type: string, enum: [ATIVO, INATIVO] }
+                        balanceCents: { type: string }
+
+  /api/v1/transfers:
+    get:
+      tags: [Transferências]
+      summary: Transferências, as mais recentes primeiro (financial_title.read)
+      parameters:
+        - { name: accountId, in: query, required: false, schema: { type: string, format: uuid }, description: 'Origem ou destino' }
+      responses:
+        '200': { description: Transferências, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Transfer' } } } } }
+    post:
+      tags: [Transferências]
+      summary: >-
+        Transfere entre contas próprias — TransferBetweenAccounts (transfer.post): saída na origem e entrada no destino, com o
+        mesmo valor e data; contas ativas e diferentes; data não futura; evento TransferPosted
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/TransferRequest' } } }
+      responses:
+        '201': { description: Transferência registrada, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Transfer' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/transfers/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Transferências]
+      summary: Transferência (financial_title.read)
+      responses:
+        '200': { description: Transferência, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Transfer' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/transfers/{id}/reversals:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Transferências]
+      summary: >-
+        Estorna a transferência inteira (transfer.post), com motivo: os dois movimentos inversos, com a data de hoje; já estornada
+        devolve a mesma; evento TransferReversed
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { description: Transferência estornada, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Transfer' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/transfers/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Transferências]
+      summary: Trilha da transferência (financial_title.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/cash-flow:
+    get:
+      tags: [Fluxo de caixa]
+      summary: >-
+        Fluxo de caixa mês a mês (financial_title.read): mês passado só realizado; corrente com realizado até hoje, em atraso e
+        previsto até o fim do mês; futuro previsto. Saldo final = inicial + entradas − saídas e é o inicial do mês seguinte.
+        Filtro de conta recorta o realizado e o saldo inicial; filtro de categoria mostra só o fluxo da categoria (saldo inicial zero)
+      parameters:
+        - { name: from, in: query, required: false, schema: { type: string, example: '2026-07' }, description: 'AAAA-MM; padrão: 3 meses antes do atual' }
+        - { name: to, in: query, required: false, schema: { type: string, example: '2027-03' }, description: 'AAAA-MM; padrão: 6 meses depois; até 24 meses' }
+        - { name: accountId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: category, in: query, required: false, schema: { type: string, example: SERVICOS_TERCEIROS } }
+      responses:
+        '200': { description: Fluxo, content: { application/json: { schema: { $ref: '#/components/schemas/CashFlow' } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/cash-flow/composition:
+    get:
+      tags: [Fluxo de caixa]
+      summary: Movimentos ou títulos que formam um valor do fluxo; a soma é o valor da grade (financial_title.read)
+      parameters:
+        - { name: month, in: query, required: true, schema: { type: string, example: '2026-10' } }
+        - name: column
+          in: query
+          required: true
+          schema: { type: string, enum: [OPENING, REALIZED_IN, REALIZED_OUT, OVERDUE_IN, OVERDUE_OUT, FORECAST_IN, FORECAST_OUT] }
+        - { name: accountId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: category, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: Composição, content: { application/json: { schema: { $ref: '#/components/schemas/CashFlowComposition' } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
   /api/v1/documents:
     get:
       tags: [Documentos e faturamento]
@@ -1942,9 +2061,10 @@ components:
         id: { type: string, format: uuid }
         effectiveDate: { type: string, format: date }
         amountCents: { type: string, description: 'Entrada positiva, saída negativa' }
-        kind: { type: string, enum: [SETTLEMENT, SETTLEMENT_REVERSAL] }
-        settlementId: { type: string, format: uuid }
-        settlementCode: { type: string }
+        kind: { type: string, enum: [SETTLEMENT, SETTLEMENT_REVERSAL, TRANSFER, TRANSFER_REVERSAL] }
+        settlementId: { type: [string, 'null'], format: uuid, description: 'Liquidação que gerou o movimento' }
+        transferId: { type: [string, 'null'], format: uuid, description: 'Transferência que gerou o movimento (Sprint 9)' }
+        settlementCode: { type: string, description: 'Código de quem gerou o movimento: RC, PG ou TR' }
         description: { type: string }
         balanceCents: { type: string, description: 'Saldo da conta depois do movimento' }
         createdAt: { type: string, format: date-time }
@@ -1974,6 +2094,87 @@ components:
         version: { type: string }
         createdAt: { type: string, format: date-time }
         createdBy: { type: string }
+    TransferRequest:
+      type: object
+      required: [fromAccountId, toAccountId, effectiveDate, amountCents]
+      properties:
+        fromAccountId: { type: string, format: uuid }
+        toAccountId: { type: string, format: uuid }
+        effectiveDate: { type: string, format: date, description: 'Não pode ser futura' }
+        amountCents: { $ref: '#/components/schemas/Cents' }
+        notes: { type: [string, 'null'], maxLength: 500 }
+    Transfer:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: TR00001 }
+        fromAccountId: { type: string, format: uuid }
+        fromAccountCode: { type: string }
+        fromAccountName: { type: string }
+        toAccountId: { type: string, format: uuid }
+        toAccountCode: { type: string }
+        toAccountName: { type: string }
+        effectiveDate: { type: string, format: date }
+        amountCents: { $ref: '#/components/schemas/Cents' }
+        notes: { type: [string, 'null'] }
+        status: { type: string, enum: [POSTED, REVERSED] }
+        reversalReason: { type: [string, 'null'] }
+        reversalDate: { type: [string, 'null'], format: date }
+        reversedAt: { type: [string, 'null'], format: date-time }
+        reversedBy: { type: [string, 'null'] }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+    CashFlow:
+      type: object
+      properties:
+        today: { type: string, format: date }
+        from: { type: string }
+        to: { type: string }
+        accountId: { type: [string, 'null'], format: uuid }
+        category: { type: [string, 'null'] }
+        months:
+          type: array
+          items:
+            type: object
+            properties:
+              month: { type: string, example: '2026-10' }
+              period: { type: string, enum: [REALIZADO, CORRENTE, PREVISTO] }
+              openingCents: { type: string }
+              realizedInCents: { type: string }
+              realizedOutCents: { type: string }
+              overdueInCents: { type: string, description: 'Só no mês corrente: títulos a receber vencidos com saldo' }
+              overdueOutCents: { type: string }
+              forecastInCents: { type: string }
+              forecastOutCents: { type: string }
+              closingCents: { type: string }
+        pendings:
+          type: array
+          items:
+            type: object
+            properties:
+              month: { type: string }
+              category: { type: string }
+              reference: { type: string, description: 'Ex.: a competência AAAA-MM sem conferência' }
+              message: { type: string }
+    CashFlowComposition:
+      type: object
+      properties:
+        month: { type: string }
+        column: { type: string }
+        totalCents: { type: string }
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              targetKind: { type: string, enum: [receivable, payable, bank-account] }
+              targetId: { type: string, format: uuid }
+              code: { type: string }
+              date: { type: string, format: date }
+              description: { type: string }
+              party: { type: [string, 'null'] }
+              amountCents: { type: string }
     Payable:
       type: object
       properties:

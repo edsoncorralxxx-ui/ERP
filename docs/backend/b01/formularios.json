@@ -1027,7 +1027,8 @@
         {"nome": "ImportStatement", "permissao": "statement.import", "idempotente": true, "eventos": ["StatementImported"]},
         {"nome": "Reconcile", "permissao": "reconciliation.create", "idempotente": true, "eventos": ["ReconciliationRecorded"]},
         {"nome": "UndoReconciliation", "permissao": "reconciliation.undo", "idempotente": true, "eventos": ["ReconciliationUndone"]},
-        {"nome": "TransferBetweenAccounts", "permissao": "transfer.post", "idempotente": true, "eventos": ["TransferPosted"]}
+        {"nome": "TransferBetweenAccounts", "permissao": "transfer.post", "idempotente": true, "eventos": ["TransferPosted"]},
+        {"nome": "ReverseTransfer", "permissao": "transfer.post", "idempotente": true, "eventos": ["TransferReversed"]}
       ],
       "indicadores": ["IND-009"],
       "analises": ["AN-012"],

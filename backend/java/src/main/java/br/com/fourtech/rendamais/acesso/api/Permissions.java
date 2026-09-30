@@ -37,6 +37,8 @@ public final class Permissions {
     public static final String FINANCIAL_CATEGORY_ADMIN = "financial_category.admin";
     /** Estornar recebimento ou pagamento (ReverseSettlement). */
     public static final String SETTLEMENT_REVERSE = "settlement.reverse";
+    /** Transferir entre contas próprias e estornar a transferência (TransferBetweenAccounts, Sprint 9). */
+    public static final String TRANSFER_POST = "transfer.post";
     /** Cadastrar e alterar contas financeiras (caixa e bancos). */
     public static final String BANK_ACCOUNT_ADMIN = "bank_account.admin";
     public static final String DOCUMENT_READ = "document.read";

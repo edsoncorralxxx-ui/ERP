@@ -45,13 +45,27 @@ class BankAccountController {
         }
     }
 
-    record MovementDto(String id, LocalDate effectiveDate, String amountCents, String kind, String settlementId,
+    /** Movimento do extrato; vem de uma liquidação ({@code settlementId}) ou de uma transferência ({@code transferId}). */
+    record MovementDto(String id, LocalDate effectiveDate, String amountCents, String kind, String settlementId, String transferId,
                        String settlementCode, String description, String balanceCents, Instant createdAt, String createdBy) {
         static MovementDto of(BankAccountRepository.Movement m) {
             return new MovementDto(m.id().toString(), m.effectiveDate(), Long.toString(m.amountCents()), m.kind(),
-                    m.settlementId().toString(), m.settlementCode(), m.description(), Long.toString(m.runningCents()), m.createdAt(),
-                    m.createdBy());
+                    m.settlementId() == null ? null : m.settlementId().toString(), m.transferId() == null ? null : m.transferId().toString(),
+                    m.sourceCode(), m.description(), Long.toString(m.runningCents()), m.createdAt(), m.createdBy());
         }
+    }
+
+    record BalanceDto(String accountId, String code, String name, String status, String balanceCents) { }
+
+    record BalancesDto(LocalDate date, List<BalanceDto> accounts, String totalCents) { }
+
+    /** Saldo realizado de cada conta e o total numa data (IND-009; padrão: hoje); transferências se anulam no total. */
+    @GetMapping("/balances")
+    BalancesDto balances(@RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        var r = service.balancesAt(date);
+        return new BalancesDto(r.date(), r.balances().stream().map(b -> new BalanceDto(b.account().id().toString(), b.account().code(),
+                b.account().name(), b.account().status().name(), Long.toString(b.balanceCents()))).toList(),
+                Long.toString(r.balances().stream().mapToLong(BankAccountRepository.BalanceAt::balanceCents).sum()));
     }
 
     @GetMapping

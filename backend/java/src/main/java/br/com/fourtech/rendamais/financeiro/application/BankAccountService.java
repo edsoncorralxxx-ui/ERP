@@ -77,6 +77,16 @@ public class BankAccountService {
         return auditQuery.history(ENTITY, id.toString());
     }
 
+    public record Balances(LocalDate date, List<BankAccountRepository.BalanceAt> balances) { }
+
+    /** Saldos realizados de todas as contas na data (padrão: hoje no fuso da empresa). */
+    @Transactional(readOnly = true)
+    public Balances balancesAt(LocalDate date) {
+        CurrentUserHolder.require(Permissions.FINANCIAL_TITLE_READ);
+        LocalDate d = date == null ? LocalDate.now(clock.withZone(SettlementService.BUSINESS_ZONE)) : date;
+        return new Balances(d, repository.balancesAt(d));
+    }
+
     @Transactional
     public BankAccountRepository.Summary create(Request r) {
         CurrentUser user = CurrentUserHolder.require(Permissions.BANK_ACCOUNT_ADMIN);

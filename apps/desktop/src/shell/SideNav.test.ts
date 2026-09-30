@@ -19,6 +19,7 @@ describe('menu lateral', () => {
       'Detalhe do projeto',
       'Documentos e faturamento',
       'Equipamentos',
+      'Fluxo de caixa',
       'Fornecedores',
       'Impostos gerenciais',
       'Notas a emitir',

@@ -103,11 +103,12 @@ class JdbcBankAccountRepository implements BankAccountRepository {
         // Saldo acumulado sobre todos os movimentos da conta; o período só recorta a exibição.
         return jdbc.sql("""
                 select * from (
-                    select m.*, s.code as settlement_code,
+                    select m.*, coalesce(s.code, t.code) as source_code,
                            a.opening_cents + sum(m.amount_cents) over (order by m.effective_date, m.created_at, m.id) as running_cents
                       from cash_movement m
                       join bank_account a on a.id = m.account_id
-                      join settlement s on s.id = m.settlement_id
+                      left join settlement s on s.id = m.settlement_id
+                      left join transfer t on t.id = m.transfer_id
                      where m.account_id = :account) x
                  where (cast(:from as date) is null or x.effective_date >= cast(:from as date))
                    and (cast(:to as date) is null or x.effective_date <= cast(:to as date))
@@ -117,7 +118,8 @@ class JdbcBankAccountRepository implements BankAccountRepository {
                 .param("to", to == null ? null : Date.valueOf(to))
                 .query((rs, n) -> new Movement(rs.getObject("id", UUID.class), rs.getDate("effective_date").toLocalDate(),
                         rs.getLong("amount_cents"), rs.getString("kind"), rs.getObject("settlement_id", UUID.class),
-                        rs.getString("settlement_code"), rs.getString("description"), rs.getLong("running_cents"),
+                        rs.getObject("transfer_id", UUID.class), rs.getString("source_code"), rs.getString("description"),
+                        rs.getLong("running_cents"),
                         instant(rs, "created_at"), rs.getString("created_by")))
                 .list();
     }
@@ -134,6 +136,39 @@ class JdbcBankAccountRepository implements BankAccountRepository {
                 .param("kind", kind).param("settlement", settlementId).param("reverses", reversesId).param("description", description)
                 .param("at", ts(now)).param("by", actor)
                 .update();
+    }
+
+    @Override
+    public void insertTransferMovement(UUID id, UUID accountId, LocalDate effectiveDate, long amountCents, String kind, UUID transferId,
+                                       UUID reversesId, String description, Instant now, String actor) {
+        jdbc.sql("""
+                insert into cash_movement (id, account_id, effective_date, amount_cents, kind, transfer_id, reverses_id, description,
+                       created_at, created_by)
+                values (:id, :account, :date, :cents, :kind, :transfer, :reverses, :description, :at, :by)
+                """)
+                .param("id", id).param("account", accountId).param("date", Date.valueOf(effectiveDate)).param("cents", amountCents)
+                .param("kind", kind).param("transfer", transferId).param("reverses", reversesId).param("description", description)
+                .param("at", ts(now)).param("by", actor)
+                .update();
+    }
+
+    @Override
+    public List<BankAccount> findForShare(List<UUID> ids) {
+        if (ids.isEmpty()) return List.of();
+        return jdbc.sql("select * from bank_account where id in (:ids) order by id for share").param("ids", ids)
+                .query(JdbcBankAccountRepository::account).list();
+    }
+
+    @Override
+    public List<BalanceAt> balancesAt(LocalDate date) {
+        return jdbc.sql("""
+                select a.*, (case when a.opening_on <= :date then a.opening_cents else 0 end)
+                            + coalesce((select sum(m.amount_cents) from cash_movement m
+                                         where m.account_id = a.id and m.effective_date <= :date), 0) as balance_at
+                  from bank_account a order by a.code
+                """)
+                .param("date", Date.valueOf(date))
+                .query((rs, n) -> new BalanceAt(account(rs, n), rs.getLong("balance_at"))).list();
     }
 
     private static Summary summary(ResultSet rs, int n) throws SQLException {

@@ -64,6 +64,7 @@ public abstract class IntegrationTest {
         jdbc.sql("delete from business_document").update();
         jdbc.sql("delete from settlement_reversal").update();
         jdbc.sql("delete from cash_movement").update();
+        jdbc.sql("delete from transfer").update();
         jdbc.sql("delete from settlement_allocation").update();
         jdbc.sql("delete from settlement").update();
         jdbc.sql("delete from bank_account where created_by <> 'sistema'").update();

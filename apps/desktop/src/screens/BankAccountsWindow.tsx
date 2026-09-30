@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { api, ApiError } from '../api/client';
-import type { BankAccount, BankAccountKind, CashMovement, Situacao } from '../api/types';
+import type { BankAccount, BankAccountKind, CashMovement, Situacao, Transfer } from '../api/types';
 import { centavos, centavosParaApi, dataDaApi, dataParaApi, hojeIso, reais } from '../format';
 import { useSession } from '../shell/SessionContext';
 import { useWindow } from '../windows/WindowContext';
+import { Dialog } from '../shell/Dialog';
+import type { StatusMessage } from '../shell/StatusBar';
+import { novaChave } from './comum/Cadastros';
 import { CampoData } from './comum/CampoData';
+import { DialogoMotivo } from './comum/Dialogos';
 import { Selecao } from './comum/Selecao';
 
 /** Avisado depois de um recebimento ou estorno, que mudam o saldo das contas. */
@@ -37,6 +41,10 @@ export function BankAccountsWindow() {
   winRef.current = win;
   const { can } = useSession();
   const admin = can('bank_account.admin');
+  const podeTransferir = can('transfer.post');
+  const [transferindo, setTransferindo] = useState(false);
+  const [transferencias, setTransferencias] = useState<Transfer[]>([]);
+  const [estornar, setEstornar] = useState<Transfer | null>(null);
   const [aba, setAba] = useState<Aba>('contas');
   const [contas, setContas] = useState<BankAccount[] | null>(null);
   const [sel, setSel] = useState<string | null>(null);
@@ -72,9 +80,14 @@ export function BankAccountsWindow() {
   useEffect(() => {
     if (aba !== 'extrato' || !extrato) return;
     setMovimentos(null);
-    api
-      .get<CashMovement[]>(`/api/v1/bank-accounts/${extrato}/movements`)
-      .then((r) => setMovimentos(r.data))
+    Promise.all([
+      api.get<CashMovement[]>(`/api/v1/bank-accounts/${extrato}/movements`),
+      api.get<Transfer[]>(`/api/v1/transfers?accountId=${extrato}`),
+    ])
+      .then(([m, t]) => {
+        setMovimentos(m.data);
+        setTransferencias(t.data);
+      })
       .catch((e: ApiError) => winRef.current.notify({ tone: 'erro', text: `${e.message} (${e.code})` }));
   }, [aba, extrato, contas]);
 
@@ -126,7 +139,8 @@ export function BankAccountsWindow() {
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.altKey) {
       const k = e.key.toLowerCase();
-      if (k === 'c') setAba('contas');
+      if (k === 't' && podeTransferir) setTransferindo(true);
+      else if (k === 'c') setAba('contas');
       else if (k === 'e') setAba('extrato');
       else if (k === 'n' && admin) novo?.();
       else return;
@@ -251,7 +265,7 @@ export function BankAccountsWindow() {
                 </div>
               )}
               <p className="rp-tip rp-usuarios__nota" role="note">
-                O saldo é o saldo inicial mais os recebimentos e estornos. Depois do primeiro movimento, o saldo inicial e a data não mudam; conta inativa não recebe lançamentos.
+                O saldo é o saldo inicial mais os recebimentos, pagamentos, transferências e estornos. Depois do primeiro movimento, o saldo inicial e a data não mudam; conta inativa não recebe lançamentos.
               </p>
             </fieldset>
           </div>
@@ -272,6 +286,7 @@ export function BankAccountsWindow() {
                     <th className="num">Saída</th>
                     <th className="num">Saldo</th>
                     <th>Lançado por</th>
+                    <th aria-label="Ações" />
                   </tr>
                 </thead>
                 <tbody>
@@ -284,6 +299,16 @@ export function BankAccountsWindow() {
                       <td className="num">{m.amountCents.startsWith('-') ? reais(m.amountCents.slice(1)) : ''}</td>
                       <td className="num">{reais(m.balanceCents)}</td>
                       <td>{m.createdBy}</td>
+                      <td>
+                        {(() => {
+                          const t = m.kind === 'TRANSFER' ? transferencias.find((x) => x.id === m.transferId) : undefined;
+                          return t && t.status === 'POSTED' && podeTransferir && (
+                            <button type="button" className="rp-btn" aria-label={`Estornar transferência ${t.code}`} onClick={() => setEstornar(t)}>
+                              Estornar
+                            </button>
+                          );
+                        })()}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -305,6 +330,11 @@ export function BankAccountsWindow() {
           </button>
         </div>
         <div className="rp-btn-row">
+          {podeTransferir && (
+            <button type="button" className="rp-btn" onClick={() => setTransferindo(true)}>
+              <span><u>T</u>ransferir</span>
+            </button>
+          )}
           {admin && (
             <button type="button" className="rp-btn" onClick={() => novo?.()}>
               <span><u>N</u>ovo</span>
@@ -312,6 +342,155 @@ export function BankAccountsWindow() {
           )}
         </div>
       </div>
+      {transferindo && contas && (
+        <DialogoTransferencia
+          contas={contas.filter((c) => c.status === 'ATIVO')}
+          origemInicial={sel ?? ''}
+          idBase={win.windowId}
+          notify={win.notify}
+          onCancelar={() => setTransferindo(false)}
+          onTransferido={(t) => {
+            setTransferindo(false);
+            winRef.current.notify({ tone: 'sucesso', text: `Transferência ${t.code} de ${reais(t.amountCents)} de ${t.fromAccountCode} para ${t.toAccountCode} registrada com sucesso` });
+            window.dispatchEvent(new Event(CONTAS_ALTERADAS));
+          }}
+        />
+      )}
+      {estornar && (
+        <DialogoMotivo
+          rotulo="Estornar transferência"
+          texto={`A transferência ${estornar.code} de ${reais(estornar.amountCents)} será estornada por inteiro: o valor volta para ${estornar.fromAccountCode} e sai de ${estornar.toAccountCode}. O registro original continua consultável.`}
+          idCampo={`${win.windowId}-motivo-transferencia`}
+          botao="Estornar"
+          voltar="Voltar"
+          falta="Informe o motivo do estorno."
+          onConfirmar={(motivo) => {
+            const t = estornar;
+            setEstornar(null);
+            api
+              .post<Transfer>(`/api/v1/transfers/${t.id}/reversals`, { reason: motivo })
+              .then((r) => {
+                winRef.current.notify({ tone: 'sucesso', text: `Transferência ${r.data.code} estornada com sucesso` });
+                window.dispatchEvent(new Event(CONTAS_ALTERADAS));
+              })
+              .catch((e: ApiError) => winRef.current.notify({ tone: 'erro', text: `${e.message} (${e.code}) [${e.correlationId ?? '—'}]` }));
+          }}
+          onCancelar={() => setEstornar(null)}
+        />
+      )}
     </>
+  );
+}
+
+/**
+ * Caixa "Transferir": origem, destino, data (hoje) e valor, com o saldo da origem depois; avisa quando a origem vai
+ * ficar negativa. A chave de idempotência só muda depois de o servidor responder.
+ */
+function DialogoTransferencia({ contas, origemInicial, idBase, notify, onCancelar, onTransferido }: {
+  contas: BankAccount[];
+  origemInicial: string;
+  idBase: string;
+  notify: (m: StatusMessage) => void;
+  onCancelar: () => void;
+  onTransferido: (t: Transfer) => void;
+}) {
+  const [origem, setOrigem] = useState(contas.some((c) => c.id === origemInicial) ? origemInicial : contas[0]?.id ?? '');
+  const [destino, setDestino] = useState(contas.find((c) => c.id !== origem)?.id ?? '');
+  const [data, setData] = useState(dataDaApi(hojeIso()));
+  const [valor, setValor] = useState('');
+  const [obs, setObs] = useState('');
+  const [erros, setErros] = useState<Record<string, string>>({});
+  const [enviando, setEnviando] = useState(false);
+  const chave = useRef(novaChave());
+  const deOrigem = contas.find((c) => c.id === origem);
+  const cents = centavosParaApi(valor) ?? '';
+  const depois = deOrigem && /^\d+$/.test(cents) ? BigInt(deOrigem.balanceCents) - BigInt(cents) : null;
+
+  const confirmar = async () => {
+    if (enviando) return;
+    const falta: Record<string, string> = {};
+    if (!origem) falta.fromAccountId = 'Escolha a conta de origem.';
+    if (!destino) falta.toAccountId = 'Escolha a conta de destino.';
+    else if (destino === origem) falta.toAccountId = 'A conta de destino deve ser diferente da origem.';
+    if (!/^\d+$/.test(cents) || BigInt(cents) <= 0n) falta.amountCents = 'Informe um valor maior que zero.';
+    if (!dataParaApi(data)) falta.effectiveDate = 'Informe a data da transferência.';
+    if (Object.keys(falta).length > 0) return setErros(falta);
+    setEnviando(true);
+    try {
+      const r = await api.post<Transfer>('/api/v1/transfers',
+        { fromAccountId: origem, toAccountId: destino, effectiveDate: dataParaApi(data), amountCents: cents, notes: obs.trim() || null },
+        { 'Idempotency-Key': chave.current });
+      chave.current = novaChave();
+      onTransferido(r.data);
+    } catch (e) {
+      const x = e as ApiError;
+      if (x.isNetwork) {
+        notify({ tone: 'aviso', text: `Sem conexão com o servidor; confirme de novo para reenviar a mesma transferência (${x.code})` });
+      } else {
+        chave.current = novaChave();
+        const m: Record<string, string> = {};
+        x.details.forEach((d) => d.field && (m[d.field] = d.message));
+        setErros(Object.keys(m).length > 0 ? m : { geral: x.message });
+        notify({ tone: 'erro', text: `${x.message} (${x.code}) [${x.correlationId ?? '—'}]` });
+      }
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const erro = (k: string) =>
+    erros[k] && (
+      <>
+        <span />
+        <span className="rp-campo-erro">
+          <i className="rp-ico rp-ico-status-erro" aria-hidden="true" /> {erros[k]}
+        </span>
+      </>
+    );
+  const fid = (k: string) => `${idBase}-transferir-${k}`;
+  const opcoes = contas.map((c) => ({ valor: c.id, rotulo: `${c.code} — ${c.name}` }));
+
+  return (
+    <Dialog icon="info" label="Transferir" onEscape={onCancelar}
+      buttons={[
+        { label: 'Transferir', primary: true, onClick: () => void confirmar() },
+        { label: 'Cancelar', onClick: onCancelar },
+      ]}>
+      O valor sai da conta de origem e entra na de destino na mesma data; o total das contas não muda.
+      <div className="rp-form rp-msgbox__form">
+        <label className="rp-label" htmlFor={fid('origem')}>Origem</label>
+        <Selecao id={fid('origem')} valor={origem} onChange={(v) => (setOrigem(v), setErros({}))} opcoes={opcoes} aria-invalid={!!erros.fromAccountId} />
+        {erro('fromAccountId')}
+        <label className="rp-label" htmlFor={fid('destino')}>Destino</label>
+        <Selecao id={fid('destino')} valor={destino} onChange={(v) => (setDestino(v), setErros({}))} opcoes={opcoes} aria-invalid={!!erros.toAccountId} />
+        {erro('toAccountId')}
+        <label className="rp-label" htmlFor={fid('data')}>Data</label>
+        <CampoData id={fid('data')} rotulo="Data da transferência" valor={data} onChange={setData} invalido={!!erros.effectiveDate} className="rp-field rp-field--curto" />
+        {erro('effectiveDate')}
+        <label className="rp-label" htmlFor={fid('valor')}>Valor</label>
+        <input id={fid('valor')} className="rp-field rp-field--num rp-field--curto" value={valor} maxLength={20} inputMode="decimal" aria-invalid={!!erros.amountCents}
+          onChange={(e) => (setValor(e.target.value), setErros({}))}
+          onBlur={() => {
+            const c = centavosParaApi(valor);
+            if (c && /^\d+$/.test(c)) setValor(centavos(c));
+          }}
+          onKeyDown={(e) => e.key === 'Enter' && void confirmar()} />
+        {erro('amountCents')}
+        <label className="rp-label" htmlFor={fid('saldo')}>Saldo da origem depois</label>
+        <input id={fid('saldo')} className="rp-field rp-field--readonly rp-field--num rp-field--curto" readOnly value={depois === null ? '' : reais(depois.toString())} />
+        <label className="rp-label" htmlFor={fid('obs')}>Observação</label>
+        <input id={fid('obs')} className="rp-field" value={obs} maxLength={500} onChange={(e) => setObs(e.target.value)} />
+      </div>
+      {depois !== null && depois < 0n && (
+        <span className="rp-janela-mdi__aviso" role="status">
+          <i className="rp-ico rp-ico-status-aviso" aria-hidden="true" /> A conta {deOrigem!.code} ficará com saldo de {reais(depois.toString())}.
+        </span>
+      )}
+      {erros.geral && (
+        <span className="rp-campo-erro">
+          <i className="rp-ico rp-ico-status-erro" aria-hidden="true" /> {erros.geral}
+        </span>
+      )}
+    </Dialog>
   );
 }

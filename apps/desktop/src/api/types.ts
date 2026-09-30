@@ -507,14 +507,79 @@ export type CashMovement = {
   id: string;
   effectiveDate: string;
   amountCents: string;
-  kind: 'SETTLEMENT' | 'SETTLEMENT_REVERSAL';
-  settlementId: string;
+  kind: 'SETTLEMENT' | 'SETTLEMENT_REVERSAL' | 'TRANSFER' | 'TRANSFER_REVERSAL';
+  /** Liquidação ou transferência (Sprint 9) que gerou o movimento; `settlementCode` é o código dela (RC, PG ou TR). */
+  settlementId: string | null;
+  transferId: string | null;
   settlementCode: string;
   description: string;
   balanceCents: string;
   createdAt: string;
   createdBy: string;
 };
+
+/** Transferência entre contas próprias (Sprint 9). */
+export type Transfer = {
+  id: string;
+  code: string;
+  fromAccountId: string;
+  fromAccountCode: string;
+  fromAccountName: string;
+  toAccountId: string;
+  toAccountCode: string;
+  toAccountName: string;
+  effectiveDate: string;
+  amountCents: string;
+  notes: string | null;
+  status: 'POSTED' | 'REVERSED';
+  reversalReason: string | null;
+  reversalDate: string | null;
+  reversedAt: string | null;
+  reversedBy: string | null;
+  version: string;
+  createdAt: string;
+  createdBy: string;
+};
+
+export type CashFlowPeriod = 'REALIZADO' | 'CORRENTE' | 'PREVISTO';
+
+export type CashFlowMonth = {
+  month: string;
+  period: CashFlowPeriod;
+  openingCents: string;
+  realizedInCents: string;
+  realizedOutCents: string;
+  overdueInCents: string;
+  overdueOutCents: string;
+  forecastInCents: string;
+  forecastOutCents: string;
+  closingCents: string;
+};
+
+/** Fluxo de caixa mês a mês: realizado e previsto separados; pendências sem valor (Sprint 9). */
+export type CashFlow = {
+  today: string;
+  from: string;
+  to: string;
+  accountId: string | null;
+  category: string | null;
+  months: CashFlowMonth[];
+  pendings: { month: string; category: string; reference: string; message: string }[];
+};
+
+export type CashFlowColumn = 'OPENING' | 'REALIZED_IN' | 'REALIZED_OUT' | 'OVERDUE_IN' | 'OVERDUE_OUT' | 'FORECAST_IN' | 'FORECAST_OUT';
+
+export type CashFlowLine = {
+  targetKind: 'receivable' | 'payable' | 'bank-account';
+  targetId: string;
+  code: string;
+  date: string;
+  description: string;
+  party: string | null;
+  amountCents: string;
+};
+
+export type CashFlowComposition = { month: string; column: CashFlowColumn; lines: CashFlowLine[]; totalCents: string };
 
 export type DocumentStatus = 'ATIVO' | 'CANCELADO';
 export type DocumentLineKind = 'PRODUTO' | 'SERVICO';
