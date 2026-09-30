@@ -6,7 +6,7 @@ const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julh
 
 /**
  * Campo de data do design system: `DD/MM/AAAA`, digitação livre normalizada ao sair (`20/09/26`, `200926`,
- * `20-09-2026`), o calendário no ícone dentro do campo (semana começando na segunda, Hoje e Limpar; Esc fecha sem
+ * `20-09-2026`), o calendário no ícone que aparece à esquerda, dentro do campo, quando se começa a digitar (semana começando na segunda, Hoje e Limpar; Esc fecha sem
  * alterar) e a conta de datas: `=19/05/2026+90du`, `=hoje+30dc`, `=+1m` — Enter ou sair do campo põe a data, Esc
  * volta à de antes.
  */
@@ -21,6 +21,8 @@ export function CampoData({ id, valor, onChange, somenteLeitura, className, inva
   rotulo?: string;
 }) {
   const [aberto, setAberto] = useState(false);
+  const [digitando, setDigitando] = useState(false);
+  const comIcone = !somenteLeitura && (digitando || aberto);
   const atual = dataParaApi(valor);
   const base = atual && /^\d{4}-\d{2}-\d{2}$/.test(atual) ? atual : hojeIso();
   const [mes, setMes] = useState<[number, number]>([Number(base.slice(0, 4)), Number(base.slice(5, 7)) - 1]);
@@ -69,7 +71,12 @@ export function CampoData({ id, valor, onChange, somenteLeitura, className, inva
     } else if (!conta && !somenteLeitura && e.key === '=' && e.target instanceof HTMLInputElement) {
       // "=" começa uma conta nova, guardando a data que estava no campo como ponto de partida.
       e.preventDefault();
+      setDigitando(true);
       onChange('=');
+    } else if (!somenteLeitura && !aberto && ((e.altKey && e.key === 'ArrowDown') || e.key === 'F4')) {
+      // Alt+↓ ou F4 abre o calendário pelo teclado, mesmo sem o ícone à vista.
+      e.preventDefault();
+      abrir();
     } else if (conta && (e.key === 'Enter' || e.key === 'Escape') && e.target instanceof HTMLInputElement) {
       // Enter e Esc são da conta: não confirmam nem fecham a janela.
       e.stopPropagation();
@@ -79,12 +86,13 @@ export function CampoData({ id, valor, onChange, somenteLeitura, className, inva
     }
   };
   const saida = () => {
+    setDigitando(false);
     if (!conta) return onChange(normalizarData(valor));
     if (!calcular() && valor.trim().startsWith('=')) onChange(antes.current);
   };
 
   return (
-    <span className={`rp-campo rp-campo--icone rp-campo-data${className?.split(' ').includes('rp-field--curto') ? ' rp-field--curto' : ''}`} ref={caixa} onKeyDown={teclas}>
+    <span className={`rp-campo rp-campo--icone rp-campo-data${comIcone ? ' rp-campo--com-icone' : ''}${className?.split(' ').includes('rp-field--curto') ? ' rp-field--curto' : ''}`} ref={caixa} onKeyDown={teclas}>
       <input
         id={id}
         className={className ?? 'rp-field'}
@@ -94,12 +102,15 @@ export function CampoData({ id, valor, onChange, somenteLeitura, className, inva
         readOnly={somenteLeitura}
         aria-invalid={invalido}
         title={conta ? 'Conta de datas: Enter põe a data, Esc cancela (dc dias corridos, du dias úteis, s semanas, m meses, a anos)' : undefined}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => (setDigitando(true), onChange(e.target.value))}
         onBlur={saida}
       />
-      <button type="button" className="rp-campo-icone" title="Abrir calendário" aria-label={`Abrir calendário${rotulo ? ` de ${rotulo}` : ''}`} disabled={somenteLeitura} onClick={() => (aberto ? setAberto(false) : abrir())}>
+      {comIcone && (
+      <button type="button" className="rp-campo-icone" title="Abrir calendário" aria-label={`Abrir calendário${rotulo ? ` de ${rotulo}` : ''}`} tabIndex={-1} onMouseDown={(e) => e.preventDefault()}
+        onClick={() => (aberto ? setAberto(false) : abrir())}>
         <i className="rp-ico rp-ico-calendario" aria-hidden="true" />
       </button>
+      )}
       {aberto && (
         <div className="rp-cal rp-campo-data__cal" role="dialog" aria-label="Calendário">
           <div className="rp-cal-head">

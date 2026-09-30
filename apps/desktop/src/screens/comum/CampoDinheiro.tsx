@@ -1,4 +1,4 @@
-import { useRef, type FocusEvent, type InputHTMLAttributes, type KeyboardEvent } from 'react';
+import { useRef, useState, type FocusEvent, type InputEvent, type InputHTMLAttributes, type KeyboardEvent } from 'react';
 import { resultadoDaExpressao } from '../../calculadora';
 
 /** Troca o valor do campo como se o usuário tivesse digitado, para o `onChange` de quem usa o campo receber o texto. */
@@ -8,15 +8,16 @@ const digitar = (el: HTMLInputElement, texto: string) => {
 };
 
 /**
- * Campo de dinheiro do design system: o `input.rp-field` de sempre com "R$" dentro, à esquerda, e o ícone de
- * calculadora sempre à direita. Digitar "=" (ou clicar no ícone) começa uma conta; Enter ou sair do campo põe o
- * resultado, Esc volta ao valor de antes. Aceita os mesmos atributos do `input`; `casas` é o máximo de casas do resultado.
+ * Campo de dinheiro do design system: o `input.rp-field` de sempre com "R$" dentro, à esquerda. O ícone de calculadora
+ * aparece à esquerda, dentro do campo, quando se começa a digitar, e some ao sair. Digitar "=" (ou clicar no ícone)
+ * começa uma conta; Enter ou sair do campo põe o resultado, Esc volta ao valor de antes. Aceita os mesmos atributos do `input`; `casas` é o máximo de casas do resultado.
  */
-export function CampoDinheiro({ casas = 2, className, value, maxLength, onKeyDown, onBlur, ...resto }: InputHTMLAttributes<HTMLInputElement> & {
+export function CampoDinheiro({ casas = 2, className, value, maxLength, onKeyDown, onBlur, onInput, ...resto }: InputHTMLAttributes<HTMLInputElement> & {
   value: string;
   casas?: number;
 }) {
   const campo = useRef<HTMLInputElement>(null);
+  const [digitando, setDigitando] = useState(false);
   const calc = value.startsWith('=');
   const antes = useRef(value);
   if (!calc) antes.current = value;
@@ -53,16 +54,23 @@ export function CampoDinheiro({ casas = 2, className, value, maxLength, onKeyDow
     const el = campo.current!;
     el.focus();
     if (!calc) digitar(el, '=');
+    el.setSelectionRange(el.value.length, el.value.length);
+  };
+
+  const entrada = (e: InputEvent<HTMLInputElement>) => {
+    setDigitando(true);
+    onInput?.(e);
   };
 
   const saida = (e: FocusEvent<HTMLInputElement>) => {
+    setDigitando(false);
     if (!calc) return onBlur?.(e);
     if (!calcular()) digitar(e.currentTarget, antes.current);
     setTimeout(() => ultimoOnBlur.current?.(e), 0);
   };
 
   return (
-    <span className={`rp-dinheiro${calc ? ' rp-dinheiro--calc' : ''}${curto ? ' rp-field--curto' : ''}`}>
+    <span className={`rp-dinheiro${calc ? ' rp-dinheiro--calc' : ''}${digitando && editavel ? ' rp-campo--com-icone' : ''}${curto ? ' rp-field--curto' : ''}`}>
       <span className="rp-dinheiro-simbolo" aria-hidden="true">R$</span>
       <input
         {...resto}
@@ -73,13 +81,16 @@ export function CampoDinheiro({ casas = 2, className, value, maxLength, onKeyDow
         maxLength={calc ? undefined : maxLength}
         title={calc ? 'Calculadora: Enter põe o resultado, Esc cancela' : resto.title}
         onKeyDown={teclas}
+        onInput={entrada}
         onBlur={saida}
       />
+      {digitando && editavel && (
       <button type="button" className="rp-campo-icone" tabIndex={-1} title="Calculadora: digite = e a conta; Enter põe o resultado"
-        aria-label={`Calculadora${resto['aria-label'] ? ` de ${resto['aria-label']}` : ''}`} disabled={!editavel}
+        aria-label={`Calculadora${resto['aria-label'] ? ` de ${resto['aria-label']}` : ''}`}
         onMouseDown={(e) => e.preventDefault()} onClick={abrirConta}>
         <i className="rp-ico rp-ico-calculadora" aria-hidden="true" />
       </button>
+      )}
     </span>
   );
 }
