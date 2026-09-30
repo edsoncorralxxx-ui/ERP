@@ -49,7 +49,7 @@
       "id": "financeiro",
       "nome": "Financeiro",
       "responsabilidade": "Títulos, ajustes, liquidações e alocações, estornos, créditos, contas, movimentos, transferências, extratos, conciliação, matriz de caixa",
-      "dependsOn": ["kernel", "acesso", "auditoria", "plataforma", "cadastros"]
+      "dependsOn": ["kernel", "acesso", "auditoria", "plataforma", "cadastros", "projetos"]
     },
     {
       "id": "comercial",

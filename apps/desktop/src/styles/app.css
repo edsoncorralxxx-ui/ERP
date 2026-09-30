@@ -314,3 +314,8 @@ body { background: var(--ground); }
 
 /* Parâmetros fiscais (Sprint 7): as faixas de produto e de serviço uma embaixo da outra; quem rola é o corpo da janela. */
 .rp-parametros__faixas { display: grid; gap: var(--space-4); }
+
+/* Fluxo de caixa (Sprint 9): valor da grade que abre a composição; o mês corrente e a coluna Em atraso em destaque. */
+.rp-fluxo__valor { cursor: pointer; color: var(--ink-heading); text-decoration: underline dotted; }
+.rp-fluxo__valor:hover, .rp-fluxo__valor:focus-visible { background: var(--field-active); }
+.rp-fluxo__pendencias { margin: var(--space-3) 0; padding-left: var(--space-5); }

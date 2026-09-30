@@ -7,6 +7,8 @@ import br.com.fourtech.rendamais.auditoria.api.AuditEntry;
 import br.com.fourtech.rendamais.auditoria.api.AuditQuery;
 import br.com.fourtech.rendamais.auditoria.api.AuditTrail;
 import br.com.fourtech.rendamais.documentos.api.DocumentQueryApi;
+import br.com.fourtech.rendamais.financeiro.api.TitleIssuanceApi;
+import br.com.fourtech.rendamais.financeiro.api.TitleQueryApi;
 import br.com.fourtech.rendamais.fiscal.domain.RevenueKind;
 import br.com.fourtech.rendamais.fiscal.domain.SimplesSimulation;
 import br.com.fourtech.rendamais.fiscal.domain.TaxParameters;
@@ -54,9 +56,17 @@ public class FiscalService {
     static final String ENTITY = "tax_period";
     static final String PARAMETER_ENTITY = "tax_parameter_revision";
     static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
+    /** Origem do título a pagar do DAS: {@code competência:nº da conferência}. */
+    public static final String DAS_ORIGIN = "TAX_PERIOD";
+    /** Beneficiário do DAS: "Receita Federal — DAS", semeado pela migração V13 (decisão do PO na Sprint 8). */
+    public static final UUID DAS_BENEFICIARY = UUID.fromString("00000000-0000-0000-0000-0000000000da");
+    /** Categoria de despesa do DAS (semeada pela V13). */
+    static final String DAS_CATEGORY = "IMPOSTOS_SIMPLES";
 
     private final TaxRepository repository;
     private final DocumentQueryApi documents;
+    private final TitleIssuanceApi titleIssuance;
+    private final TitleQueryApi titleQuery;
     private final AuditTrail audit;
     private final AuditQuery auditQuery;
     private final Outbox outbox;
@@ -65,11 +75,13 @@ public class FiscalService {
     private final Clock clock;
     private final YearMonth revenueStart;
 
-    public FiscalService(TaxRepository repository, DocumentQueryApi documents, AuditTrail audit, AuditQuery auditQuery, Outbox outbox,
-                         CommandReceipts receipts, JsonMapper json, Clock clock,
+    public FiscalService(TaxRepository repository, DocumentQueryApi documents, TitleIssuanceApi titleIssuance, TitleQueryApi titleQuery,
+                         AuditTrail audit, AuditQuery auditQuery, Outbox outbox, CommandReceipts receipts, JsonMapper json, Clock clock,
                          @Value("${renda.fiscal.revenue-start:2026-09}") String revenueStart) {
         this.repository = repository;
         this.documents = documents;
+        this.titleIssuance = titleIssuance;
+        this.titleQuery = titleQuery;
         this.audit = audit;
         this.auditQuery = auditQuery;
         this.outbox = outbox;
@@ -113,7 +125,8 @@ public class FiscalService {
     public record PeriodDetail(YearMonth competence, boolean revenueKnown, DocumentQueryApi.Revenue revenue,
                                List<DocumentQueryApi.DocumentRef> documents, TaxRepository.Period period, Rbt12View rbt12,
                                TaxParameters parameters, List<TaxRepository.Simulation> simulations,
-                               List<TaxRepository.Confirmation> confirmations, List<TaxRepository.Closure> closures) {
+                               List<TaxRepository.Confirmation> confirmations, List<TaxRepository.Closure> closures,
+                               Map<UUID, TitleQueryApi.TitleView> dasTitles) {
         public String status() {
             return period == null ? "ABERTA" : period.status();
         }
@@ -162,11 +175,20 @@ public class FiscalService {
     private PeriodDetail detail(YearMonth c) {
         Optional<TaxRepository.Period> p = repository.find(c);
         DocumentQueryApi.Revenue revenue = documents.revenue(c, c).getOrDefault(c, new DocumentQueryApi.Revenue(0, 0, 0));
+        List<TaxRepository.Confirmation> confirmations = p.map(x -> repository.confirmations(x.id())).orElse(List.of());
         return new PeriodDetail(c, !c.isBefore(revenueStart), revenue, documents.documents(c), p.orElse(null), rbt12(c, p.orElse(null)),
                 repository.parametersFor(c).orElse(null),
                 p.map(x -> repository.simulations(x.id())).orElse(List.of()),
-                p.map(x -> repository.confirmations(x.id())).orElse(List.of()),
-                p.map(x -> repository.closures(x.id())).orElse(List.of()));
+                confirmations,
+                p.map(x -> repository.closures(x.id())).orElse(List.of()), dasTitles(confirmations));
+    }
+
+    /** Títulos do DAS das conferências, pelo id (o financeiro dá a situação e o saldo de hoje). */
+    private Map<UUID, TitleQueryApi.TitleView> dasTitles(List<TaxRepository.Confirmation> confirmations) {
+        List<UUID> ids = confirmations.stream().map(TaxRepository.Confirmation::titleId).filter(Objects::nonNull).toList();
+        Map<UUID, TitleQueryApi.TitleView> out = new LinkedHashMap<>();
+        titleQuery.byIds(ids).forEach(t -> out.put(t.id(), t));
+        return out;
     }
 
     @Transactional(readOnly = true)
@@ -299,7 +321,12 @@ public class FiscalService {
         return m;
     }
 
-    /** Registra o valor apurado pelo contador e o vencimento; a conferência anterior fica no histórico. */
+    /**
+     * Registra o valor apurado pelo contador e o vencimento; a conferência anterior fica no histórico. Na mesma transação
+     * nasce o título a pagar do DAS (Sprint 8): reconferir cancela o DAS anterior sem pagamento e cria outro, para haver um
+     * só DAS ativo na competência; DAS com pagamento recusa a reconferência ({@code TAX_DAS_PAID}); valor zero não cria
+     * título.
+     */
     @Transactional
     public PeriodDetail confirm(String competence, long expectedVersion, ConfirmRequest r) {
         CurrentUser user = CurrentUserHolder.require(Permissions.TAX_PERIOD_CONFIRM);
@@ -325,8 +352,29 @@ public class FiscalService {
         TaxRepository.Period p = open(c, expectedVersion, at, user);
         List<TaxRepository.Simulation> sims = repository.simulations(p.id());
         List<TaxRepository.Confirmation> previous = repository.confirmations(p.id());
-        TaxRepository.Confirmation conf = new TaxRepository.Confirmation(UUID.randomUUID(), p.id(), previous.size() + 1, amount, due, notes,
-                sims.isEmpty() ? null : sims.getFirst().id(), at, user.username());
+        int seq = previous.size() + 1;
+        String label = SimplesSimulation.label(c);
+        List<TitleQueryApi.TitleView> activeDas = titleQuery.byIds(previous.stream().map(TaxRepository.Confirmation::titleId)
+                .filter(Objects::nonNull).toList()).stream().filter(t -> !"CANCELLED".equals(t.status())).toList();
+        for (TitleQueryApi.TitleView t : activeDas) {
+            if (t.receivedCents() > 0) {
+                throw new RuleViolationException("TAX_DAS_PAID", "O DAS " + t.code() + " da competência " + label + " tem pagamento de "
+                        + brl(t.receivedCents()) + "; estorne o pagamento do DAS antes de registrar outra conferência.",
+                        List.of(new FieldIssue("amountCents", "DAS " + t.code() + " com pagamento.")));
+            }
+        }
+        if (!activeDas.isEmpty()) {
+            titleIssuance.cancelOpen(DAS_ORIGIN, activeDas.stream().map(TitleQueryApi.TitleView::originId).toList(),
+                    "Substituído pela conferência " + seq + " do contador.");
+        }
+        UUID titleId = null;
+        if (amount > 0) {
+            titleId = titleIssuance.issuePayables(new TitleIssuanceApi.PayableRequest(DAS_ORIGIN, DAS_BENEFICIARY, null,
+                    LocalDate.now(clock.withZone(BUSINESS_ZONE)), DAS_CATEGORY, c, List.of(new TitleIssuanceApi.Installment(c + ":" + seq, due,
+                    Money.ofCents(amount, Currency.BRL), "DAS " + label)))).getFirst();
+        }
+        TaxRepository.Confirmation conf = new TaxRepository.Confirmation(UUID.randomUUID(), p.id(), seq, amount, due, notes,
+                sims.isEmpty() ? null : sims.getFirst().id(), titleId, at, user.username());
         repository.insertConfirmation(conf);
         TaxRepository.Period changed = bump(p, at, user);
         repository.update(changed, p.version());
@@ -335,6 +383,10 @@ public class FiscalService {
         changes.put("dueDate", new AuditEntry.Change(previous.isEmpty() ? null : previous.getFirst().dueDate().toString(), due.toString()));
         Long diff = difference(sims.isEmpty() ? null : sims.getFirst(), conf);
         if (diff != null) changes.put("difference", new AuditEntry.Change(null, brl(diff)));
+        if (titleId != null || !activeDas.isEmpty()) {
+            String das = titleId == null ? null : titleQuery.byIds(List.of(titleId)).getFirst().code();
+            changes.put("dasTitle", new AuditEntry.Change(activeDas.isEmpty() ? null : activeDas.getFirst().code(), das));
+        }
         audit.record(new AuditEntry(user.username(), "TAX_PERIOD_CONFIRMED", ENTITY, p.id().toString(), changed.version(), notes, changes,
                 CorrelationId.current()));
         Map<String, Object> payload = new LinkedHashMap<>();
@@ -342,8 +394,7 @@ public class FiscalService {
         payload.put("competence", c.toString());
         payload.put("confirmedAmountCents", Long.toString(amount));
         payload.put("dueDate", due.toString());
-        // O título a pagar do DAS nasce com as contas a pagar (decisão do PO na Sprint 7).
-        payload.put("titleId", null);
+        payload.put("titleId", titleId == null ? null : titleId.toString());
         outbox.append("TaxPeriodConfirmed", ENTITY, p.id().toString(), payload, user.username());
         return detail(c);
     }

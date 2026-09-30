@@ -14,7 +14,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Liquidação (docs/backend/12, §4): um recebimento numa conta, numa data, repartido entre títulos. O total é a soma
+ * Liquidação (docs/backend/12, §4): um recebimento ou um pagamento numa conta, numa data, repartido entre títulos. O total é a soma
  * exata das alocações (INV-ST-1) e cada título aparece uma vez, na mesma direção (INV-ST-2). O estorno é total
  * (PD-005): a liquidação continua consultável como REVERSED, com motivo, data, ator e o movimento de caixa inverso.
  * Crédito do parceiro e componentes explícitos (juros, tarifas) ficam para depois (PD-004).
@@ -85,7 +85,7 @@ public final class Settlement {
     /** INV-ST-1 e INV-ST-2, conferidos antes de tocar o banco. */
     public static void check(Money total, List<Allocation> allocations) {
         if (allocations.isEmpty()) {
-            throw new RuleViolationException("SETTLEMENT_INVALID", "Informe ao menos um título a receber.",
+            throw new RuleViolationException("SETTLEMENT_INVALID", "Informe ao menos um título.",
                     List.of(new FieldIssue("allocations", "Obrigatório.")));
         }
         Set<UUID> seen = new HashSet<>();
@@ -93,7 +93,7 @@ public final class Settlement {
         for (int i = 0; i < allocations.size(); i++) {
             Allocation a = allocations.get(i);
             if (!seen.add(a.titleId())) {
-                throw new RuleViolationException("SETTLEMENT_DIRECTION_MISMATCH", "Cada título aparece uma vez só no recebimento.",
+                throw new RuleViolationException("SETTLEMENT_DIRECTION_MISMATCH", "Cada título aparece uma vez só na liquidação.",
                         List.of(new FieldIssue("allocations[" + i + "].titleId", "Título repetido.")));
             }
             if (a.amount().isNegative() || a.amount().isZero()) {

@@ -36,7 +36,7 @@ class SupplierApiTest extends CadastrosApiTest {
         assertThat(jdbc.sql("select payload::text from outbox_event where event_type = 'PartnerRegistered'").query(String.class).single())
                 .contains("FORNECEDOR");
         assertThat(post("/api/v1/suppliers", "forn-cad-00001", fornecedor(chapas)).body()).contains(campo(r.body(), "id"));
-        assertThat(conta("select count(*) from partner")).isEqualTo(1);
+        assertThat(conta("select count(*) from partner where created_by <> 'sistema'")).isEqualTo(1);
     }
 
     @Test
@@ -51,7 +51,7 @@ class SupplierApiTest extends CadastrosApiTest {
         assertThat(dup.statusCode()).isEqualTo(422);
         assertThat(dup.body()).contains("PARTNER_OTHER_ROLE", codigo, "\"field\":\"partnerId\",\"message\":\"" + id + "\"",
                 "\"field\":\"version\",\"message\":\"1\"");
-        assertThat(conta("select count(*) from partner")).isEqualTo(1);
+        assertThat(conta("select count(*) from partner where created_by <> 'sistema'")).isEqualTo(1);
 
         HttpResponse<String> vira = withVersion("POST", "/api/v1/suppliers/" + id + "/enable", "1", null);
         assertThat(vira.statusCode()).as(vira.body()).isEqualTo(200);
@@ -74,7 +74,8 @@ class SupplierApiTest extends CadastrosApiTest {
         assertThat(r.statusCode()).isEqualTo(200);
         assertThat(r.body()).contains("\"status\":\"INATIVO\"", "\"customer\":true");
         assertThat(get("/api/v1/customers/" + id).body()).contains("\"status\":\"ATIVO\"", "\"supplier\":false");
-        assertThat(get("/api/v1/suppliers").body()).isEqualTo("[]");
+        // Ativo, só o fornecedor semeado pelo sistema para o DAS (Sprint 8).
+        assertThat(get("/api/v1/suppliers").body()).doesNotContain(id).contains("Receita Federal");
         assertThat(get("/api/v1/suppliers?status=INATIVO").body()).contains(id);
         assertThat(get("/api/v1/customers").body()).contains(id);
         assertThat(jdbc.sql("select status from partner where id = cast(:id as uuid)").param("id", id).query(String.class).single())
@@ -99,7 +100,7 @@ class SupplierApiTest extends CadastrosApiTest {
         assertThat(prazo.body()).contains("está inativa");
         HttpResponse<String> soPrazo = post("/api/v1/suppliers", "forn-val-00004", "{\"legalName\":\"X\",\"leadTimeDays\":400}");
         assertThat(soPrazo.body()).contains("\"field\":\"leadTimeDays\"");
-        assertThat(conta("select count(*) from partner")).isEqualTo(1);
+        assertThat(conta("select count(*) from partner where created_by <> 'sistema'")).isEqualTo(1);
     }
 
     @Test
@@ -110,6 +111,6 @@ class SupplierApiTest extends CadastrosApiTest {
         HttpResponse<String> negado = call("POST", "/api/v1/suppliers", consulta, "{\"legalName\":\"Outro\"}",
                 Map.of("Idempotency-Key", "forn-con-00002"));
         assertThat(negado.statusCode()).isEqualTo(403);
-        assertThat(conta("select count(*) from partner")).isEqualTo(1);
+        assertThat(conta("select count(*) from partner where created_by <> 'sistema'")).isEqualTo(1);
     }
 }

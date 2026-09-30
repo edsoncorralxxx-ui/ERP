@@ -1,6 +1,7 @@
 package br.com.fourtech.rendamais.fiscal.infrastructure;
 
 import br.com.fourtech.rendamais.documentos.api.DocumentQueryApi;
+import br.com.fourtech.rendamais.financeiro.api.TitleQueryApi;
 import br.com.fourtech.rendamais.fiscal.application.FiscalService;
 import br.com.fourtech.rendamais.fiscal.application.TaxRepository;
 import br.com.fourtech.rendamais.fiscal.domain.TaxParameters;
@@ -69,8 +70,10 @@ class FiscalController {
                          String productRevenueCents, String serviceRevenueCents, String productTaxCents, String serviceTaxCents,
                          String totalTaxCents, JsonNode memory, Instant createdAt, String createdBy) { }
 
+    /** Conferência do contador com o título do DAS que ela criou (código, situação e saldo de hoje). */
     record ConfirmationDto(String id, int seq, String amountCents, LocalDate dueDate, String notes, Integer simulationSeq,
-                           Instant createdAt, String createdBy) { }
+                           String titleId, String titleCode, String titleStatus, String titleBalanceCents, Instant createdAt,
+                           String createdBy) { }
 
     record ClosureDto(String action, String reason, String revenueCents, Instant occurredAt, String actor) { }
 
@@ -173,8 +176,13 @@ class FiscalController {
                         text(s.rbt12Cents()), s.rbt12Origin(), Long.toString(s.productRevenueCents()), Long.toString(s.serviceRevenueCents()),
                         text(s.productTaxCents()), text(s.serviceTaxCents()), text(s.totalTaxCents()), json.readTree(s.memory()),
                         s.createdAt(), s.createdBy())).toList(),
-                d.confirmations().stream().map(c -> new ConfirmationDto(c.id().toString(), c.seq(), Long.toString(c.amountCents()), c.dueDate(),
-                        c.notes(), c.simulationId() == null ? null : simSeq.get(c.simulationId()), c.createdAt(), c.createdBy())).toList(),
+                d.confirmations().stream().map(c -> {
+                    TitleQueryApi.TitleView t = c.titleId() == null ? null : d.dasTitles().get(c.titleId());
+                    return new ConfirmationDto(c.id().toString(), c.seq(), Long.toString(c.amountCents()), c.dueDate(), c.notes(),
+                            c.simulationId() == null ? null : simSeq.get(c.simulationId()), c.titleId() == null ? null : c.titleId().toString(),
+                            t == null ? null : t.code(), t == null ? null : t.status(), t == null ? null : Long.toString(t.balanceCents()),
+                            c.createdAt(), c.createdBy());
+                }).toList(),
                 d.closures().stream().map(c -> new ClosureDto(c.action(), c.reason(),
                         c.productRevenueCents() == null ? null : Long.toString(c.productRevenueCents() + c.serviceRevenueCents()),
                         c.occurredAt(), c.actor())).toList(),

@@ -32,7 +32,7 @@ public abstract class CadastrosApiTest extends IntegrationTest {
         jdbc.sql("delete from command_receipt").update();
         limpaDocumentos();
         jdbc.sql("delete from item").update();
-        jdbc.sql("delete from partner").update();
+        jdbc.sql("delete from partner where created_by <> 'sistema'").update();
         jdbc.sql("delete from item_category").update();
         jdbc.sql("delete from unit_of_measure where created_by <> 'sistema'").update();
         jdbc.sql("update unit_of_measure set status = 'ATIVO'").update();

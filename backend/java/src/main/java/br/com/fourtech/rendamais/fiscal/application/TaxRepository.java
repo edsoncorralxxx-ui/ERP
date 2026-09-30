@@ -26,8 +26,9 @@ public interface TaxRepository {
                       Long rbt12Cents, String rbt12Origin, long productRevenueCents, long serviceRevenueCents, Long productTaxCents,
                       Long serviceTaxCents, Long totalTaxCents, String memory, Instant createdAt, String createdBy) { }
 
+    /** Conferência do contador; {@code titleId} é o título a pagar do DAS criado por ela (nulo quando o valor é zero). */
     record Confirmation(UUID id, UUID periodId, int seq, long amountCents, LocalDate dueDate, String notes, UUID simulationId,
-                        Instant createdAt, String createdBy) { }
+                        UUID titleId, Instant createdAt, String createdBy) { }
 
     record Closure(UUID id, UUID periodId, String action, String reason, Long productRevenueCents, Long serviceRevenueCents,
                    UUID simulationId, UUID confirmationId, Instant occurredAt, String actor) { }

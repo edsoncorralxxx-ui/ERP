@@ -26,6 +26,7 @@ export const SEQUENCIA_PADRAO: Partial<Record<WindowKind, (recordKey: string) =>
   project: () => ids('/api/v1/projects?status=TODOS'),
   equipment: () => ids('/api/v1/equipment?status=TODOS'),
   receivable: () => ids('/api/v1/receivables?status=TODOS'),
+  payable: () => ids('/api/v1/payables?status=TODOS'),
   document: () => ids('/api/v1/documents?status=TODOS'),
   'tax-period': async (competencia) => mesesDoAno(competencia),
 };

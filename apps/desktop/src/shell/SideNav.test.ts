@@ -10,13 +10,16 @@ describe('menu lateral', () => {
     const implementados = MENU.flatMap((m) => m.itens).filter((i) => i.implementado);
     expect(implementados.map((i) => i.rotulo).sort()).toEqual([
       'Carteira de projetos',
+      'Categorias financeiras',
       'Clientes e unidades',
+      'Contas a pagar',
       'Contas a receber',
       'Contas financeiras',
       'Dados da empresa',
       'Detalhe do projeto',
       'Documentos e faturamento',
       'Equipamentos',
+      'Fluxo de caixa',
       'Fornecedores',
       'Impostos gerenciais',
       'Notas a emitir',

@@ -92,7 +92,8 @@
       "premissaB01": "Categoria obrigatória por título, lista a cadastrar",
       "bloqueia": "Relatórios gerenciais de B06/B10",
       "responsavel": "Financeiro",
-      "adr": "ADR-010"
+      "adr": "ADR-010",
+      "resposta": "Respondida pelo PO no planning da Sprint 8 (28/09/2026): lista inicial semeada — Materiais, Serviços de terceiros, Frete, Impostos — Simples Nacional, Folha e encargos, Aluguel, Energia e utilidades, Despesas administrativas, Outras despesas (despesa) e Receita de vendas (receita); o Administrador cadastra outras. Centros de resultado continuam pendentes"
     },
     {
       "id": "PD-011",

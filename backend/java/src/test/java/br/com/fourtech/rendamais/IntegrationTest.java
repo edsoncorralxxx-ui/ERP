@@ -64,11 +64,15 @@ public abstract class IntegrationTest {
         jdbc.sql("delete from business_document").update();
         jdbc.sql("delete from settlement_reversal").update();
         jdbc.sql("delete from cash_movement").update();
+        jdbc.sql("delete from transfer").update();
         jdbc.sql("delete from settlement_allocation").update();
         jdbc.sql("delete from settlement").update();
         jdbc.sql("delete from bank_account where created_by <> 'sistema'").update();
         jdbc.sql("update bank_account set status = 'ATIVO'").update();
         jdbc.sql("delete from financial_title").update();
+        // Contas a pagar (Sprint 8): categorias criadas nos testes; as semeadas voltam ao estado original.
+        jdbc.sql("delete from financial_category where created_by <> 'sistema'").update();
+        jdbc.sql("update financial_category set status = 'ATIVO'").update();
         jdbc.sql("delete from equipment").update();
         jdbc.sql("delete from project").update();
         jdbc.sql("delete from sales_order").update();

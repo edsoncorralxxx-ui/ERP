@@ -43,6 +43,8 @@ public final class FinancialTitle {
     private final Money received;
     private final Lifecycle lifecycle;
     private final String cancelReason;
+    private final String documentNumber;
+    private final String notes;
     private final long version;
     private final Instant createdAt;
     private final String createdBy;
@@ -51,8 +53,8 @@ public final class FinancialTitle {
 
     public FinancialTitle(UUID id, String code, Direction direction, UUID counterpartyId, String originType, String originId,
                           String originLabel, UUID projectId, String category, YearMonth competence, LocalDate issueDate,
-                          LocalDate dueDate, Money original, Money received, Lifecycle lifecycle, String cancelReason, long version,
-                          Instant createdAt, String createdBy, Instant updatedAt, String updatedBy) {
+                          LocalDate dueDate, Money original, Money received, Lifecycle lifecycle, String cancelReason,
+                          String documentNumber, String notes, long version, Instant createdAt, String createdBy, Instant updatedAt, String updatedBy) {
         this.id = Objects.requireNonNull(id);
         this.code = Objects.requireNonNull(code);
         this.direction = Objects.requireNonNull(direction);
@@ -72,6 +74,8 @@ public final class FinancialTitle {
         }
         this.lifecycle = Objects.requireNonNull(lifecycle);
         this.cancelReason = cancelReason;
+        this.documentNumber = documentNumber;
+        this.notes = notes;
         this.version = version;
         this.createdAt = createdAt;
         this.createdBy = createdBy;
@@ -91,11 +95,26 @@ public final class FinancialTitle {
         }
         return new FinancialTitle(UUID.randomUUID(), code, Direction.RECEIVABLE, counterpartyId, originType, originId, label,
                 projectId, category, YearMonth.from(dueDate), issueDate, dueDate, amount, Money.zero(amount.currency()), Lifecycle.ACTIVE,
-                null, 1, now, actor,
+                null, null, null, 1, now, actor,
                 now, actor);
     }
 
-    /** Valor recebido e não estornado. */
+    /**
+     * Título a pagar (formulário "pagar"): a competência é informada (título manual exige categoria e competência —
+     * PD-010), não derivada do vencimento.
+     */
+    public static FinancialTitle payable(String code, UUID counterpartyId, String originType, String originId, String label,
+                                         UUID projectId, String category, YearMonth competence, LocalDate issueDate, LocalDate dueDate,
+                                         Money amount, String documentNumber, String notes, Instant now, String actor) {
+        if (amount.currency() != Currency.BRL || amount.isNegative() || amount.isZero()) {
+            throw new IllegalArgumentException("Valor do título deve ser positivo, em reais: " + amount);
+        }
+        return new FinancialTitle(UUID.randomUUID(), code, Direction.PAYABLE, counterpartyId, originType, originId, label,
+                projectId, category, Objects.requireNonNull(competence), issueDate, dueDate, amount, Money.zero(amount.currency()),
+                Lifecycle.ACTIVE, null, documentNumber, notes, 1, now, actor, now, actor);
+    }
+
+    /** Valor recebido (ou pago, no título a pagar) e não estornado. */
     public Money received() {
         return received;
     }
@@ -146,14 +165,16 @@ public final class FinancialTitle {
     public FinancialTitle cancel(String reason, Instant now, String actor) {
         if (lifecycle == Lifecycle.CANCELLED) return this;
         if (!received().isZero()) {
-            throw new InvalidStateException("O título " + code + " tem valor recebido; estorne o recebimento antes de cancelar.");
+            throw new InvalidStateException(direction == Direction.PAYABLE
+                    ? "O título " + code + " tem valor pago; estorne o pagamento antes de cancelar."
+                    : "O título " + code + " tem valor recebido; estorne o recebimento antes de cancelar.");
         }
         return with(received, Lifecycle.CANCELLED, reason, now, actor);
     }
 
     private FinancialTitle with(Money newReceived, Lifecycle newLifecycle, String reason, Instant now, String actor) {
         return new FinancialTitle(id, code, direction, counterpartyId, originType, originId, originLabel, projectId, category,
-                competence, issueDate, dueDate, original, newReceived, newLifecycle, reason, version + 1, createdAt, createdBy, now, actor);
+                competence, issueDate, dueDate, original, newReceived, newLifecycle, reason, documentNumber, notes, version + 1, createdAt, createdBy, now, actor);
     }
 
     public UUID id() { return id; }
@@ -171,6 +192,8 @@ public final class FinancialTitle {
     public Money original() { return original; }
     public Lifecycle lifecycle() { return lifecycle; }
     public String cancelReason() { return cancelReason; }
+    public String documentNumber() { return documentNumber; }
+    public String notes() { return notes; }
     public long version() { return version; }
     public Instant createdAt() { return createdAt; }
     public String createdBy() { return createdBy; }
