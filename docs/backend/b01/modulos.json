@@ -61,7 +61,7 @@
       "id": "engenharia",
       "nome": "Engenharia e planejamento",
       "responsabilidade": "BOM/modelo/revisão, BOM aplicada ao projeto, EAP, atividades, dependências, calendários, linhas de base, avanço",
-      "dependsOn": ["kernel", "plataforma", "cadastros", "projetos"]
+      "dependsOn": ["kernel", "acesso", "auditoria", "plataforma", "cadastros", "projetos"]
     },
     {
       "id": "estoque",

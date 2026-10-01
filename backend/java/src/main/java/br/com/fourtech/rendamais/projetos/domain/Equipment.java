@@ -18,7 +18,7 @@ import java.util.UUID;
  * da linha de equipamento. Número de série e observações são do usuário; aceite e início da garantia vêm do aceite
  * registrado (PD-015), nunca da previsão, e ficam vazios até a instalação.
  */
-public record Equipment(UUID id, String code, UUID projectId, UUID orderLineId, int lineSeq, String model, UUID itemId,
+public record Equipment(UUID id, String code, UUID projectId, UUID orderLineId, int lineSeq, String model, UUID modelId, UUID itemId,
                         UUID customerId, UUID unitId, String unitName, String serialNumber, String notes, Status status,
                         LocalDate acceptedOn, LocalDate warrantyStart, long version, Instant createdAt, String createdBy,
                         Instant updatedAt, String updatedBy) {
@@ -29,12 +29,13 @@ public record Equipment(UUID id, String code, UUID projectId, UUID orderLineId, 
         Objects.requireNonNull(id);
         Objects.requireNonNull(code);
         Objects.requireNonNull(model);
+        Objects.requireNonNull(modelId);
         Objects.requireNonNull(status);
     }
 
-    public static Equipment create(String code, Project project, UUID orderLineId, int lineSeq, String model, UUID itemId,
-                                   Instant now, String actor) {
-        return new Equipment(UUID.randomUUID(), code, project.id(), orderLineId, lineSeq, model, itemId, project.customerId(),
+    public static Equipment create(String code, Project project, UUID orderLineId, int lineSeq, String model, UUID modelId,
+                                   UUID itemId, Instant now, String actor) {
+        return new Equipment(UUID.randomUUID(), code, project.id(), orderLineId, lineSeq, model, modelId, itemId, project.customerId(),
                 project.unitId(), project.unitName(), null, null, Status.ATIVO, null, null, 1, now, actor, now, actor);
     }
 
@@ -49,13 +50,13 @@ public record Equipment(UUID id, String code, UUID projectId, UUID orderLineId, 
         String n = text(notes);
         if (n != null && n.length() > 1000) issues.add(new FieldIssue("notes", "Máximo de 1000 caracteres."));
         if (!issues.isEmpty()) throw new RuleViolationException("EQUIPMENT_INVALID", "Corrija os campos indicados.", issues);
-        return new Equipment(id, code, projectId, orderLineId, lineSeq, model, itemId, customerId, unitId, unitName, serial, n,
+        return new Equipment(id, code, projectId, orderLineId, lineSeq, model, modelId, itemId, customerId, unitId, unitName, serial, n,
                 status, acceptedOn, warrantyStart, version + 1, createdAt, createdBy, now, actor);
     }
 
     public Equipment cancel(Instant now, String actor) {
         if (status == Status.CANCELADO) return this;
-        return new Equipment(id, code, projectId, orderLineId, lineSeq, model, itemId, customerId, unitId, unitName, serialNumber,
+        return new Equipment(id, code, projectId, orderLineId, lineSeq, model, modelId, itemId, customerId, unitId, unitName, serialNumber,
                 notes, Status.CANCELADO, acceptedOn, warrantyStart, version + 1, createdAt, createdBy, now, actor);
     }
 

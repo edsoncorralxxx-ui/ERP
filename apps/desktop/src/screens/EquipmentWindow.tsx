@@ -8,9 +8,10 @@ import { DialogoConflito } from './comum/Dialogos';
 import { tratarFalha } from './comum/Falhas';
 import { GradeHistorico } from './comum/GradeHistorico';
 import { seloEquipamento } from './comum/Selos';
+import { EquipmentBomPanel } from './EquipmentBomPanel';
 import { EQUIPAMENTOS_ALTERADOS } from './EquipmentsWindow';
 
-type Tab = 'geral' | 'historico';
+type Tab = 'geral' | 'bom' | 'historico';
 type Form = { serialNumber: string; notes: string };
 
 const toForm = (e: Equipment): Form => ({ serialNumber: e.serialNumber ?? '', notes: e.notes ?? '' });
@@ -98,7 +99,7 @@ export function EquipmentWindow({ recordKey }: { recordKey: string }) {
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (conflito !== null) return;
     if (e.altKey) {
-      const alvo: Record<string, Tab> = { g: 'geral', h: 'historico' };
+      const alvo: Record<string, Tab> = { g: 'geral', b: 'bom', h: 'historico' };
       const t = alvo[e.key.toLowerCase()];
       if (!t) return;
       e.preventDefault();
@@ -129,6 +130,7 @@ export function EquipmentWindow({ recordKey }: { recordKey: string }) {
   const classeCampo = `rp-field${somenteLeitura ? ' rp-field--readonly' : ''}`;
   const tabs: [Tab, ReactNode][] = [
     ['geral', <span><u>G</u>eral</span>],
+    ['bom', <span><u>B</u>OM</span>],
     ['historico', <span><u>H</u>istórico</span>],
   ];
 
@@ -150,7 +152,7 @@ export function EquipmentWindow({ recordKey }: { recordKey: string }) {
                 <input className="rp-field rp-field--readonly" readOnly aria-label="Equipamento" value={eq.code} />
                 <span className="rp-label">Modelo</span>
                 <span />
-                <input className="rp-field rp-field--readonly" readOnly aria-label="Modelo" value={eq.model} />
+                <input className="rp-field rp-field--readonly" readOnly aria-label="Modelo" value={eq.modelName} title={eq.model !== eq.modelName ? `No pedido: ${eq.model}` : undefined} />
                 <label className="rp-label" htmlFor={fid('serie')}>Nº de série</label>
                 <span />
                 <input id={fid('serie')} className={classeCampo} value={form.serialNumber} maxLength={60} readOnly={somenteLeitura} aria-invalid={!!erros.serialNumber}
@@ -222,6 +224,12 @@ export function EquipmentWindow({ recordKey }: { recordKey: string }) {
                     </>
                   )}
                 </div>
+              ) : tab === 'bom' ? (
+                can('bom.read') ? (
+                  <EquipmentBomPanel equipmentId={eq.id} ativo={eq.status === 'ATIVO'} />
+                ) : (
+                  <p className="rp-janela-mdi__aviso">Seu perfil não vê a BOM (bom.read).</p>
+                )
               ) : (
                 <GradeHistorico historico={historico} rotulo="Histórico do equipamento" />
               )}

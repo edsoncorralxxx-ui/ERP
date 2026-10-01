@@ -59,6 +59,14 @@ public final class Permissions {
     public static final String TAX_PERIOD_CLOSE = "tax_period.close";
     /** Reabrir competência fechada, com motivo. */
     public static final String TAX_PERIOD_REOPEN = "tax_period.reopen";
+    /** Ver modelos de equipamento, BOMs, revisões e o custo planejado (Sprint 10). */
+    public static final String BOM_READ = "bom.read";
+    /** Cadastrar modelos e BOMs, editar rascunhos, carregar BOM do arquivo e criar revisão nova. */
+    public static final String BOM_UPDATE = "bom.update";
+    /** Aprovar revisão da BOM (ApproveBomRevision): só o Administrador (decisão do PO em 01/10/2026). */
+    public static final String BOM_APPROVE = "bom.approve";
+    /** Aplicar BOM ao equipamento, trocar a revisão e ajustar a BOM do equipamento (ApplyBomToProject). */
+    public static final String PROJECT_BOM_APPLY = "project_bom.apply";
     public static final String USER_ADMIN = "user.admin";
 
     private Permissions() { }

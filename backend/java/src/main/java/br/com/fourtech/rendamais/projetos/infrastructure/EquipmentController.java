@@ -31,14 +31,14 @@ class EquipmentController {
         this.service = service;
     }
 
-    record EquipmentDto(String id, String code, String model, String itemId, String projectId, String projectCode,
+    record EquipmentDto(String id, String code, String model, String modelId, String modelCode, String modelName, String itemId, String projectId, String projectCode,
                         String orderCode, String customerId, String customerCode, String customerName, String unitId,
                         String unitName, String serialNumber, String notes, String status, LocalDate acceptedOn,
                         LocalDate warrantyStart, String version, Instant createdAt, String createdBy, Instant updatedAt,
                         String updatedBy) {
         static EquipmentDto of(ProjectRepository.EquipmentSummary s) {
             Equipment e = s.equipment();
-            return new EquipmentDto(e.id().toString(), e.code(), e.model(), e.itemId() == null ? null : e.itemId().toString(),
+            return new EquipmentDto(e.id().toString(), e.code(), e.model(), e.modelId().toString(), s.modelCode(), s.modelName(), e.itemId() == null ? null : e.itemId().toString(),
                     e.projectId().toString(), s.projectCode(), s.orderCode(), e.customerId().toString(), s.customerCode(),
                     s.customerName(), e.unitId().toString(), e.unitName(), e.serialNumber(), e.notes(), e.status().name(),
                     e.acceptedOn(), e.warrantyStart(), Long.toString(e.version()), e.createdAt(), e.createdBy(), e.updatedAt(),

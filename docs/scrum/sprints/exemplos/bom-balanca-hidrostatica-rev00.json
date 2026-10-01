@@ -1,0 +1,2287 @@
+{
+  "produto": "Balança Hidrostática Renda+ Automática",
+  "empresa": "Fourtech Soluções Industriais",
+  "revisao": "00",
+  "data_revisao": "2026-03-03",
+  "moeda": "BRL",
+  "resumo": {
+    "mecanica": {
+      "quantidade_itens": 127,
+      "custo_total": 28477.4
+    },
+    "eletrica": {
+      "quantidade_itens": 76,
+      "custo_total": 40921.11
+    },
+    "custo_total_geral": 69398.51
+  },
+  "bom_mecanica": {
+    "categorias": [
+      {
+        "codigo": "CAT-01",
+        "categoria": "CHAPAS E PEÇAS CORTADAS A LASER",
+        "quantidade_itens": 61,
+        "subtotal": 10441.77,
+        "itens": [
+          {
+            "item": 1,
+            "codigo": "ADR-01-194-P",
+            "descricao": "Chapa 124x206mm #5/16\" Laser",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 25.69,
+            "preco_total": 51.38,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 2,
+            "codigo": "ADR-01-002-P",
+            "descricao": "Chapa 1063x1568mm #1/4\" Laser",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 306.45,
+            "preco_total": 612.9,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 3,
+            "codigo": "ADR-01-279-P",
+            "descricao": "Chapa 127x108mm #1/4\" Laser",
+            "quantidade": 4.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 10.27,
+            "preco_total": 41.08,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 4,
+            "codigo": "ADR-01-193-P",
+            "descricao": "Chapa 90x90mm #1/4\" Laser",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 10.78,
+            "preco_total": 21.56,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 5,
+            "codigo": "ADR-01-269-P",
+            "descricao": "Chapa 117x136mm #14 Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 24.05,
+            "preco_total": 24.05,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 6,
+            "codigo": "ADR-01-263-P",
+            "descricao": "Chapa 243x163mm #1/4\" Laser",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 18.23,
+            "preco_total": 36.46,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 7,
+            "codigo": "ADR-01-152-P",
+            "descricao": "Chapa 245x140mm #1/4\" Laser",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 24.06,
+            "preco_total": 48.12,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 8,
+            "codigo": "ADR-01-131-P",
+            "descricao": "Chapa 800x858mm #2mm Laser",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço Inox 304",
+            "preco_unitario": 267.82,
+            "preco_total": 535.64,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 9,
+            "codigo": "ADR-01-080-P",
+            "descricao": "Chapa 700x550mm #5/16\" Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 282.17,
+            "preco_total": 282.17,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 10,
+            "codigo": "ADR-01-069-P",
+            "descricao": "Chapa 170x85mm #5/16\" Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 22.25,
+            "preco_total": 22.25,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 11,
+            "codigo": "ADR-01-030-P",
+            "descricao": "Chapa 700x550mm #5/16\" Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 282.17,
+            "preco_total": 282.17,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 12,
+            "codigo": "ADR-01-211-P",
+            "descricao": "Chapa 1293x1404mm #14 Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 474.31,
+            "preco_total": 474.31,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 13,
+            "codigo": "MT-CONP-R+-041-P",
+            "descricao": "Chapa 200x100mm #3/16\" Laser",
+            "quantidade": 4.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 16.05,
+            "preco_total": 64.2,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 14,
+            "codigo": "ADR-01-216-P",
+            "descricao": "Chapa 200x107mm #3/16\" Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 18.12,
+            "preco_total": 18.12,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 15,
+            "codigo": "ADR-01-213-P",
+            "descricao": "Chapa 170x160mm #3/16\" Laser",
+            "quantidade": 4.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 18.89,
+            "preco_total": 75.56,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 16,
+            "codigo": "ADR-01-207-P",
+            "descricao": "Chapa 360x1090mm #3/16\" Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 184.97,
+            "preco_total": 184.97,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 17,
+            "codigo": "ADR-01-270-P",
+            "descricao": "Chapa 30x150mm #3/16\" Laser Inox",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço Inox 304",
+            "preco_unitario": 8.81,
+            "preco_total": 8.81,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 18,
+            "codigo": "ADR-01-223-P",
+            "descricao": "Chapa 130x230mm #1/8\" Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 15.46,
+            "preco_total": 15.46,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 19,
+            "codigo": "ADR-01-175-P",
+            "descricao": "Chapa 158x278mm #1/8\" Laser",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 24.5,
+            "preco_total": 49.0,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 20,
+            "codigo": "ADR-01-151-P",
+            "descricao": "Chapa 200x1068mm #1/8\" Laser",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 65.95,
+            "preco_total": 131.9,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 21,
+            "codigo": "ADR-01-100-P",
+            "descricao": "Chapa 45x170mm #1/8\" Laser",
+            "quantidade": 4.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 8.35,
+            "preco_total": 33.4,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 22,
+            "codigo": "ADR-01-038-P",
+            "descricao": "Chapa 600x112mm #1/8\" Laser",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 28.45,
+            "preco_total": 56.9,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 23,
+            "codigo": "ADR-01-037-P",
+            "descricao": "Chapa 380x198mm #1/8\" Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 28.06,
+            "preco_total": 28.06,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 24,
+            "codigo": "ADR-01-031-P",
+            "descricao": "Chapa 117x293mm #1/4\" Laser",
+            "quantidade": 4.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1021",
+            "preco_unitario": 64.36,
+            "preco_total": 257.44,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 25,
+            "codigo": "ADR-01-288-P",
+            "descricao": "Chapa 67x710mm #1/4\" Laser Inox",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço Inox 304",
+            "preco_unitario": 111.76,
+            "preco_total": 111.76,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 26,
+            "codigo": "ADR-01-035-P",
+            "descricao": "Chapa 85x430mm #1/8\" Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 18.58,
+            "preco_total": 18.58,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 27,
+            "codigo": "ADR-01-019-P",
+            "descricao": "Chapa 800x900mm #1/8\" Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 187.47,
+            "preco_total": 187.47,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 28,
+            "codigo": "ADR-01-043-P",
+            "descricao": "Chapa 100x300mm #5/16\" Laser",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 32.16,
+            "preco_total": 64.32,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 29,
+            "codigo": "ADR-01-135-P",
+            "descricao": "Chapa 127x50mm #5/16\" Laser",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 11.72,
+            "preco_total": 23.44,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 30,
+            "codigo": "ADR-01-161-P",
+            "descricao": "Chapa 430x75mm #1/8\" Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 17.79,
+            "preco_total": 17.79,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 31,
+            "codigo": "ADR-01-048-P",
+            "descricao": "Chapa 75x240mm #3/16\" Laser Inox",
+            "quantidade": 4.0,
+            "unidade": "UND",
+            "material": "Aço Inox 304",
+            "preco_unitario": 103.7,
+            "preco_total": 414.8,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 32,
+            "codigo": "ADR-01-101-P",
+            "descricao": "Chapa 75x240mm #3/16\" Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 5.9,
+            "preco_total": 5.9,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 33,
+            "codigo": "ADR-01-269-P",
+            "descricao": "Chapa 117x135mm #3/16\" Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 16.9,
+            "preco_total": 16.9,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 34,
+            "codigo": "ADR-01-028-P",
+            "descricao": "Chapa 32x167mm #1/4\" Laser Inox",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço Inox 304",
+            "preco_unitario": 9.0,
+            "preco_total": 18.0,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 35,
+            "codigo": "ADR-01-205-P",
+            "descricao": "Chapa 16x20mm #1/8\" Laser Inox",
+            "quantidade": 6.0,
+            "unidade": "UND",
+            "material": "Aço Inox 304",
+            "preco_unitario": 6.44,
+            "preco_total": 38.64,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 36,
+            "codigo": "ADR-01-262-P",
+            "descricao": "Chapa 812x455mm #1/8\" Laser Inox",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço Inox 304",
+            "preco_unitario": 203.79,
+            "preco_total": 407.58,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 37,
+            "codigo": "ADR-01-181-P",
+            "descricao": "Chapa 100x96mm #1/8\" Laser Inox",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço Inox 304",
+            "preco_unitario": 16.57,
+            "preco_total": 16.57,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 38,
+            "codigo": "ADR-01-129-P",
+            "descricao": "Chapa 75x590mm #1/8\" Laser Inox (x10)",
+            "quantidade": 10.0,
+            "unidade": "UND",
+            "material": "Aço Inox 304",
+            "preco_unitario": 78.19,
+            "preco_total": 781.9,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 39,
+            "codigo": "ADR-01-068-P",
+            "descricao": "Chapa 30x40mm #1/8\" Laser Inox",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço Inox 304",
+            "preco_unitario": 5.7,
+            "preco_total": 11.4,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 40,
+            "codigo": "ADR-01-130-P",
+            "descricao": "Chapa 620x597mm #14 Laser Inox",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço Inox 304",
+            "preco_unitario": 213.45,
+            "preco_total": 426.9,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 41,
+            "codigo": "ADR-01-127-P",
+            "descricao": "Chapa 717x400mm #14 Laser Inox",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço Inox 304",
+            "preco_unitario": 172.82,
+            "preco_total": 172.82,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 42,
+            "codigo": "ADR-01-129-P",
+            "descricao": "Chapa 75x590mm #1/8\" Laser Inox (x6)",
+            "quantidade": 6.0,
+            "unidade": "UND",
+            "material": "Aço Inox 304",
+            "preco_unitario": 56.7,
+            "preco_total": 340.2,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 43,
+            "codigo": "ADR-01-025-P",
+            "descricao": "Chapa 32x535mm #14 Laser Inox",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço Inox 304",
+            "preco_unitario": 57.0,
+            "preco_total": 114.0,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 44,
+            "codigo": "ADR-01-126-P",
+            "descricao": "Chapa 797x698mm #14 Laser Inox 310",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço Inox 310",
+            "preco_unitario": 335.15,
+            "preco_total": 335.15,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 45,
+            "codigo": "ADR-01-016-P",
+            "descricao": "Chapa 1177x290mm #14 Laser Inox 311",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço Inox 311",
+            "preco_unitario": 200.0,
+            "preco_total": 200.0,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 46,
+            "codigo": "ADR-01-141-P",
+            "descricao": "Chapa 1063x1568mm #16 Laser Inox",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 353.46,
+            "preco_total": 353.46,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 47,
+            "codigo": "ADR-01-241-P",
+            "descricao": "Chapa 1056x1646mm #18 Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 359.54,
+            "preco_total": 359.54,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 48,
+            "codigo": "ADR-01-166-P",
+            "descricao": "Chapa 894x1590mm #18 Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 216.79,
+            "preco_total": 216.79,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 49,
+            "codigo": "ADR-01-234-P",
+            "descricao": "Chapa 98x298mm #14 Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 23.5,
+            "preco_total": 23.5,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 50,
+            "codigo": "ADR-01-261-P",
+            "descricao": "Chapa 180x187mm #14 Laser",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 16.8,
+            "preco_total": 33.6,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 51,
+            "codigo": "ADR-01-147-P",
+            "descricao": "Chapa 900x1596mm #16 Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 265.58,
+            "preco_total": 265.58,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 52,
+            "codigo": "ADR-01-132-P",
+            "descricao": "Chapa 902x857mm #16 Laser Inox 430",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço Inox 430",
+            "preco_unitario": 317.11,
+            "preco_total": 634.22,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 53,
+            "codigo": "ADR-01-258-P",
+            "descricao": "Chapa 1056x1042mm #20 Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 158.23,
+            "preco_total": 158.23,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 54,
+            "codigo": "ADR-01-239-P",
+            "descricao": "Chapa 406x50mm #20 Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 16.5,
+            "preco_total": 16.5,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 55,
+            "codigo": "ADR-01-242-P",
+            "descricao": "Chapa 456x621mm #20 Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 43.85,
+            "preco_total": 43.85,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 56,
+            "codigo": "ADR-01-227-P",
+            "descricao": "Chapa 744x1114mm #20 Laser",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 190.25,
+            "preco_total": 380.5,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 57,
+            "codigo": "ADR-01-225-P",
+            "descricao": "Chapa 744x1114mm #20 Laser",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 160.75,
+            "preco_total": 321.5,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 58,
+            "codigo": "ADR-01-136-P",
+            "descricao": "Chapa 894x621mm #20 Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 87.42,
+            "preco_total": 87.42,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 59,
+            "codigo": "ADR-01-232-P",
+            "descricao": "Chapa 266x1056mm #20 Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 51.23,
+            "preco_total": 51.23,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 60,
+            "codigo": "ADR-01-248-P",
+            "descricao": "Chapa 893x1586mm #20 Laser",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço SAE 1020",
+            "preco_unitario": 223.87,
+            "preco_total": 223.87,
+            "fornecedor": "Laser/Próprio"
+          },
+          {
+            "item": 61,
+            "codigo": "ADR-01-090-P",
+            "descricao": "Chapa 1056x1044mm #20 Laser Inox",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço Inox 304",
+            "preco_unitario": 191.95,
+            "preco_total": 191.95,
+            "fornecedor": "Laser/Próprio"
+          }
+        ]
+      },
+      {
+        "codigo": "CAT-02",
+        "categoria": "COMPONENTES PNEUMÁTICOS",
+        "quantidade_itens": 13,
+        "subtotal": 2512.08,
+        "itens": [
+          {
+            "item": 62,
+            "codigo": "B-02-O",
+            "descricao": "Tampao Metalico Sextavado Rosca 1/4 BSP c/ O-ring",
+            "quantidade": 3.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 5.88,
+            "preco_total": 17.64,
+            "fornecedor": "AR Fusion"
+          },
+          {
+            "item": 63,
+            "codigo": "AMKS63-200",
+            "descricao": "Cilindro Pneumático ISO15552 63x200mm c/ Magnetico",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 345.0,
+            "preco_total": 345.0,
+            "fornecedor": "AR Fusion"
+          },
+          {
+            "item": 64,
+            "codigo": "QRH08-02",
+            "descricao": "Conexao Reta Tubo 08mm Rosca 1/4\" BSP",
+            "quantidade": 11.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 4.57,
+            "preco_total": 50.27,
+            "fornecedor": "AR Fusion"
+          },
+          {
+            "item": 65,
+            "codigo": "B-VH5-02-04",
+            "descricao": "Bloco Manifold 1/4 para 4 Estacoes",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 46.17,
+            "preco_total": 46.17,
+            "fornecedor": "AR Fusion"
+          },
+          {
+            "item": 66,
+            "codigo": "VH52-SS-02-24D",
+            "descricao": "Válvula 5/2 Vias Simples Solenoide Rosca 1/4\" 24V",
+            "quantidade": 4.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 70.0,
+            "preco_total": 280.0,
+            "fornecedor": "AR Fusion"
+          },
+          {
+            "item": 67,
+            "codigo": "SC-02",
+            "descricao": "Silenciador Conico Rosca 1/4 BSP",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 4.0,
+            "preco_total": 8.0,
+            "fornecedor": "AR Fusion"
+          },
+          {
+            "item": 68,
+            "codigo": "QRL-08-03",
+            "descricao": "Conexao Cotovelo Tubo 08mm Rosca 3/8",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 8.07,
+            "preco_total": 16.14,
+            "fornecedor": "AR Fusion"
+          },
+          {
+            "item": 69,
+            "codigo": "FK5063",
+            "descricao": "Ponteira Rotular para Cilindro ISO 50/63 Rosca M16x1.5",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 46.29,
+            "preco_total": 46.29,
+            "fornecedor": "AR Fusion"
+          },
+          {
+            "item": 70,
+            "codigo": "FRLE20-02M",
+            "descricao": "Filtro Regulador Lubrificador Economica Rosca 1/4",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 93.87,
+            "preco_total": 93.87,
+            "fornecedor": "AR Fusion"
+          },
+          {
+            "item": 71,
+            "codigo": "OLEO-500-NAC",
+            "descricao": "Óleo Pneumático Frasco 500ml",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 40.0,
+            "preco_total": 40.0,
+            "fornecedor": "AR Fusion"
+          },
+          {
+            "item": 72,
+            "codigo": "PU-08-AZ",
+            "descricao": "Tubo de Poliuretano Azul 08mm x 5.5mm",
+            "quantidade": 30.0,
+            "unidade": "M",
+            "material": null,
+            "preco_unitario": 3.09,
+            "preco_total": 92.7,
+            "fornecedor": null
+          },
+          {
+            "item": 73,
+            "codigo": null,
+            "descricao": "Atuador Pneumatico c/ Válvula Tripartida Inox 304 1\"",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 634.0,
+            "preco_total": 634.0,
+            "fornecedor": "Cilindros Mamute"
+          },
+          {
+            "item": 74,
+            "codigo": null,
+            "descricao": "Válvula Borboleta 3 Polegadas Inox c/ Atuador",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 842.0,
+            "preco_total": 842.0,
+            "fornecedor": "Cilindros Mamute"
+          }
+        ]
+      },
+      {
+        "codigo": "CAT-03",
+        "categoria": "PARAFUSARIA E FIXADORES",
+        "quantidade_itens": 26,
+        "subtotal": 339.17,
+        "itens": [
+          {
+            "item": 75,
+            "codigo": null,
+            "descricao": "Parafuso Sext UNC 1/2\" x 1.1/2\" ZB",
+            "quantidade": 6.0,
+            "unidade": "UND",
+            "material": "Aço ZB",
+            "preco_unitario": 2.9,
+            "preco_total": 17.4,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 76,
+            "codigo": null,
+            "descricao": "Parafuso Sext UNC 3/8\" x 1\" ZB",
+            "quantidade": 4.0,
+            "unidade": "UND",
+            "material": "Aço ZB",
+            "preco_unitario": 1.1,
+            "preco_total": 4.4,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 77,
+            "codigo": null,
+            "descricao": "Parafuso Sext UNC 5/16\" x 1\" ZB",
+            "quantidade": 10.0,
+            "unidade": "UND",
+            "material": "Aço ZB",
+            "preco_unitario": 0.8,
+            "preco_total": 8.0,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 78,
+            "codigo": null,
+            "descricao": "Parafuso Sext UNC 5/16\" x 1.1/2\" ZB",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço ZB",
+            "preco_unitario": 0.9,
+            "preco_total": 1.8,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 79,
+            "codigo": null,
+            "descricao": "Parafuso Sext UNC 5/16\" x 2.1/2\" ZB",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço ZB",
+            "preco_unitario": 1.3,
+            "preco_total": 2.6,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 80,
+            "codigo": null,
+            "descricao": "Parafuso Sext UNC 5/16\" x 3\" ZB",
+            "quantidade": 18.0,
+            "unidade": "UND",
+            "material": "Aço ZB",
+            "preco_unitario": 0.68,
+            "preco_total": 12.24,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 81,
+            "codigo": null,
+            "descricao": "Parafuso Sext UNC 5/8\" x 2.1/2\" ZB",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço ZB",
+            "preco_unitario": 4.5,
+            "preco_total": 4.5,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 82,
+            "codigo": null,
+            "descricao": "Porca Sext Travante UNC 5/8\" ZB",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço ZB",
+            "preco_unitario": 3.25,
+            "preco_total": 3.25,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 83,
+            "codigo": null,
+            "descricao": "Porca Sext Travante UNC 1/2\" ZB",
+            "quantidade": 6.0,
+            "unidade": "UND",
+            "material": "Aço ZB",
+            "preco_unitario": 1.05,
+            "preco_total": 6.3,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 84,
+            "codigo": null,
+            "descricao": "Porca Sext Travante UNC 3/8\" ZB",
+            "quantidade": 4.0,
+            "unidade": "UND",
+            "material": "Aço ZB",
+            "preco_unitario": 1.05,
+            "preco_total": 4.2,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 85,
+            "codigo": null,
+            "descricao": "Porca Sext Travante UNC 5/16\" ZB",
+            "quantidade": 40.0,
+            "unidade": "UND",
+            "material": "Aço ZB",
+            "preco_unitario": 0.55,
+            "preco_total": 22.0,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 86,
+            "codigo": null,
+            "descricao": "Porca M5 Inox",
+            "quantidade": 6.0,
+            "unidade": "UND",
+            "material": "Inox",
+            "preco_unitario": 0.45,
+            "preco_total": 2.7,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 87,
+            "codigo": null,
+            "descricao": "Parafuso Frances 5/16\" x 2.1/2\" ZB",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": "Aço ZB",
+            "preco_unitario": 1.7,
+            "preco_total": 3.4,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 88,
+            "codigo": null,
+            "descricao": "Porca Sext Travante M6 ZB",
+            "quantidade": 4.0,
+            "unidade": "UND",
+            "material": "Aço ZB",
+            "preco_unitario": 0.32,
+            "preco_total": 1.28,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 89,
+            "codigo": null,
+            "descricao": "Arruela 5/16\" ZB",
+            "quantidade": 40.0,
+            "unidade": "CT",
+            "material": "Aço ZB",
+            "preco_unitario": 0.18,
+            "preco_total": 7.2,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 90,
+            "codigo": null,
+            "descricao": "Arruela 1/2\" ZB",
+            "quantidade": 6.0,
+            "unidade": "CT",
+            "material": "Aço ZB",
+            "preco_unitario": 0.75,
+            "preco_total": 4.5,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 91,
+            "codigo": null,
+            "descricao": "Arruela 3/8\" ZB",
+            "quantidade": 8.0,
+            "unidade": "CT",
+            "material": "Aço ZB",
+            "preco_unitario": 0.3,
+            "preco_total": 2.4,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 92,
+            "codigo": null,
+            "descricao": "Arruela 5/8\" ZB",
+            "quantidade": 2.0,
+            "unidade": "CT",
+            "material": "Aço ZB",
+            "preco_unitario": 1.3,
+            "preco_total": 2.6,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 93,
+            "codigo": null,
+            "descricao": "Parafuso Allen Cab. Chata MA 6x20",
+            "quantidade": 16.0,
+            "unidade": "UND",
+            "material": "Aço",
+            "preco_unitario": 0.9,
+            "preco_total": 14.4,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 94,
+            "codigo": null,
+            "descricao": "Parafuso Allen Cil. JMC Ox. 06x20mm",
+            "quantidade": 36.0,
+            "unidade": "UND",
+            "material": "Aço",
+            "preco_unitario": 0.85,
+            "preco_total": 30.6,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 95,
+            "codigo": null,
+            "descricao": "Parafuso Sext Inox 1/4\" x 3/4\"",
+            "quantidade": 50.0,
+            "unidade": "UND",
+            "material": "Inox",
+            "preco_unitario": 1.4,
+            "preco_total": 70.0,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 96,
+            "codigo": null,
+            "descricao": "Parafuso Inox Sext 5.5 ZB M8x20",
+            "quantidade": 4.0,
+            "unidade": "UND",
+            "material": "Inox",
+            "preco_unitario": 0.6,
+            "preco_total": 2.4,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 97,
+            "codigo": null,
+            "descricao": "Porca Sext Inox Travante UNC 1/4\"",
+            "quantidade": 50.0,
+            "unidade": "UND",
+            "material": "Inox",
+            "preco_unitario": 0.48,
+            "preco_total": 24.0,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 98,
+            "codigo": null,
+            "descricao": "Parafuso Cab Abaulada Allen M5x16 Inox",
+            "quantidade": 6.0,
+            "unidade": "UND",
+            "material": "Inox",
+            "preco_unitario": 1.1,
+            "preco_total": 6.6,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 99,
+            "codigo": null,
+            "descricao": "Parafuso Sext MA RI 12x30 ZB",
+            "quantidade": 0.5,
+            "unidade": "CT",
+            "material": "Aço ZB",
+            "preco_unitario": 0.8,
+            "preco_total": 0.4,
+            "fornecedor": "Falcao Ferragens"
+          },
+          {
+            "item": 100,
+            "codigo": null,
+            "descricao": "Parafuso Auto Brocante Sext 5.5x19",
+            "quantidade": 200.0,
+            "unidade": "CT",
+            "material": "Aço",
+            "preco_unitario": 0.4,
+            "preco_total": 80.0,
+            "fornecedor": "Falcao Ferragens"
+          }
+        ]
+      },
+      {
+        "codigo": "CAT-04",
+        "categoria": "ESTRUTURA METÁLICA, TUBOS E BARRAS",
+        "quantidade_itens": 5,
+        "subtotal": 1428.38,
+        "itens": [
+          {
+            "item": 101,
+            "codigo": null,
+            "descricao": "Barra Redonda Ø1.1/2\" x 700mm",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço Barra",
+            "preco_unitario": 78.75,
+            "preco_total": 78.75,
+            "fornecedor": "Aco Barra"
+          },
+          {
+            "item": 102,
+            "codigo": null,
+            "descricao": "Tubo 3\" Sch 40 x 700mm",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço",
+            "preco_unitario": 71.58,
+            "preco_total": 71.58,
+            "fornecedor": "Cia do Vapor"
+          },
+          {
+            "item": 103,
+            "codigo": null,
+            "descricao": "Tubo Retangular 60x40xP2x6000mm",
+            "quantidade": 5.0,
+            "unidade": "UND",
+            "material": "Aço",
+            "preco_unitario": 224.41,
+            "preco_total": 1122.05,
+            "fornecedor": "Companhia do Aco"
+          },
+          {
+            "item": 104,
+            "codigo": null,
+            "descricao": "Tubo Retangular 30x40 Ch-2.00 FQ",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço",
+            "preco_unitario": 112.0,
+            "preco_total": 112.0,
+            "fornecedor": "Companhia do Aco"
+          },
+          {
+            "item": 105,
+            "codigo": null,
+            "descricao": "Ferro Cantoneira 1/8\" x 3/4\"",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Aço",
+            "preco_unitario": 44.0,
+            "preco_total": 44.0,
+            "fornecedor": "Aco Barra"
+          }
+        ]
+      },
+      {
+        "codigo": "CAT-05",
+        "categoria": "TUBULAÇÃO E CONEXÕES INOX",
+        "quantidade_itens": 5,
+        "subtotal": 230.91,
+        "itens": [
+          {
+            "item": 106,
+            "codigo": null,
+            "descricao": "Curva Inox 304L OD Pipe 76.2mm x 2.00",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Inox 304L",
+            "preco_unitario": 72.53,
+            "preco_total": 72.53,
+            "fornecedor": "Ingatubos"
+          },
+          {
+            "item": 107,
+            "codigo": null,
+            "descricao": "Curva Inox 304L OD Pipe 25.4mm x 1",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Inox 304L",
+            "preco_unitario": 22.24,
+            "preco_total": 22.24,
+            "fornecedor": "Ingatubos"
+          },
+          {
+            "item": 108,
+            "codigo": null,
+            "descricao": "Uniao Inox 304L Sold TC OD Curta 76.2mm",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Inox 304L",
+            "preco_unitario": 62.02,
+            "preco_total": 62.02,
+            "fornecedor": "Ingatubos"
+          },
+          {
+            "item": 109,
+            "codigo": null,
+            "descricao": "Ponta Rosca Inox 304 Sch 40 de 3\"",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Inox 304",
+            "preco_unitario": 63.68,
+            "preco_total": 63.68,
+            "fornecedor": "Cia do Vapor"
+          },
+          {
+            "item": 110,
+            "codigo": null,
+            "descricao": "Ponta Rosca Inox 304 Sch 40 de 1\"",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": "Inox 304",
+            "preco_unitario": 10.44,
+            "preco_total": 10.44,
+            "fornecedor": "Cia do Vapor"
+          }
+        ]
+      },
+      {
+        "codigo": "CAT-06",
+        "categoria": "ROLAMENTOS, MANCAIS E TRANSMISSÃO",
+        "quantidade_itens": 4,
+        "subtotal": 339.34,
+        "itens": [
+          {
+            "item": 111,
+            "codigo": "P-206 VRM",
+            "descricao": "Mancal P-206 VRM",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 18.0,
+            "preco_total": 18.0,
+            "fornecedor": "Rolmar"
+          },
+          {
+            "item": 112,
+            "codigo": "UG-206F 30MM",
+            "descricao": "Rolamento UG-206F 30mm VRM",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 28.5,
+            "preco_total": 28.5,
+            "fornecedor": "Rolmar"
+          },
+          {
+            "item": 113,
+            "codigo": null,
+            "descricao": "Chaveta 10x08x500",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 47.0,
+            "preco_total": 47.0,
+            "fornecedor": "Rolmar"
+          },
+          {
+            "item": 114,
+            "codigo": "VIBRA STOP",
+            "descricao": "Vibra Stop MAC 3/8\" 62mm/200kg",
+            "quantidade": 4.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 61.46,
+            "preco_total": 245.84,
+            "fornecedor": "Rolmar"
+          }
+        ]
+      },
+      {
+        "codigo": "CAT-07",
+        "categoria": "MOTORREDUTOR",
+        "quantidade_itens": 1,
+        "subtotal": 2296.1,
+        "itens": [
+          {
+            "item": 115,
+            "codigo": "WCG01 90 1:100 NCJ 80 1cv",
+            "descricao": "Motorredutor Coroa e Rosca s/ Fim WCG01 90 1:100 NCJ 80 1cv 4P 60Hz",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 2296.1,
+            "preco_total": 2296.1,
+            "fornecedor": "WEG Cetari"
+          }
+        ]
+      },
+      {
+        "codigo": "CAT-08",
+        "categoria": "CABOS E RIGGING",
+        "quantidade_itens": 6,
+        "subtotal": 566.96,
+        "itens": [
+          {
+            "item": 116,
+            "codigo": null,
+            "descricao": "Roldana do Cabo de Aco",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 25.41,
+            "preco_total": 50.82,
+            "fornecedor": "Metal. Alto Parana"
+          },
+          {
+            "item": 117,
+            "codigo": null,
+            "descricao": "Rolo do Cabo de Aco",
+            "quantidade": 1.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 406.98,
+            "preco_total": 406.98,
+            "fornecedor": "Metalize"
+          },
+          {
+            "item": 118,
+            "codigo": null,
+            "descricao": "Cabo Galvanizado 1/4\" 6x7+AF",
+            "quantidade": 4.0,
+            "unidade": "M",
+            "material": null,
+            "preco_unitario": 4.09,
+            "preco_total": 16.36,
+            "fornecedor": null
+          },
+          {
+            "item": 119,
+            "codigo": null,
+            "descricao": "Sapatilha Leve 1/4\"",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 0.6,
+            "preco_total": 1.2,
+            "fornecedor": null
+          },
+          {
+            "item": 120,
+            "codigo": null,
+            "descricao": "Presilha de Aco 1/4\" (11.5x16.5x35)",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 12.65,
+            "preco_total": 25.3,
+            "fornecedor": null
+          },
+          {
+            "item": 121,
+            "codigo": null,
+            "descricao": "Olhal Suspensao DIN 444 M16x150",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 33.15,
+            "preco_total": 66.3,
+            "fornecedor": null
+          }
+        ]
+      },
+      {
+        "codigo": "CAT-09",
+        "categoria": "FERRAGENS E ACESSÓRIOS",
+        "quantidade_itens": 3,
+        "subtotal": 212.9,
+        "itens": [
+          {
+            "item": 122,
+            "codigo": null,
+            "descricao": "Dobradica 50x50 ZAMAC",
+            "quantidade": 4.0,
+            "unidade": "UND",
+            "material": "ZAMAC",
+            "preco_unitario": 9.5,
+            "preco_total": 38.0,
+            "fornecedor": "Fixoparts"
+          },
+          {
+            "item": 123,
+            "codigo": null,
+            "descricao": "Alca CAN 133",
+            "quantidade": 2.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 1.45,
+            "preco_total": 2.9,
+            "fornecedor": "Fixoparts"
+          },
+          {
+            "item": 124,
+            "codigo": null,
+            "descricao": "Fecho Lingueta com Trava",
+            "quantidade": 4.0,
+            "unidade": "UND",
+            "material": null,
+            "preco_unitario": 43.0,
+            "preco_total": 172.0,
+            "fornecedor": "Eletropainel"
+          }
+        ]
+      },
+      {
+        "codigo": "CAT-10",
+        "categoria": "SERVIÇOS",
+        "quantidade_itens": 3,
+        "subtotal": 10109.79,
+        "itens": [
+          {
+            "item": 125,
+            "codigo": "SRV-01",
+            "descricao": "Montagem Caixa de Agua",
+            "quantidade": 1.0,
+            "unidade": "SRV",
+            "material": null,
+            "preco_unitario": 709.79,
+            "preco_total": 709.79,
+            "fornecedor": "Marcos"
+          },
+          {
+            "item": 126,
+            "codigo": "SRV-02",
+            "descricao": "Pintura",
+            "quantidade": 1.0,
+            "unidade": "SRV",
+            "material": null,
+            "preco_unitario": 1400.0,
+            "preco_total": 1400.0,
+            "fornecedor": "Serralheria Chacal"
+          },
+          {
+            "item": 127,
+            "codigo": "SRV-03",
+            "descricao": "Servico de Montagem Metalize",
+            "quantidade": 1.0,
+            "unidade": "SRV",
+            "material": null,
+            "preco_unitario": 8000.0,
+            "preco_total": 8000.0,
+            "fornecedor": "Metalize"
+          }
+        ]
+      }
+    ]
+  },
+  "bom_eletrica": {
+    "categorias": [
+      {
+        "codigo": "ELE-01",
+        "categoria": "PAINEL ELÉTRICO",
+        "quantidade_itens": 50,
+        "subtotal": 29129.67,
+        "itens": [
+          {
+            "item": 1,
+            "descricao": "Painel de Comando 1000x800x250mm",
+            "quantidade": 1.0,
+            "unid_ref": "3 unidades",
+            "marca": null,
+            "preco_unitario": 1000.0,
+            "preco_total": 1000.0,
+            "fornecedor": null
+          },
+          {
+            "item": 2,
+            "descricao": "Painel de Comando 400x300x250mm",
+            "quantidade": 1.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 145.0,
+            "preco_total": 145.0,
+            "fornecedor": null
+          },
+          {
+            "item": 3,
+            "descricao": "Tomada p/ Painel 2P+T 10A",
+            "quantidade": 1.0,
+            "unid_ref": null,
+            "marca": "TASCO",
+            "preco_unitario": 73.3,
+            "preco_total": 73.3,
+            "fornecedor": null
+          },
+          {
+            "item": 4,
+            "descricao": "Protetor de Surto 40kA Classe 2",
+            "quantidade": 2.0,
+            "unid_ref": "6 unidades",
+            "marca": "WEG",
+            "preco_unitario": 101.0,
+            "preco_total": 202.0,
+            "fornecedor": null
+          },
+          {
+            "item": 5,
+            "descricao": "Ventilador p/ Painel 120x120 Bivolt",
+            "quantidade": 1.0,
+            "unid_ref": "3 unidades",
+            "marca": "MAXTECH",
+            "preco_unitario": 85.0,
+            "preco_total": 85.0,
+            "fornecedor": null
+          },
+          {
+            "item": 6,
+            "descricao": "Grelha com Filtro p/ Ventilador",
+            "quantidade": 2.0,
+            "unid_ref": "6 unidades",
+            "marca": "TASCO",
+            "preco_unitario": 80.0,
+            "preco_total": 160.0,
+            "fornecedor": null
+          },
+          {
+            "item": 7,
+            "descricao": "Termostato TLZ530 NA",
+            "quantidade": 1.0,
+            "unid_ref": "3 unidades",
+            "marca": "TASCO",
+            "preco_unitario": 135.0,
+            "preco_total": 135.0,
+            "fornecedor": null
+          },
+          {
+            "item": 8,
+            "descricao": "Trilho DIN",
+            "quantidade": 2.0,
+            "unid_ref": "3 unidades",
+            "marca": "AIEDEM",
+            "preco_unitario": 14.54,
+            "preco_total": 29.08,
+            "fornecedor": null
+          },
+          {
+            "item": 9,
+            "descricao": "Canaleta Total Aberta 35x80x2000",
+            "quantidade": 3.0,
+            "unid_ref": "5 unidades",
+            "marca": null,
+            "preco_unitario": 36.3,
+            "preco_total": 108.9,
+            "fornecedor": null
+          },
+          {
+            "item": 10,
+            "descricao": "Disjuntor 2x25A",
+            "quantidade": 1.0,
+            "unid_ref": "3 unidades",
+            "marca": null,
+            "preco_unitario": 34.05,
+            "preco_total": 34.05,
+            "fornecedor": null
+          },
+          {
+            "item": 11,
+            "descricao": "Disjuntor 2x16A",
+            "quantidade": 1.0,
+            "unid_ref": "3 unidades",
+            "marca": null,
+            "preco_unitario": 34.05,
+            "preco_total": 34.05,
+            "fornecedor": null
+          },
+          {
+            "item": 12,
+            "descricao": "Disjuntor 2x10A",
+            "quantidade": 3.0,
+            "unid_ref": "9 unidades",
+            "marca": null,
+            "preco_unitario": 34.05,
+            "preco_total": 102.15,
+            "fornecedor": null
+          },
+          {
+            "item": 13,
+            "descricao": "Canaleta Total Aberta 50x30x2000",
+            "quantidade": 3.0,
+            "unid_ref": "5 unidades",
+            "marca": null,
+            "preco_unitario": 36.3,
+            "preco_total": 108.9,
+            "fornecedor": null
+          },
+          {
+            "item": 14,
+            "descricao": "Borne Fusível 5x20 SAK 4mm LED 24V",
+            "quantidade": 21.0,
+            "unid_ref": "63 unidades",
+            "marca": "PHOENIX",
+            "preco_unitario": 22.5,
+            "preco_total": 472.5,
+            "fornecedor": null
+          },
+          {
+            "item": 15,
+            "descricao": "Transformador 1000 VA",
+            "quantidade": 1.0,
+            "unid_ref": "3 unidades",
+            "marca": null,
+            "preco_unitario": 718.0,
+            "preco_total": 718.0,
+            "fornecedor": null
+          },
+          {
+            "item": 16,
+            "descricao": "Fusível de Vidro",
+            "quantidade": 21.0,
+            "unid_ref": "100 unidades",
+            "marca": null,
+            "preco_unitario": 4.0,
+            "preco_total": 84.0,
+            "fornecedor": null
+          },
+          {
+            "item": 17,
+            "descricao": "CLP Allen Bradley 2080-IC50-48QBB Micro 850",
+            "quantidade": 1.0,
+            "unid_ref": "3 unidades",
+            "marca": "Allen Bradley",
+            "preco_unitario": 4780.0,
+            "preco_total": 4780.0,
+            "fornecedor": null
+          },
+          {
+            "item": 18,
+            "descricao": "Acopladores a Relé 24Vcc 6A 1NAF SLIN",
+            "quantidade": 12.0,
+            "unid_ref": "36 unidades",
+            "marca": null,
+            "preco_unitario": 38.0,
+            "preco_total": 456.0,
+            "fornecedor": null
+          },
+          {
+            "item": 19,
+            "descricao": "Inversor de Frequência 1CV 220V Saída Trifásica",
+            "quantidade": 3.0,
+            "unid_ref": "7 unidades",
+            "marca": null,
+            "preco_unitario": 721.0,
+            "preco_total": 2163.0,
+            "fornecedor": null
+          },
+          {
+            "item": 20,
+            "descricao": "IHM MT8102IE Weinview 10\" Serial Ethernet",
+            "quantidade": 1.0,
+            "unid_ref": "2 unidades",
+            "marca": "Weinview",
+            "preco_unitario": 3800.0,
+            "preco_total": 3800.0,
+            "fornecedor": null
+          },
+          {
+            "item": 21,
+            "descricao": "Switch 8P Industrial Fast Ethernet ISW-801T",
+            "quantidade": 1.0,
+            "unid_ref": "3 unidades",
+            "marca": "Planet",
+            "preco_unitario": 1100.0,
+            "preco_total": 1100.0,
+            "fornecedor": null
+          },
+          {
+            "item": 22,
+            "descricao": "Botão Impulso Faceado Azul CLB2/14 63",
+            "quantidade": 1.0,
+            "unid_ref": "2 unidades",
+            "marca": null,
+            "preco_unitario": 11.33,
+            "preco_total": 11.33,
+            "fornecedor": null
+          },
+          {
+            "item": 23,
+            "descricao": "Soquete de Lâmpada Parafuso CLP 0001",
+            "quantidade": 1.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 14.89,
+            "preco_total": 14.89,
+            "fornecedor": null
+          },
+          {
+            "item": 24,
+            "descricao": "Bloco de Contato 1NA+1NF CLP110+CLP101 (5NA/3NF)",
+            "quantidade": 8.0,
+            "unid_ref": "15NA 9NF",
+            "marca": null,
+            "preco_unitario": 24.39,
+            "preco_total": 195.12,
+            "fornecedor": null
+          },
+          {
+            "item": 25,
+            "descricao": "CLE2 40 Gravado Emergência",
+            "quantidade": 1.0,
+            "unid_ref": "3 unidades",
+            "marca": null,
+            "preco_unitario": 28.07,
+            "preco_total": 28.07,
+            "fornecedor": null
+          },
+          {
+            "item": 26,
+            "descricao": "LB 240 B33 YR Topo Chave Seccionadora 40A",
+            "quantidade": 1.0,
+            "unid_ref": "3 unidades",
+            "marca": null,
+            "preco_unitario": 116.35,
+            "preco_total": 116.35,
+            "fornecedor": null
+          },
+          {
+            "item": 27,
+            "descricao": "Sinalizeiro Monobloco 22mm Cor Vermelha 24Vcc",
+            "quantidade": 1.0,
+            "unid_ref": "3 unidades",
+            "marca": null,
+            "preco_unitario": 29.06,
+            "preco_total": 29.06,
+            "fornecedor": null
+          },
+          {
+            "item": 28,
+            "descricao": "Sinalizeiro Monobloco 22mm Cor Verde 24Vcc",
+            "quantidade": 1.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 29.88,
+            "preco_total": 29.88,
+            "fornecedor": null
+          },
+          {
+            "item": 29,
+            "descricao": "SRB 301MC-24VAC/DC Relé de Segurança",
+            "quantidade": 2.0,
+            "unid_ref": "6 unidades",
+            "marca": null,
+            "preco_unitario": 543.38,
+            "preco_total": 1086.76,
+            "fornecedor": null
+          },
+          {
+            "item": 30,
+            "descricao": "Fonte 5A PSS-B24-120M",
+            "quantidade": 1.0,
+            "unid_ref": "3 unidades",
+            "marca": null,
+            "preco_unitario": 268.79,
+            "preco_total": 268.79,
+            "fornecedor": null
+          },
+          {
+            "item": 31,
+            "descricao": "Conector SACK 2,5mm",
+            "quantidade": 60.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 3.79,
+            "preco_total": 227.4,
+            "fornecedor": null
+          },
+          {
+            "item": 32,
+            "descricao": "Conector SACK Terra 2,5mm",
+            "quantidade": 10.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 10.04,
+            "preco_total": 100.4,
+            "fornecedor": null
+          },
+          {
+            "item": 33,
+            "descricao": "Poste Final",
+            "quantidade": 12.0,
+            "unid_ref": "24 unidades",
+            "marca": null,
+            "preco_unitario": 1.39,
+            "preco_total": 16.68,
+            "fornecedor": null
+          },
+          {
+            "item": 34,
+            "descricao": "Barra Terra",
+            "quantidade": 1.0,
+            "unid_ref": "3 unidades",
+            "marca": null,
+            "preco_unitario": 13.83,
+            "preco_total": 13.83,
+            "fornecedor": null
+          },
+          {
+            "item": 35,
+            "descricao": "Conector RJ-45 Cat6",
+            "quantidade": 4.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 1.0,
+            "preco_total": 4.0,
+            "fornecedor": null
+          },
+          {
+            "item": 36,
+            "descricao": "Transmissor de Peso LAUMAS Modelo TLB4-RS485",
+            "quantidade": 1.0,
+            "unid_ref": "3 unidades",
+            "marca": "LAUMAS",
+            "preco_unitario": 2700.0,
+            "preco_total": 2700.0,
+            "fornecedor": null
+          },
+          {
+            "item": 37,
+            "descricao": "Cabo Mini DIN 8 Pinos",
+            "quantidade": 1.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 76.0,
+            "preco_total": 76.0,
+            "fornecedor": null
+          },
+          {
+            "item": 38,
+            "descricao": "Suporte 45° para Trilho DIN",
+            "quantidade": null,
+            "unid_ref": "6 unidades",
+            "marca": null,
+            "preco_unitario": 9.44,
+            "preco_total": 0.0,
+            "fornecedor": null
+          },
+          {
+            "item": 39,
+            "descricao": "Terminal Tubular 0,75mm",
+            "quantidade": 1.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 11.83,
+            "preco_total": 11.83,
+            "fornecedor": null
+          },
+          {
+            "item": 40,
+            "descricao": "Terminal Tubular 1,00mm",
+            "quantidade": 1.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 8.52,
+            "preco_total": 8.52,
+            "fornecedor": null
+          },
+          {
+            "item": 41,
+            "descricao": "Terminal Tubular 2,5mm",
+            "quantidade": 1.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 9.82,
+            "preco_total": 9.82,
+            "fornecedor": null
+          },
+          {
+            "item": 42,
+            "descricao": "Abraçadeira de Nylon 4x60mm",
+            "quantidade": 1.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 4.13,
+            "preco_total": 4.13,
+            "fornecedor": null
+          },
+          {
+            "item": 43,
+            "descricao": "Cabo Flexível 6,00mm 750V PT",
+            "quantidade": 7.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 8.95,
+            "preco_total": 62.65,
+            "fornecedor": null
+          },
+          {
+            "item": 44,
+            "descricao": "Cabo Flexível 2,5mm 750V PT",
+            "quantidade": 12.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 2.39,
+            "preco_total": 28.68,
+            "fornecedor": null
+          },
+          {
+            "item": 45,
+            "descricao": "Cabo Flexível 1,00mm 750V",
+            "quantidade": 50.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 1.65,
+            "preco_total": 82.5,
+            "fornecedor": null
+          },
+          {
+            "item": 46,
+            "descricao": "Placa de Identificação de Emergência",
+            "quantidade": 1.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 12.5,
+            "preco_total": 12.5,
+            "fornecedor": null
+          },
+          {
+            "item": 47,
+            "descricao": "Borne SACK 4,00mm",
+            "quantidade": 2.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 12.9,
+            "preco_total": 25.8,
+            "fornecedor": null
+          },
+          {
+            "item": 48,
+            "descricao": "Etiqueta de Componente EMLP 20x7",
+            "quantidade": 55.0,
+            "unid_ref": null,
+            "marca": "Phoenix",
+            "preco_unitario": 2.25,
+            "preco_total": 123.75,
+            "fornecedor": null
+          },
+          {
+            "item": 49,
+            "descricao": "Etiqueta de Porta EMLP 45x15",
+            "quantidade": 5.0,
+            "unid_ref": null,
+            "marca": "Phoenix",
+            "preco_unitario": 10.0,
+            "preco_total": 50.0,
+            "fornecedor": null
+          },
+          {
+            "item": 50,
+            "descricao": "Mão de Obra — Confecção do Painel",
+            "quantidade": 1.0,
+            "unid_ref": "SRV",
+            "marca": null,
+            "preco_unitario": 8000.0,
+            "preco_total": 8000.0,
+            "fornecedor": null
+          }
+        ]
+      },
+      {
+        "codigo": "ELE-02",
+        "categoria": "COMPONENTES EXTERNOS — MÁQUINA",
+        "quantidade_itens": 26,
+        "subtotal": 11791.44,
+        "itens": [
+          {
+            "item": 51,
+            "descricao": "Sensor Magnético de Segurança BNS 36-02/10ZG-R 5m",
+            "quantidade": 2.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 521.43,
+            "preco_total": 1042.86,
+            "fornecedor": null
+          },
+          {
+            "item": 52,
+            "descricao": "Atuador do Sensor Magnético de Segurança BPS-36-1",
+            "quantidade": 2.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 76.13,
+            "preco_total": 152.26,
+            "fornecedor": null
+          },
+          {
+            "item": 53,
+            "descricao": "Espaçador p/ Sensor+Atuador de Segurança BNS 36",
+            "quantidade": 2.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 2.65,
+            "preco_total": 5.3,
+            "fornecedor": null
+          },
+          {
+            "item": 54,
+            "descricao": "Fim de Curso ZV7H 234-11ZP",
+            "quantidade": 2.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 97.43,
+            "preco_total": 194.86,
+            "fornecedor": null
+          },
+          {
+            "item": 55,
+            "descricao": "Sensor Indutivo M18 PNP 1NA IFL 5-18-10STP",
+            "quantidade": 2.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 148.16,
+            "preco_total": 296.32,
+            "fornecedor": null
+          },
+          {
+            "item": 56,
+            "descricao": "Cabo Conector Angular M12 4 Pinos CON-A-M12-4M-5M-PVC",
+            "quantidade": 2.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 71.7,
+            "preco_total": 143.4,
+            "fornecedor": null
+          },
+          {
+            "item": 57,
+            "descricao": "Sensor de Nível Chave Bóia 150mm",
+            "quantidade": 1.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 77.99,
+            "preco_total": 77.99,
+            "fornecedor": null
+          },
+          {
+            "item": 58,
+            "descricao": "Mini PC Lenovo M900 i5-6500T 8GB 240GB SSD",
+            "quantidade": 1.0,
+            "unid_ref": null,
+            "marca": "Lenovo",
+            "preco_unitario": 2000.0,
+            "preco_total": 2000.0,
+            "fornecedor": null
+          },
+          {
+            "item": 59,
+            "descricao": "Adaptador de Rede Ethernet",
+            "quantidade": 1.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 31.46,
+            "preco_total": 31.46,
+            "fornecedor": null
+          },
+          {
+            "item": 60,
+            "descricao": "Cabo PP 7x1,00mm",
+            "quantidade": 5.0,
+            "unid_ref": "M",
+            "marca": null,
+            "preco_unitario": 13.5,
+            "preco_total": 67.5,
+            "fornecedor": null
+          },
+          {
+            "item": 61,
+            "descricao": "Esteira Porta Cabos 37x75mm Aberta 2 Metros",
+            "quantidade": 1.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 289.9,
+            "preco_total": 289.9,
+            "fornecedor": null
+          },
+          {
+            "item": 62,
+            "descricao": "Célula de Carga Berman BTSI/50kg",
+            "quantidade": 4.0,
+            "unid_ref": null,
+            "marca": "Berman",
+            "preco_unitario": 744.0,
+            "preco_total": 2976.0,
+            "fornecedor": null
+          },
+          {
+            "item": 63,
+            "descricao": "Eletrocalha 50x50",
+            "quantidade": 2.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 74.9,
+            "preco_total": 149.8,
+            "fornecedor": null
+          },
+          {
+            "item": 64,
+            "descricao": "Emenda p/ Eletrocalha 50x50",
+            "quantidade": 4.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 4.1,
+            "preco_total": 16.4,
+            "fornecedor": null
+          },
+          {
+            "item": 65,
+            "descricao": "Curva Vertical Interna 90° p/ Eletrocalha 50x50",
+            "quantidade": 3.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 12.7,
+            "preco_total": 38.1,
+            "fornecedor": null
+          },
+          {
+            "item": 66,
+            "descricao": "T Vertical Descida p/ Eletrocalha 50x50",
+            "quantidade": 1.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 23.5,
+            "preco_total": 23.5,
+            "fornecedor": null
+          },
+          {
+            "item": 67,
+            "descricao": "Curva Vertical Externa 90° p/ Eletrocalha 50x50",
+            "quantidade": 2.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 13.9,
+            "preco_total": 27.8,
+            "fornecedor": null
+          },
+          {
+            "item": 68,
+            "descricao": "Terminal Fechamento Eletrocalha 50x50",
+            "quantidade": 2.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 2.3,
+            "preco_total": 4.6,
+            "fornecedor": null
+          },
+          {
+            "item": 69,
+            "descricao": "Parafuso Lentilha p/ Eletrocalha 1/4\"",
+            "quantidade": 30.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 4.87,
+            "preco_total": 146.1,
+            "fornecedor": null
+          },
+          {
+            "item": 70,
+            "descricao": "Porca Sextavada 1/4\"",
+            "quantidade": 30.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 5.61,
+            "preco_total": 168.3,
+            "fornecedor": null
+          },
+          {
+            "item": 71,
+            "descricao": "Arruela Lisa 1/4\"",
+            "quantidade": 30.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 8.36,
+            "preco_total": 250.8,
+            "fornecedor": null
+          },
+          {
+            "item": 72,
+            "descricao": "Cabo PP 3x0,75mm",
+            "quantidade": 5.0,
+            "unid_ref": "M",
+            "marca": null,
+            "preco_unitario": 3.35,
+            "preco_total": 16.75,
+            "fornecedor": null
+          },
+          {
+            "item": 73,
+            "descricao": "Cabo PP 2x0,75mm",
+            "quantidade": 15.0,
+            "unid_ref": "M",
+            "marca": null,
+            "preco_unitario": 2.4,
+            "preco_total": 36.0,
+            "fornecedor": null
+          },
+          {
+            "item": 74,
+            "descricao": "Cabo PP 4x1,5mm",
+            "quantidade": 5.0,
+            "unid_ref": "M",
+            "marca": null,
+            "preco_unitario": 6.7,
+            "preco_total": 33.5,
+            "fornecedor": null
+          },
+          {
+            "item": 75,
+            "descricao": "Sensor Magnético p/ Pistão Pneumático",
+            "quantidade": 2.0,
+            "unid_ref": null,
+            "marca": null,
+            "preco_unitario": 50.97,
+            "preco_total": 101.94,
+            "fornecedor": null
+          },
+          {
+            "item": 76,
+            "descricao": "Mão de Obra — Montagem e Instalação Máquina",
+            "quantidade": 1.0,
+            "unid_ref": "SRV",
+            "marca": null,
+            "preco_unitario": 3500.0,
+            "preco_total": 3500.0,
+            "fornecedor": null
+          }
+        ]
+      }
+    ]
+  },
+  "observacoes": [
+    "Valores e quantidades transcritos dos PDFs BOM_Renda_Mecanica e BOM_Renda_Eletrica (Rev. 00 — 03/03/2026); todos os subtotais conferem com os PDFs.",
+    "Na BOM elétrica, 'unid_ref' é a coluna 'Unid. Ref.' do original, mantida como texto.",
+    "Elétrica item 38 (Suporte 45° p/ Trilho DIN) está sem quantidade no original — total R$ 0,00.",
+    "Mecânica: códigos ADR-01-269-P (itens 5 e 33) e ADR-01-129-P (itens 38 e 42) aparecem duas vezes com dimensões/preços diferentes.",
+    "Mecânica item 46: descrição diz 'Laser Inox', mas o material informado é Aço SAE 1020; item 24 indica 'Aço SAE 1021' e item 45 'Aço Inox 311' — conferir se são erros de digitação.",
+    "Mecânica item 32 está sem material informado."
+  ]
+}

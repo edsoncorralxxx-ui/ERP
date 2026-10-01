@@ -213,7 +213,7 @@ describe('Pedido', () => {
 describe('Equipamento', () => {
   it('grava a série com a versão lida e mostra a recusa de série repetida no campo', async () => {
     const eq: Equipment = {
-      id: 'e-1', code: 'EQ00001', model: 'Balança BF-200', itemId: null, projectId: 'pj-1', projectCode: 'PJ00001', orderCode: 'PV00001', customerId: 'c-1',
+      id: 'e-1', code: 'EQ00001', model: 'Balança BF-200', modelId: 'md-1', modelCode: 'MD00001', modelName: 'Balança BF-200', itemId: null, projectId: 'pj-1', projectCode: 'PJ00001', orderCode: 'PV00001', customerId: 'c-1',
       customerCode: 'C00001', customerName: 'Fecularia Vale Ltda.', unitId: 'un-1', unitName: 'Matriz', serialNumber: null, notes: null, status: 'ATIVO',
       acceptedOn: null, warrantyStart: null, version: '1', createdAt: '2026-09-27T12:00:00Z', createdBy: 'ana', updatedAt: null, updatedBy: null,
     };

@@ -2,6 +2,7 @@ package br.com.fourtech.rendamais.projetos.infrastructure;
 
 import br.com.fourtech.rendamais.projetos.application.ProjectRepository;
 import br.com.fourtech.rendamais.projetos.domain.Equipment;
+import br.com.fourtech.rendamais.projetos.domain.EquipmentModel;
 import br.com.fourtech.rendamais.projetos.domain.Project;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -25,8 +26,10 @@ class JdbcProjectRepository implements ProjectRepository {
               from project pr join partner p on p.id = pr.customer_id
             """;
     private static final String EQUIPMENT = """
-            select e.*, pr.code as project_code, pr.order_code, p.code as partner_code, p.legal_name as partner_name
+            select e.*, pr.code as project_code, pr.order_code, p.code as partner_code, p.legal_name as partner_name,
+                   m.code as model_code, m.name as model_name
               from equipment e join project pr on pr.id = e.project_id join partner p on p.id = e.customer_id
+                   join equipment_model m on m.id = e.model_id
             """;
 
     private final JdbcClient jdbc;
@@ -76,14 +79,14 @@ class JdbcProjectRepository implements ProjectRepository {
     @Override
     public void insert(Equipment e) {
         jdbc.sql("""
-                insert into equipment (id, code, project_id, order_line_id, line_seq, model, item_id, customer_id, unit_id, unit_name,
+                insert into equipment (id, code, project_id, order_line_id, line_seq, model, model_id, item_id, customer_id, unit_id, unit_name,
                        serial_number, notes, status, accepted_on, warranty_start, version, created_at, created_by, updated_at,
                        updated_by)
-                values (:id, :code, :project, :line, :seq, :model, :item, :customer, :unit, :unitName, :serial, :notes, :status,
+                values (:id, :code, :project, :line, :seq, :model, :modelId, :item, :customer, :unit, :unitName, :serial, :notes, :status,
                         :accepted, :warranty, :version, :createdAt, :createdBy, :updatedAt, :updatedBy)
                 """)
                 .param("id", e.id()).param("code", e.code()).param("project", e.projectId()).param("line", e.orderLineId())
-                .param("seq", e.lineSeq()).param("model", e.model()).param("item", e.itemId()).param("customer", e.customerId())
+                .param("seq", e.lineSeq()).param("model", e.model()).param("modelId", e.modelId()).param("item", e.itemId()).param("customer", e.customerId())
                 .param("unit", e.unitId()).param("unitName", e.unitName()).param("serial", e.serialNumber())
                 .param("notes", e.notes()).param("status", e.status().name()).param("accepted", date(e.acceptedOn()))
                 .param("warranty", date(e.warrantyStart())).param("version", e.version())
@@ -178,6 +181,81 @@ class JdbcProjectRepository implements ProjectRepository {
                 .query(JdbcProjectRepository::equipmentSummary).list();
     }
 
+    // ───────────── Modelos de equipamento ─────────────
+
+    private static final String MODELS = """
+            select m.*, (select count(*) from equipment e where e.model_id = m.id) as equipment_count from equipment_model m
+            """;
+
+    @Override
+    public String nextModelCode() {
+        return String.format("MD%05d", jdbc.sql("select nextval('equipment_model_code_seq')").query(Long.class).single());
+    }
+
+    @Override
+    public void insert(EquipmentModel m) {
+        jdbc.sql("""
+                insert into equipment_model (id, code, name, status, version, created_at, created_by, updated_at, updated_by)
+                values (:id, :code, :name, :status, :version, :createdAt, :createdBy, :updatedAt, :updatedBy)
+                """)
+                .param("id", m.id()).param("code", m.code()).param("name", m.name()).param("status", m.status().name())
+                .param("version", m.version()).param("createdAt", ts(m.createdAt())).param("createdBy", m.createdBy())
+                .param("updatedAt", ts(m.updatedAt())).param("updatedBy", m.updatedBy())
+                .update();
+    }
+
+    @Override
+    public boolean update(EquipmentModel m, long expectedVersion) {
+        return jdbc.sql("""
+                update equipment_model set name = :name, status = :status, version = :version, updated_at = :updatedAt,
+                       updated_by = :updatedBy where id = :id and version = :expected
+                """)
+                .param("name", m.name()).param("status", m.status().name()).param("version", m.version())
+                .param("updatedAt", ts(m.updatedAt())).param("updatedBy", m.updatedBy()).param("id", m.id())
+                .param("expected", expectedVersion)
+                .update() == 1;
+    }
+
+    @Override
+    public Optional<EquipmentModel> findModelForUpdate(UUID id) {
+        return jdbc.sql("select * from equipment_model where id = :id for update").param("id", id)
+                .query(JdbcProjectRepository::model).optional();
+    }
+
+    @Override
+    public Optional<ModelSummary> findModel(UUID id) {
+        return jdbc.sql(MODELS + " where m.id = :id").param("id", id).query(JdbcProjectRepository::modelSummary).optional();
+    }
+
+    @Override
+    public Optional<EquipmentModel> findModelByName(String name) {
+        return jdbc.sql("select * from equipment_model where lower(name) = lower(:name)").param("name", name)
+                .query(JdbcProjectRepository::model).optional();
+    }
+
+    @Override
+    public List<ModelSummary> listModels(String search, boolean includeInactive, int limit) {
+        return jdbc.sql(MODELS + """
+                 where (:all or m.status = 'ATIVO')
+                   and (cast(:term as varchar) is null
+                        or m.code ilike '%' || cast(:term as varchar) || '%'
+                        or m.name ilike '%' || cast(:term as varchar) || '%')
+                 order by m.name limit :limit
+                """)
+                .param("all", includeInactive).param("term", search).param("limit", limit)
+                .query(JdbcProjectRepository::modelSummary).list();
+    }
+
+    private static ModelSummary modelSummary(ResultSet rs, int n) throws SQLException {
+        return new ModelSummary(model(rs, n), rs.getInt("equipment_count"));
+    }
+
+    private static EquipmentModel model(ResultSet rs, int n) throws SQLException {
+        return new EquipmentModel(rs.getObject("id", UUID.class), rs.getString("code"), rs.getString("name"),
+                EquipmentModel.Status.valueOf(rs.getString("status")), rs.getLong("version"), instant(rs, "created_at"),
+                rs.getString("created_by"), instant(rs, "updated_at"), rs.getString("updated_by"));
+    }
+
     private static ProjectSummary projectSummary(ResultSet rs, int n) throws SQLException {
         return new ProjectSummary(project(rs, n), rs.getString("partner_code"), rs.getString("partner_name"),
                 rs.getInt("equipment_count"));
@@ -185,7 +263,7 @@ class JdbcProjectRepository implements ProjectRepository {
 
     private static EquipmentSummary equipmentSummary(ResultSet rs, int n) throws SQLException {
         return new EquipmentSummary(equipment(rs, n), rs.getString("project_code"), rs.getString("order_code"),
-                rs.getString("partner_code"), rs.getString("partner_name"));
+                rs.getString("partner_code"), rs.getString("partner_name"), rs.getString("model_code"), rs.getString("model_name"));
     }
 
     private static Project project(ResultSet rs, int n) throws SQLException {
@@ -200,7 +278,7 @@ class JdbcProjectRepository implements ProjectRepository {
     private static Equipment equipment(ResultSet rs, int n) throws SQLException {
         return new Equipment(rs.getObject("id", UUID.class), rs.getString("code"), rs.getObject("project_id", UUID.class),
                 rs.getObject("order_line_id", UUID.class), rs.getInt("line_seq"), rs.getString("model"),
-                rs.getObject("item_id", UUID.class), rs.getObject("customer_id", UUID.class), rs.getObject("unit_id", UUID.class),
+                rs.getObject("model_id", UUID.class), rs.getObject("item_id", UUID.class), rs.getObject("customer_id", UUID.class), rs.getObject("unit_id", UUID.class),
                 rs.getString("unit_name"), rs.getString("serial_number"), rs.getString("notes"),
                 Equipment.Status.valueOf(rs.getString("status")), localDate(rs, "accepted_on"), localDate(rs, "warranty_start"),
                 rs.getLong("version"), instant(rs, "created_at"), rs.getString("created_by"), instant(rs, "updated_at"),

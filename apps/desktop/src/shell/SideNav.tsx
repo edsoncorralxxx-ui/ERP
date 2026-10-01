@@ -88,6 +88,8 @@ const WINDOWS: Record<string, WindowKind> = {
   'documentos:': 'documents',
   'documentos:A_EMITIR': 'to-issue',
   'impostos:': 'tax-periods',
+  'bom:': 'boms',
+  'bom:MODELOS': 'equipment-models',
 };
 
 /** Permissão de leitura que cada janela exige; sem ela o item aparece, mas não abre. */
@@ -110,6 +112,10 @@ export const NEEDS: Partial<Record<WindowKind, string>> = {
   'to-issue': 'document.read',
   'tax-periods': 'tax.read',
   'company-profile': 'company.read',
+  boms: 'bom.read',
+  'bom-revision': 'bom.read',
+  'bom-import': 'bom.update',
+  'equipment-models': 'bom.read',
 };
 
 /** Janela aberta pelo item; só itens marcados como implementados têm destino. */

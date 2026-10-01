@@ -9,6 +9,7 @@ describe('menu lateral', () => {
   it('todo item marcado como implementado abre uma janela (nenhum clique morto)', () => {
     const implementados = MENU.flatMap((m) => m.itens).filter((i) => i.implementado);
     expect(implementados.map((i) => i.rotulo).sort()).toEqual([
+      'BOM — composição de custos',
       'Carteira de projetos',
       'Categorias financeiras',
       'Clientes e unidades',
@@ -22,6 +23,7 @@ describe('menu lateral', () => {
       'Fluxo de caixa',
       'Fornecedores',
       'Impostos gerenciais',
+      'Modelos de equipamento',
       'Notas a emitir',
       'Oportunidades e propostas',
       'Pedidos e contratos',

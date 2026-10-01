@@ -365,6 +365,9 @@ export type Equipment = {
   id: string;
   code: string;
   model: string;
+  modelId: string;
+  modelCode: string;
+  modelName: string;
   itemId: string | null;
   projectId: string;
   projectCode: string;
@@ -791,4 +794,274 @@ export type TaxPeriod = {
   confirmations: TaxConfirmation[];
   closures: TaxClosure[];
   differenceCents: string | null;
+};
+
+// ───────────── Engenharia: modelos, BOM e custo planejado (Sprint 10) ─────────────
+
+export type EquipmentModel = {
+  id: string;
+  code: string;
+  name: string;
+  status: 'ATIVO' | 'INATIVO';
+  equipmentCount: number;
+  version: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export type BomRevisionStatus = 'DRAFT' | 'APPROVED' | 'SUPERSEDED';
+
+export type BomRevisionRef = {
+  id: string;
+  label: string;
+  status: BomRevisionStatus;
+  totalCents: string;
+  pending: number;
+  approvedAt: string | null;
+  approvedBy: string | null;
+};
+
+export type Bom = {
+  id: string;
+  code: string;
+  name: string;
+  modelId: string | null;
+  modelCode: string | null;
+  modelName: string | null;
+  approved: BomRevisionRef | null;
+  draft: BomRevisionRef | null;
+  revisionCount: number;
+  createdAt: string;
+  createdBy: string;
+};
+
+export type BomLine = {
+  id: string;
+  position: number;
+  kind: 'ITEM' | 'SUBASSEMBLY';
+  itemId: string | null;
+  itemCode: string | null;
+  itemActive: boolean;
+  childRevisionId: string | null;
+  childBomId: string | null;
+  childBomCode: string | null;
+  childBomName: string | null;
+  childRevisionLabel: string | null;
+  childRevisionStatus: BomRevisionStatus | null;
+  referenceCode: string | null;
+  description: string;
+  quantity: string | null;
+  uom: string;
+  unitCost: string | null;
+  lineCents: string | null;
+  pending: number;
+  category: string | null;
+  supplier: string | null;
+  material: string | null;
+  notes: string | null;
+};
+
+export type BomProblem = { severity: 'BLOCKING' | 'WARNING' | 'INFO'; position: number | null; message: string };
+
+export type BomRevision = {
+  id: string;
+  bomId: string;
+  bomCode: string;
+  bomName: string;
+  modelId: string | null;
+  modelCode: string | null;
+  modelName: string | null;
+  revision: number;
+  label: string;
+  status: BomRevisionStatus;
+  basedOnId: string | null;
+  informedTotalCents: string | null;
+  notes: string | null;
+  importId: string | null;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  version: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+  totalCents: string;
+  pending: number;
+  lines: BomLine[];
+  categories: { category: string; cents: string; lines: number }[];
+  problems: BomProblem[];
+  usedBy: { bomId: string; bomName: string; revisionId: string; revisionLabel: string; status: BomRevisionStatus }[];
+  revisions: BomRevisionRef[];
+};
+
+export type BomLineRequest = {
+  kind: 'ITEM' | 'SUBASSEMBLY';
+  itemId?: string | null;
+  childRevisionId?: string | null;
+  referenceCode?: string | null;
+  description?: string | null;
+  quantity?: string | null;
+  uom?: string | null;
+  unitCost?: string | null;
+  category?: string | null;
+  supplier?: string | null;
+  material?: string | null;
+  notes?: string | null;
+};
+
+export type BomComparison = {
+  bomId: string;
+  bomName: string;
+  from: BomRevisionRef;
+  to: BomRevisionRef;
+  totalBefore: string;
+  totalAfter: string;
+  difference: string;
+  rows: {
+    status: 'ADDED' | 'REMOVED' | 'CHANGED';
+    kind: 'ITEM' | 'SUBASSEMBLY';
+    referenceCode: string | null;
+    description: string;
+    revisionBefore: string | null;
+    revisionAfter: string | null;
+    quantityBefore: string | null;
+    quantityAfter: string | null;
+    unitCostBefore: string | null;
+    unitCostAfter: string | null;
+    centsBefore: string | null;
+    centsAfter: string | null;
+    childRevisionBefore: string | null;
+    childRevisionAfter: string | null;
+  }[];
+};
+
+export type BomImport = {
+  id: string;
+  fileName: string;
+  status: 'PREVIEW' | 'CONFIRMED';
+  product: string;
+  revisionLabel: string | null;
+  revisionDate: string | null;
+  lineCount: number;
+  totalCents: string;
+  pending: number;
+  informedTotalCents: string | null;
+  groups: { name: string; parent: string; lines: number; totalCents: string; pending: number; informedCents: string | null }[];
+  problems: BomProblem[];
+  newItems: number;
+  existingItems: number;
+  newUnits: string[];
+  newCategories: string[];
+  fileNotes: string[];
+  lines: {
+    group: string;
+    category: string;
+    sourceNo: number;
+    referenceCode: string | null;
+    generatedCode: boolean;
+    description: string;
+    quantity: string | null;
+    uom: string;
+    unitCost: string | null;
+    lineCents: string | null;
+    itemCode: string | null;
+    newItem: boolean;
+    supplier: string | null;
+    material: string | null;
+  }[];
+  revisionId: string | null;
+  bomId: string | null;
+  createdAt: string;
+  createdBy: string;
+  confirmedAt: string | null;
+  confirmedBy: string | null;
+};
+
+export type EquipmentRef = {
+  id: string;
+  code: string;
+  projectId: string;
+  projectCode: string;
+  modelId: string;
+  modelCode: string;
+  modelName: string;
+  serialNumber: string | null;
+  active: boolean;
+};
+
+export type EquipmentBomLine = {
+  id: string;
+  parentId: string | null;
+  depth: number;
+  position: number;
+  kind: 'ITEM' | 'SUBASSEMBLY';
+  itemId: string | null;
+  itemCode: string | null;
+  childRevisionId: string | null;
+  referenceCode: string | null;
+  description: string;
+  quantity: string | null;
+  uom: string;
+  unitCost: string | null;
+  lineCents: string | null;
+  category: string | null;
+  supplier: string | null;
+  material: string | null;
+  notes: string | null;
+  origin: 'MODEL' | 'ADJUSTMENT';
+  modelQuantity: string | null;
+  modelUnitCost: string | null;
+  status: 'ACTIVE' | 'REMOVED';
+  state: 'MODEL' | 'CHANGED' | 'ADDED' | 'REMOVED';
+  adjustmentReason: string | null;
+};
+
+export type EquipmentBom = {
+  equipment: EquipmentRef;
+  applied: boolean;
+  id: string | null;
+  bomId: string | null;
+  bomCode: string | null;
+  bomName: string | null;
+  revisionId: string | null;
+  revisionLabel: string | null;
+  revisionStatus: BomRevisionStatus | null;
+  version: string | null;
+  appliedAt: string | null;
+  appliedBy: string | null;
+  updatedAt: string | null;
+  updatedBy: string | null;
+  totalCents: string | null;
+  pending: number;
+  modelTotalCents: string | null;
+  added: number;
+  removed: number;
+  changed: number;
+  lines: EquipmentBomLine[];
+};
+
+export type PlannedCost = {
+  projectId: string;
+  projectCode: string;
+  projectName: string;
+  stage: string;
+  contractCents: string;
+  plannedCostCents: string;
+  complete: boolean;
+  withoutBom: number;
+  marginCents: string | null;
+  marginRate: string | null;
+  equipment: {
+    equipment: EquipmentRef;
+    applied: boolean;
+    bomId: string | null;
+    bomName: string | null;
+    revisionId: string | null;
+    revisionLabel: string | null;
+    costCents: string | null;
+    pending: number;
+    adjusted: boolean;
+  }[];
 };
