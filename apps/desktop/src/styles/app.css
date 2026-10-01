@@ -228,6 +228,8 @@ body { background: var(--ground); }
 .rp-msgbox__form { grid-template-columns: auto 260px; column-gap: var(--space-3); margin-top: var(--space-3); }
 .rp-grid--edicao .rp-field[aria-invalid=true] { background: var(--field); box-shadow: inset 0 -2px 0 var(--status-error); }
 .rp-form--adicao.rp-grid--edicao td .rp-field { background: var(--field); }
+/* Com foco, a célula fica amarela também na adição e com erro (o erro segue no traço vermelho embaixo). */
+.rp-form--adicao.rp-grid--edicao td .rp-field:focus, .rp-grid--edicao .rp-field[aria-invalid=true]:focus { background: var(--field-active); }
 .rp-tab[aria-disabled=true] { opacity: .55; cursor: default; }
 
 /* Usuários e permissões. */
