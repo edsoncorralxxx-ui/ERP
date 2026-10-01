@@ -176,7 +176,6 @@ export function Selecao({ valor, opcoes, onChange, id, className, disabled, titl
                 className={`rp-menu-item${o.valor === valor ? ' rp-selecao__atual' : ''}`}
                 aria-selected={i === ativa}
                 aria-disabled={o.desabilitada || undefined}
-                onMouseEnter={() => !o.desabilitada && setAtiva(i)}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => escolher(i)}
               >
