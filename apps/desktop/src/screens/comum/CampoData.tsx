@@ -6,7 +6,7 @@ const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julh
 
 /**
  * Campo de data do design system: `DD/MM/AAAA`, digitação livre normalizada ao sair (`20/09/26`, `200926`,
- * `20-09-2026`), o calendário no ícone que aparece à direita, dentro do campo, quando ele é selecionado (semana começando na segunda, Hoje e Limpar; Esc fecha sem
+ * `20-09-2026`), o calendário no ícone que aparece à esquerda, dentro do campo, quando ele é selecionado (semana começando na segunda, Hoje e Limpar; Esc fecha sem
  * alterar) e a conta de datas: `=19/05/2026+90du`, `=hoje+30dc`, `=+1m` — Enter ou sair do campo põe a data, Esc
  * volta à de antes.
  */
