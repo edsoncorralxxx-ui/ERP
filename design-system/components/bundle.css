@@ -81,6 +81,7 @@
 .rp-grid td.num, .rp-grid th.num { text-align: right; }
 .rp-grid td.rownum { color: var(--ink-muted); background: var(--grid-rownum); }
 .rp-grid tr[aria-selected=true] td { background: var(--grid-row-selected); }
+.rp-grid tr[aria-selected=true] td.rownum { background: var(--grid-rownum); } /* a coluna # não acompanha a seleção */
 .rp-grid tfoot td { background: var(--field-readonly); border-top: 1px solid var(--grid-rule); }
 
 /* Painel de módulos */
