@@ -73,7 +73,17 @@ public abstract class IntegrationTest {
         // Contas a pagar (Sprint 8): categorias criadas nos testes; as semeadas voltam ao estado original.
         jdbc.sql("delete from financial_category where created_by <> 'sistema'").update();
         jdbc.sql("update financial_category set status = 'ATIVO'").update();
+        // Engenharia (Sprint 10): BOMs dos equipamentos, revisões, cargas do arquivo, modelos e códigos de referência.
+        jdbc.sql("delete from equipment_bom_line").update();
+        jdbc.sql("delete from equipment_bom").update();
+        jdbc.sql("delete from bom_line").update();
+        jdbc.sql("update bom_import set revision_id = null").update();
+        jdbc.sql("delete from bom_revision").update();
+        jdbc.sql("delete from bom_import").update();
+        jdbc.sql("delete from bom").update();
+        jdbc.sql("delete from item_reference_code").update();
         jdbc.sql("delete from equipment").update();
+        jdbc.sql("delete from equipment_model").update();
         jdbc.sql("delete from project").update();
         jdbc.sql("delete from sales_order").update();
         jdbc.sql("delete from proposal").update();

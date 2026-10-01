@@ -3,7 +3,7 @@ info:
   title: Renda+ ERP — API do servidor
   version: v1
   description: |
-    Contrato da API usada pelo app do Mac (Sprints 1 a 9).
+    Contrato da API usada pelo app do Mac (Sprints 1 a 10).
     Regras gerais:
     - Toda rota exige sessão (`Authorization: Bearer <token>`), exceto `GET /api/v1/status` e `POST /api/v1/session` (ADR-005).
       Sem sessão válida: 401 `UNAUTHENTICATED`. Perfil sem a permissão: 403 `FORBIDDEN` (a negativa fica na auditoria).
@@ -39,6 +39,13 @@ info:
     - Caixa (Sprint 9): transferência entre contas próprias (`Idempotency-Key`; saída e entrada vinculadas, total inalterado;
       estorno total). Fluxo de caixa mês a mês com realizado e previsto separados e a composição de cada valor, que soma
       exatamente o valor da grade. Pendências (obrigação sem título, ex.: competência fiscal sem conferência) vêm sem valor.
+    - BOM (Sprint 10): modelo de equipamento com uma BOM; submontagens (Mecânica, Elétrica, Painel elétrico) são BOMs próprias,
+      usadas pela revisão escolhida. A revisão nasce em rascunho e, aprovada, não muda (409); aprovar leva junto as submontagens
+      em rascunho abaixo dela e é recusado com pendência (linha sem quantidade ou custo: 422 `BOM_INCOMPLETE`); ciclo de
+      submontagens: 422 `BOM_CYCLE`. Linha = quantidade × custo digitado, arredondado nos centavos uma vez. A carga do arquivo JSON
+      mostra a prévia antes de gravar e não repete o mesmo arquivo. A BOM do equipamento é cópia congelada da revisão aplicada,
+      com ajustes só dele (com motivo); o custo planejado do projeto soma as BOMs e a margem só sai com todos os equipamentos com
+      BOM. Quantidades e custos unitários trafegam como texto decimal com ponto, até 6 casas.
     - Erros sempre no formato `ApiError`, em português, com `correlationId` (cabeçalho `X-Correlation-Id` é aceito e devolvido).
 servers:
   - url: http://localhost:8080
@@ -64,6 +71,9 @@ tags:
   - name: Fluxo de caixa
   - name: Documentos e faturamento
   - name: Impostos gerenciais
+  - name: Modelos de equipamento
+  - name: BOM
+  - name: BOM do equipamento
 
 paths:
   /api/v1/status:
@@ -1436,6 +1446,258 @@ paths:
         '201': { description: Revisão criada, content: { application/json: { schema: { $ref: '#/components/schemas/TaxParameters' } } } }
         '422': { $ref: '#/components/responses/Erro' }
 
+  /api/v1/equipment-models:
+    get:
+      tags: [Modelos de equipamento]
+      summary: Modelos com a quantidade de equipamentos de cada um (bom.read)
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Código ou nome' }
+        - { name: includeInactive, in: query, required: false, schema: { type: boolean, default: false } }
+      responses:
+        '200': { description: Modelos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/EquipmentModel' } } } } }
+    post:
+      tags: [Modelos de equipamento]
+      summary: Cadastra o modelo (bom.update); nome único sem diferenciar maiúsculas (422 EQUIPMENT_MODEL_DUPLICATE); evento EquipmentModelRegistered
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/EquipmentModelRequest' } } }
+      responses:
+        '201': { description: Modelo cadastrado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/EquipmentModel' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/equipment-models/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Modelos de equipamento]
+      summary: Modelo (bom.read)
+      responses:
+        '200': { description: Modelo, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/EquipmentModel' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Modelos de equipamento]
+      summary: Renomeia o modelo (bom.update); os equipamentos continuam com o texto do pedido; evento EquipmentModelUpdated
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/EquipmentModelRequest' } } }
+      responses:
+        '200': { description: Modelo alterado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/EquipmentModel' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/equipment-models/{id}/deactivate:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Modelos de equipamento]
+      summary: Inativa o modelo com motivo (bom.update); equipamentos e BOMs existentes continuam
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { description: Modelo inativo, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/EquipmentModel' } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/equipment-models/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Modelos de equipamento]
+      summary: Trilha do modelo (bom.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/boms:
+    get:
+      tags: [BOM]
+      summary: BOMs (as dos modelos primeiro, depois as submontagens), com a revisão aprovada e o rascunho (bom.read)
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Código, nome da BOM ou do modelo' }
+      responses:
+        '200': { description: BOMs, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Bom' } } } } }
+    post:
+      tags: [BOM]
+      summary: >-
+        Cadastra a BOM — CreateBom (bom.update): de um modelo (uma por modelo) ou submontagem (sem modelo); nasce com a revisão 00
+        em rascunho, sem linhas. Nome único (422 BOM_DUPLICATE)
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/BomRequest' } } }
+      responses:
+        '201': { description: BOM cadastrada, content: { application/json: { schema: { $ref: '#/components/schemas/Bom' } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/boms/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [BOM]
+      summary: BOM com a revisão aprovada e o rascunho (bom.read)
+      responses:
+        '200': { description: BOM, content: { application/json: { schema: { $ref: '#/components/schemas/Bom' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/boms/{id}/revisions:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [BOM]
+      summary: >-
+        Revisão nova em rascunho — CreateBomRevision (bom.update), cópia das linhas da revisão aprovada; só um rascunho por BOM
+        (422 BOM_DRAFT_EXISTS)
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      responses:
+        '201': { description: Rascunho criado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/BomRevision' } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/boms/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [BOM]
+      summary: Trilha da BOM e das revisões (bom.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/bom-revisions/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [BOM]
+      summary: >-
+        Revisão com as linhas, o valor de cada uma, subtotais por categoria, total, pendências e problemas, quem a usa como submontagem
+        e as revisões da BOM (bom.read)
+      responses:
+        '200': { description: Revisão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/BomRevision' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [BOM]
+      summary: >-
+        Grava o rascunho inteiro — UpdateBomDraft (bom.update): linhas na ordem e total informado da origem. Revisão aprovada: 409.
+        Item inexistente, quantidade ≤ 0, custo negativo: 422 BOM_INVALID; ciclo de submontagens: 422 BOM_CYCLE
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/BomDraftRequest' } } }
+      responses:
+        '200': { description: Rascunho gravado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/BomRevision' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/bom-revisions/{id}/approval:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [BOM]
+      summary: >-
+        Aprova — ApproveBomRevision (bom.approve): a revisão e as submontagens em rascunho abaixo dela, juntas; a aprovada antes fica
+        substituída. Pendência: 422 BOM_INCOMPLETE com cada linha em details. Aprovada de novo: devolve a mesma. Evento BomRevisionApproved
+      responses:
+        '200': { description: Revisão aprovada, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/BomRevision' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/bom-revisions/{id}/comparison:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [BOM]
+      summary: Linhas incluídas, retiradas e alteradas entre a revisão `with` (antes) e esta (depois), e a variação do total (bom.read)
+      parameters:
+        - { name: with, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Comparação, content: { application/json: { schema: { $ref: '#/components/schemas/BomComparison' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/bom-imports:
+    post:
+      tags: [BOM]
+      summary: >-
+        Envia o arquivo JSON da BOM e devolve a prévia (bom.update): linhas, submontagens, totais, itens e unidades novos, códigos
+        gerados e problemas da origem, sem gravar nada além do arquivo. O mesmo arquivo devolve a mesma carga
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/BomImportRequest' } } }
+      responses:
+        '201': { description: Prévia, content: { application/json: { schema: { $ref: '#/components/schemas/BomImport' } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/bom-imports/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [BOM]
+      summary: Carga e a prévia (bom.read)
+      responses:
+        '200': { description: Carga, content: { application/json: { schema: { $ref: '#/components/schemas/BomImport' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/bom-imports/{id}/confirmation:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [BOM]
+      summary: >-
+        Confirma a carga — ImportBom (bom.update): modelo, BOM do modelo, submontagens com a revisão em rascunho e itens novos, numa
+        transação; confirmar de novo devolve a mesma. BOM com rascunho aberto: 422 BOM_DRAFT_EXISTS. Evento BomImported
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      responses:
+        '200': { description: Carga confirmada, content: { application/json: { schema: { $ref: '#/components/schemas/BomImport' } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/equipment/{id}/bom:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [BOM do equipamento]
+      summary: BOM do equipamento em árvore, com o estado de cada linha em relação ao modelo; `applied` falso se ainda não tem (bom.read)
+      responses:
+        '200': { description: BOM do equipamento, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/EquipmentBom' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    post:
+      tags: [BOM do equipamento]
+      summary: >-
+        Aplica a revisão aprovada de uma BOM de modelo — ApplyBomToProject (project_bom.apply): cópia congelada; a mesma revisão de novo
+        não muda nada; outra revisão exige motivo e descarta os ajustes. Rascunho: 422 BOM_NOT_APPROVED. Evento ProjectBomApplied
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/EquipmentBomApplyRequest' } } }
+      responses:
+        '200': { description: BOM aplicada, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/EquipmentBom' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/equipment/{id}/bom/adjustments:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [BOM do equipamento]
+      summary: >-
+        Ajusta só este equipamento — AdjustEquipmentBom (project_bom.apply), com motivo: incluir (ADD), alterar quantidade ou custo
+        (UPDATE), retirar (REMOVE) ou devolver (RESTORE) uma linha. O modelo não muda. Evento EquipmentBomAdjusted
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/EquipmentBomAdjustRequest' } } }
+      responses:
+        '200': { description: BOM ajustada, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/EquipmentBom' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/equipment/{id}/bom/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [BOM do equipamento]
+      summary: Trilha da BOM do equipamento (bom.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/projects/{id}/planned-cost:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [BOM do equipamento]
+      summary: >-
+        Custo planejado do projeto (project.read e bom.read): soma das BOMs dos equipamentos ativos, valor contratado e margem prevista;
+        equipamento sem BOM aparece sem custo, e a margem só sai quando todos têm BOM sem pendência
+      responses:
+        '200': { description: Custo planejado, content: { application/json: { schema: { $ref: '#/components/schemas/PlannedCost' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
 components:
   securitySchemes:
     sessao:
@@ -1594,7 +1856,10 @@ components:
             PARTNER_REGISTERED, PARTNER_UPDATED, PARTNER_DEACTIVATED, PARTNER_ROLE_ENABLED, ITEM_REGISTERED, ITEM_UPDATED,
             ITEM_DEACTIVATED, PROPOSAL_DRAFTED, PROPOSAL_UPDATED, PROPOSAL_REVISION_ISSUED, PROPOSAL_REVISION_CREATED,
             PROPOSAL_LOST, PROPOSAL_WON, SALES_ORDER_DRAFTED, SALES_ORDER_UPDATED, SALES_ORDER_CONFIRMED, SALES_ORDER_CANCELLED,
-            PROJECT_CREATED, PROJECT_CLOSED, EQUIPMENT_CREATED, EQUIPMENT_UPDATED, EQUIPMENT_CANCELLED
+            PROJECT_CREATED, PROJECT_CLOSED, EQUIPMENT_CREATED, EQUIPMENT_UPDATED, EQUIPMENT_CANCELLED,
+            EQUIPMENT_MODEL_REGISTERED, EQUIPMENT_MODEL_UPDATED, EQUIPMENT_MODEL_DEACTIVATED, BOM_CREATED, BOM_DRAFT_UPDATED,
+            BOM_REVISION_CREATED, BOM_REVISION_APPROVED, BOM_IMPORTED, EQUIPMENT_BOM_APPLIED, EQUIPMENT_BOM_REVISION_CHANGED,
+            EQUIPMENT_BOM_ADJUSTED
         version: { type: integer }
         reason: { type: [string, 'null'] }
         changes:
@@ -1949,7 +2214,10 @@ components:
       properties:
         id: { type: string, format: uuid }
         code: { type: string, example: EQ00001 }
-        model: { type: string }
+        model: { type: string, description: 'Texto do modelo como veio do pedido' }
+        modelId: { type: string, format: uuid, description: 'Modelo de equipamento (Sprint 10)' }
+        modelCode: { type: string, example: MD00001 }
+        modelName: { type: string }
         itemId: { type: [string, 'null'], format: uuid }
         projectId: { type: string, format: uuid }
         projectCode: { type: string }
@@ -2560,3 +2828,337 @@ components:
               occurredAt: { type: string, format: date-time }
               actor: { type: string }
         differenceCents: { type: [string, 'null'], description: 'Contador − última simulação calculada' }
+    Decimal:
+      type: [string, 'null']
+      pattern: '^\d{1,13}(\.\d{1,6})?$'
+      description: Número decimal com ponto, até 6 casas ("2.5")
+    EquipmentModel:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: MD00001 }
+        name: { type: string }
+        status: { type: string, enum: [ATIVO, INATIVO] }
+        equipmentCount: { type: integer }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    EquipmentModelRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 200 }
+    BomRevisionRef:
+      type: [object, 'null']
+      properties:
+        id: { type: string, format: uuid }
+        label: { type: string, example: '00' }
+        status: { type: string, enum: [DRAFT, APPROVED, SUPERSEDED] }
+        totalCents: { type: string }
+        pending: { type: integer, description: 'Linhas sem quantidade ou custo, em qualquer nível' }
+        approvedAt: { type: [string, 'null'], format: date-time }
+        approvedBy: { type: [string, 'null'] }
+    Bom:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: BOM00001 }
+        name: { type: string }
+        modelId: { type: [string, 'null'], format: uuid, description: 'Vazio: submontagem' }
+        modelCode: { type: [string, 'null'] }
+        modelName: { type: [string, 'null'] }
+        approved: { $ref: '#/components/schemas/BomRevisionRef' }
+        draft: { $ref: '#/components/schemas/BomRevisionRef' }
+        revisionCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+    BomRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 200 }
+        modelId: { type: [string, 'null'], format: uuid }
+    BomLineRequest:
+      type: object
+      properties:
+        kind: { type: string, enum: [ITEM, SUBASSEMBLY], default: ITEM }
+        itemId: { type: [string, 'null'], format: uuid, description: 'Linha de item' }
+        childRevisionId: { type: [string, 'null'], format: uuid, description: 'Linha de submontagem: a revisão escolhida' }
+        referenceCode: { type: [string, 'null'], maxLength: 60 }
+        description: { type: [string, 'null'], maxLength: 200, description: 'Vazio: a do item' }
+        quantity: { $ref: '#/components/schemas/Decimal' }
+        uom: { type: [string, 'null'], description: 'Vazio: a do item' }
+        unitCost: { $ref: '#/components/schemas/Decimal' }
+        category: { type: [string, 'null'], maxLength: 100 }
+        supplier: { type: [string, 'null'], maxLength: 120 }
+        material: { type: [string, 'null'], maxLength: 120 }
+        notes: { type: [string, 'null'], maxLength: 500 }
+    BomDraftRequest:
+      type: object
+      properties:
+        informedTotalCents: { type: [string, 'null'], description: 'Total informado da origem, em centavos' }
+        notes: { type: [string, 'null'], maxLength: 500 }
+        lines: { type: array, maxItems: 1000, items: { $ref: '#/components/schemas/BomLineRequest' } }
+    BomProblem:
+      type: object
+      properties:
+        severity: { type: string, enum: [BLOCKING, WARNING, INFO], description: 'BLOCKING impede a aprovação' }
+        position: { type: [integer, 'null'] }
+        message: { type: string }
+    BomRevision:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        bomId: { type: string, format: uuid }
+        bomCode: { type: string }
+        bomName: { type: string }
+        modelId: { type: [string, 'null'], format: uuid }
+        modelCode: { type: [string, 'null'] }
+        modelName: { type: [string, 'null'] }
+        revision: { type: integer }
+        label: { type: string, example: '00' }
+        status: { type: string, enum: [DRAFT, APPROVED, SUPERSEDED] }
+        basedOnId: { type: [string, 'null'], format: uuid }
+        informedTotalCents: { type: [string, 'null'] }
+        notes: { type: [string, 'null'] }
+        importId: { type: [string, 'null'], format: uuid }
+        approvedAt: { type: [string, 'null'], format: date-time }
+        approvedBy: { type: [string, 'null'] }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+        totalCents: { type: string, description: 'Soma das linhas; parcial quando pending > 0' }
+        pending: { type: integer }
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              position: { type: integer }
+              kind: { type: string, enum: [ITEM, SUBASSEMBLY] }
+              itemId: { type: [string, 'null'], format: uuid }
+              itemCode: { type: [string, 'null'] }
+              itemActive: { type: boolean }
+              childRevisionId: { type: [string, 'null'], format: uuid }
+              childBomId: { type: [string, 'null'], format: uuid }
+              childBomCode: { type: [string, 'null'] }
+              childBomName: { type: [string, 'null'] }
+              childRevisionLabel: { type: [string, 'null'] }
+              childRevisionStatus: { type: [string, 'null'] }
+              referenceCode: { type: [string, 'null'] }
+              description: { type: string }
+              quantity: { $ref: '#/components/schemas/Decimal' }
+              uom: { type: string }
+              unitCost: { $ref: '#/components/schemas/Decimal' }
+              lineCents: { type: [string, 'null'], description: 'Vazio quando falta quantidade ou custo' }
+              pending: { type: integer }
+              category: { type: [string, 'null'] }
+              supplier: { type: [string, 'null'] }
+              material: { type: [string, 'null'] }
+              notes: { type: [string, 'null'] }
+        categories: { type: array, items: { type: object, properties: { category: { type: string }, cents: { type: string }, lines: { type: integer } } } }
+        problems: { type: array, items: { $ref: '#/components/schemas/BomProblem' } }
+        usedBy:
+          type: array
+          items: { type: object, properties: { bomId: { type: string }, bomName: { type: string }, revisionId: { type: string }, revisionLabel: { type: string }, status: { type: string } } }
+        revisions: { type: array, items: { $ref: '#/components/schemas/BomRevisionRef' } }
+    BomComparison:
+      type: object
+      properties:
+        bomId: { type: string, format: uuid }
+        bomName: { type: string }
+        from: { $ref: '#/components/schemas/BomRevisionRef' }
+        to: { $ref: '#/components/schemas/BomRevisionRef' }
+        totalBefore: { type: string }
+        totalAfter: { type: string }
+        difference: { type: string, description: 'Depois − antes, em centavos (pode ser negativo)' }
+        rows:
+          type: array
+          items:
+            type: object
+            properties:
+              status: { type: string, enum: [ADDED, REMOVED, CHANGED] }
+              kind: { type: string, enum: [ITEM, SUBASSEMBLY] }
+              referenceCode: { type: [string, 'null'] }
+              description: { type: string }
+              revisionBefore: { type: [string, 'null'] }
+              revisionAfter: { type: [string, 'null'] }
+              quantityBefore: { $ref: '#/components/schemas/Decimal' }
+              quantityAfter: { $ref: '#/components/schemas/Decimal' }
+              unitCostBefore: { $ref: '#/components/schemas/Decimal' }
+              unitCostAfter: { $ref: '#/components/schemas/Decimal' }
+              centsBefore: { type: [string, 'null'] }
+              centsAfter: { type: [string, 'null'] }
+              childRevisionBefore: { type: [string, 'null'], format: uuid }
+              childRevisionAfter: { type: [string, 'null'], format: uuid }
+    BomImportRequest:
+      type: object
+      required: [content]
+      properties:
+        fileName: { type: [string, 'null'] }
+        content: { type: string, description: 'Conteúdo do arquivo JSON (até 2 MB), no formato de docs/scrum/sprints/exemplos/bom-balanca-hidrostatica-rev00.json' }
+    BomImport:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        fileName: { type: string }
+        status: { type: string, enum: [PREVIEW, CONFIRMED] }
+        product: { type: string }
+        revisionLabel: { type: [string, 'null'] }
+        revisionDate: { type: [string, 'null'] }
+        lineCount: { type: integer }
+        totalCents: { type: string }
+        pending: { type: integer }
+        informedTotalCents: { type: [string, 'null'] }
+        groups:
+          type: array
+          items: { type: object, properties: { name: { type: string }, parent: { type: string }, lines: { type: integer }, totalCents: { type: string }, pending: { type: integer }, informedCents: { type: [string, 'null'] } } }
+        problems: { type: array, items: { $ref: '#/components/schemas/BomProblem' } }
+        newItems: { type: integer }
+        existingItems: { type: integer }
+        newUnits: { type: array, items: { type: string } }
+        newCategories: { type: array, items: { type: string } }
+        fileNotes: { type: array, items: { type: string }, description: 'Observações do próprio arquivo' }
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              group: { type: string }
+              category: { type: string }
+              sourceNo: { type: integer }
+              referenceCode: { type: [string, 'null'] }
+              generatedCode: { type: boolean }
+              description: { type: string }
+              quantity: { $ref: '#/components/schemas/Decimal' }
+              uom: { type: string }
+              unitCost: { $ref: '#/components/schemas/Decimal' }
+              lineCents: { type: [string, 'null'] }
+              itemCode: { type: [string, 'null'], description: 'Item já cadastrado' }
+              newItem: { type: boolean }
+              supplier: { type: [string, 'null'] }
+              material: { type: [string, 'null'] }
+        revisionId: { type: [string, 'null'], format: uuid, description: 'Revisão do modelo criada pela confirmação' }
+        bomId: { type: [string, 'null'], format: uuid }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        confirmedAt: { type: [string, 'null'], format: date-time }
+        confirmedBy: { type: [string, 'null'] }
+    EquipmentBomApplyRequest:
+      type: object
+      required: [revisionId]
+      properties:
+        revisionId: { type: string, format: uuid }
+        reason: { type: [string, 'null'], maxLength: 500, description: 'Obrigatório para trocar de revisão' }
+    EquipmentBomAdjustRequest:
+      type: object
+      required: [action, reason]
+      properties:
+        action: { type: string, enum: [ADD, UPDATE, REMOVE, RESTORE] }
+        lineId: { type: [string, 'null'], format: uuid, description: 'UPDATE, REMOVE, RESTORE' }
+        parentLineId: { type: [string, 'null'], format: uuid, description: 'ADD: submontagem onde incluir (vazio: primeiro nível)' }
+        itemId: { type: [string, 'null'], format: uuid }
+        description: { type: [string, 'null'] }
+        quantity: { $ref: '#/components/schemas/Decimal' }
+        uom: { type: [string, 'null'] }
+        unitCost: { $ref: '#/components/schemas/Decimal' }
+        category: { type: [string, 'null'] }
+        notes: { type: [string, 'null'] }
+        reason: { type: string, maxLength: 500 }
+    EquipmentRef:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        projectId: { type: string, format: uuid }
+        projectCode: { type: string }
+        modelId: { type: string, format: uuid }
+        modelCode: { type: string }
+        modelName: { type: string }
+        serialNumber: { type: [string, 'null'] }
+        active: { type: boolean }
+    EquipmentBom:
+      type: object
+      properties:
+        equipment: { $ref: '#/components/schemas/EquipmentRef' }
+        applied: { type: boolean }
+        id: { type: [string, 'null'], format: uuid }
+        bomId: { type: [string, 'null'], format: uuid }
+        bomCode: { type: [string, 'null'] }
+        bomName: { type: [string, 'null'] }
+        revisionId: { type: [string, 'null'], format: uuid }
+        revisionLabel: { type: [string, 'null'] }
+        revisionStatus: { type: [string, 'null'] }
+        version: { type: [string, 'null'] }
+        appliedAt: { type: [string, 'null'], format: date-time }
+        appliedBy: { type: [string, 'null'] }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+        totalCents: { type: [string, 'null'] }
+        pending: { type: integer }
+        modelTotalCents: { type: [string, 'null'], description: 'Total da revisão do modelo, sem os ajustes' }
+        added: { type: integer }
+        removed: { type: integer }
+        changed: { type: integer }
+        lines:
+          type: array
+          description: Linhas na ordem da árvore (cada submontagem seguida das linhas dela)
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              parentId: { type: [string, 'null'], format: uuid }
+              depth: { type: integer }
+              position: { type: integer }
+              kind: { type: string, enum: [ITEM, SUBASSEMBLY] }
+              itemId: { type: [string, 'null'], format: uuid }
+              itemCode: { type: [string, 'null'] }
+              childRevisionId: { type: [string, 'null'], format: uuid }
+              referenceCode: { type: [string, 'null'] }
+              description: { type: string }
+              quantity: { $ref: '#/components/schemas/Decimal' }
+              uom: { type: string }
+              unitCost: { $ref: '#/components/schemas/Decimal' }
+              lineCents: { type: [string, 'null'] }
+              category: { type: [string, 'null'] }
+              supplier: { type: [string, 'null'] }
+              material: { type: [string, 'null'] }
+              notes: { type: [string, 'null'] }
+              origin: { type: string, enum: [MODEL, ADJUSTMENT] }
+              modelQuantity: { $ref: '#/components/schemas/Decimal' }
+              modelUnitCost: { $ref: '#/components/schemas/Decimal' }
+              status: { type: string, enum: [ACTIVE, REMOVED] }
+              state: { type: string, enum: [MODEL, CHANGED, ADDED, REMOVED] }
+              adjustmentReason: { type: [string, 'null'] }
+    PlannedCost:
+      type: object
+      properties:
+        projectId: { type: string, format: uuid }
+        projectCode: { type: string }
+        projectName: { type: string }
+        stage: { type: string }
+        contractCents: { type: string, description: 'Valor contratado do projeto' }
+        plannedCostCents: { type: string, description: 'Soma das BOMs aplicadas' }
+        complete: { type: boolean, description: 'Todos os equipamentos ativos com BOM, sem pendência' }
+        withoutBom: { type: integer }
+        marginCents: { type: [string, 'null'], description: 'Contratado − custo planejado; vazio enquanto incompleto' }
+        marginRate: { type: [string, 'null'], description: 'Margem ÷ contratado, como fração ("0.4216")' }
+        equipment:
+          type: array
+          items:
+            type: object
+            properties:
+              equipment: { $ref: '#/components/schemas/EquipmentRef' }
+              applied: { type: boolean }
+              bomId: { type: [string, 'null'], format: uuid }
+              bomName: { type: [string, 'null'] }
+              revisionId: { type: [string, 'null'], format: uuid }
+              revisionLabel: { type: [string, 'null'] }
+              costCents: { type: [string, 'null'], description: 'Vazio: sem custo planejado' }
+              pending: { type: integer }
+              adjusted: { type: boolean }

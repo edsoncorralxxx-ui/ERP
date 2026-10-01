@@ -53,7 +53,8 @@
       "nome": "Engenharia",
       "icone": "engenharia",
       "itens": [
-        {"rotulo": "BOM — composição de custos", "tela": "bom", "fase": "B07"},
+        {"rotulo": "BOM — composição de custos", "tela": "bom", "fase": "Sprint 10 · B07", "implementado": true},
+        {"rotulo": "Modelos de equipamento", "tela": "bom", "secao": "MODELOS", "fase": "Sprint 10 · B07", "implementado": true},
         {"rotulo": "Desenvolvimento de produtos", "recurso": "AN-032", "fase": "B14/B15"}
       ]
     },

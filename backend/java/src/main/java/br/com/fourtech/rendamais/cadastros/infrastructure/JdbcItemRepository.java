@@ -141,6 +141,38 @@ class JdbcItemRepository implements ItemRepository {
         return t == null ? null : t.toInstant();
     }
 
+    @Override
+    public Optional<UUID> itemByReferenceCode(String referenceCode) {
+        return jdbc.sql("select item_id from item_reference_code where lower(reference_code) = lower(:ref)").param("ref", referenceCode)
+                .query(UUID.class).optional();
+    }
+
+    @Override
+    public Optional<UUID> itemByDescription(String description, Item.Nature nature) {
+        return jdbc.sql("select id from item where lower(description) = lower(:d) and nature = :n order by code limit 1")
+                .param("d", description).param("n", nature.name()).query(UUID.class).optional();
+    }
+
+    @Override
+    public Optional<String> referenceCodeOf(UUID itemId) {
+        return jdbc.sql("select reference_code from item_reference_code where item_id = :item order by created_at limit 1")
+                .param("item", itemId).query(String.class).optional();
+    }
+
+    @Override
+    public void insertReferenceCode(String referenceCode, UUID itemId, Instant now, String actor) {
+        jdbc.sql("insert into item_reference_code (reference_code, item_id, created_at, created_by) values (:ref, :item, :now, :actor)")
+                .param("ref", referenceCode).param("item", itemId).param("now", ts(now)).param("actor", actor).update();
+    }
+
+    @Override
+    public int lastGeneratedNumber(String prefix) {
+        return jdbc.sql("""
+                select coalesce(max(cast(substring(reference_code from :len) as integer)), 0) from item_reference_code
+                 where reference_code ~ ('^' || :prefix || '-[0-9]{4,9}$')
+                """).param("len", prefix.length() + 2).param("prefix", prefix).query(Integer.class).single();
+    }
+
     private static Timestamp ts(Instant i) {
         return i == null ? null : Timestamp.from(i);
     }

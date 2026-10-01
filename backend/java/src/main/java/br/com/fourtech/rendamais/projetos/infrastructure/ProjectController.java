@@ -57,11 +57,7 @@ class ProjectController {
 
     @GetMapping("/{id}/equipment")
     List<EquipmentController.EquipmentDto> equipment(@PathVariable UUID id) {
-        ProjectRepository.ProjectSummary s = service.project(id);
-        return service.equipmentOfProject(id).stream()
-                .map(e -> EquipmentController.EquipmentDto.of(new ProjectRepository.EquipmentSummary(e, s.project().code(),
-                        s.project().orderCode(), s.customerCode(), s.customerName())))
-                .toList();
+        return service.equipmentOfProject(id).stream().map(EquipmentController.EquipmentDto::of).toList();
     }
 
     @GetMapping("/{id}/history")

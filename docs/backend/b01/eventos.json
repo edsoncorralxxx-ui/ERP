@@ -89,18 +89,46 @@
       "consumidores": []
     },
     {
+      "type": "EquipmentModelRegistered",
+      "produtor": "projetos",
+      "conceito": "EQUIPAMENTO",
+      "payload": ["modelId", "name"],
+      "consumidores": []
+    },
+    {
+      "type": "EquipmentModelUpdated",
+      "produtor": "projetos",
+      "conceito": "EQUIPAMENTO",
+      "payload": ["modelId", "changedFields"],
+      "consumidores": []
+    },
+    {
       "type": "BomRevisionApproved",
       "produtor": "engenharia",
       "conceito": "BOM",
-      "payload": ["bomId", "revision", "totalReferenceCents"],
+      "payload": ["bomId", "revisionId", "revision", "totalReferenceCents"],
       "consumidores": []
     },
     {
       "type": "ProjectBomApplied",
       "produtor": "engenharia",
       "conceito": "BOM",
-      "payload": ["projectId", "equipmentId", "bomId", "revision"],
+      "payload": ["projectId", "equipmentId", "bomId", "revisionId", "revision"],
       "consumidores": ["custos"]
+    },
+    {
+      "type": "BomImported",
+      "produtor": "engenharia",
+      "conceito": "BOM",
+      "payload": ["importId", "bomId", "revisionId", "modelId", "lines"],
+      "consumidores": []
+    },
+    {
+      "type": "EquipmentBomAdjusted",
+      "produtor": "engenharia",
+      "conceito": "BOM",
+      "payload": ["equipmentId", "projectId", "action", "totalCents"],
+      "consumidores": []
     },
     {
       "type": "ScheduleRecalculated",

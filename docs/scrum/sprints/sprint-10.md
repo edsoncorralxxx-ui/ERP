@@ -1,6 +1,6 @@
 # Sprint 10 — BOM: composição de custos por modelo e por equipamento
 
-Situação: **Planning — aguardando o "aprovado" do PO** (01/10/2026). Perguntas respondidas pelo PO em 01/10/2026 (tabela abaixo).
+Situação: **Em execução**. Planning aprovado pelo PO em 01/10/2026 ("aprovado"), com as perguntas respondidas na tabela abaixo.
 
 A conciliação bancária com importação de extrato OFX/CSV, proposta para esta sprint, foi **adiada pelo PO em 01/10/2026** e voltou ao backlog. A proposta e as perguntas dela (onde processar o arquivo, extrato real do banco, conciliar com diferença, janela de ±3 dias, PD-006) ficam para quando ela voltar.
 

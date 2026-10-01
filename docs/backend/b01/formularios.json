@@ -465,12 +465,16 @@
       "classificacoes": ["categoria", "subsistema", "atividade"],
       "validacoes": [
         {"regra": "Linha exige item, quantidade > 0, unidade compatível, custo referencial e categoria"},
-        {"regra": "Diferença entre Σ linhas e total informado da origem é exibida como divergência, não corrigida (ex.: R$ 3.000,00)"},
-        {"regra": "Revisão aprovada é imutável"}
+        {"regra": "Diferença entre Σ linhas e total informado da origem é exibida como divergência, não corrigida"},
+        {"regra": "Revisão aprovada é imutável"},
+        {"regra": "Submontagem é outra BOM usada pela revisão escolhida; ciclo de submontagens é recusado"},
+        {"regra": "Aprovar leva junto as submontagens em rascunho; linha sem quantidade ou custo impede a aprovação"}
       ],
       "comandos": [
+        {"nome": "ImportBom", "permissao": "bom.update", "idempotente": true, "eventos": ["BomImported"]},
         {"nome": "ApproveBomRevision", "permissao": "bom.approve", "idempotente": true, "eventos": ["BomRevisionApproved"]},
-        {"nome": "ApplyBomToProject", "permissao": "project_bom.apply", "idempotente": true, "eventos": ["ProjectBomApplied"]}
+        {"nome": "ApplyBomToProject", "permissao": "project_bom.apply", "idempotente": true, "eventos": ["ProjectBomApplied"]},
+        {"nome": "AdjustEquipmentBom", "permissao": "project_bom.apply", "idempotente": false, "eventos": ["EquipmentBomAdjusted"]}
       ],
       "indicadores": ["IND-011"],
       "analises": ["AN-020"],
