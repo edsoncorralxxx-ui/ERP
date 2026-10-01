@@ -60,6 +60,8 @@ type Props<T extends { id: string; status?: string }> = {
   selo?: (linha: T) => ReactNode;
   /** Totaliza a lista visível no rodapé (ex.: soma em reais). */
   total?: (linhas: T[]) => ReactNode;
+  /** Botões a mais embaixo, depois do Novo (ex.: Importar BOM). */
+  acoes?: ReactNode;
 };
 
 /**
@@ -237,6 +239,7 @@ export function JanelaLista<T extends { id: string; status?: string }>(p: Props<
               <span><u>N</u>ovo</span>
             </button>
           )}
+          {p.acoes}
         </div>
         <button type="button" className="rp-funil" title="Filtrar tabela" aria-label="Filtrar tabela" aria-haspopup="dialog" aria-pressed={filtrado} onClick={() => setFiltroAberto((v) => !v)}>
           <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">

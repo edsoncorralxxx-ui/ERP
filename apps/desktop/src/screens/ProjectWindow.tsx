@@ -5,9 +5,11 @@ import { dataDaApi, dataHora, reais } from '../format';
 import { useWindow } from '../windows/WindowContext';
 import { somaFaturamento, useFaturamento } from './comum/Faturamento';
 import { GradeHistorico } from './comum/GradeHistorico';
+import { PlannedCostPanel } from './PlannedCostPanel';
+import { useSession } from '../shell/SessionContext';
 import { ESTAGIO, seloEquipamento, seloEstagio, seloTitulo } from './comum/Selos';
 
-type Tab = 'equipamentos' | 'receber' | 'historico';
+type Tab = 'equipamentos' | 'custo' | 'receber' | 'historico';
 
 /**
  * Detalhe do projeto (formulário "projeto"): o vínculo central entre pedido, cliente, unidade, equipamentos e
@@ -17,6 +19,7 @@ export function ProjectWindow({ recordKey }: { recordKey: string }) {
   const win = useWindow();
   const winRef = useRef(win);
   winRef.current = win;
+  const { can } = useSession();
   const [projeto, setProjeto] = useState<Project | null>(null);
   const [equipamentos, setEquipamentos] = useState<Equipment[] | null>(null);
   const [titulos, setTitulos] = useState<Receivable[] | null>(null);
@@ -44,7 +47,7 @@ export function ProjectWindow({ recordKey }: { recordKey: string }) {
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.altKey) {
-      const alvo: Record<string, Tab> = { e: 'equipamentos', r: 'receber', h: 'historico' };
+      const alvo: Record<string, Tab> = { e: 'equipamentos', c: 'custo', r: 'receber', h: 'historico' };
       const t = alvo[e.key.toLowerCase()];
       if (!t) return;
       e.preventDefault();
@@ -62,6 +65,7 @@ export function ProjectWindow({ recordKey }: { recordKey: string }) {
   const faturamento = useFaturamento((titulos ?? []).map((t) => t.id));
   const tabs: [Tab, ReactNode][] = [
     ['equipamentos', <span><u>E</u>quipamentos ({equipamentos?.length ?? 0})</span>],
+    ['custo', <span><u>C</u>usto planejado</span>],
     ['receber', <span>Parcelas a <u>r</u>eceber ({ativos.length})</span>],
     ['historico', <span><u>H</u>istórico</span>],
   ];
@@ -148,7 +152,7 @@ export function ProjectWindow({ recordKey }: { recordKey: string }) {
                           <td className="rownum">{i + 1}</td>
                           <td>{seta(`Abrir equipamento ${e.code}`, () => win.open('equipment', e.id))}</td>
                           <td>{e.code}</td>
-                          <td>{e.model}</td>
+                          <td>{e.modelName}</td>
                           <td>{e.serialNumber ?? ''}</td>
                           <td>{dataDaApi(e.acceptedOn)}</td>
                           <td>{dataDaApi(e.warrantyStart)}</td>
@@ -159,6 +163,8 @@ export function ProjectWindow({ recordKey }: { recordKey: string }) {
                   </table>
                   {equipamentos?.length === 0 && <p className="rp-jlista__vazio">O pedido deste projeto não tem linhas de equipamento.</p>}
                 </div>
+              ) : tab === 'custo' ? (
+                can('bom.read') ? <PlannedCostPanel projectId={projeto.id} /> : <p className="rp-janela-mdi__aviso">Seu perfil não vê o custo planejado (bom.read).</p>
               ) : tab === 'receber' ? (
                 <div className="rp-grid-rolagem rp-rolagem rp-ficha__grade">
                   <table className="rp-grid rp-janela-mdi__grade" aria-label="Parcelas a receber do projeto">
@@ -223,7 +229,7 @@ export function ProjectWindow({ recordKey }: { recordKey: string }) {
             OK
           </button>
         </div>
-        <span className="rp-janela-mdi__aviso">{projeto ? `Estágio ${ESTAGIO[projeto.stage].toLowerCase()}; estágios e cronograma entram com a engenharia.` : ''}</span>
+        <span className="rp-janela-mdi__aviso">{projeto ? `Estágio ${ESTAGIO[projeto.stage].toLowerCase()}; estágios e cronograma entram com o planejamento.` : ''}</span>
       </div>
     </>
   );

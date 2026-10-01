@@ -35,6 +35,10 @@ export type WindowKind =
   | 'tax-periods'
   | 'tax-period'
   | 'tax-parameters'
+  | 'boms'
+  | 'bom-revision'
+  | 'bom-import'
+  | 'equipment-models'
   | 'users'
   | 'password';
 export type WindowMode = 'normal' | 'minimized' | 'maximized';

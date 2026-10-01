@@ -12,6 +12,10 @@ import { EquipmentWindow } from './screens/EquipmentWindow';
 import { ItemsWindow } from './screens/ItemsWindow';
 import { ItemWindow } from './screens/ItemWindow';
 import { BankAccountsWindow } from './screens/BankAccountsWindow';
+import { BomImportWindow } from './screens/BomImportWindow';
+import { BomRevisionWindow } from './screens/BomRevisionWindow';
+import { BomsWindow } from './screens/BomsWindow';
+import { EquipmentModelsWindow } from './screens/EquipmentModelsWindow';
 import { DocumentsWindow } from './screens/DocumentsWindow';
 import { DocumentWindow } from './screens/DocumentWindow';
 import { ToIssueWindow } from './screens/ToIssueWindow';
@@ -81,6 +85,10 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   'tax-periods': { title: 'Impostos gerenciais', size: { w: 1180, h: 620 } },
   'tax-period': { title: 'Competência fiscal', size: { w: 1120, h: 680 } },
   'tax-parameters': { title: 'Parâmetros fiscais', size: { w: 900, h: 660 } },
+  boms: { title: 'BOM — composição de custos', size: { w: 1160, h: 620 } },
+  'bom-revision': { title: 'Revisão da BOM', size: { w: 1200, h: 700 } },
+  'bom-import': { title: 'Importar BOM', size: { w: 1160, h: 700 } },
+  'equipment-models': { title: 'Modelos de equipamento', size: { w: 900, h: 560 } },
   users: { title: 'Usuários e permissões', size: { w: 980, h: 560 } },
   password: { title: 'Alteração de senha', size: { w: 520, h: 330 } },
 };
@@ -453,6 +461,14 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                         <TaxPeriodWindow recordKey={w.recordKey} />
                       ) : w.kind === 'tax-parameters' ? (
                         <TaxParametersWindow />
+                      ) : w.kind === 'boms' ? (
+                        <BomsWindow />
+                      ) : w.kind === 'bom-revision' ? (
+                        <BomRevisionWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'bom-import' ? (
+                        <BomImportWindow />
+                      ) : w.kind === 'equipment-models' ? (
+                        <EquipmentModelsWindow />
                       ) : w.kind === 'users' ? (
                         <UsersWindow />
                       ) : w.kind === 'password' ? (
