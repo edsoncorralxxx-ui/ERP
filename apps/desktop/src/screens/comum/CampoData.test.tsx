@@ -16,13 +16,12 @@ function Teste({ inicial = '', onEnter = () => {} }: { inicial?: string; onEnter
 }
 
 describe('Campo de data', () => {
-  it('o calendário aparece à direita, dentro do campo, só quando se começa a digitar', async () => {
+  it('o calendário aparece à direita, dentro do campo, só com o campo selecionado', async () => {
     const user = userEvent.setup();
     render(<Teste />);
     const campo = screen.getByLabelText('Vencimento');
     expect(screen.queryByRole('button', { name: 'Abrir calendário de Vencimento' })).toBeNull();
     await user.click(campo);
-    await user.keyboard('1');
     const icone = screen.getByRole('button', { name: 'Abrir calendário de Vencimento' });
     expect(icone).toHaveClass('rp-campo-icone');
     await user.click(icone);

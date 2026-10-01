@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CampoDinheiro } from './CampoDinheiro';
 
@@ -15,13 +15,12 @@ describe('Campo de dinheiro', () => {
     expect(screen.getByText('R$')).toBeInTheDocument();
   });
 
-  it('a calculadora aparece à direita só quando se começa a digitar', async () => {
+  it('a calculadora aparece à direita só com o campo selecionado', async () => {
     const user = userEvent.setup();
     render(<><Teste inicial="10,00" /><button>Outro</button></>);
     const campo = screen.getByLabelText('Valor');
-    await user.click(campo);
     expect(screen.queryByRole('button', { name: 'Calculadora de Valor' })).toBeNull();
-    await user.keyboard('5');
+    await user.click(campo);
     expect(screen.getByRole('button', { name: 'Calculadora de Valor' })).toBeInTheDocument();
     expect(campo.parentElement).toHaveClass('rp-campo--com-icone');
     await user.tab();
@@ -71,8 +70,6 @@ describe('Campo de dinheiro', () => {
     render(<Teste inicial="10,00" />);
     const campo = screen.getByLabelText('Valor');
     await user.click(campo);
-    // Mostra o ícone como se tivesse digitado, sem o texto que o user-event guarda da própria digitação.
-    fireEvent.input(campo);
     await user.click(screen.getByRole('button', { name: 'Calculadora de Valor' }));
     expect(campo).toHaveFocus();
     expect(campo).toHaveValue('=');
