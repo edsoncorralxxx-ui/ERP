@@ -70,6 +70,11 @@
   display: grid; place-content: center; font-size: 12px; line-height: 1; }
 .rp-window-body { padding: var(--space-5); }
 .rp-window-foot { display: flex; justify-content: space-between; padding: 0 var(--space-5) var(--space-5); }
+/* Alça de redimensionar no canto inferior direito: três riscos diagonais em ink-muted com brilho branco */
+.rp-window-grip { width: var(--space-5); height: var(--space-5); display: grid; place-content: end; padding: var(--space-1); cursor: nwse-resize; }
+.rp-window-grip svg { display: block; }
+.rp-window-grip__risco { stroke: var(--ink-muted); stroke-width: 1.2; stroke-linecap: round; fill: none; }
+.rp-window-grip__luz { stroke: var(--on-dark); stroke-width: 1.2; stroke-linecap: round; fill: none; }
 .rp-window--login .rp-titlebar { border-bottom: 4px solid var(--gold-light); }
 
 /* Grade (matriz) */

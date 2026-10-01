@@ -90,7 +90,7 @@ body { background: var(--ground); }
 
 .rp-janela-mdi__corpo { flex: 1; min-height: 0; overflow: auto; user-select: text; }
 .rp-janela-mdi .rp-window-foot { flex: none; }
-.rp-janela-mdi__alca { position: absolute; right: 0; bottom: 0; width: 12px; height: 12px; cursor: nwse-resize; }
+.rp-janela-mdi__alca { position: absolute; right: 0; bottom: 0; cursor: nwse-resize; }
 .rp-janela-mdi__cabecalho { display: flex; gap: var(--space-5); margin-bottom: var(--space-4); flex-wrap: wrap; }
 .rp-janela-mdi__cabecalho .rp-form { grid-template-columns: 110px 200px; }
 .rp-janela-mdi__form { grid-template-columns: 160px 14px minmax(160px, 1fr); }

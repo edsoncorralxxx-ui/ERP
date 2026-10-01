@@ -82,12 +82,19 @@ export function WindowFrame({ win, active, children, onFocus, onMove, onResize, 
       {children}
       {!maximized && (
         <div
-          className="rp-janela-mdi__alca"
+          className="rp-janela-mdi__alca rp-window-grip"
           aria-hidden="true"
+          title="Arraste para redimensionar"
           onPointerDown={startResize}
           onPointerMove={(e) => size.current && onResize(size.current.w + e.clientX - size.current.x, size.current.h + e.clientY - size.current.y)}
           onPointerUp={() => (size.current = null)}
-        />
+        >
+          {/* Alça clássica: três riscos diagonais com brilho, no canto inferior direito. */}
+          <svg width="12" height="12" viewBox="0 0 12 12">
+            <path d="M11 4L4 11M11 7L7 11M11 10L10 11" className="rp-window-grip__luz" />
+            <path d="M10 4L4 10M10 7L7 10M10 10L10 10" className="rp-window-grip__risco" />
+          </svg>
+        </div>
       )}
     </section>
   );
