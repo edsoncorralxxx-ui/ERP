@@ -160,7 +160,8 @@
 .rp-menu-item { display: flex; align-items: center; gap: 10px; height: var(--row-grid); padding: 0 8px; cursor: pointer; }
 .rp-menu-item:hover, .rp-menu-item[aria-selected=true] { background: var(--field-active); }
 /* Opções de uma lista de escolha (Seleção): a de baixo do mouse e a em destaque na cor da seleção. */
-[role=listbox] .rp-menu-item:hover, [role=listbox] .rp-menu-item[aria-selected=true] { background: var(--grid-row-selected); }
+[role=listbox] .rp-menu-item:hover { background: none; }
+[role=listbox] .rp-menu-item[aria-selected=true] { background: var(--grid-row-selected); }
 .rp-menu-item kbd { margin-left: auto; font: inherit; font-size: 12px; color: var(--ink-muted); }
 .rp-menu-item[aria-disabled=true] { color: var(--ink-muted); }
 .rp-menu-sep { height: 1px; margin: 3px 0; background: var(--grid-rule); }
@@ -268,7 +269,6 @@
 .rp-nav--pastas .rp-nav-group[data-open=true] .rp-ico-w-pasta { background-image: none; }
 .rp-cockpit-list { padding: 6px 12px; display: grid; gap: 4px; }
 .rp-cockpit-list div { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius-sm); cursor: pointer; }
-.rp-cockpit-list div:hover { background: var(--grid-row-selected); }
 .rp-workspace { flex: 1; position: relative; padding: 14px 18px; min-width: 0; }
 .rp-workspace-welcome { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .rp-workspace-welcome .rp-search { width: 360px; }
@@ -340,12 +340,9 @@
 
 /* Grade: realce suave da linha sob o mouse */
 .rp-grid tbody tr td { transition: background-color .15s ease; }
-.rp-grid tbody tr:hover td { background: var(--grid-row-selected); cursor: default; }
-.rp-grid tbody tr[aria-selected=true]:hover td { background: var(--grid-row-selected); }
-.rp-grid tbody tr:hover td.rownum { background: var(--grid-row-selected); }
+/* Sem amarelo sob o mouse: a linha só fica amarela quando selecionada (aria-selected) e o campo, com foco */
+.rp-grid tbody tr:hover td { cursor: default; }
 .rp-grid tbody tr:hover .rp-link { filter: brightness(1.08); }
-/* Célula editável sob o mouse fica amarela, mesmo quando o campo é branco (modo de adição); com foco vale field-active */
-.rp-grid tbody td:hover .rp-field:not(:focus):not([readonly]) { background: var(--grid-row-selected); }
 
 /* ===== Campos de formulário (complementos) ===== */
 /* Campo com botão à direita: data, busca, anexo */
@@ -383,7 +380,6 @@
 /* Lista de seleção */
 .rp-lista { background: var(--field); border: 1px solid var(--field-border); box-shadow: var(--shadow-inset-field); overflow: auto; }
 .rp-lista div { height: var(--row-grid); display: flex; align-items: center; gap: 6px; padding: 0 var(--space-2); cursor: pointer; }
-.rp-lista div:hover { background: var(--grid-row-selected); }
 .rp-lista div[aria-selected=true] { background: var(--grid-row-selected); color: var(--ink); }
 .rp-lista-dupla { display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--space-3); align-items: center; }
 .rp-lista-mover { display: grid; gap: 4px; }
