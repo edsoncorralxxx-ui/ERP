@@ -224,7 +224,7 @@ DataQualityIssue
 
 - **INV-DQ-1** Um problema BLOCKING impede a aplicação do registro importado ou a confirmação que depende dele.
 - **INV-DQ-2** A correção preserva o valor original e o corrigido, com autor e motivo.
-- **INV-DQ-3** Detecções conhecidas da origem entram como casos de teste: soma da BOM × total impresso (R$ 3.000,00), entrega = venda + 90 dias, competência 01/2027 com ano 2026, `#REF!`, custo elétrico com diferença de R$ 601,49.
+- **INV-DQ-3** Detecções conhecidas da origem entram como casos de teste: soma da BOM × total impresso (o caso de R$ 3.000,00 foi resolvido pelo PO em 01/10/2026 — a pintura é R$ 1.400,00 e a BOM soma R$ 69.398,51; a regra continua testada com exemplo próprio), entrega = venda + 90 dias, competência 01/2027 com ano 2026, `#REF!`, custo elétrico com diferença de R$ 601,49.
 
 ## 8. Demais agregados (resumo para B03–B11)
 

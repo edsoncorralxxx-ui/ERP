@@ -387,7 +387,7 @@ Cadastros e aliases → clientes/unidades → carteira/projetos/equipamentos →
 
 - BASE comercial: 32 linhas e R$ 5.681.662,94 antes de correções aprovadas; não equivalem automaticamente a 32 clientes únicos.
 - Prospecção: 104 linhas, 23 SIM e 81 NÃO antes de deduplicação; não converter automaticamente em equipamentos vendidos.
-- BOM: total impresso R$ 69.398,51 e soma R$ 72.398,51; diferença R$ 3.000,00 ligada à pintura, sem decisão automática sobre orçamento.
+- BOM: total impresso R$ 69.398,51 e soma R$ 72.398,51; diferença R$ 3.000,00 ligada à pintura, sem decisão automática sobre orçamento. **Resolvido pelo PO em 01/10/2026:** a pintura é R$ 1.400,00 e a BOM rev. 00 soma R$ 69.398,51 (mecânica R$ 28.477,40 + elétrica R$ 40.921,11); a diferença não existe na origem.
 - Custo elétrico: R$ 41.522,60 em parte do fluxo contra R$ 40.921,11 na BOM; diferença R$ 601,49 a explicar.
 - Cronograma/EAP: conferir as 41 atividades e soma de pesos 100%, nomenclaturas de etapas e dependências de material.
 - Parcelas do fluxo: R$ 2.537.685,00, recorte distinto da carteira total. “Recebido ou a receber” não é evidência de liquidação.
