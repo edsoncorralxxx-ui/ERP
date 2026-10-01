@@ -15,7 +15,7 @@ describe('Campo de dinheiro', () => {
     expect(screen.getByText('R$')).toBeInTheDocument();
   });
 
-  it('a calculadora aparece à direita só com o campo selecionado', async () => {
+  it('a calculadora aparece à esquerda só com o campo selecionado', async () => {
     const user = userEvent.setup();
     render(<><Teste inicial="10,00" /><button>Outro</button></>);
     const campo = screen.getByLabelText('Valor');
