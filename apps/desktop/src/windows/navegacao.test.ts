@@ -41,3 +41,16 @@ describe('navegação entre registros', () => {
     expect(paths).toEqual(['/api/v1/customers?status=TODOS']);
   });
 });
+
+describe('Sequência padrão de projetos e equipamentos', () => {
+  it('inclui encerrados e cancelados com os parâmetros que essas listas aceitam', async () => {
+    const caminhos: string[] = [];
+    setTransport(async (req) => {
+      caminhos.push(req.path);
+      return { status: 200, headers: {}, body: JSON.stringify([{ id: 'a' }, { id: 'b' }]) };
+    });
+    expect(await SEQUENCIA_PADRAO.project!('a')).toEqual(['a', 'b']);
+    expect(await SEQUENCIA_PADRAO.equipment!('a')).toEqual(['a', 'b']);
+    expect(caminhos).toEqual(['/api/v1/projects?includeClosed=true', '/api/v1/equipment?includeCancelled=true']);
+  });
+});
