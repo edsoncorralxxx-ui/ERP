@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useReducer, useRef, useState
 import { api, setUnauthorizedHandler } from './api/client';
 import type { CompanyProfile, SessionUser } from './api/types';
 import { CatalogWindow } from './screens/CatalogWindow';
+import { CalculadoraFinanceiraWindow } from './screens/CalculadoraFinanceiraWindow';
 import { ChangePasswordWindow } from './screens/ChangePasswordWindow';
 import { CockpitWindow } from './screens/CockpitWindow';
 import { CompanyProfileWindow } from './screens/CompanyProfileWindow';
@@ -83,6 +84,7 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   'tax-parameters': { title: 'Parâmetros fiscais', size: { w: 900, h: 660 } },
   users: { title: 'Usuários e permissões', size: { w: 980, h: 560 } },
   password: { title: 'Alteração de senha', size: { w: 520, h: 330 } },
+  calculator: { title: 'Calculadora financeira', size: { w: 920, h: 640 } },
 };
 
 type Lock = 'BLOQUEIO' | 'EXPIRADA';
@@ -355,6 +357,7 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
             novo: activeNew,
             ...navegacao,
             ajuda: () => open('server-status'),
+            calculadora: () => open('calculator'),
             consulta: openCockpit,
           }}
         />
@@ -457,6 +460,8 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                         <UsersWindow />
                       ) : w.kind === 'password' ? (
                         <ChangePasswordWindow />
+                      ) : w.kind === 'calculator' ? (
+                        <CalculadoraFinanceiraWindow />
                       ) : (
                         <ServerStatusWindow connection={connection} />
                       ))}

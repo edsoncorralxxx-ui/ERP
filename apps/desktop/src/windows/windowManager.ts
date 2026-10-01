@@ -36,7 +36,8 @@ export type WindowKind =
   | 'tax-period'
   | 'tax-parameters'
   | 'users'
-  | 'password';
+  | 'password'
+  | 'calculator';
 export type WindowMode = 'normal' | 'minimized' | 'maximized';
 
 export type Rect = { x: number; y: number; w: number; h: number };

@@ -320,3 +320,17 @@ body { background: var(--ground); }
 .rp-fluxo__valor { cursor: pointer; color: var(--ink-heading); text-decoration: underline dotted; }
 .rp-fluxo__valor:focus-visible { background: var(--field-active); }
 .rp-fluxo__pendencias { margin: var(--space-3) 0; padding-left: var(--space-5); }
+
+/* Calculadora financeira: grupos de campos em duas colunas, rótulos à esquerda, resultados em destaque */
+.rp-calc-fin { display: grid; gap: var(--space-4); }
+.rp-calc-fin__colunas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); align-items: start; }
+.rp-calc-fin__colunas > div { display: grid; gap: var(--space-4); align-content: start; }
+.rp-calc-fin__grupo { margin: 0; min-width: 0; }
+.rp-calc-fin__form { grid-template-columns: minmax(150px, 1fr) minmax(120px, 160px); }
+.rp-calc-fin__linha { display: contents; }
+.rp-calc-fin__destaque { font-weight: 600; }
+.rp-calc-fin__ajuda { margin: 0; color: var(--ink-muted); font: var(--text-caption); }
+.rp-calc-fin__tabela .rp-grid { width: 100%; }
+.rp-calc-fin__tabela .rp-grid-rolagem { max-height: 220px; }
+.rp-calc-fin__col-periodo { width: 72px; }
+.rp-calc-fin__vazio { color: var(--ink-muted); font-style: italic; }

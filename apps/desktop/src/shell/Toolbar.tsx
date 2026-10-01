@@ -60,6 +60,7 @@ export function Toolbar({ actions }: { actions: ToolActions }) {
     { name: 'consulta', title: 'Consulta', abre: true },
     { name: 'alerta', title: 'Alertas', abre: true },
     { name: 'calendario', title: 'Calendário', abre: true },
+    { name: 'calculadora', title: 'Calculadora financeira', abre: true },
     'sep',
     { name: 'ajuda', title: 'Ajuda', abre: true },
     'sep',

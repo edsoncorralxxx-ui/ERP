@@ -100,7 +100,7 @@ export function MenuBar(p: Props) {
         { label: 'Status do servidor', action: () => p.onOpen('server-status') },
       ],
     },
-    { id: 'ferramentas', label: (<><u>F</u>erramentas</>), items: PROXIMAS },
+    { id: 'ferramentas', label: (<><u>F</u>erramentas</>), items: [{ label: 'Calculadora financeira', action: () => p.onOpen('calculator') }] },
     {
       id: 'janela',
       label: (<><u>J</u>anela</>),
