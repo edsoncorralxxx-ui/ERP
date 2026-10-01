@@ -52,14 +52,17 @@ describe('Revisão da BOM', () => {
   it('mostra a linha sem quantidade como pendência, grava a quantidade com a versão lida e aprova', async () => {
     const puts: TransportRequest[] = [];
     let aprovacoes = 0;
+    let estado = painel();
+    const lida = () => resposta(200, estado, { etag: `"${estado.version}"` });
     setTransport(async (req) => {
-      if (req.path === '/api/v1/bom-revisions/r-painel' && req.method === 'GET') return resposta(200, painel(), { etag: '"1"' });
+      if (req.path === '/api/v1/bom-revisions/r-painel' && req.method === 'GET') return lida();
       if (req.path === '/api/v1/bom-revisions/r-painel' && req.method === 'PUT') {
         puts.push(req);
-        return resposta(200, painel({
+        estado = painel({
           version: '2', pending: 0, totalCents: '2913911', problems: [],
           lines: [linha({ quantity: '1', lineCents: '944', pending: 0 }), painel().lines[1]],
-        }), { etag: '"2"' });
+        });
+        return lida();
       }
       if (req.path === '/api/v1/bom-revisions/r-painel/approval') {
         aprovacoes++;
@@ -67,9 +70,10 @@ describe('Revisão da BOM', () => {
           return resposta(422, { code: 'BOM_INCOMPLETE', message: 'A revisão tem pendências; resolva antes de aprovar.',
             details: [{ field: 'Painel elétrico — Balança rev. 00', message: 'Linha 1 — Suporte 45° para Trilho DIN: sem quantidade.' }] });
         }
-        return resposta(200, painel({ status: 'APPROVED', version: '3', pending: 0, totalCents: '2913911', problems: [], approvedAt: '2026-10-01T13:00:00Z', approvedBy: 'ana',
+        estado = painel({ status: 'APPROVED', version: '3', pending: 0, totalCents: '2913911', problems: [], approvedAt: '2026-10-01T13:00:00Z', approvedBy: 'ana',
           revisions: [{ id: 'r-painel', label: '00', status: 'APPROVED', totalCents: '2913911', pending: 0, approvedAt: null, approvedBy: null }],
-          lines: [linha({ quantity: '1', lineCents: '944', pending: 0 }), painel().lines[1]] }), { etag: '"3"' });
+          lines: [linha({ quantity: '1', lineCents: '944', pending: 0 }), painel().lines[1]] });
+        return lida();
       }
       return naoAchou();
     });

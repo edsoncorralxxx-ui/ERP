@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { api, type ApiError } from '../api/client';
 import type { EquipmentModel } from '../api/types';
 import { Dialog } from '../shell/Dialog';
@@ -26,6 +26,9 @@ export function EquipmentModelsWindow() {
   const { can } = useSession();
   const [aberto, setAberto] = useState<EquipmentModel | 'novo' | null>(null);
   const lidos = useRef<EquipmentModel[]>([]);
+  // Função estável: a lista registra o Novo na barra de ferramentas a cada mudança dela.
+  const podeCriar = can('bom.update');
+  const novo = useMemo(() => (podeCriar ? () => setAberto('novo') : undefined), [podeCriar]);
   return (
     <>
       <JanelaLista<EquipmentModel>
@@ -41,7 +44,7 @@ export function EquipmentModelsWindow() {
           { titulo: 'Modelo', valor: (m) => m.name },
           { titulo: 'Equipamentos', num: true, valor: (m) => m.equipmentCount },
         ]}
-        novo={can('bom.update') ? () => setAberto('novo') : undefined}
+        novo={novo}
       />
       {aberto && <DialogoModelo idBase={`${win.windowId}-modelo`} modelo={aberto === 'novo' ? null : aberto} onFechar={() => setAberto(null)} />}
     </>

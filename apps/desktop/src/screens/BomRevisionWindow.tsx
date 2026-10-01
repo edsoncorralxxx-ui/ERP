@@ -84,6 +84,13 @@ export function BomRevisionWindow({ recordKey }: { recordKey: string }) {
 
   useEffect(() => void carregar(), [carregar]);
 
+  // Aprovar uma BOM aprova as submontagens em rascunho abaixo dela: as janelas abertas delas se atualizam.
+  useEffect(() => {
+    const r = () => void carregar();
+    window.addEventListener(BOM_ALTERADA, r);
+    return () => window.removeEventListener(BOM_ALTERADA, r);
+  }, [carregar]);
+
   useEffect(() => {
     if (tab !== 'historico' || historico !== null || !rev) return;
     api
@@ -176,8 +183,11 @@ export function BomRevisionWindow({ recordKey }: { recordKey: string }) {
   const fazerComparacao = async (outra: string) => {
     setComparar(outra);
     if (!rev || !outra) return setComparacao(null);
+    // Sempre da revisão mais antiga para a mais nova, para a diferença ler "antes → depois".
+    const numero = (id: string) => Number(rev.revisions.find((r) => r.id === id)?.label ?? '0');
+    const [antes, depois] = numero(outra) <= rev.revision ? [outra, rev.id] : [rev.id, outra];
     try {
-      setComparacao((await api.get<BomComparison>(`/api/v1/bom-revisions/${rev.id}/comparison?with=${outra}`)).data);
+      setComparacao((await api.get<BomComparison>(`/api/v1/bom-revisions/${depois}/comparison?with=${antes}`)).data);
     } catch (e) {
       const x = e as ApiError;
       win.notify({ tone: 'erro', text: `${x.message} (${x.code}) [${x.correlationId ?? '—'}]` });

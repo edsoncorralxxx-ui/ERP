@@ -71,7 +71,7 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   projects: { title: 'Carteira de projetos', size: { w: 1100, h: 620 } },
   project: { title: 'Detalhe do projeto', size: { w: 1000, h: 640 } },
   equipments: { title: 'Equipamentos', size: { w: 1100, h: 620 } },
-  equipment: { title: 'Equipamento', size: { w: 900, h: 600 } },
+  equipment: { title: 'Equipamento', size: { w: 1120, h: 660 } },
   receivables: { title: 'Contas a receber', size: { w: 1160, h: 620 } },
   receivable: { title: 'Título a receber', size: { w: 1000, h: 620 } },
   payables: { title: 'Contas a pagar', size: { w: 1160, h: 620 } },

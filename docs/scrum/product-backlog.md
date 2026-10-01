@@ -12,7 +12,7 @@ Ordenado por prioridade. Épicos correspondem às fases do roteiro (`../backend/
 | 4 | Arquivos, importação e conferência | B04 | Backlog |
 | 5 | Comercial e primeiro fluxo transacional | B05 | Em execução (Sprints 4 e 5) |
 | 6 | Financeiro, conciliação e caixa | B06 | Em execução (Sprint 5: recebimentos, estornos e contas; Sprint 6: documentos e faturamento; Sprint 8: contas a pagar; Sprint 9: fluxo de caixa e transferências) |
-| 7 | Engenharia e planejamento | B07 | Em planejamento (Sprint 10: BOM) |
+| 7 | Engenharia e planejamento | B07 | Em execução (Sprint 10: BOM) |
 | 8 | Suprimentos, estoque e terceiros | B08 | Backlog |
 | 9 | Produção, qualidade e instalação | B09 | Backlog |
 | 10 | Repasses, fiscal e indicadores | B10 | Em execução (Sprint 7: fiscal gerencial) |
@@ -40,7 +40,7 @@ Decidido com o PO em 25/09/2026: cada sprint entrega uma **fatia vertical comple
 | 7 | Fiscal gerencial: receita por competência, histórico informado, simulação do Simples Nacional, conferência do contador e fechamento e notas separadas de produto e serviço; registro anterior e próximo nas fichas — **entregue para Review** (`sprints/sprint-07.md`; PD-013 respondida) | Conferir impostos por competência | B10 |
 | 8 | Contas a pagar: títulos manuais com parcelas, pagamento parcial com saída na conta, estorno, cancelamento, categorias financeiras (PD-010) e o DAS gerado pela conferência do contador — **entregue para Review** (`sprints/sprint-08.md`) | Registrar e pagar obrigações; DAS uma vez só | B06, B10 |
 | 9 | Fluxo de caixa mês a mês (realizado, em atraso e previsto, com a composição de cada valor), transferência entre contas e pendências fiscais — **entregue para Review** (`sprints/sprint-09.md`) | Ver o caixa previsto e o realizado | B06 |
-| 10 | BOM por modelo com submontagens e revisões, carga da BOM real em JSON, BOM do equipamento com ajustes, custo planejado e margem do projeto — **planning em aprovação** (`sprints/sprint-10.md`) | Saber quanto custa cada equipamento antes de produzir | B07 |
+| 10 | BOM por modelo com submontagens e revisões, carga da BOM real em JSON, BOM do equipamento com ajustes, custo planejado e margem do projeto — **entregue para Review** (`sprints/sprint-10.md`) | Saber quanto custa cada equipamento antes de produzir | B07 |
 | — | Conciliação bancária com importação de extrato OFX/CSV — **adiada pelo PO em 01/10/2026**, sem sprint definida | Conferir o extrato do banco com os lançamentos | B04, B06 |
 | 11+ | Cronograma, compras, estoque, produção, qualidade, instalação, repasses, pós-venda, importação do histórico | Um fluxo novo por sprint | B04–B12 |
 

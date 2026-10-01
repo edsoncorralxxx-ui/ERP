@@ -9,7 +9,8 @@ Registro da execução real do roteiro B01–B16. Desde 25/09/2026 o trabalho se
 | B03 — Acesso, cadastros e metadados | Em execução (Sprints 2 e 3: sessões, perfis, permissões, clientes, fornecedores, materiais e serviços, unidades e categorias) | 2026-09-25 | `docs/scrum/sprints/sprint-02.md`, `sprint-03.md` | Contas e categorias financeiras (PD-010) |
 | B05 — Comercial e primeiro fluxo transacional | Em execução (Sprint 4: propostas com revisões, pedidos, confirmação com projeto, equipamentos e títulos a receber, cancelamento; Sprint 5: baixa parcial e estorno) | 2026-09-27 | `docs/scrum/sprints/sprint-04.md`, `sprint-05.md` | Aditivo; documentos e faturamento (Sprint 6) |
 | B06 — Financeiro, conciliação e caixa | Em execução (Sprint 5: recebimentos com alocações, estorno total, contas financeiras, movimentos de caixa e extrato; Sprint 6: documentos de saída vinculados às parcelas, faturado e a faturar) | 2026-09-28 | `docs/scrum/sprints/sprint-05.md`, `sprint-06.md` | Crédito do cliente (PD-004), ajustes, renegociação, contas a pagar e documentos de entrada, conciliação (PD-006), fluxo de caixa |
-| B04, B07–B16 | Planejado | — | — | Conforme dependências do roteiro |
+| B07 — Engenharia e planejamento | Em execução (Sprint 10: modelos de equipamento, BOM com submontagens e revisões, carga do arquivo, BOM do equipamento e custo planejado) | 2026-10-01 | `docs/scrum/sprints/sprint-10.md` | EAP e cronograma; ligação das linhas da BOM com atividades |
+| B04, B08–B16 | Planejado | — | — | Conforme dependências do roteiro |
 
 ## Registro
 

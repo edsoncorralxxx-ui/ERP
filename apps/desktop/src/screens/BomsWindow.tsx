@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, type ApiError } from '../api/client';
 import type { Bom, EquipmentModel } from '../api/types';
 import { centavos } from '../format';
@@ -30,6 +30,9 @@ export function BomsWindow() {
   const { can } = useSession();
   const [nova, setNova] = useState(false);
   const lidas = useRef<Bom[]>([]);
+  // Função estável: a lista registra o Novo na barra de ferramentas a cada mudança dela.
+  const podeCriar = can('bom.update');
+  const novo = useMemo(() => (podeCriar ? () => setNova(true) : undefined), [podeCriar]);
   return (
     <>
       <JanelaLista<Bom & { status: string }>
@@ -56,7 +59,7 @@ export function BomsWindow() {
           { titulo: 'Total aprovado', num: true, valor: (b) => (b.approved ? centavos(b.approved.totalCents) : '') },
           { titulo: 'Rascunho', valor: (b) => (b.draft ? `Rev. ${b.draft.label}${b.draft.pending ? ` — ${b.draft.pending} pendente(s)` : ''}` : '') },
         ]}
-        novo={can('bom.update') ? () => setNova(true) : undefined}
+        novo={novo}
         acoes={
           can('bom.update') ? (
             <button type="button" className="rp-btn" onClick={() => win.open('bom-import')}>

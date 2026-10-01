@@ -47,7 +47,7 @@ export function PlannedCostPanel({ projectId }: { projectId: string }) {
         <input className="rp-field rp-field--readonly rp-field--num rp-field--curto" readOnly aria-label="Custo planejado" value={reais(custo.plannedCostCents)} />
         <span className="rp-label">Margem prevista</span>
         <span />
-        <input className="rp-field rp-field--readonly rp-field--num rp-field--curto" readOnly aria-label="Margem prevista"
+        <input className="rp-field rp-field--readonly rp-field--num rp-bom__margem" readOnly aria-label="Margem prevista"
           value={custo.marginCents === null ? '' : `${reais(custo.marginCents)} (${margem(custo.marginRate)})`}
           placeholder="Sem margem: falta custo planejado" />
       </div>
