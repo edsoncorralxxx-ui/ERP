@@ -271,6 +271,8 @@ body { background: var(--ground); }
 .rp-select .rp-selecao__campo { display: block; text-align: left; cursor: default; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rp-select .rp-selecao__campo[aria-expanded=true] { background: var(--field-active); }
 .rp-select .rp-selecao__campo:disabled { background: var(--field-readonly); color: var(--ink); box-shadow: none; }
+/* Resultados da busca global: por cima das janelas, ancorados no campo (posição calculada no componente). */
+.rp-busca__lista { position: fixed; z-index: 1000; box-sizing: border-box; margin-top: 0; max-height: 60vh; overflow-y: auto; box-shadow: var(--shadow-window); }
 .rp-selecao__lista { position: fixed; z-index: 1000; box-sizing: border-box; width: auto; overflow-y: auto; }
 .rp-selecao__lista .rp-menu-item { white-space: nowrap; }
 .rp-selecao__atual { font-weight: 600; }

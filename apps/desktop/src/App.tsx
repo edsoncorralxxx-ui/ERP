@@ -43,6 +43,7 @@ import { Drawer, Rail, type RailView } from './shell/SideNav';
 import { StatusBar, type LoggedMessage, type StatusMessage } from './shell/StatusBar';
 import { Toolbar } from './shell/Toolbar';
 import { useConnection } from './shell/useConnection';
+import { BuscaGlobal } from './shell/BuscaGlobal';
 import { WindowContext, type WindowApi, type WindowCommands } from './windows/WindowContext';
 import { WindowFrame } from './windows/WindowFrame';
 import { destino, navegavel, SEQUENCIA_PADRAO, type Passo } from './windows/navegacao';
@@ -368,12 +369,7 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
               <span>
                 Bem-vindo, {user.displayName}. Você está no cockpit inicial da {company ?? 'Fourtech'}.
               </span>
-              <div className="rp-search">
-                <input placeholder="Pesquisar operações, dados mestre e documentos" disabled title="A busca global entra nas próximas sprints" aria-label="Busca global" />
-                <button type="button" aria-label="Pesquisar" disabled>
-                  <i className="rp-ico rp-ico-buscar" aria-hidden="true" />
-                </button>
-              </div>
+              <BuscaGlobal onOpen={openKind} />
             </div>
             <main className="rp-aplicativo__area" ref={workspace} aria-label="Área de trabalho">
               <div className="rp-watermark" aria-hidden="true">

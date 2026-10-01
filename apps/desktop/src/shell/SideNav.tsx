@@ -91,7 +91,7 @@ const WINDOWS: Record<string, WindowKind> = {
 };
 
 /** Permissão de leitura que cada janela exige; sem ela o item aparece, mas não abre. */
-const NEEDS: Partial<Record<WindowKind, string>> = {
+export const NEEDS: Partial<Record<WindowKind, string>> = {
   users: 'user.admin',
   customers: 'partner.read',
   suppliers: 'partner.read',
