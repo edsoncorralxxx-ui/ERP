@@ -3,6 +3,7 @@ import { ApiError } from '../../api/client';
 import { numero } from '../../format';
 import { useWindow } from '../../windows/WindowContext';
 import { Selecao } from './Selecao';
+import { LinhaResto } from './LinhaResto';
 
 /** Situação filtrada no servidor: ATIVO, INATIVO ou TODOS nos cadastros; cada documento tem as suas. */
 export type Situacao = string;
@@ -209,6 +210,7 @@ export function JanelaLista<T extends { id: string; status?: string }>(p: Props<
                     <td>{p.selo ? p.selo(l) : seloCadastro(l.status ?? '')}</td>
                   </tr>
                 ))}
+                <LinhaResto colunas={p.colunas.length + 3} />
               </tbody>
             </table>
             {linhas !== null && visiveis.length === 0 && (

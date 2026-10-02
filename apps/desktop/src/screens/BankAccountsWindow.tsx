@@ -11,6 +11,7 @@ import { CampoData } from './comum/CampoData';
 import { DialogoMotivo } from './comum/Dialogos';
 import { Selecao } from './comum/Selecao';
 import { CampoDinheiro } from './comum/CampoDinheiro';
+import { LinhaResto } from './comum/LinhaResto';
 
 /** Avisado depois de um recebimento ou estorno, que mudam o saldo das contas. */
 export const CONTAS_ALTERADAS = 'renda:contas-alteradas';
@@ -213,6 +214,7 @@ export function BankAccountsWindow() {
                       <td>{selo(c.status)}</td>
                     </tr>
                   ))}
+                  <LinhaResto colunas={6} />
                 </tbody>
               </table>
             </div>
@@ -313,6 +315,7 @@ export function BankAccountsWindow() {
                       </td>
                     </tr>
                   ))}
+                  <LinhaResto colunas={8} />
                 </tbody>
               </table>
               {movimentos?.length === 0 && <p className="rp-jlista__vazio">Nenhum movimento nesta conta.</p>}

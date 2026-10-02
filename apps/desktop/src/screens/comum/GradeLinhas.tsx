@@ -3,6 +3,7 @@ import type { ItemSummary, SalesLine, TipoLinha } from '../../api/types';
 import { Selecao } from './Selecao';
 import { brutoDaLinha, centavos, centavosParaApi, decimalDaApi, decimalParaApi, reais } from '../../format';
 import { CampoDinheiro } from './CampoDinheiro';
+import { LinhaResto } from './LinhaResto';
 
 /** Linha como o usuário edita: números no padrão brasileiro; o servidor confere e calcula de novo. */
 export type LinhaForm = { id: string | null; kind: TipoLinha; itemId: string; description: string; quantity: string; unitPrice: string; discount: string };
@@ -159,6 +160,7 @@ export function GradeLinhas({ linhas, onChange, itens, somenteLeitura, adicao, e
                 </td>
               </tr>
             )}
+            <LinhaResto colunas={10} />
           </tbody>
           <tfoot>
             <tr>

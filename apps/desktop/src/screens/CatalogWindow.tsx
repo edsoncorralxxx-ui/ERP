@@ -4,6 +4,7 @@ import type { ItemCategory, Situacao, UnitOfMeasure } from '../api/types';
 import { numero } from '../format';
 import { useSession } from '../shell/SessionContext';
 import { useWindow } from '../windows/WindowContext';
+import { LinhaResto } from './comum/LinhaResto';
 
 type Aba = 'unidades' | 'categorias';
 type Form = { code: string; name: string; status: Situacao };
@@ -170,6 +171,7 @@ export function CatalogWindow() {
                       <td>{selo(u.status)}</td>
                     </tr>
                   ))}
+                  <LinhaResto colunas={5} />
                 </tbody>
               </table>
             ) : (
@@ -193,6 +195,7 @@ export function CatalogWindow() {
                       <td>{selo(c.status)}</td>
                     </tr>
                   ))}
+                  <LinhaResto colunas={5} />
                 </tbody>
               </table>
             )}

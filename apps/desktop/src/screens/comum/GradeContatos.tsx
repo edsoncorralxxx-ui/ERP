@@ -1,4 +1,5 @@
 import type { KeyboardEvent } from 'react';
+import { LinhaResto } from './LinhaResto';
 
 export type Contato = { id: string | null; name: string; role: string; phone: string; email: string };
 export const CONTATO_VAZIO: Contato = { id: null, name: '', role: '', phone: '', email: '' };
@@ -105,6 +106,7 @@ export function GradeContatos({ contatos, onChange, somenteLeitura, adicao, erro
                 </td>
               </tr>
             )}
+            <LinhaResto colunas={6} />
           </tbody>
         </table>
       </div>
