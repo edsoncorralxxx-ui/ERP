@@ -139,3 +139,22 @@ Testes executados: servidor **113** (PostgreSQL 16 real; eram 104), app **131** 
 - Funcionou: o cálculo de custo é uma função única (`BomCost`) usada pela revisão, pela BOM do equipamento e pelo custo do projeto, então as três telas sempre batem.
 - Melhorar: o roteiro de ponta a ponta achou dois problemas que os testes de componente não pegaram — a lista com o botão Novo recriado a cada render (laço de renderização) e as janelas das submontagens desatualizadas depois da aprovação. Telas que abrem outras janelas do mesmo registro precisam de um teste com duas janelas.
 - Ação: na próxima sprint, rodar o roteiro de ponta a ponta assim que a primeira tela existir, não só no fim.
+
+## Ajustes depois da Review (02/10/2026)
+
+Pedidos do PO ao usar as telas: "o custo de referência deverá ser o mesmo que o custo unitário?", "não estou entendendo como funcionam essas revisões", "retire essa funcionalidade de congelar a BOM" (escolha: **revisão aprovada editável** — uma BOM só, editada direto), "melhore essas janelas, adicione diagramas árvores" e "eu quero apenas um diagrama de árvore para a estrutura e não gráficos 3D".
+
+| Ajuste | Como ficou | Evidência |
+|---|---|---|
+| Custo de referência | Item novo criado pela carga recebe o preço da BOM como custo de referência (Pintura: R$ 1.400,00); ao incluir uma linha, o custo unitário vem preenchido com o do cadastro; linha com custo diferente do cadastro gera aviso | `BomApiTest.cargaCriaModelo…` e `cicloCustoDoCadastro…`; `Sprint10Windows.test.tsx` (custo de referência ao incluir) |
+| BOM única editável | Sem revisões, rascunho nem aprovação: a BOM é editada direto e vale na hora para as BOMs que a usam; cada gravação fica na trilha (`BOM_UPDATED`, evento `BomUpdated`). Linha sem quantidade ou custo não impede gravar, só impede aplicar ao equipamento (`BOM_INCOMPLETE`). Migração V16 mantém a revisão mais alta de cada BOM e repõe as ligações; a permissão `bom.approve` saiu | `BomApiTest.bomEditavel…`: o total do modelo passa de R$ 69.398,51 para R$ 69.407,95 assim que o painel é gravado |
+| Equipamento: reaplicar | O equipamento guarda a cópia aplicada; quando a BOM do modelo (ou uma submontagem dela) muda, a aba BOM avisa com o total atual e **Reaplicar BOM** (com motivo) traz o conteúdo atual, descartando os ajustes (`EQUIPMENT_BOM_REAPPLIED`) | Pintura a R$ 1.500,00: modelo R$ 69.507,95, equipamento continua em R$ 68.007,95 até reaplicar |
+| Janela da BOM | Uma janela por BOM: à esquerda a **árvore da estrutura** (pastas do design system, setas do teclado, total de cada nó); à direita a BOM escolhida com Linhas, **Diagrama**, Categorias, Problemas e Histórico. A seta ou o duplo clique na linha de submontagem escolhe a submontagem na árvore | `Sprint10Windows.test.tsx` (BOM, 4 testes) |
+| Diagrama em árvore | Caixas ligadas por linhas em cotovelo, da BOM do modelo às submontagens, com código, quantidade, itens, submontagens, total e pendências; só cores e medidas dos tokens; **sem gráficos 3D** | Roteiro: `s10-04-diagrama.png` |
+| Lista de BOMs | Colunas BOM, Nome, Modelo, Linhas, Total, Atualizada em e o selo Completa / N pendências | — |
+
+**Corrigido junto:** o GET da BOM devolvia a ETag da versão do próprio conteúdo; quando só uma submontagem mudava, o navegador revalidava com If-None-Match, o Spring respondia 304 e a árvore mostrava o total antigo. As respostas da BOM e da BOM do equipamento agora saem com `Cache-Control: no-store` (o roteiro de ponta a ponta achou; `BomApiTest` confere o cabeçalho).
+
+Testes executados: servidor **112** (o `BomApiTest` foi reescrito para a BOM única: 5 testes), app **135**, typecheck, verificador B01, roteiro Playwright da Sprint 10 contra o servidor real (com a migração V16 aplicada num banco que já tinha revisões).
+
+**Não verificado aqui:** o app dentro do Electron no macOS; a V16 no seu banco (no banco de testes daqui, as BOMs com várias revisões ficaram com a mais alta).

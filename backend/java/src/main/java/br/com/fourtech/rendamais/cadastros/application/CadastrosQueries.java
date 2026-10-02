@@ -40,6 +40,6 @@ class CadastrosQueries implements PartnerQueryApi, ItemQueryApi {
     @Transactional(readOnly = true)
     public Optional<ItemRef> item(UUID id) {
         return items.findById(id).map(i -> new ItemRef(i.id(), i.code(), i.description(), i.nature().name(), i.uom(),
-                i.status() == Partner.Status.ATIVO));
+                i.status() == Partner.Status.ATIVO, i.referenceCost()));
     }
 }

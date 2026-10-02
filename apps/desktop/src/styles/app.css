@@ -326,12 +326,52 @@ body { background: var(--ground); }
 .rp-bom__problemas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
 .rp-bom__problemas li { display: flex; gap: var(--space-2); align-items: flex-start; }
 .rp-bom__secao { margin: var(--space-4) 0 var(--space-2); }
-.rp-bom__rev { color: var(--ink-muted); }
-.rp-bom__comparar { margin-top: var(--space-4); }
-.rp-bom__comparar .rp-field { min-width: 320px; }
 .rp-bom__margem { max-width: 240px; }
+.rp-bom__aviso { display: flex; align-items: center; gap: var(--space-3); }
 .rp-bom__retirada td:not(.rownum) { color: var(--ink-muted); text-decoration: line-through; }
 .rp-bom__nivel-1 { padding-left: var(--space-5) !important; }
 .rp-bom__nivel-2 { padding-left: calc(var(--space-5) * 2) !important; }
 .rp-bom__nivel-3 { padding-left: calc(var(--space-5) * 3) !important; }
 .rp-bom__nivel-4 { padding-left: calc(var(--space-5) * 4) !important; }
+.rp-bom__sub { display: inline-flex; align-items: center; gap: var(--space-2); }
+.rp-bom__sub .rp-ico[role="button"] { cursor: pointer; }
+
+/* Janela da BOM: estrutura em árvore à esquerda, a BOM escolhida à direita (ajuste da Review de 02/10/2026). */
+.rp-bom { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: var(--space-4); align-items: stretch; }
+.rp-bom__lado { display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--tab-border); background: var(--surface-panel); }
+.rp-bom__lado-tit { display: flex; justify-content: space-between; padding: var(--space-2) var(--space-3); background: var(--panel-head);
+  border-bottom: 1px solid var(--tab-border); font: var(--text-label-strong); color: var(--ink-heading); }
+.rp-bom__lado-total { font-variant-numeric: tabular-nums; }
+.rp-bom__lado-nota { margin: 0; padding: var(--space-3); border-top: 1px solid var(--tab-border); font: var(--text-caption); color: var(--ink-muted); }
+.rp-bom__arvore { flex: 1; list-style: none; margin: 0; padding: var(--space-2) 0; overflow: auto; outline: none; }
+.rp-bom__arvore:focus-visible .rp-bom__no[aria-selected="true"] { outline: 1px dotted var(--ink); outline-offset: -1px; }
+.rp-bom__no { display: flex; align-items: center; gap: var(--space-2); height: var(--row-grid); padding-right: var(--space-3); cursor: pointer;
+  font: var(--text-body); color: var(--ink); white-space: nowrap; }
+.rp-bom__no:hover { background: var(--grid-row-alt); }
+.rp-bom__no[aria-selected="true"] { background: var(--grid-row-selected); }
+.rp-bom__no-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.rp-bom__no-total { font: var(--text-numeric); font-variant-numeric: tabular-nums; color: var(--ink-muted); }
+.rp-bom__principal { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.rp-bom__painel { flex: 1; min-height: 0; }
+.rp-bom__principal .rp-bom__grade { max-height: none; height: 100%; }
+.rp-bom__legenda { margin: var(--space-3) 0 0; font: var(--text-caption); color: var(--ink-muted); }
+
+/* Diagrama em árvore da estrutura: caixas ligadas por linhas em cotovelo, da BOM do modelo às submontagens. */
+.rp-bom-diagrama { overflow: auto; max-height: 420px; background: var(--field); border: 1px solid var(--field-border); box-shadow: var(--shadow-inset-field); }
+.rp-bom-diagrama__tela { position: relative; }
+.rp-bom-diagrama__ligacoes { position: absolute; inset: 0; }
+.rp-bom-diagrama__ligacoes path { fill: none; stroke: var(--window-border); stroke-width: 1.5; }
+.rp-bom-diagrama__caixas { list-style: none; margin: 0; padding: 0; }
+.rp-bom-diagrama__no { position: absolute; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: var(--space-1);
+  padding: var(--space-2) var(--space-3); background: var(--surface-panel); border: 1px solid var(--window-border); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-window); cursor: pointer; font: var(--text-caption); color: var(--ink); outline: none; }
+.rp-bom-diagrama__no:hover { background: var(--grid-row-alt); }
+.rp-bom-diagrama__no:focus-visible { outline: 1px dotted var(--ink); outline-offset: 2px; }
+.rp-bom-diagrama__no--raiz { background: var(--panel-head); border-width: 2px; }
+.rp-bom-diagrama__no--sel { background: var(--grid-row-selected); }
+.rp-bom-diagrama__no--pendente { border-color: var(--status-warning); }
+.rp-bom-diagrama__nome { display: flex; align-items: center; gap: var(--space-2); font: var(--text-label-strong); color: var(--ink-heading);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp-bom-diagrama__meta { color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp-bom-diagrama__total { display: flex; align-items: center; gap: var(--space-3); font: var(--text-numeric); font-variant-numeric: tabular-nums; }
+.rp-bom-diagrama__pendente { display: inline-flex; align-items: center; gap: var(--space-1); font: var(--text-caption); color: var(--ink); }

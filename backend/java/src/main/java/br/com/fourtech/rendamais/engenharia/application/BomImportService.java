@@ -46,7 +46,7 @@ import java.util.UUID;
  * Carga da BOM a partir do arquivo JSON da engenharia (Sprint 10, formato do exemplo
  * {@code docs/scrum/sprints/exemplos/bom-balanca-hidrostatica-rev00.json}). Primeiro a prévia: linhas, totais e
  * problemas da origem, sem gravar nada além do arquivo. Depois a confirmação, numa transação: o modelo, a BOM do
- * modelo, as submontagens (cada bloco "bom_*" e as categorias de painel) com a revisão em rascunho, e os itens que ainda
+ * modelo, as submontagens (cada bloco "bom_*" e as categorias de painel) com as linhas do arquivo, e os itens que ainda
  * não existem, com o código de referência da origem ou um gerado (MEC-0001, ELE-0001). Nada é corrigido sozinho; o mesmo
  * arquivo (pelo hash) não carrega duas vezes.
  */
@@ -92,7 +92,7 @@ public class BomImportService {
     public record Preview(BomRepository.BomImport bomImport, String product, String revisionLabel, String revisionDate, int lineCount,
                           long totalCents, int pending, Long informedTotalCents, List<PreviewGroup> groups,
                           List<BomService.Problem> problems, int newItems, int existingItems, List<String> newUnits,
-                          List<String> newCategories, List<String> fileNotes, List<PreviewLine> lines, UUID revisionId, UUID bomId) { }
+                          List<String> newCategories, List<String> fileNotes, List<PreviewLine> lines, UUID bomId) { }
 
     // ───────────── Comandos ─────────────
 
@@ -123,8 +123,8 @@ public class BomImportService {
     }
 
     /**
-     * ImportBom: grava a carga numa transação. Confirmar de novo devolve a mesma carga. Recusa quando uma das BOMs já
-     * tem revisão em rascunho (uma por BOM).
+     * ImportBom: grava a carga numa transação. A BOM que já existe tem as linhas substituídas pelas do arquivo (o que
+     * havia fica na auditoria). Confirmar de novo devolve a mesma carga.
      */
     @Transactional
     public Preview confirm(String idempotencyKey, UUID id) {
@@ -138,70 +138,67 @@ public class BomImportService {
             return preview(imp, parsed);
         }
         Instant now = clock.instant();
+        String actor = user.username();
+        String origem = "Carga do arquivo " + imp.fileName() + (parsed.revision == null ? "" : ", rev. " + String.format("%02d", parsed.revision));
         EquipmentModelApi.ModelRef model = models.provisionModel(parsed.product);
-        Bom modelBom = repository.findBomByModel(model.id()).orElseGet(() -> createBom(parsed.product, model.id(), now, user.username()));
+        Bom modelBom = repository.findBomByModel(model.id()).orElseGet(() -> {
+            repository.findBomByName(parsed.product).ifPresent(b -> {
+                throw new RuleViolationException("BOM_DUPLICATE", "Já existe a BOM " + b.code() + " — " + b.name()
+                        + " sem ser a do modelo; renomeie-a antes de carregar o arquivo.", List.of());
+            });
+            return boms.createBom(parsed.product, model.id(), now, actor, "Carga da BOM");
+        });
 
         // Submontagens: cada bloco do arquivo; dentro dele, as categorias de painel viram submontagem própria.
         Map<String, Integer> generated = new HashMap<>();
         List<BomLine> modelLines = new ArrayList<>();
+        UUID modelContent = boms.contentId(modelBom.id());
         int position = 1;
         for (Group g : parsed.groups) {
-            Bom groupBom = findOrCreate(g.name + " — " + parsed.product, now, user.username());
-            BomRevision groupRev = newDraft(groupBom, parsed.revision, g.informed, imp.id(), now, user.username());
+            Bom groupBom = findOrCreate(g.name + " — " + parsed.product, now, actor);
+            UUID groupContent = boms.contentId(groupBom.id());
             List<BomLine> lines = new ArrayList<>();
             int p = 1;
             for (Category c : g.categories) {
                 if (c.subassembly) {
-                    Bom subBom = findOrCreate(sentence(c.name) + " — " + parsed.product, now, user.username());
-                    BomRevision subRev = newDraft(subBom, parsed.revision, c.subtotal, imp.id(), now, user.username());
+                    Bom subBom = findOrCreate(sentence(c.name) + " — " + parsed.product, now, actor);
+                    UUID subContent = boms.contentId(subBom.id());
                     List<BomLine> subLines = new ArrayList<>();
                     int sp = 1;
-                    for (Line l : c.lines) subLines.add(itemLine(subRev.id(), sp++, g, c, l, generated));
-                    repository.replaceLines(subRev.id(), subLines);
-                    lines.add(new BomLine(UUID.randomUUID(), groupRev.id(), p++, BomCost.Kind.SUBASSEMBLY, null, subRev.id(), subBom.code(),
+                    for (Line l : c.lines) subLines.add(itemLine(subContent, sp++, g, c, l, generated));
+                    store(subBom, subLines, c.subtotal, origem, now, actor);
+                    lines.add(new BomLine(UUID.randomUUID(), groupContent, p++, BomCost.Kind.SUBASSEMBLY, null, subContent, subBom.code(),
                             subBom.name(), BigDecimal.ONE, BomService.SUBASSEMBLY_UOM, null, sentence(c.name), null, null, null));
                 } else {
-                    for (Line l : c.lines) lines.add(itemLine(groupRev.id(), p++, g, c, l, generated));
+                    for (Line l : c.lines) lines.add(itemLine(groupContent, p++, g, c, l, generated));
                 }
             }
-            repository.replaceLines(groupRev.id(), lines);
-            modelLines.add(new BomLine(UUID.randomUUID(), null, position++, BomCost.Kind.SUBASSEMBLY, null, groupRev.id(), groupBom.code(),
+            store(groupBom, lines, g.informed, origem, now, actor);
+            modelLines.add(new BomLine(UUID.randomUUID(), modelContent, position++, BomCost.Kind.SUBASSEMBLY, null, groupContent, groupBom.code(),
                     groupBom.name(), BigDecimal.ONE, BomService.SUBASSEMBLY_UOM, null, g.name, null, null, null));
         }
-        BomRevision modelRev = newDraft(modelBom, parsed.revision, parsed.informedTotal, imp.id(), now, user.username());
-        repository.replaceLines(modelRev.id(), modelLines.stream().map(l -> new BomLine(l.id(), modelRev.id(), l.position(), l.kind(),
-                l.itemId(), l.childRevisionId(), l.referenceCode(), l.description(), l.quantity(), l.uom(), l.unitCost(), l.category(),
-                l.supplier(), l.material(), l.notes())).toList());
-        repository.confirm(imp.id(), modelRev.id(), now, user.username());
+        store(modelBom, modelLines, parsed.informedTotal, origem, now, actor);
+        repository.confirm(imp.id(), modelContent, now, actor);
 
         Map<String, AuditEntry.Change> changes = new LinkedHashMap<>();
         changes.put("file", BomService.change(null, imp.fileName()));
-        changes.put("revision", BomService.change(null, modelRev.label()));
         changes.put("lines", BomService.change(null, Integer.toString(parsed.lineCount())));
-        boms.record(user.username(), "BOM_IMPORTED", modelBom, null, changes);
+        boms.record(actor, "BOM_IMPORTED", modelBom, null, changes);
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("importId", imp.id().toString());
         payload.put("bomId", modelBom.id().toString());
-        payload.put("revisionId", modelRev.id().toString());
         payload.put("modelId", model.id().toString());
         payload.put("lines", parsed.lineCount());
-        outbox.append("BomImported", BomService.ENTITY, modelBom.id().toString(), payload, user.username());
-        receipts.complete(user.username(), key, imp.id().toString());
+        outbox.append("BomImported", BomService.ENTITY, modelBom.id().toString(), payload, actor);
+        receipts.complete(actor, key, imp.id().toString());
         return preview(repository.findImport(imp.id()).orElseThrow(), parsed);
     }
 
     // ───────────── Gravação ─────────────
 
-    private Bom createBom(String name, UUID modelId, Instant now, String actor) {
-        repository.findBomByName(name).ifPresent(b -> {
-            throw new RuleViolationException("BOM_DUPLICATE", "Já existe a BOM " + b.code() + " — " + b.name()
-                    + " sem ser a do modelo; renomeie-a antes de carregar o arquivo.", List.of());
-        });
-        Bom bom = Bom.create(repository.nextBomCode(), name, modelId, now, actor);
-        repository.insert(bom);
-        boms.record(actor, "BOM_CREATED", bom, "Carga da BOM", Map.of("code", BomService.change(null, bom.code()),
-                "name", BomService.change(null, bom.name())));
-        return bom;
+    private void store(Bom bom, List<BomLine> lines, BigDecimal informed, String origem, Instant now, String actor) {
+        BomRevision content = repository.findRevisionForUpdate(boms.contentId(bom.id())).orElseThrow();
+        boms.replaceContent(bom, content, lines, informed == null ? null : cents(informed), origem, now, actor, origem);
     }
 
     private Bom findOrCreate(String name, Instant now, String actor) {
@@ -212,21 +209,7 @@ public class BomImportService {
             }
             return found.get();
         }
-        return createBom(name, null, now, actor);
-    }
-
-    private BomRevision newDraft(Bom bom, Integer preferred, BigDecimal informed, UUID importId, Instant now, String actor) {
-        repository.draftOf(bom.id()).ifPresent(d -> {
-            throw new RuleViolationException("BOM_DRAFT_EXISTS", "A BOM " + bom.name() + " já tem a revisão " + d.label()
-                    + " em rascunho; aprove-a antes de carregar outro arquivo.", List.of());
-        });
-        int next = repository.nextRevisionNumber(bom.id());
-        int number = preferred != null && preferred >= next ? preferred : next;
-        UUID basedOn = repository.approvedOf(bom.id()).map(BomRevision::id).orElse(null);
-        BomRevision rev = BomRevision.draft(bom.id(), number, basedOn, informed == null ? null : cents(informed), null, importId, now, actor);
-        repository.insert(rev);
-        boms.record(actor, "BOM_REVISION_CREATED", bom, "Carga da BOM", Map.of("revision", BomService.change(null, rev.label())));
-        return rev;
+        return boms.createBom(name, null, now, actor, "Carga da BOM");
     }
 
     private BomLine itemLine(UUID revisionId, int position, Group g, Category c, Line l, Map<String, Integer> generated) {
@@ -242,7 +225,7 @@ public class BomImportService {
             ref = String.format("%s-%04d", g.prefix, n);
         }
         ItemProvisioningApi.ProvisionedItem item = itemCatalog.provision(new ItemProvisioningApi.ItemRequest(ref, l.description,
-                l.nature(), l.uom, UOM_NAMES.get(l.uom), sentence(c.name)));
+                l.nature(), l.uom, UOM_NAMES.get(l.uom), sentence(c.name), l.unitCost));
         return line(revisionId, position, item.id(), ref, g, c, l);
     }
 
@@ -339,11 +322,27 @@ public class BomImportService {
             problems.add(0, new BomService.Problem("INFO", null, "Este arquivo já foi carregado em " + imp.confirmedAt() + " por "
                     + imp.confirmedBy() + "."));
         }
+        if (!confirmed) {
+            List<String> existentes = new ArrayList<>();
+            if (models.modelByName(parsed.product).flatMap(m -> repository.findBomByModel(m.id())).isPresent()) existentes.add(parsed.product);
+            for (Group g : parsed.groups) {
+                if (repository.findBomByName(g.name + " — " + parsed.product).isPresent()) existentes.add(g.name + " — " + parsed.product);
+                for (Category c : g.categories) {
+                    if (c.subassembly && repository.findBomByName(sentence(c.name) + " — " + parsed.product).isPresent()) {
+                        existentes.add(sentence(c.name) + " — " + parsed.product);
+                    }
+                }
+            }
+            if (!existentes.isEmpty()) {
+                problems.add(0, new BomService.Problem("WARNING", null, "Já existem e terão as linhas substituídas pelas do arquivo: "
+                        + String.join("; ", existentes) + ". O que havia fica no histórico."));
+            }
+        }
         UUID bomId = imp.revisionId() == null ? null : repository.findRevision(imp.revisionId()).map(BomRevision::bomId).orElse(null);
-        return new Preview(imp, parsed.product, parsed.revision == null ? null : BomRevision.label(parsed.revision), parsed.revisionDate,
+        return new Preview(imp, parsed.product, parsed.revision == null ? null : String.format("%02d", parsed.revision), parsed.revisionDate,
                 parsed.lineCount(), total, pending, parsed.informedTotal == null ? null : cents(parsed.informedTotal), groups, problems,
                 confirmed ? 0 : newItems, confirmed ? 0 : existing, confirmed ? List.of() : List.copyOf(newUnits),
-                confirmed ? List.of() : List.copyOf(newCategories), parsed.notes, lines, imp.revisionId(), bomId);
+                confirmed ? List.of() : List.copyOf(newCategories), parsed.notes, lines, bomId);
     }
 
     // ───────────── Leitura do arquivo ─────────────

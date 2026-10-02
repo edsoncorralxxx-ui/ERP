@@ -7,7 +7,9 @@ import java.util.UUID;
 public interface ItemQueryApi {
 
     /** {@code nature} é MATERIAL ou SERVICO; {@code active} é falso quando o item foi inativado. */
-    record ItemRef(UUID id, String code, String description, String nature, String uom, boolean active) { }
+    /** {@code referenceCost} é o custo de referência do cadastro (pode ser vazio). */
+    record ItemRef(UUID id, String code, String description, String nature, String uom, boolean active,
+                   java.math.BigDecimal referenceCost) { }
 
     Optional<ItemRef> item(UUID id);
 }

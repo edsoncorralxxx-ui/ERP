@@ -2,18 +2,18 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { setTransport, type TransportRequest, type TransportResponse } from '../api/client';
-import type { Bom, BomImport, BomLine, BomRevision, EquipmentBom, EquipmentBomLine, PlannedCost, SessionUser } from '../api/types';
+import type { Bom, BomImport, BomLine, BomSummary, BomTreeNode, EquipmentBom, EquipmentBomLine, ItemSummary, PlannedCost, SessionUser } from '../api/types';
 import { SessionContext, sessionOf } from '../shell/SessionContext';
 import { WindowContext, type WindowApi } from '../windows/WindowContext';
 import { BomImportWindow } from './BomImportWindow';
-import { BomRevisionWindow } from './BomRevisionWindow';
+import { BomWindow } from './BomWindow';
 import { margem } from './comum/Bom';
 import { EquipmentBomPanel } from './EquipmentBomPanel';
 import { PlannedCostPanel } from './PlannedCostPanel';
 
 const ADMIN: SessionUser = {
   id: 'u-1', username: 'ana', displayName: 'Ana', profile: 'ADMINISTRADOR', profileLabel: 'Administrador',
-  permissions: ['bom.read', 'bom.update', 'bom.approve', 'project_bom.apply', 'item.read', 'project.read', 'equipment.read'],
+  permissions: ['bom.read', 'bom.update', 'project_bom.apply', 'item.read', 'project.read', 'equipment.read'],
 };
 const CONSULTA: SessionUser = { ...ADMIN, profile: 'CONSULTA', profileLabel: 'Consulta', permissions: ['bom.read', 'item.read', 'project.read', 'equipment.read'] };
 
@@ -31,68 +31,77 @@ function abrir(janela: ReactNode, user: SessionUser = ADMIN) {
 }
 
 const linha = (p: Partial<BomLine>): BomLine => ({
-  id: 'l-1', position: 1, kind: 'ITEM', itemId: 'i-1', itemCode: 'P00001', itemActive: true, childRevisionId: null, childBomId: null, childBomCode: null,
-  childBomName: null, childRevisionLabel: null, childRevisionStatus: null, referenceCode: 'ELE-0038', description: 'Suporte 45° para Trilho DIN',
-  quantity: null, uom: 'UN', unitCost: '9.44', lineCents: null, pending: 1, category: 'Painel elétrico', supplier: null, material: null, notes: null, ...p,
+  id: 'l-1', position: 1, kind: 'ITEM', itemId: 'i-1', itemCode: 'P00001', itemActive: true, childBomId: null, childBomCode: null, childBomName: null,
+  referenceCode: 'ELE-0038', description: 'Suporte 45° para Trilho DIN', quantity: null, uom: 'UN', unitCost: '9.44', lineCents: null, pending: 1,
+  category: 'Painel elétrico', supplier: null, material: null, notes: null, itemReferenceCost: null, ...p,
 });
 
-const painel = (p: Partial<BomRevision> = {}): BomRevision => ({
-  id: 'r-painel', bomId: 'b-painel', bomCode: 'BOM00004', bomName: 'Painel elétrico — Balança', modelId: null, modelCode: null, modelName: null, revision: 0,
-  label: '00', status: 'DRAFT', basedOnId: null, informedTotalCents: '2912967', notes: null, importId: 'imp-1', approvedAt: null, approvedBy: null, version: '1',
-  createdAt: '2026-10-01T12:00:00Z', createdBy: 'ana', updatedAt: null, updatedBy: null, totalCents: '2912967', pending: 1,
+const subLinha = (id: string, bomId: string, code: string, nome: string, cents: string, pending = 0) => linha({
+  id, kind: 'SUBASSEMBLY', itemId: null, itemCode: null, childBomId: bomId, childBomCode: code, childBomName: nome, referenceCode: code, description: nome,
+  quantity: '1', uom: 'CJ', unitCost: null, lineCents: cents, pending, category: null,
+});
+
+// Árvore da BOM real: Balança → Mecânica e Elétrica → Painel elétrico (o painel tem a linha sem quantidade).
+const arvore = (painelCents = '2912967', pendente = 1): BomTreeNode => ({
+  bomId: 'b-mod', code: 'BOM00001', name: 'Balança Hidrostática', quantity: null, totalCents: String(2847740 + 1179144 + Number(painelCents)), pending: pendente, itemLines: 0,
+  children: [
+    { bomId: 'b-mec', code: 'BOM00002', name: 'Mecânica — Balança', quantity: '1', totalCents: '2847740', pending: 0, itemLines: 127, children: [] },
+    { bomId: 'b-ele', code: 'BOM00003', name: 'Elétrica — Balança', quantity: '1', totalCents: String(1179144 + Number(painelCents)), pending: pendente, itemLines: 26,
+      children: [{ bomId: 'b-painel', code: 'BOM00004', name: 'Painel elétrico — Balança', quantity: '1', totalCents: painelCents, pending: pendente, itemLines: 50, children: [] }] },
+  ],
+});
+
+const bom = (p: Partial<Bom> = {}): Bom => ({
+  id: 'b-painel', code: 'BOM00004', name: 'Painel elétrico — Balança', modelId: null, modelCode: null, modelName: null, informedTotalCents: '2912967', notes: null,
+  version: '1', createdAt: '2026-10-01T12:00:00Z', createdBy: 'ana', updatedAt: '2026-10-01T12:00:00Z', updatedBy: 'ana', totalCents: '2912967', pending: 1,
   lines: [linha({}), linha({ id: 'l-2', position: 2, referenceCode: 'ELE-0017', description: 'CLP Allen Bradley Micro 850', quantity: '1', unitCost: '4780', lineCents: '478000', pending: 0 })],
   categories: [{ category: 'Painel elétrico', cents: '2912967', lines: 50 }],
   problems: [{ severity: 'BLOCKING', position: 1, message: 'Linha 1 — Suporte 45° para Trilho DIN: sem quantidade.' }],
-  usedBy: [{ bomId: 'b-ele', bomName: 'Elétrica — Balança', revisionId: 'r-ele', revisionLabel: '00', status: 'DRAFT' }],
-  revisions: [{ id: 'r-painel', label: '00', status: 'DRAFT', totalCents: '2912967', pending: 1, approvedAt: null, approvedBy: null }],
+  usedBy: [{ bomId: 'b-ele', bomCode: 'BOM00003', bomName: 'Elétrica — Balança' }],
+  tree: arvore().children[1].children[0],
   ...p,
 });
 
-describe('Revisão da BOM', () => {
-  it('mostra a linha sem quantidade como pendência, grava a quantidade com a versão lida e aprova', async () => {
+const modelo = (p: Partial<Bom> = {}): Bom => bom({
+  id: 'b-mod', code: 'BOM00001', name: 'Balança Hidrostática', modelId: 'md-1', modelCode: 'MD00001', modelName: 'Balança Hidrostática', informedTotalCents: '6939851',
+  totalCents: '6939851', usedBy: [], problems: [], categories: [], tree: arvore(),
+  lines: [subLinha('l-m', 'b-mec', 'BOM00002', 'Mecânica — Balança', '2847740'), subLinha('l-e', 'b-ele', 'BOM00003', 'Elétrica — Balança', '4092111', 1)],
+  ...p,
+});
+
+describe('BOM', () => {
+  it('abre com a árvore da estrutura, mostra as linhas da submontagem escolhida e grava a quantidade com a versão lida', async () => {
     const puts: TransportRequest[] = [];
-    let aprovacoes = 0;
-    let estado = painel();
-    const lida = () => resposta(200, estado, { etag: `"${estado.version}"` });
+    let painel = bom();
+    let raiz = modelo();
     setTransport(async (req) => {
-      if (req.path === '/api/v1/bom-revisions/r-painel' && req.method === 'GET') return lida();
-      if (req.path === '/api/v1/bom-revisions/r-painel' && req.method === 'PUT') {
+      if (req.path === '/api/v1/boms/b-mod' && req.method === 'GET') return resposta(200, raiz, { etag: `"${raiz.version}"` });
+      if (req.path === '/api/v1/boms/b-painel' && req.method === 'GET') return resposta(200, painel, { etag: `"${painel.version}"` });
+      if (req.path === '/api/v1/boms/b-painel' && req.method === 'PUT') {
         puts.push(req);
-        estado = painel({
-          version: '2', pending: 0, totalCents: '2913911', problems: [],
-          lines: [linha({ quantity: '1', lineCents: '944', pending: 0 }), painel().lines[1]],
-        });
-        return lida();
-      }
-      if (req.path === '/api/v1/bom-revisions/r-painel/approval') {
-        aprovacoes++;
-        if (aprovacoes === 1) {
-          return resposta(422, { code: 'BOM_INCOMPLETE', message: 'A revisão tem pendências; resolva antes de aprovar.',
-            details: [{ field: 'Painel elétrico — Balança rev. 00', message: 'Linha 1 — Suporte 45° para Trilho DIN: sem quantidade.' }] });
-        }
-        estado = painel({ status: 'APPROVED', version: '3', pending: 0, totalCents: '2913911', problems: [], approvedAt: '2026-10-01T13:00:00Z', approvedBy: 'ana',
-          revisions: [{ id: 'r-painel', label: '00', status: 'APPROVED', totalCents: '2913911', pending: 0, approvedAt: null, approvedBy: null }],
-          lines: [linha({ quantity: '1', lineCents: '944', pending: 0 }), painel().lines[1]] });
-        return lida();
+        painel = bom({ version: '2', pending: 0, totalCents: '2913911', problems: [], lines: [linha({ quantity: '1', lineCents: '944', pending: 0 }), bom().lines[1]] });
+        raiz = modelo({ totalCents: '6940795', pending: 0, tree: arvore('2913911', 0) });
+        return resposta(200, painel, { etag: '"2"' });
       }
       return naoAchou();
     });
-    const win = abrir(<BomRevisionWindow recordKey="r-painel" />);
+    const win = abrir(<BomWindow recordKey="b-mod" />);
     const user = userEvent.setup();
-    const grade = await screen.findByRole('table', { name: 'Linhas da revisão' });
+    const estrutura = await screen.findByRole('tree', { name: 'Estrutura da BOM' });
+    expect(within(estrutura).getAllByRole('treeitem')).toHaveLength(4);
+    expect(within(estrutura).getByRole('treeitem', { name: /Balança Hidrostática/ })).toHaveAttribute('aria-selected', 'true');
+    await waitFor(() => expect(screen.getByLabelText('Total da BOM')).toHaveValue('R$ 69.398,51'));
+
+    // Escolher o Painel elétrico na árvore mostra as linhas dele, com a pendência.
+    await user.click(within(estrutura).getByText('Painel elétrico — Balança'));
+    const grade = await screen.findByRole('table', { name: 'Linhas da BOM' });
+    await waitFor(() => expect(screen.getByLabelText('BOM')).toHaveValue('BOM00004 — Painel elétrico — Balança'));
     expect(within(grade).getByText('Sem quantidade')).toBeInTheDocument();
-    expect(screen.getByRole('note')).toHaveTextContent('Total parcial: 1 linha está sem quantidade ou sem custo');
-    expect(screen.getByLabelText('Total da revisão')).toHaveValue('R$ 29.129,67');
+    expect(screen.getByLabelText('Usada em')).toHaveValue('Elétrica — Balança');
+    expect(screen.getByRole('note')).toHaveTextContent('enquanto isso a BOM não se aplica a equipamento');
 
-    // Aprovar com pendência: a recusa lista a linha.
-    await user.click(screen.getByRole('button', { name: 'Aprovar revisão' }));
-    await user.click(within(screen.getByRole('alertdialog', { name: 'Aprovar revisão' })).getByRole('button', { name: 'Aprovar' }));
-    const recusa = await screen.findByRole('alertdialog', { name: 'Revisão com pendências' });
-    expect(recusa).toHaveTextContent('Painel elétrico — Balança rev. 00: Linha 1 — Suporte 45° para Trilho DIN: sem quantidade.');
-    await user.click(within(recusa).getByRole('button', { name: 'OK' }));
-
-    // Informar a quantidade grava o rascunho inteiro com If-Match.
-    await user.click(within(grade).getByText('Suporte 45° para Trilho DIN'));
+    // Informar a quantidade grava a BOM inteira com If-Match; a árvore se atualiza com o total novo.
+    await user.click(within(screen.getByRole('table', { name: 'Linhas da BOM' })).getByText('Suporte 45° para Trilho DIN'));
     await user.click(screen.getByRole('button', { name: 'Alterar linha' }));
     const dialogo = screen.getByRole('alertdialog', { name: 'Alterar linha' });
     await user.clear(within(dialogo).getByLabelText('Quantidade'));
@@ -104,33 +113,81 @@ describe('Revisão da BOM', () => {
     expect(corpo.lines).toHaveLength(2);
     expect(corpo.lines[0]).toMatchObject({ kind: 'ITEM', itemId: 'i-1', quantity: '1', unitCost: '9.44', referenceCode: 'ELE-0038' });
     expect(corpo.informedTotalCents).toBe('2912967');
-    await waitFor(() => expect(screen.getByLabelText('Total da revisão')).toHaveValue('R$ 29.139,11'));
-
-    await user.click(screen.getByRole('button', { name: 'Aprovar revisão' }));
-    await user.click(within(screen.getByRole('alertdialog', { name: 'Aprovar revisão' })).getByRole('button', { name: 'Aprovar' }));
-    await waitFor(() => expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Revisão 00 da BOM Painel elétrico — Balança aprovada com sucesso' }));
-    expect(screen.getByText('Aprovada', { selector: '.rp-badge' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Alterar linha' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Nova revisão' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText('Total da BOM')).toHaveValue('R$ 29.139,11'));
+    expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Linha 1 da BOM Painel elétrico — Balança atualizada com sucesso' });
+    await waitFor(() => expect(within(screen.getByRole('tree', { name: 'Estrutura da BOM' })).getByRole('treeitem', { name: /Balança Hidrostática/ }))
+      .toHaveTextContent('R$ 69.407,95'));
+    expect(screen.queryByText(/Aprovar/)).not.toBeInTheDocument();
   });
 
-  it('a submontagem abre pela seta e Consulta só vê', async () => {
-    const modelo = painel({
-      id: 'r-mod', bomName: 'Balança Hidrostática', modelId: 'md-1', modelCode: 'MD00001', modelName: 'Balança Hidrostática', status: 'APPROVED',
-      approvedAt: '2026-10-01T13:00:00Z', approvedBy: 'ana', pending: 0, problems: [], usedBy: [],
-      lines: [linha({ id: 'l-s', kind: 'SUBASSEMBLY', itemId: null, itemCode: null, childRevisionId: 'r-mec', childBomId: 'b-mec', childBomCode: 'BOM00002',
-        childBomName: 'Mecânica — Balança', childRevisionLabel: '00', childRevisionStatus: 'APPROVED', referenceCode: 'BOM00002', description: 'Mecânica — Balança',
-        quantity: '1', uom: 'CJ', unitCost: null, lineCents: '2847740', pending: 0 })],
-      revisions: [{ id: 'r-mod', label: '00', status: 'APPROVED', totalCents: '2847740', pending: 0, approvedAt: null, approvedBy: null }],
+  it('o diagrama mostra a estrutura em árvore e duas vezes na caixa abre as linhas dela', async () => {
+    setTransport(async (req) => {
+      if (req.path === '/api/v1/boms/b-mod') return resposta(200, modelo(), { etag: '"1"' });
+      if (req.path === '/api/v1/boms/b-painel') return resposta(200, bom(), { etag: '"1"' });
+      return naoAchou();
     });
-    setTransport(async (req) => (req.path === '/api/v1/bom-revisions/r-mod' ? resposta(200, modelo, { etag: '"3"' }) : naoAchou()));
-    const win = abrir(<BomRevisionWindow recordKey="r-mod" />, CONSULTA);
+    abrir(<BomWindow recordKey="b-mod" />);
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('link', { name: 'Abrir submontagem Mecânica — Balança rev. 00' }));
-    expect(win.open).toHaveBeenCalledWith('bom-revision', 'r-mec');
+    await screen.findByLabelText('Total da BOM');
+    await user.click(screen.getByRole('tab', { name: 'Diagrama' }));
+    const diagrama = screen.getByRole('tree', { name: 'Diagrama da estrutura' });
+    const caixas = within(diagrama).getAllByRole('treeitem');
+    expect(caixas).toHaveLength(4);
+    expect(caixas.map((c) => c.getAttribute('aria-level'))).toEqual(['1', '2', '2', '3']);
+    const painel = within(diagrama).getByRole('treeitem', { name: 'Painel elétrico — Balança, R$ 29.129,67, 1 pendência' });
+    expect(painel).toHaveTextContent('BOM00004 · Qtd. 1 · 50 itens');
+    expect(caixas[0]).toHaveTextContent('BOM00001 · 2 submontagens');
+    expect(caixas[2]).toHaveTextContent('BOM00003 · Qtd. 1 · 26 itens · 1 submontagem');
+    // Uma linha de ligação por submontagem.
+    expect(document.querySelectorAll('.rp-bom-diagrama__ligacoes path')).toHaveLength(3);
+    expect(document.querySelector('.rp-ico-rosca, canvas')).toBeNull();
+    await user.dblClick(painel);
+    await screen.findByRole('table', { name: 'Linhas da BOM' });
+    await waitFor(() => expect(screen.getByLabelText('BOM')).toHaveValue('BOM00004 — Painel elétrico — Balança'));
+  });
+
+  it('a seta da submontagem escolhe a BOM na árvore e Consulta só vê', async () => {
+    setTransport(async (req) => {
+      if (req.path === '/api/v1/boms/b-mod') return resposta(200, modelo(), { etag: '"3"' });
+      if (req.path === '/api/v1/boms/b-mec') {
+        return resposta(200, bom({ id: 'b-mec', code: 'BOM00002', name: 'Mecânica — Balança', pending: 0, problems: [], lines: [bom().lines[1]], tree: arvore().children[0] }));
+      }
+      return naoAchou();
+    });
+    const win = abrir(<BomWindow recordKey="b-mod" />, CONSULTA);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('link', { name: 'Mostrar a submontagem Mecânica — Balança' }));
+    await waitFor(() => expect(screen.getByLabelText('BOM')).toHaveValue('BOM00002 — Mecânica — Balança'));
+    expect(within(screen.getByRole('tree', { name: 'Estrutura da BOM' })).getByRole('treeitem', { name: /Mecânica/ })).toHaveAttribute('aria-selected', 'true');
+    expect(win.open).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Incluir linha' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Aprovar revisão' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Nova revisão' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Alterar linha' })).not.toBeInTheDocument();
+  });
+
+  it('ao incluir um item, o custo unitário vem do custo de referência do cadastro', async () => {
+    const item: ItemSummary = { id: 'i-7', code: 'P00129', description: 'Painel de Comando 400x300x250mm', nature: 'MATERIAL', uom: 'UN',
+      category: 'Painel elétrico', stockControlled: false, referenceCost: '135.560000', ncm: null, serviceCode: null, status: 'ATIVO', version: '2' };
+    const puts: TransportRequest[] = [];
+    const painel = bom({ tree: { ...arvore().children[1].children[0], quantity: null } });
+    setTransport(async (req) => {
+      if (req.path === '/api/v1/boms/b-painel' && req.method === 'GET') return resposta(200, painel, { etag: '"1"' });
+      if (req.path.startsWith('/api/v1/items?search=')) return resposta(200, [item]);
+      if (req.path === '/api/v1/boms/b-painel' && req.method === 'PUT') {
+        puts.push(req);
+        return resposta(200, { ...painel, version: '2' }, { etag: '"2"' });
+      }
+      return naoAchou();
+    });
+    abrir(<BomWindow recordKey="b-painel" />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Incluir linha' }));
+    const dialogo = screen.getByRole('alertdialog', { name: 'Incluir linha' });
+    await user.type(within(dialogo).getByLabelText('Item'), 'P00129');
+    await user.click(within(dialogo).getByRole('button', { name: 'Buscar item' }));
+    await waitFor(() => expect(within(dialogo).getByLabelText('Custo unitário')).toHaveValue('135,56'));
+    await user.click(within(dialogo).getByRole('button', { name: 'Incluir' }));
+    await waitFor(() => expect(puts).toHaveLength(1));
+    expect(JSON.parse(puts[0].body!).lines[2]).toMatchObject({ kind: 'ITEM', itemId: 'i-7', unitCost: '135.56', quantity: '1' });
   });
 });
 
@@ -143,13 +200,13 @@ const previa: BomImport = {
     { name: 'Painel elétrico', parent: 'Elétrica', lines: 50, totalCents: '2912967', pending: 1, informedCents: '2912967' },
   ],
   problems: [
-    { severity: 'BLOCKING', position: 38, message: 'Elétrica 38 — Suporte 45° para Trilho DIN: sem quantidade no arquivo. Informe antes de aprovar a revisão.' },
+    { severity: 'BLOCKING', position: 38, message: 'Elétrica 38 — Suporte 45° para Trilho DIN: sem quantidade no arquivo. Informe antes de aplicar a BOM.' },
     { severity: 'WARNING', position: null, message: 'O código ADR-01-269-P aparece 2 vezes com descrições diferentes.' },
   ],
   newItems: 201, existingItems: 0, newUnits: ['SRV (Serviço)', 'CT (Cento)'], newCategories: ['Serviços'], fileNotes: ['Valores transcritos dos PDFs.'],
   lines: [{ group: 'Mecânica', category: 'Serviços', sourceNo: 126, referenceCode: 'SRV-02', generatedCode: false, description: 'Pintura', quantity: '1', uom: 'SRV',
     unitCost: '1400', lineCents: '140000', itemCode: null, newItem: true, supplier: 'Serralheria Chacal', material: null }],
-  revisionId: null, bomId: null, createdAt: '2026-10-01T12:00:00Z', createdBy: 'ana', confirmedAt: null, confirmedBy: null,
+  bomId: null, createdAt: '2026-10-01T12:00:00Z', createdBy: 'ana', confirmedAt: null, confirmedBy: null,
 };
 
 describe('Importar BOM', () => {
@@ -162,7 +219,7 @@ describe('Importar BOM', () => {
       }
       if (req.path === '/api/v1/bom-imports/imp-1/confirmation') {
         posts.push(req);
-        return resposta(200, { ...previa, status: 'CONFIRMED', revisionId: 'r-mod', bomId: 'b-mod', confirmedAt: '2026-10-01T12:05:00Z', confirmedBy: 'ana' });
+        return resposta(200, { ...previa, status: 'CONFIRMED', bomId: 'b-mod', confirmedAt: '2026-10-01T12:05:00Z', confirmedBy: 'ana' });
       }
       return naoAchou();
     });
@@ -177,10 +234,10 @@ describe('Importar BOM', () => {
     const grupos = screen.getByRole('table', { name: 'Submontagens da carga' });
     expect(within(grupos).getByText('Painel elétrico')).toBeInTheDocument();
     expect(within(grupos).getByText('29.129,67', { selector: 'td:nth-child(6)' })).toBeInTheDocument();
-    expect(screen.getByRole('list', { name: 'Problemas da carga' })).toHaveTextContent('Impede a aprovação: Elétrica 38 — Suporte 45° para Trilho DIN');
+    expect(screen.getByRole('list', { name: 'Problemas da carga' })).toHaveTextContent('Impede aplicar ao equipamento: Elétrica 38 — Suporte 45° para Trilho DIN');
     expect(screen.getByRole('note')).toHaveTextContent('Unidades novas: SRV (Serviço), CT (Cento).');
     await user.click(screen.getByRole('button', { name: 'Confirmar carga' }));
-    await waitFor(() => expect(win.open).toHaveBeenCalledWith('bom-revision', 'r-mod'));
+    await waitFor(() => expect(win.open).toHaveBeenCalledWith('bom', 'b-mod'));
     expect(posts[1].headers?.['Idempotency-Key']).toMatch(/^[A-Za-z0-9_-]{8,}$/);
     expect(screen.getByText('Carregada')).toBeInTheDocument();
   });
@@ -196,20 +253,18 @@ const equipamentoRef = { id: 'e-1', code: 'EQ00001', projectId: 'pj-1', projectC
   modelName: 'Balança Hidrostática', serialNumber: null, active: true };
 
 const aplicada: EquipmentBom = {
-  equipment: equipamentoRef, applied: true, id: 'eb-1', bomId: 'b-mod', bomCode: 'BOM00001', bomName: 'Balança Hidrostática', revisionId: 'r-mod',
-  revisionLabel: '00', revisionStatus: 'APPROVED', version: '1', appliedAt: '2026-10-01T13:00:00Z', appliedBy: 'ana', updatedAt: null, updatedBy: null,
-  totalCents: '6940795', pending: 0, modelTotalCents: '6940795', added: 0, removed: 0, changed: 0,
+  equipment: equipamentoRef, applied: true, id: 'eb-1', bomId: 'b-mod', bomCode: 'BOM00001', bomName: 'Balança Hidrostática', version: '1', appliedAt: '2026-10-01T13:00:00Z', appliedBy: 'ana', updatedAt: null, updatedBy: null,
+  totalCents: '6940795', pending: 0, modelTotalCents: '6940795', modelChanged: false, added: 0, removed: 0, changed: 0,
   lines: [ebLinha({ id: 'el-s', kind: 'SUBASSEMBLY', itemId: null, itemCode: null, description: 'Mecânica — Balança', uom: 'CJ', unitCost: null,
     lineCents: '2847740', referenceCode: 'BOM00002', modelUnitCost: null }), ebLinha({ parentId: 'el-s', depth: 1 })],
 };
 
 describe('BOM do equipamento', () => {
-  it('aplica a revisão aprovada do modelo e retira uma linha só deste equipamento, com motivo', async () => {
+  it('aplica a BOM do modelo e retira uma linha só deste equipamento, com motivo', async () => {
     const posts: TransportRequest[] = [];
-    let atual: EquipmentBom = { ...aplicada, applied: false, id: null, bomId: null, revisionId: null, revisionLabel: null, revisionStatus: null, lines: [], totalCents: null, modelTotalCents: null, version: null };
-    const boms: Bom[] = [{ id: 'b-mod', code: 'BOM00001', name: 'Balança Hidrostática', modelId: 'md-1', modelCode: 'MD00001', modelName: 'Balança Hidrostática',
-      approved: { id: 'r-mod', label: '00', status: 'APPROVED', totalCents: '6940795', pending: 0, approvedAt: null, approvedBy: null }, draft: null, revisionCount: 1,
-      createdAt: '2026-10-01T12:00:00Z', createdBy: 'ana' }];
+    let atual: EquipmentBom = { ...aplicada, applied: false, id: null, bomId: null, lines: [], totalCents: null, modelTotalCents: null, version: null };
+    const boms: BomSummary[] = [{ id: 'b-mod', code: 'BOM00001', name: 'Balança Hidrostática', modelId: 'md-1', modelCode: 'MD00001', modelName: 'Balança Hidrostática',
+      totalCents: '6940795', pending: 0, lineCount: 2, updatedAt: '2026-10-01T12:00:00Z', updatedBy: 'ana' }];
     setTransport(async (req) => {
       if (req.path === '/api/v1/equipment/e-1/bom' && req.method === 'GET') return resposta(200, atual);
       if (req.path === '/api/v1/boms') return resposta(200, boms);
@@ -230,10 +285,10 @@ describe('BOM do equipamento', () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Aplicar BOM' }));
     const dialogo = screen.getByRole('alertdialog', { name: 'Aplicar BOM' });
-    await waitFor(() => expect(within(dialogo).getByRole('combobox', { name: 'Revisão' })).toHaveTextContent('BOM00001 — Balança Hidrostática — rev. 00 — R$ 69.407,95'));
+    await waitFor(() => expect(within(dialogo).getByRole('combobox', { name: 'BOM' })).toHaveTextContent('BOM00001 — Balança Hidrostática — R$ 69.407,95'));
     await user.click(within(dialogo).getByRole('button', { name: 'Aplicar' }));
     await screen.findByRole('table', { name: 'BOM do equipamento' });
-    expect(JSON.parse(posts[0].body!)).toEqual({ revisionId: 'r-mod', reason: null });
+    expect(JSON.parse(posts[0].body!)).toEqual({ bomId: 'b-mod', reason: null });
     expect(posts[0].headers?.['Idempotency-Key']).toBeTruthy();
     expect(screen.getByLabelText('Total do equipamento')).toHaveValue('R$ 69.407,95');
 
@@ -253,12 +308,55 @@ describe('BOM do equipamento', () => {
     expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'BOM do equipamento EQ00001 ajustada: total R$ 68.007,95' });
   });
 
+  it('avisa quando a BOM do modelo mudou e reaplica com motivo', async () => {
+    const posts: TransportRequest[] = [];
+    let atual: EquipmentBom = { ...aplicada, modelTotalCents: '6950795', modelChanged: true };
+    setTransport(async (req) => {
+      if (req.path === '/api/v1/equipment/e-1/bom' && req.method === 'GET') return resposta(200, atual);
+      if (req.path === '/api/v1/boms') {
+        return resposta(200, [{ id: 'b-mod', code: 'BOM00001', name: 'Balança Hidrostática', modelId: 'md-1', modelCode: 'MD00001', modelName: 'Balança Hidrostática',
+          totalCents: '6950795', pending: 0, lineCount: 2, updatedAt: '2026-10-02T12:00:00Z', updatedBy: 'ana' }]);
+      }
+      if (req.path === '/api/v1/equipment/e-1/bom' && req.method === 'POST') {
+        posts.push(req);
+        atual = { ...aplicada, totalCents: '6950795', modelTotalCents: '6950795', modelChanged: false };
+        return resposta(200, atual);
+      }
+      return naoAchou();
+    });
+    const win = abrir(<EquipmentBomPanel equipmentId="e-1" ativo />);
+    const user = userEvent.setup();
+    const aviso = await screen.findByRole('note');
+    expect(aviso).toHaveTextContent('A BOM do modelo mudou depois de aplicada (total atual R$ 69.507,95)');
+    await user.click(within(aviso).getByRole('button', { name: 'Reaplicar BOM' }));
+    const dialogo = screen.getByRole('alertdialog', { name: 'Reaplicar BOM' });
+    await user.click(within(dialogo).getByRole('button', { name: 'Reaplicar' }));
+    expect(within(dialogo).getByText('Informe o motivo para reaplicar a BOM.')).toBeInTheDocument();
+    await user.type(within(dialogo).getByLabelText('Motivo'), 'Pintura reajustada');
+    await user.click(within(dialogo).getByRole('button', { name: 'Reaplicar' }));
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(JSON.parse(posts[0].body!)).toEqual({ bomId: 'b-mod', reason: 'Pintura reajustada' });
+    await waitFor(() => expect(screen.queryByRole('note')).not.toBeInTheDocument());
+    expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'BOM Balança Hidrostática reaplicada ao equipamento EQ00001: total R$ 69.507,95' });
+  });
+
+  it('a submontagem fecha e abre como pasta', async () => {
+    setTransport(async (req) => (req.path === '/api/v1/equipment/e-1/bom' ? resposta(200, aplicada) : naoAchou()));
+    abrir(<EquipmentBomPanel equipmentId="e-1" ativo />);
+    const user = userEvent.setup();
+    await screen.findByText('Pintura');
+    await user.click(screen.getByRole('button', { name: 'Fechar Mecânica — Balança' }));
+    expect(screen.queryByText('Pintura')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Abrir Mecânica — Balança' }));
+    expect(screen.getByText('Pintura')).toBeInTheDocument();
+  });
+
   it('Consulta vê a BOM sem os botões de ajuste', async () => {
     setTransport(async (req) => (req.path === '/api/v1/equipment/e-1/bom' ? resposta(200, aplicada) : naoAchou()));
     abrir(<EquipmentBomPanel equipmentId="e-1" ativo />, CONSULTA);
     await screen.findByRole('table', { name: 'BOM do equipamento' });
     expect(screen.queryByRole('button', { name: 'Retirar linha' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Trocar revisão' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reaplicar BOM' })).not.toBeInTheDocument();
   });
 });
 
@@ -266,7 +364,7 @@ describe('Custo planejado do projeto', () => {
   const base: PlannedCost = {
     projectId: 'pj-1', projectCode: 'PJ00001', projectName: 'Fecularia', stage: 'PLANEJADO', contractCents: '12000000', plannedCostCents: '0', complete: false,
     withoutBom: 1, marginCents: null, marginRate: null,
-    equipment: [{ equipment: equipamentoRef, applied: false, bomId: null, bomName: null, revisionId: null, revisionLabel: null, costCents: null, pending: 0, adjusted: false }],
+    equipment: [{ equipment: equipamentoRef, applied: false, bomId: null, bomName: null, costCents: null, pending: 0, adjusted: false }],
   };
 
   it('equipamento sem BOM fica sem custo planejado e sem margem; com BOM mostra a margem', async () => {
@@ -277,7 +375,7 @@ describe('Custo planejado do projeto', () => {
     expect(screen.getByLabelText('Margem prevista')).toHaveValue('');
     expect(screen.getByRole('status')).toHaveTextContent('1 equipamento está sem custo planejado');
     custo = { ...base, plannedCostCents: '6940795', complete: true, withoutBom: 0, marginCents: '5059205', marginRate: '0.4216',
-      equipment: [{ ...base.equipment[0], applied: true, bomId: 'b-mod', bomName: 'Balança Hidrostática', revisionId: 'r-mod', revisionLabel: '00', costCents: '6940795' }] };
+      equipment: [{ ...base.equipment[0], applied: true, bomId: 'b-mod', bomName: 'Balança Hidrostática', costCents: '6940795' }] };
     window.dispatchEvent(new Event('renda:bom-alterada'));
     await waitFor(() => expect(screen.getByLabelText('Margem prevista')).toHaveValue('R$ 50.592,05 (42,16%)'));
     expect(screen.getByLabelText('Custo planejado')).toHaveValue('R$ 69.407,95');

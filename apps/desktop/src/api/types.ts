@@ -811,30 +811,18 @@ export type EquipmentModel = {
   updatedBy: string | null;
 };
 
-export type BomRevisionStatus = 'DRAFT' | 'APPROVED' | 'SUPERSEDED';
-
-export type BomRevisionRef = {
-  id: string;
-  label: string;
-  status: BomRevisionStatus;
-  totalCents: string;
-  pending: number;
-  approvedAt: string | null;
-  approvedBy: string | null;
-};
-
-export type Bom = {
+export type BomSummary = {
   id: string;
   code: string;
   name: string;
   modelId: string | null;
   modelCode: string | null;
   modelName: string | null;
-  approved: BomRevisionRef | null;
-  draft: BomRevisionRef | null;
-  revisionCount: number;
-  createdAt: string;
-  createdBy: string;
+  totalCents: string;
+  pending: number;
+  lineCount: number;
+  updatedAt: string | null;
+  updatedBy: string | null;
 };
 
 export type BomLine = {
@@ -844,12 +832,9 @@ export type BomLine = {
   itemId: string | null;
   itemCode: string | null;
   itemActive: boolean;
-  childRevisionId: string | null;
   childBomId: string | null;
   childBomCode: string | null;
   childBomName: string | null;
-  childRevisionLabel: string | null;
-  childRevisionStatus: BomRevisionStatus | null;
   referenceCode: string | null;
   description: string;
   quantity: string | null;
@@ -861,27 +846,32 @@ export type BomLine = {
   supplier: string | null;
   material: string | null;
   notes: string | null;
+  itemReferenceCost: string | null;
 };
 
 export type BomProblem = { severity: 'BLOCKING' | 'WARNING' | 'INFO'; position: number | null; message: string };
 
-export type BomRevision = {
-  id: string;
+/** Nó da árvore de submontagens: o total é de uma unidade; `quantity` é a da linha no nó de cima (vazia na raiz). */
+export type BomTreeNode = {
   bomId: string;
-  bomCode: string;
-  bomName: string;
+  code: string;
+  name: string;
+  quantity: string | null;
+  totalCents: string;
+  pending: number;
+  itemLines: number;
+  children: BomTreeNode[];
+};
+
+export type Bom = {
+  id: string;
+  code: string;
+  name: string;
   modelId: string | null;
   modelCode: string | null;
   modelName: string | null;
-  revision: number;
-  label: string;
-  status: BomRevisionStatus;
-  basedOnId: string | null;
   informedTotalCents: string | null;
   notes: string | null;
-  importId: string | null;
-  approvedAt: string | null;
-  approvedBy: string | null;
   version: string;
   createdAt: string;
   createdBy: string;
@@ -892,14 +882,14 @@ export type BomRevision = {
   lines: BomLine[];
   categories: { category: string; cents: string; lines: number }[];
   problems: BomProblem[];
-  usedBy: { bomId: string; bomName: string; revisionId: string; revisionLabel: string; status: BomRevisionStatus }[];
-  revisions: BomRevisionRef[];
+  usedBy: { bomId: string; bomCode: string; bomName: string }[];
+  tree: BomTreeNode;
 };
 
 export type BomLineRequest = {
   kind: 'ITEM' | 'SUBASSEMBLY';
   itemId?: string | null;
-  childRevisionId?: string | null;
+  childBomId?: string | null;
   referenceCode?: string | null;
   description?: string | null;
   quantity?: string | null;
@@ -909,32 +899,6 @@ export type BomLineRequest = {
   supplier?: string | null;
   material?: string | null;
   notes?: string | null;
-};
-
-export type BomComparison = {
-  bomId: string;
-  bomName: string;
-  from: BomRevisionRef;
-  to: BomRevisionRef;
-  totalBefore: string;
-  totalAfter: string;
-  difference: string;
-  rows: {
-    status: 'ADDED' | 'REMOVED' | 'CHANGED';
-    kind: 'ITEM' | 'SUBASSEMBLY';
-    referenceCode: string | null;
-    description: string;
-    revisionBefore: string | null;
-    revisionAfter: string | null;
-    quantityBefore: string | null;
-    quantityAfter: string | null;
-    unitCostBefore: string | null;
-    unitCostAfter: string | null;
-    centsBefore: string | null;
-    centsAfter: string | null;
-    childRevisionBefore: string | null;
-    childRevisionAfter: string | null;
-  }[];
 };
 
 export type BomImport = {
@@ -971,7 +935,6 @@ export type BomImport = {
     supplier: string | null;
     material: string | null;
   }[];
-  revisionId: string | null;
   bomId: string | null;
   createdAt: string;
   createdBy: string;
@@ -1025,9 +988,6 @@ export type EquipmentBom = {
   bomId: string | null;
   bomCode: string | null;
   bomName: string | null;
-  revisionId: string | null;
-  revisionLabel: string | null;
-  revisionStatus: BomRevisionStatus | null;
   version: string | null;
   appliedAt: string | null;
   appliedBy: string | null;
@@ -1036,6 +996,7 @@ export type EquipmentBom = {
   totalCents: string | null;
   pending: number;
   modelTotalCents: string | null;
+  modelChanged: boolean;
   added: number;
   removed: number;
   changed: number;
@@ -1058,8 +1019,6 @@ export type PlannedCost = {
     applied: boolean;
     bomId: string | null;
     bomName: string | null;
-    revisionId: string | null;
-    revisionLabel: string | null;
     costCents: string | null;
     pending: number;
     adjusted: boolean;

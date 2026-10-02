@@ -25,8 +25,8 @@ import java.util.UUID;
 
 /**
  * Cadastro de itens pela carga da BOM (Sprint 10). A permissão é a do caso de uso que chama (bom.update); cada item,
- * unidade e categoria criados aqui ficam na auditoria como se fossem cadastrados na tela. O item entra sem controle de
- * estoque e sem custo de referência: o custo da BOM é o digitado na linha (decisão do PO em 01/10/2026).
+ * unidade e categoria criados aqui ficam na auditoria como se fossem cadastrados na tela. O item novo entra sem controle de
+ * estoque e com o preço da carga como custo de referência; item já cadastrado não muda (decisão do PO em 02/10/2026).
  */
 @Component
 class ItemProvisioning implements ItemProvisioningApi {
@@ -112,7 +112,8 @@ class ItemProvisioning implements ItemProvisioningApi {
                     Map.of("name", new AuditEntry.Change(null, categoryName)), CorrelationId.current()));
         }
         UUID category = categoryId;
-        ItemData data = new ItemData(r.description(), nature.name(), uom, category.toString(), false, null, null, null, List.of());
+        String cost = r.referenceCost() == null || r.referenceCost().signum() < 0 ? null : r.referenceCost().toPlainString();
+        ItemData data = new ItemData(r.description(), nature.name(), uom, category.toString(), false, cost, null, null, List.of());
         Item item = Item.register(items.nextCode(nature), data, new Item.Lookups(code -> catalog.unit(code, false).isPresent(),
                 raw -> catalog.category(category, false).map(c -> new Partner.Category(c.id(), c.name()))), now, actor);
         items.insert(item);

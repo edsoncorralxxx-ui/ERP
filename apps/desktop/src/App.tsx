@@ -13,7 +13,7 @@ import { ItemsWindow } from './screens/ItemsWindow';
 import { ItemWindow } from './screens/ItemWindow';
 import { BankAccountsWindow } from './screens/BankAccountsWindow';
 import { BomImportWindow } from './screens/BomImportWindow';
-import { BomRevisionWindow } from './screens/BomRevisionWindow';
+import { BomWindow } from './screens/BomWindow';
 import { BomsWindow } from './screens/BomsWindow';
 import { EquipmentModelsWindow } from './screens/EquipmentModelsWindow';
 import { DocumentsWindow } from './screens/DocumentsWindow';
@@ -86,7 +86,7 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   'tax-period': { title: 'Competência fiscal', size: { w: 1120, h: 680 } },
   'tax-parameters': { title: 'Parâmetros fiscais', size: { w: 900, h: 660 } },
   boms: { title: 'BOM — composição de custos', size: { w: 1160, h: 620 } },
-  'bom-revision': { title: 'Revisão da BOM', size: { w: 1200, h: 700 } },
+  bom: { title: 'BOM', size: { w: 1320, h: 720 } },
   'bom-import': { title: 'Importar BOM', size: { w: 1160, h: 700 } },
   'equipment-models': { title: 'Modelos de equipamento', size: { w: 900, h: 560 } },
   users: { title: 'Usuários e permissões', size: { w: 980, h: 560 } },
@@ -463,8 +463,8 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                         <TaxParametersWindow />
                       ) : w.kind === 'boms' ? (
                         <BomsWindow />
-                      ) : w.kind === 'bom-revision' ? (
-                        <BomRevisionWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'bom' ? (
+                        <BomWindow recordKey={w.recordKey} />
                       ) : w.kind === 'bom-import' ? (
                         <BomImportWindow />
                       ) : w.kind === 'equipment-models' ? (

@@ -1,23 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, type ApiError } from '../api/client';
-import type { Bom, EquipmentBom, EquipmentBomLine, HistoryEntry, ItemSummary } from '../api/types';
+import type { BomSummary, EquipmentBom, EquipmentBomLine, HistoryEntry, ItemSummary } from '../api/types';
 import { centavos, dataHora, decimalParaApi, reais } from '../format';
 import { Dialog } from '../shell/Dialog';
 import { useSession } from '../shell/SessionContext';
 import { useWindow } from '../windows/WindowContext';
-import { BOM_ALTERADA } from './BomRevisionWindow';
-import { custo, quantidade, seloEstadoLinha, seloRevisaoBom } from './comum/Bom';
+import { BOM_ALTERADA, custo, quantidade, seloEstadoLinha } from './comum/Bom';
 import { novaChave } from './comum/Cadastros';
 import { CampoDinheiro } from './comum/CampoDinheiro';
 import { GradeHistorico } from './comum/GradeHistorico';
 import { Selecao } from './comum/Selecao';
 
-type Acao = 'aplicar' | 'trocar' | 'ADD' | 'UPDATE' | 'REMOVE' | 'RESTORE' | null;
+type Acao = 'aplicar' | 'reaplicar' | 'ADD' | 'UPDATE' | 'REMOVE' | 'RESTORE' | null;
 
 /**
- * Aba BOM da ficha do equipamento (Sprint 10): a cópia congelada da revisão aplicada, em árvore, com o que mudou só neste
- * equipamento (incluída, retirada, alterada) e o total comparado com o do modelo. Aplicar, trocar a revisão e ajustar
- * exigem project_bom.apply; trocar e ajustar pedem motivo.
+ * Aba BOM da ficha do equipamento (Sprint 10): a cópia da BOM do modelo feita ao aplicar, em árvore, com o que mudou só
+ * neste equipamento (incluída, retirada, alterada) e o total comparado com o atual do modelo. A cópia não muda quando a
+ * BOM do modelo muda: o aviso mostra a diferença e Reaplicar BOM (com motivo) traz o conteúdo atual. Aplicar, reaplicar e
+ * ajustar exigem project_bom.apply.
  */
 export function EquipmentBomPanel({ equipmentId, ativo }: { equipmentId: string; ativo: boolean }) {
   const win = useWindow();
@@ -30,6 +30,7 @@ export function EquipmentBomPanel({ equipmentId, ativo }: { equipmentId: string;
   const [acao, setAcao] = useState<Acao>(null);
   const [historico, setHistorico] = useState<HistoryEntry[] | null>(null);
   const [verHistorico, setVerHistorico] = useState(false);
+  const [fechados, setFechados] = useState<Set<string>>(new Set());
 
   const carregar = useCallback(async () => {
     try {
@@ -43,6 +44,13 @@ export function EquipmentBomPanel({ equipmentId, ativo }: { equipmentId: string;
   }, [equipmentId]);
 
   useEffect(() => void carregar(), [carregar]);
+
+  // A BOM do modelo mudou em outra janela: o aviso de "modelo alterado" aparece sem reabrir a ficha.
+  useEffect(() => {
+    const r = () => void carregar();
+    window.addEventListener(BOM_ALTERADA, r);
+    return () => window.removeEventListener(BOM_ALTERADA, r);
+  }, [carregar]);
 
   useEffect(() => {
     if (!verHistorico || historico !== null) return;
@@ -60,6 +68,15 @@ export function EquipmentBomPanel({ equipmentId, ativo }: { equipmentId: string;
     window.dispatchEvent(new Event(BOM_ALTERADA));
   };
 
+  // Árvore: uma submontagem fechada esconde as linhas abaixo dela (as linhas vêm na ordem da árvore).
+  const alternar = (id: string) =>
+    setFechados((f) => {
+      const n = new Set(f);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+
   if (erro) {
     return (
       <p className="rp-janela-mdi__aviso">
@@ -70,6 +87,11 @@ export function EquipmentBomPanel({ equipmentId, ativo }: { equipmentId: string;
   if (!eb) return <p className="rp-janela-mdi__aviso">Carregando</p>;
 
   const fid = (k: string) => `${win.windowId}-bom-${k}`;
+  const porId = new Map(eb.lines.map((l) => [l.id, l]));
+  const escondida = (l: EquipmentBomLine) => {
+    for (let p = l.parentId; p; p = porId.get(p)?.parentId ?? null) if (fechados.has(p)) return true;
+    return false;
+  };
   const diferenca = eb.applied && eb.totalCents && eb.modelTotalCents ? (BigInt(eb.totalCents) - BigInt(eb.modelTotalCents)).toString() : null;
 
   return (
@@ -91,17 +113,16 @@ export function EquipmentBomPanel({ equipmentId, ativo }: { equipmentId: string;
             <span className="rp-label">BOM</span>
             <span />
             <span className="rp-ficha__ref">
-              <span className="rp-link" role="link" tabIndex={0} aria-label={`Abrir revisão ${eb.revisionLabel} da BOM`} title="Abrir a revisão aplicada"
-                onClick={() => win.open('bom-revision', eb.revisionId!)} onKeyDown={(e) => e.key === 'Enter' && win.open('bom-revision', eb.revisionId!)} />
-              <input className="rp-field rp-field--readonly" readOnly aria-label="BOM aplicada" value={`${eb.bomCode} — ${eb.bomName} — rev. ${eb.revisionLabel}`} />
-              {seloRevisaoBom(eb.revisionStatus!)}
+              <span className="rp-link" role="link" tabIndex={0} aria-label={`Abrir a BOM ${eb.bomName}`} title="Abrir a BOM do modelo"
+                onClick={() => win.open('bom', eb.bomId!)} onKeyDown={(e) => e.key === 'Enter' && win.open('bom', eb.bomId!)} />
+              <input className="rp-field rp-field--readonly" readOnly aria-label="BOM aplicada" value={`${eb.bomCode} — ${eb.bomName}`} />
             </span>
             <span className="rp-label">Total do equipamento</span>
             <span />
             <input className="rp-field rp-field--readonly rp-field--num rp-field--curto" readOnly aria-label="Total do equipamento" value={reais(eb.totalCents)} />
-            <span className="rp-label">Total do modelo</span>
+            <span className="rp-label">Total atual do modelo</span>
             <span />
-            <input className="rp-field rp-field--readonly rp-field--num rp-field--curto" readOnly aria-label="Total do modelo" value={reais(eb.modelTotalCents)} />
+            <input className="rp-field rp-field--readonly rp-field--num rp-field--curto" readOnly aria-label="Total atual do modelo" value={reais(eb.modelTotalCents)} />
             <span className="rp-label">Diferença</span>
             <span />
             <input className="rp-field rp-field--readonly" readOnly aria-label="Diferença para o modelo"
@@ -110,6 +131,18 @@ export function EquipmentBomPanel({ equipmentId, ativo }: { equipmentId: string;
             <span />
             <input className="rp-field rp-field--readonly" readOnly aria-label="Aplicada em" value={`${dataHora(eb.appliedAt)} por ${eb.appliedBy}`} />
           </div>
+          {eb.modelChanged && (
+            <p className="rp-tip rp-bom__aviso" role="note">
+              <i className="rp-ico rp-ico-status-aviso" aria-hidden="true" />
+              <span>
+                A BOM do modelo mudou depois de aplicada (total atual {reais(eb.modelTotalCents)}). Este equipamento continua com a cópia de{' '}
+                {dataHora(eb.appliedAt)}{podeAjustar ? ' até reaplicar.' : '.'}
+              </span>
+              {podeAjustar && (
+                <button type="button" className="rp-btn" onClick={() => setAcao('reaplicar')}><span>R<u>e</u>aplicar BOM</span></button>
+              )}
+            </p>
+          )}
           <div className="rp-tabela">
             <div className="rp-tabela-acoes">
               <span className="rp-tabela-tit">Linhas do equipamento</span>
@@ -122,7 +155,7 @@ export function EquipmentBomPanel({ equipmentId, ativo }: { equipmentId: string;
                   ) : (
                     <button type="button" className="rp-btn" disabled={!linha} onClick={() => setAcao('REMOVE')}><span><u>R</u>etirar linha</span></button>
                   )}
-                  <button type="button" className="rp-btn" onClick={() => setAcao('trocar')}><span><u>T</u>rocar revisão</span></button>
+                  {!eb.modelChanged && <button type="button" className="rp-btn" onClick={() => setAcao('reaplicar')}><span>R<u>e</u>aplicar BOM</span></button>}
                 </>
               )}
               <button type="button" className="rp-btn" onClick={() => setVerHistorico((v) => !v)}>{verHistorico ? 'Ver linhas' : 'Histórico da BOM'}</button>
@@ -146,11 +179,24 @@ export function EquipmentBomPanel({ equipmentId, ativo }: { equipmentId: string;
                     </tr>
                   </thead>
                   <tbody>
-                    {eb.lines.map((l, i) => (
-                      <tr key={l.id} aria-selected={sel === l.id} onClick={() => setSel(l.id)} className={l.status === 'REMOVED' ? 'rp-bom__retirada' : undefined}>
+                    {eb.lines.map((l, i) => escondida(l) ? null : (
+                      <tr key={l.id} aria-selected={sel === l.id} onClick={() => setSel(l.id)} className={l.status === 'REMOVED' ? 'rp-bom__retirada' : undefined}
+                        aria-level={l.depth + 1} aria-expanded={l.kind === 'SUBASSEMBLY' ? !fechados.has(l.id) : undefined}>
                         <td className="rownum">{i + 1}</td>
                         <td>{l.referenceCode ?? ''}</td>
-                        <td className={`rp-bom__nivel-${Math.min(l.depth, 4)}`}>{l.kind === 'SUBASSEMBLY' ? <b>{l.description}</b> : l.description}</td>
+                        <td className={`rp-bom__nivel-${Math.min(l.depth, 4)}`}>
+                          {l.kind === 'SUBASSEMBLY' ? (
+                            <span className="rp-bom__sub">
+                              <i className={`rp-ico ${fechados.has(l.id) ? 'rp-ico-pasta' : 'rp-ico-pasta-aberta'}`} role="button" tabIndex={0}
+                                aria-label={fechados.has(l.id) ? `Abrir ${l.description}` : `Fechar ${l.description}`}
+                                onClick={(e) => (e.stopPropagation(), alternar(l.id))}
+                                onKeyDown={(e) => e.key === 'Enter' && (e.stopPropagation(), alternar(l.id))} />{' '}
+                              <b>{l.description}</b>
+                            </span>
+                          ) : (
+                            l.description
+                          )}
+                        </td>
                         <td className="num">
                           {quantidade(l.quantity)}
                           {l.state === 'CHANGED' && l.modelQuantity !== l.quantity && <span className="rp-ficha__antes"> (era {quantidade(l.modelQuantity)})</span>}
@@ -180,11 +226,11 @@ export function EquipmentBomPanel({ equipmentId, ativo }: { equipmentId: string;
         </>
       )}
 
-      {(acao === 'aplicar' || acao === 'trocar') && (
-        <DialogoAplicar idBase={fid('aplicar')} eb={eb} trocar={acao === 'trocar'} onCancelar={() => setAcao(null)}
+      {(acao === 'aplicar' || acao === 'reaplicar') && (
+        <DialogoAplicar idBase={fid('aplicar')} eb={eb} reaplicar={acao === 'reaplicar'} onCancelar={() => setAcao(null)}
           onAplicado={(r, texto) => concluir(r, texto)} />
       )}
-      {acao && acao !== 'aplicar' && acao !== 'trocar' && (
+      {acao && acao !== 'aplicar' && acao !== 'reaplicar' && (
         <DialogoAjuste idBase={fid('ajuste')} eb={eb} acao={acao} linha={linha} onCancelar={() => setAcao(null)}
           onAjustado={(r, texto) => concluir(r, texto)}
           onConflito={() => {
@@ -196,40 +242,39 @@ export function EquipmentBomPanel({ equipmentId, ativo }: { equipmentId: string;
   );
 }
 
-/** Aplicar a primeira BOM ou trocar a revisão (com motivo; os ajustes do equipamento são descartados). */
-function DialogoAplicar({ idBase, eb, trocar, onAplicado, onCancelar }: {
+/** Aplicar a primeira BOM ou reaplicar a BOM do modelo (com motivo; os ajustes do equipamento são descartados). */
+function DialogoAplicar({ idBase, eb, reaplicar, onAplicado, onCancelar }: {
   idBase: string;
   eb: EquipmentBom;
-  trocar: boolean;
+  reaplicar: boolean;
   onAplicado: (r: EquipmentBom, texto: string) => void;
   onCancelar: () => void;
 }) {
   const win = useWindow();
-  const [opcoes, setOpcoes] = useState<{ valor: string; rotulo: string; modelo: string | null }[]>([]);
-  const [revisao, setRevisao] = useState('');
+  const [opcoes, setOpcoes] = useState<{ valor: string; rotulo: string; modelo: string | null; pendente: number }[]>([]);
+  const [bom, setBom] = useState(eb.bomId ?? '');
   const [motivo, setMotivo] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const chave = useRef(novaChave());
 
   useEffect(() => {
-    api.get<Bom[]>('/api/v1/boms').then((r) => {
-      const daqui = r.data.filter((b) => b.modelId && b.approved).map((b) => ({
-        valor: b.approved!.id, rotulo: `${b.code} — ${b.name} — rev. ${b.approved!.label} — ${reais(b.approved!.totalCents)}`, modelo: b.modelId,
+    api.get<BomSummary[]>('/api/v1/boms').then((r) => {
+      const daqui = r.data.filter((b) => b.modelId).map((b) => ({
+        valor: b.id, rotulo: `${b.code} — ${b.name} — ${reais(b.totalCents)}${b.pending ? ` — ${b.pending} pendente(s)` : ''}`, modelo: b.modelId, pendente: b.pending,
       }));
       setOpcoes(daqui);
-      const livre = (o: { valor: string }) => !trocar || o.valor !== eb.revisionId;
-      setRevisao(daqui.find((o) => o.modelo === eb.equipment.modelId && livre(o))?.valor ?? daqui.find(livre)?.valor ?? '');
+      setBom((v) => v || (daqui.find((o) => o.modelo === eb.equipment.modelId)?.valor ?? daqui[0]?.valor ?? ''));
     }).catch(() => setOpcoes([]));
-  }, [eb.equipment.modelId, eb.revisionId, trocar]);
+  }, [eb.equipment.modelId]);
 
-  const escolhida = opcoes.find((o) => o.valor === revisao);
+  const escolhida = opcoes.find((o) => o.valor === bom);
   const confirmar = async () => {
-    if (!revisao) return setErro('Escolha a revisão aprovada.');
-    if (trocar && !motivo.trim()) return setErro('Informe o motivo da troca de revisão.');
+    if (!bom) return setErro('Escolha a BOM do modelo.');
+    if (reaplicar && !motivo.trim()) return setErro('Informe o motivo para reaplicar a BOM.');
     try {
-      const r = await api.post<EquipmentBom>(`/api/v1/equipment/${eb.equipment.id}/bom`, { revisionId: revisao, reason: motivo.trim() || null },
+      const r = await api.post<EquipmentBom>(`/api/v1/equipment/${eb.equipment.id}/bom`, { bomId: bom, reason: motivo.trim() || null },
         { 'Idempotency-Key': chave.current });
-      onAplicado(r.data, `BOM ${r.data.bomName} rev. ${r.data.revisionLabel} aplicada ao equipamento ${r.data.equipment.code}`);
+      onAplicado(r.data, `BOM ${r.data.bomName} ${reaplicar ? 'reaplicada' : 'aplicada'} ao equipamento ${r.data.equipment.code}: total ${reais(r.data.totalCents)}`);
     } catch (e) {
       const x = e as ApiError;
       if (!x.isNetwork) chave.current = novaChave();
@@ -238,25 +283,31 @@ function DialogoAplicar({ idBase, eb, trocar, onAplicado, onCancelar }: {
     }
   };
   return (
-    <Dialog icon={trocar ? 'aviso' : 'info'} label={trocar ? 'Trocar revisão da BOM' : 'Aplicar BOM'} onEscape={onCancelar}
+    <Dialog icon={reaplicar ? 'aviso' : 'info'} label={reaplicar ? 'Reaplicar BOM' : 'Aplicar BOM'} onEscape={onCancelar}
       buttons={[
-        { label: trocar ? 'Trocar' : 'Aplicar', primary: true, onClick: () => void confirmar() },
+        { label: reaplicar ? 'Reaplicar' : 'Aplicar', primary: true, onClick: () => void confirmar() },
         { label: 'Cancelar', onClick: onCancelar },
       ]}>
-      {trocar
-        ? 'O equipamento passa a usar a outra revisão; os ajustes feitos só nele são descartados e ficam no histórico.'
-        : 'A revisão aprovada é copiada para o equipamento e não muda quando o modelo ganhar uma revisão nova.'}
+      {reaplicar
+        ? `O equipamento recebe o conteúdo atual da BOM (${reais(eb.modelTotalCents)}); os ajustes feitos só nele são descartados e ficam no histórico.`
+        : 'O conteúdo atual da BOM é copiado para o equipamento e não muda quando a BOM do modelo mudar, até reaplicar.'}
       <div className="rp-form rp-msgbox__form">
-        <label className="rp-label" htmlFor={`${idBase}-rev`}>Revisão</label>
-        <Selecao id={`${idBase}-rev`} valor={revisao} onChange={(v) => (setRevisao(v), setErro(null))}
-          opcoes={opcoes.length ? opcoes.map(({ valor, rotulo }) => ({ valor, rotulo })) : [{ valor: '', rotulo: 'Nenhuma BOM de modelo aprovada' }]} />
-        {trocar && (
+        <label className="rp-label" htmlFor={`${idBase}-bom`}>BOM</label>
+        <Selecao id={`${idBase}-bom`} valor={bom} onChange={(v) => (setBom(v), setErro(null))}
+          opcoes={opcoes.length ? opcoes.map(({ valor, rotulo }) => ({ valor, rotulo })) : [{ valor: '', rotulo: 'Nenhuma BOM de modelo' }]} />
+        {reaplicar && (
           <>
             <label className="rp-label" htmlFor={`${idBase}-motivo`}>Motivo</label>
-            <input id={`${idBase}-motivo`} className="rp-field" value={motivo} maxLength={500} onChange={(e) => (setMotivo(e.target.value), setErro(null))} />
+            <input id={`${idBase}-motivo`} className="rp-field" value={motivo} maxLength={500} onChange={(e) => (setMotivo(e.target.value), setErro(null))}
+              onKeyDown={(e) => e.key === 'Enter' && void confirmar()} />
           </>
         )}
       </div>
+      {escolhida && escolhida.pendente > 0 && (
+        <span className="rp-janela-mdi__aviso" role="status">
+          <i className="rp-ico rp-ico-status-aviso" aria-hidden="true" /> A BOM tem {escolhida.pendente} {escolhida.pendente === 1 ? 'linha' : 'linhas'} sem quantidade ou custo e não se aplica até completar.
+        </span>
+      )}
       {escolhida && escolhida.modelo !== eb.equipment.modelId && (
         <span className="rp-janela-mdi__aviso" role="status">
           <i className="rp-ico rp-ico-status-aviso" aria-hidden="true" /> A BOM escolhida é de outro modelo; o equipamento é do modelo {eb.equipment.modelName}.
@@ -297,7 +348,10 @@ function DialogoAjuste({ idBase, eb, acao, linha, onAjustado, onConflito, onCanc
     if (!busca.trim()) return;
     const r = (await api.get<ItemSummary[]>(`/api/v1/items?search=${encodeURIComponent(busca.trim())}`)).data.filter((i) => i.status === 'ATIVO');
     setItens(r);
-    if (r.length === 1) setItemId(r[0].id);
+    if (r.length === 1) {
+      setItemId(r[0].id);
+      if (!preco.trim() && r[0].referenceCost) setPreco(custo(r[0].referenceCost));
+    }
     if (r.length === 0) setErro('Nenhum registro correspondente encontrado.');
   };
 
@@ -349,7 +403,12 @@ function DialogoAjuste({ idBase, eb, acao, linha, onAjustado, onConflito, onCanc
             {itens.length > 0 && (
               <>
                 <label className="rp-label" htmlFor={`${idBase}-item`}>Encontrados</label>
-                <Selecao id={`${idBase}-item`} valor={itemId} onChange={setItemId}
+                <Selecao id={`${idBase}-item`} valor={itemId}
+                  onChange={(v) => {
+                    setItemId(v);
+                    const it = itens.find((i) => i.id === v);
+                    if (!preco.trim() && it?.referenceCost) setPreco(custo(it.referenceCost));
+                  }}
                   opcoes={[{ valor: '', rotulo: 'Escolha o item' }, ...itens.map((i) => ({ valor: i.id, rotulo: `${i.code} — ${i.description}` }))]} />
               </>
             )}

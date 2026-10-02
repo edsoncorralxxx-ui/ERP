@@ -115,27 +115,8 @@ class JdbcBomRepository implements BomRepository {
     }
 
     @Override
-    public List<BomRevision> revisionsOf(UUID bomId) {
-        return jdbc.sql("select * from bom_revision where bom_id = :bom order by revision desc").param("bom", bomId)
-                .query(JdbcBomRepository::revision).list();
-    }
-
-    @Override
-    public Optional<BomRevision> approvedOf(UUID bomId) {
-        return jdbc.sql("select * from bom_revision where bom_id = :bom and status = 'APPROVED'").param("bom", bomId)
-                .query(JdbcBomRepository::revision).optional();
-    }
-
-    @Override
-    public Optional<BomRevision> draftOf(UUID bomId) {
-        return jdbc.sql("select * from bom_revision where bom_id = :bom and status = 'DRAFT'").param("bom", bomId)
-                .query(JdbcBomRepository::revision).optional();
-    }
-
-    @Override
-    public int nextRevisionNumber(UUID bomId) {
-        return jdbc.sql("select coalesce(max(revision) + 1, 0) from bom_revision where bom_id = :bom").param("bom", bomId)
-                .query(Integer.class).single();
+    public Optional<BomRevision> currentOf(UUID bomId) {
+        return jdbc.sql("select * from bom_revision where bom_id = :bom").param("bom", bomId).query(JdbcBomRepository::revision).optional();
     }
 
     @Override

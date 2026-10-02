@@ -1511,100 +1511,56 @@ paths:
   /api/v1/boms:
     get:
       tags: [BOM]
-      summary: BOMs (as dos modelos primeiro, depois as submontagens), com a revisão aprovada e o rascunho (bom.read)
+      summary: BOMs (as dos modelos primeiro, depois as submontagens), com o total e as pendências (bom.read)
       parameters:
         - { name: search, in: query, required: false, schema: { type: string }, description: 'Código, nome da BOM ou do modelo' }
       responses:
-        '200': { description: BOMs, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Bom' } } } } }
+        '200': { description: BOMs, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/BomSummary' } } } } }
     post:
       tags: [BOM]
       summary: >-
-        Cadastra a BOM — CreateBom (bom.update): de um modelo (uma por modelo) ou submontagem (sem modelo); nasce com a revisão 00
-        em rascunho, sem linhas. Nome único (422 BOM_DUPLICATE)
+        Cadastra a BOM — CreateBom (bom.update): de um modelo (uma por modelo) ou submontagem (sem modelo), sem linhas. Nome único
+        (422 BOM_DUPLICATE)
       parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: '#/components/schemas/BomRequest' } } }
       responses:
-        '201': { description: BOM cadastrada, content: { application/json: { schema: { $ref: '#/components/schemas/Bom' } } } }
+        '201': { description: BOM cadastrada, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Bom' } } } }
         '422': { $ref: '#/components/responses/Erro' }
 
   /api/v1/boms/{id}:
     parameters: [{ $ref: '#/components/parameters/Id' }]
     get:
       tags: [BOM]
-      summary: BOM com a revisão aprovada e o rascunho (bom.read)
+      summary: >-
+        BOM com as linhas, o valor de cada uma, subtotais por categoria, total, pendências, problemas, quem a usa como submontagem e a
+        árvore das submontagens (bom.read)
       responses:
-        '200': { description: BOM, content: { application/json: { schema: { $ref: '#/components/schemas/Bom' } } } }
+        '200': { description: BOM, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Bom' } } } }
         '404': { $ref: '#/components/responses/Erro' }
-
-  /api/v1/boms/{id}/revisions:
-    parameters: [{ $ref: '#/components/parameters/Id' }]
-    post:
+    put:
       tags: [BOM]
       summary: >-
-        Revisão nova em rascunho — CreateBomRevision (bom.update), cópia das linhas da revisão aprovada; só um rascunho por BOM
-        (422 BOM_DRAFT_EXISTS)
-      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+        Grava a BOM inteira — UpdateBom (bom.update): linhas na ordem e total informado da origem; vale na hora para as BOMs que a usam.
+        Equipamentos não mudam até reaplicar. Item inexistente, quantidade ≤ 0, custo negativo: 422 BOM_INVALID; ciclo de
+        submontagens: 422 BOM_CYCLE. Evento BomUpdated
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/BomContentRequest' } } }
       responses:
-        '201': { description: Rascunho criado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/BomRevision' } } } }
+        '200': { description: BOM gravada, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Bom' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
         '422': { $ref: '#/components/responses/Erro' }
 
   /api/v1/boms/{id}/history:
     parameters: [{ $ref: '#/components/parameters/Id' }]
     get:
       tags: [BOM]
-      summary: Trilha da BOM e das revisões (bom.read)
+      summary: Trilha da BOM, com cada gravação (bom.read)
       responses:
         '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
-
-  /api/v1/bom-revisions/{id}:
-    parameters: [{ $ref: '#/components/parameters/Id' }]
-    get:
-      tags: [BOM]
-      summary: >-
-        Revisão com as linhas, o valor de cada uma, subtotais por categoria, total, pendências e problemas, quem a usa como submontagem
-        e as revisões da BOM (bom.read)
-      responses:
-        '200': { description: Revisão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/BomRevision' } } } }
-        '404': { $ref: '#/components/responses/Erro' }
-    put:
-      tags: [BOM]
-      summary: >-
-        Grava o rascunho inteiro — UpdateBomDraft (bom.update): linhas na ordem e total informado da origem. Revisão aprovada: 409.
-        Item inexistente, quantidade ≤ 0, custo negativo: 422 BOM_INVALID; ciclo de submontagens: 422 BOM_CYCLE
-      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
-      requestBody:
-        required: true
-        content: { application/json: { schema: { $ref: '#/components/schemas/BomDraftRequest' } } }
-      responses:
-        '200': { description: Rascunho gravado, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/BomRevision' } } } }
-        '409': { $ref: '#/components/responses/Erro' }
-        '412': { $ref: '#/components/responses/Erro' }
-        '422': { $ref: '#/components/responses/Erro' }
-
-  /api/v1/bom-revisions/{id}/approval:
-    parameters: [{ $ref: '#/components/parameters/Id' }]
-    post:
-      tags: [BOM]
-      summary: >-
-        Aprova — ApproveBomRevision (bom.approve): a revisão e as submontagens em rascunho abaixo dela, juntas; a aprovada antes fica
-        substituída. Pendência: 422 BOM_INCOMPLETE com cada linha em details. Aprovada de novo: devolve a mesma. Evento BomRevisionApproved
-      responses:
-        '200': { description: Revisão aprovada, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/BomRevision' } } } }
-        '403': { $ref: '#/components/responses/Erro' }
-        '422': { $ref: '#/components/responses/Erro' }
-
-  /api/v1/bom-revisions/{id}/comparison:
-    parameters: [{ $ref: '#/components/parameters/Id' }]
-    get:
-      tags: [BOM]
-      summary: Linhas incluídas, retiradas e alteradas entre a revisão `with` (antes) e esta (depois), e a variação do total (bom.read)
-      parameters:
-        - { name: with, in: query, required: true, schema: { type: string, format: uuid } }
-      responses:
-        '200': { description: Comparação, content: { application/json: { schema: { $ref: '#/components/schemas/BomComparison' } } } }
-        '404': { $ref: '#/components/responses/Erro' }
 
   /api/v1/bom-imports:
     post:
@@ -1633,8 +1589,8 @@ paths:
     post:
       tags: [BOM]
       summary: >-
-        Confirma a carga — ImportBom (bom.update): modelo, BOM do modelo, submontagens com a revisão em rascunho e itens novos, numa
-        transação; confirmar de novo devolve a mesma. BOM com rascunho aberto: 422 BOM_DRAFT_EXISTS. Evento BomImported
+        Confirma a carga — ImportBom (bom.update): modelo, BOM do modelo, submontagens e itens novos, numa transação; BOMs que já
+        existem têm as linhas substituídas pelas do arquivo. Confirmar de novo devolve a mesma. Evento BomImported
       parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
       responses:
         '200': { description: Carga confirmada, content: { application/json: { schema: { $ref: '#/components/schemas/BomImport' } } } }
@@ -1651,8 +1607,9 @@ paths:
     post:
       tags: [BOM do equipamento]
       summary: >-
-        Aplica a revisão aprovada de uma BOM de modelo — ApplyBomToProject (project_bom.apply): cópia congelada; a mesma revisão de novo
-        não muda nada; outra revisão exige motivo e descarta os ajustes. Rascunho: 422 BOM_NOT_APPROVED. Evento ProjectBomApplied
+        Aplica ou reaplica a BOM de um modelo — ApplyBomToProject (project_bom.apply): cópia do conteúdo atual, que não muda quando a
+        BOM do modelo muda. Reaplicar exige motivo e descarta os ajustes. Linha sem quantidade ou custo: 422 BOM_INCOMPLETE.
+        Evento ProjectBomApplied
       parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody:
         required: true
@@ -1858,7 +1815,7 @@ components:
             PROPOSAL_LOST, PROPOSAL_WON, SALES_ORDER_DRAFTED, SALES_ORDER_UPDATED, SALES_ORDER_CONFIRMED, SALES_ORDER_CANCELLED,
             PROJECT_CREATED, PROJECT_CLOSED, EQUIPMENT_CREATED, EQUIPMENT_UPDATED, EQUIPMENT_CANCELLED,
             EQUIPMENT_MODEL_REGISTERED, EQUIPMENT_MODEL_UPDATED, EQUIPMENT_MODEL_DEACTIVATED, BOM_CREATED, BOM_DRAFT_UPDATED,
-            BOM_REVISION_CREATED, BOM_REVISION_APPROVED, BOM_IMPORTED, EQUIPMENT_BOM_APPLIED, EQUIPMENT_BOM_REVISION_CHANGED,
+            BOM_REVISION_CREATED, BOM_REVISION_APPROVED, BOM_DRAFT_DISCARDED, BOM_IMPORTED, EQUIPMENT_BOM_APPLIED, EQUIPMENT_BOM_REVISION_CHANGED,
             EQUIPMENT_BOM_ADJUSTED
         version: { type: integer }
         reason: { type: [string, 'null'] }
@@ -2850,17 +2807,7 @@ components:
       required: [name]
       properties:
         name: { type: string, maxLength: 200 }
-    BomRevisionRef:
-      type: [object, 'null']
-      properties:
-        id: { type: string, format: uuid }
-        label: { type: string, example: '00' }
-        status: { type: string, enum: [DRAFT, APPROVED, SUPERSEDED] }
-        totalCents: { type: string }
-        pending: { type: integer, description: 'Linhas sem quantidade ou custo, em qualquer nível' }
-        approvedAt: { type: [string, 'null'], format: date-time }
-        approvedBy: { type: [string, 'null'] }
-    Bom:
+    BomSummary:
       type: object
       properties:
         id: { type: string, format: uuid }
@@ -2869,11 +2816,11 @@ components:
         modelId: { type: [string, 'null'], format: uuid, description: 'Vazio: submontagem' }
         modelCode: { type: [string, 'null'] }
         modelName: { type: [string, 'null'] }
-        approved: { $ref: '#/components/schemas/BomRevisionRef' }
-        draft: { $ref: '#/components/schemas/BomRevisionRef' }
-        revisionCount: { type: integer }
-        createdAt: { type: string, format: date-time }
-        createdBy: { type: string }
+        totalCents: { type: string }
+        pending: { type: integer, description: 'Linhas sem quantidade ou custo, em qualquer nível' }
+        lineCount: { type: integer }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
     BomRequest:
       type: object
       required: [name]
@@ -2885,7 +2832,7 @@ components:
       properties:
         kind: { type: string, enum: [ITEM, SUBASSEMBLY], default: ITEM }
         itemId: { type: [string, 'null'], format: uuid, description: 'Linha de item' }
-        childRevisionId: { type: [string, 'null'], format: uuid, description: 'Linha de submontagem: a revisão escolhida' }
+        childBomId: { type: [string, 'null'], format: uuid, description: 'Linha de submontagem' }
         referenceCode: { type: [string, 'null'], maxLength: 60 }
         description: { type: [string, 'null'], maxLength: 200, description: 'Vazio: a do item' }
         quantity: { $ref: '#/components/schemas/Decimal' }
@@ -2895,7 +2842,7 @@ components:
         supplier: { type: [string, 'null'], maxLength: 120 }
         material: { type: [string, 'null'], maxLength: 120 }
         notes: { type: [string, 'null'], maxLength: 500 }
-    BomDraftRequest:
+    BomContentRequest:
       type: object
       properties:
         informedTotalCents: { type: [string, 'null'], description: 'Total informado da origem, em centavos' }
@@ -2904,28 +2851,31 @@ components:
     BomProblem:
       type: object
       properties:
-        severity: { type: string, enum: [BLOCKING, WARNING, INFO], description: 'BLOCKING impede a aprovação' }
+        severity: { type: string, enum: [BLOCKING, WARNING, INFO], description: 'BLOCKING impede aplicar a BOM ao equipamento' }
         position: { type: [integer, 'null'] }
         message: { type: string }
-    BomRevision:
+    BomTreeNode:
+      type: object
+      properties:
+        bomId: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        quantity: { $ref: '#/components/schemas/Decimal' }
+        totalCents: { type: string, description: 'Total de uma unidade da submontagem' }
+        pending: { type: integer }
+        itemLines: { type: integer, description: 'Linhas de item desta BOM (sem as das submontagens)' }
+        children: { type: array, items: { $ref: '#/components/schemas/BomTreeNode' } }
+    Bom:
       type: object
       properties:
         id: { type: string, format: uuid }
-        bomId: { type: string, format: uuid }
-        bomCode: { type: string }
-        bomName: { type: string }
+        code: { type: string }
+        name: { type: string }
         modelId: { type: [string, 'null'], format: uuid }
         modelCode: { type: [string, 'null'] }
         modelName: { type: [string, 'null'] }
-        revision: { type: integer }
-        label: { type: string, example: '00' }
-        status: { type: string, enum: [DRAFT, APPROVED, SUPERSEDED] }
-        basedOnId: { type: [string, 'null'], format: uuid }
         informedTotalCents: { type: [string, 'null'] }
         notes: { type: [string, 'null'] }
-        importId: { type: [string, 'null'], format: uuid }
-        approvedAt: { type: [string, 'null'], format: date-time }
-        approvedBy: { type: [string, 'null'] }
         version: { type: string }
         createdAt: { type: string, format: date-time }
         createdBy: { type: string }
@@ -2944,12 +2894,9 @@ components:
               itemId: { type: [string, 'null'], format: uuid }
               itemCode: { type: [string, 'null'] }
               itemActive: { type: boolean }
-              childRevisionId: { type: [string, 'null'], format: uuid }
               childBomId: { type: [string, 'null'], format: uuid }
               childBomCode: { type: [string, 'null'] }
               childBomName: { type: [string, 'null'] }
-              childRevisionLabel: { type: [string, 'null'] }
-              childRevisionStatus: { type: [string, 'null'] }
               referenceCode: { type: [string, 'null'] }
               description: { type: string }
               quantity: { $ref: '#/components/schemas/Decimal' }
@@ -2961,41 +2908,13 @@ components:
               supplier: { type: [string, 'null'] }
               material: { type: [string, 'null'] }
               notes: { type: [string, 'null'] }
+              itemReferenceCost: { $ref: '#/components/schemas/Decimal' }
         categories: { type: array, items: { type: object, properties: { category: { type: string }, cents: { type: string }, lines: { type: integer } } } }
         problems: { type: array, items: { $ref: '#/components/schemas/BomProblem' } }
         usedBy:
           type: array
-          items: { type: object, properties: { bomId: { type: string }, bomName: { type: string }, revisionId: { type: string }, revisionLabel: { type: string }, status: { type: string } } }
-        revisions: { type: array, items: { $ref: '#/components/schemas/BomRevisionRef' } }
-    BomComparison:
-      type: object
-      properties:
-        bomId: { type: string, format: uuid }
-        bomName: { type: string }
-        from: { $ref: '#/components/schemas/BomRevisionRef' }
-        to: { $ref: '#/components/schemas/BomRevisionRef' }
-        totalBefore: { type: string }
-        totalAfter: { type: string }
-        difference: { type: string, description: 'Depois − antes, em centavos (pode ser negativo)' }
-        rows:
-          type: array
-          items:
-            type: object
-            properties:
-              status: { type: string, enum: [ADDED, REMOVED, CHANGED] }
-              kind: { type: string, enum: [ITEM, SUBASSEMBLY] }
-              referenceCode: { type: [string, 'null'] }
-              description: { type: string }
-              revisionBefore: { type: [string, 'null'] }
-              revisionAfter: { type: [string, 'null'] }
-              quantityBefore: { $ref: '#/components/schemas/Decimal' }
-              quantityAfter: { $ref: '#/components/schemas/Decimal' }
-              unitCostBefore: { $ref: '#/components/schemas/Decimal' }
-              unitCostAfter: { $ref: '#/components/schemas/Decimal' }
-              centsBefore: { type: [string, 'null'] }
-              centsAfter: { type: [string, 'null'] }
-              childRevisionBefore: { type: [string, 'null'], format: uuid }
-              childRevisionAfter: { type: [string, 'null'], format: uuid }
+          items: { type: object, properties: { bomId: { type: string }, bomCode: { type: string }, bomName: { type: string } } }
+        tree: { $ref: '#/components/schemas/BomTreeNode' }
     BomImportRequest:
       type: object
       required: [content]
@@ -3043,18 +2962,17 @@ components:
               newItem: { type: boolean }
               supplier: { type: [string, 'null'] }
               material: { type: [string, 'null'] }
-        revisionId: { type: [string, 'null'], format: uuid, description: 'Revisão do modelo criada pela confirmação' }
-        bomId: { type: [string, 'null'], format: uuid }
+        bomId: { type: [string, 'null'], format: uuid, description: 'BOM do modelo gravada pela confirmação' }
         createdAt: { type: string, format: date-time }
         createdBy: { type: string }
         confirmedAt: { type: [string, 'null'], format: date-time }
         confirmedBy: { type: [string, 'null'] }
     EquipmentBomApplyRequest:
       type: object
-      required: [revisionId]
+      required: [bomId]
       properties:
-        revisionId: { type: string, format: uuid }
-        reason: { type: [string, 'null'], maxLength: 500, description: 'Obrigatório para trocar de revisão' }
+        bomId: { type: string, format: uuid, description: 'BOM do modelo' }
+        reason: { type: [string, 'null'], maxLength: 500, description: 'Obrigatório para reaplicar' }
     EquipmentBomAdjustRequest:
       type: object
       required: [action, reason]
@@ -3091,9 +3009,6 @@ components:
         bomId: { type: [string, 'null'], format: uuid }
         bomCode: { type: [string, 'null'] }
         bomName: { type: [string, 'null'] }
-        revisionId: { type: [string, 'null'], format: uuid }
-        revisionLabel: { type: [string, 'null'] }
-        revisionStatus: { type: [string, 'null'] }
         version: { type: [string, 'null'] }
         appliedAt: { type: [string, 'null'], format: date-time }
         appliedBy: { type: [string, 'null'] }
@@ -3101,7 +3016,8 @@ components:
         updatedBy: { type: [string, 'null'] }
         totalCents: { type: [string, 'null'] }
         pending: { type: integer }
-        modelTotalCents: { type: [string, 'null'], description: 'Total da revisão do modelo, sem os ajustes' }
+        modelTotalCents: { type: [string, 'null'], description: 'Total atual da BOM do modelo, sem os ajustes' }
+        modelChanged: { type: boolean, description: 'A BOM do modelo (ou uma submontagem dela) mudou depois de aplicada' }
         added: { type: integer }
         removed: { type: integer }
         changed: { type: integer }
@@ -3157,8 +3073,6 @@ components:
               applied: { type: boolean }
               bomId: { type: [string, 'null'], format: uuid }
               bomName: { type: [string, 'null'] }
-              revisionId: { type: [string, 'null'], format: uuid }
-              revisionLabel: { type: [string, 'null'] }
               costCents: { type: [string, 'null'], description: 'Vazio: sem custo planejado' }
               pending: { type: integer }
               adjusted: { type: boolean }

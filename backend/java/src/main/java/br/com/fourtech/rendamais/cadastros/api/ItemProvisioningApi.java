@@ -11,7 +11,9 @@ import java.util.UUID;
 public interface ItemProvisioningApi {
 
     /** {@code nature} é MATERIAL ou SERVICO. */
-    record ItemRequest(String referenceCode, String description, String nature, String uom, String uomName, String categoryName) { }
+    /** {@code referenceCost}: custo de referência do item novo (o preço da carga); item já cadastrado não muda. */
+    record ItemRequest(String referenceCode, String description, String nature, String uom, String uomName, String categoryName,
+                       java.math.BigDecimal referenceCost) { }
 
     record ProvisionedItem(UUID id, String code, String referenceCode, boolean created) { }
 

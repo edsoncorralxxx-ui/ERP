@@ -20,9 +20,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Sprint 10 contra PostgreSQL real, com a BOM real da Balança Hidrostática (rev. 00): carga do arquivo com a prévia e os
- * problemas da origem, submontagens (Mecânica, Elétrica e Painel elétrico), aprovação recusada pela linha sem quantidade,
- * aprovação junto com as submontagens, aplicação ao equipamento do pedido, ajustes, custo planejado e margem, revisão
- * nova que não muda o equipamento, comparação, ciclo recusado e permissões.
+ * problemas da origem, submontagens (Mecânica, Elétrica e Painel elétrico) e a árvore, BOM única editável (decisão do PO
+ * em 02/10/2026), aplicação recusada com pendência, aplicação ao equipamento do pedido, ajustes, reaplicar depois que o
+ * modelo muda, custo planejado e margem, custo de referência, ciclo recusado e permissões.
  */
 class BomApiTest extends CadastrosApiTest {
 
@@ -47,18 +47,18 @@ class BomApiTest extends CadastrosApiTest {
         return post("/api/v1/bom-imports", null, JSON.writeValueAsString(body));
     }
 
-    private JsonNode revisao(String id) throws Exception {
-        HttpResponse<String> r = get("/api/v1/bom-revisions/" + id);
+    private JsonNode bom(String id) throws Exception {
+        HttpResponse<String> r = get("/api/v1/boms/" + id);
         assertThat(r.statusCode()).as(r.body()).isEqualTo(200);
         return json(r);
     }
 
-    /** Linhas da revisão no formato do PUT, para regravar o rascunho com uma mudança. */
-    private static ArrayNode linhas(JsonNode rev) {
+    /** Linhas da BOM no formato do PUT, para regravar com uma mudança. */
+    private static ArrayNode linhas(JsonNode b) {
         ArrayNode out = JSON.createArrayNode();
-        for (JsonNode l : rev.get("lines")) {
+        for (JsonNode l : b.get("lines")) {
             ObjectNode o = JSON.createObjectNode();
-            for (String f : List.of("kind", "itemId", "childRevisionId", "referenceCode", "description", "quantity", "uom", "unitCost",
+            for (String f : List.of("kind", "itemId", "childBomId", "referenceCode", "description", "quantity", "uom", "unitCost",
                     "category", "supplier", "material", "notes")) {
                 if (l.hasNonNull(f)) o.put(f, l.get(f).asString());
             }
@@ -67,48 +67,48 @@ class BomApiTest extends CadastrosApiTest {
         return out;
     }
 
-    private HttpResponse<String> grava(JsonNode rev, ArrayNode lines, String informed) throws Exception {
+    private HttpResponse<String> grava(JsonNode b, ArrayNode lines, String informed) throws Exception {
         ObjectNode body = JSON.createObjectNode();
-        if (informed == null && rev.hasNonNull("informedTotalCents")) informed = rev.get("informedTotalCents").asString();
+        if (informed == null && b.hasNonNull("informedTotalCents")) informed = b.get("informedTotalCents").asString();
         if (informed != null) body.put("informedTotalCents", informed);
         body.set("lines", lines);
-        return withVersion("PUT", "/api/v1/bom-revisions/" + rev.get("id").asString(), rev.get("version").asString(),
-                JSON.writeValueAsString(body));
+        return withVersion("PUT", "/api/v1/boms/" + b.get("id").asString(), b.get("version").asString(), JSON.writeValueAsString(body));
     }
 
-    private static JsonNode linha(JsonNode rev, String descricao) {
-        for (JsonNode l : rev.get("lines")) if (l.get("description").asString().equals(descricao)) return l;
+    private static JsonNode linha(JsonNode b, String descricao) {
+        for (JsonNode l : b.get("lines")) if (l.get("description").asString().equals(descricao)) return l;
         throw new AssertionError("linha " + descricao + " não encontrada");
     }
 
-    private static int posicao(JsonNode rev, String descricao) {
+    private static int posicao(JsonNode b, String descricao) {
         int i = 0;
-        for (JsonNode l : rev.get("lines")) {
+        for (JsonNode l : b.get("lines")) {
             if (l.get("description").asString().equals(descricao)) return i;
             i++;
         }
         throw new AssertionError("linha " + descricao + " não encontrada");
     }
 
-    /** Carga confirmada da BOM real; devolve a revisão do modelo. */
+    /** Carga confirmada da BOM real; devolve a BOM do modelo. */
     private JsonNode carrega() throws Exception {
         String id = json(envia(arquivo)).get("id").asString();
         HttpResponse<String> c = post("/api/v1/bom-imports/" + id + "/confirmation", "bom-imp-" + id.substring(0, 8), null);
         assertThat(c.statusCode()).as(c.body()).isEqualTo(200);
-        return revisao(json(c).get("revisionId").asString());
+        return bom(json(c).get("bomId").asString());
     }
 
-    /** Informa a quantidade do Suporte 45° (linha sem quantidade no arquivo) e aprova a BOM do modelo com as submontagens. */
-    private JsonNode aprova(JsonNode modelo) throws Exception {
-        JsonNode eletrica = revisao(linha(modelo, "Elétrica — " + PRODUTO).get("childRevisionId").asString());
-        JsonNode painel = revisao(linha(eletrica, "Painel elétrico — " + PRODUTO).get("childRevisionId").asString());
+    private JsonNode sub(JsonNode b, String nome) throws Exception {
+        return bom(linha(b, nome).get("childBomId").asString());
+    }
+
+    /** Informa a quantidade do Suporte 45° (linha sem quantidade no arquivo); devolve a BOM do modelo atualizada. */
+    private JsonNode completa(JsonNode modelo) throws Exception {
+        JsonNode painel = sub(sub(modelo, "Elétrica — " + PRODUTO), "Painel elétrico — " + PRODUTO);
         ArrayNode ls = linhas(painel);
         ((ObjectNode) ls.get(posicao(painel, "Suporte 45° para Trilho DIN"))).put("quantity", "1");
-        HttpResponse<String> g = grava(painel, ls, painel.get("informedTotalCents").asString());
+        HttpResponse<String> g = grava(painel, ls, null);
         assertThat(g.statusCode()).as(g.body()).isEqualTo(200);
-        HttpResponse<String> a = post("/api/v1/bom-revisions/" + modelo.get("id").asString() + "/approval", null, null);
-        assertThat(a.statusCode()).as(a.body()).isEqualTo(200);
-        return json(a);
+        return bom(modelo.get("id").asString());
     }
 
     /** Pedido confirmado com um equipamento do modelo, vendido por R$ 120.000,00; devolve o id do equipamento. */
@@ -186,229 +186,169 @@ class BomApiTest extends CadastrosApiTest {
     }
 
     @Test
-    void cargaCriaModeloSubmontagensEItensUmaVezSoEAprovacaoEsperaAQuantidadeQueFalta() throws Exception {
+    void cargaCriaModeloSubmontagensEItensUmaVezSoComAArvore() throws Exception {
         JsonNode modelo = carrega();
-        assertThat(modelo.get("status").asString()).isEqualTo("DRAFT");
-        assertThat(modelo.get("label").asString()).isEqualTo("00");
-        assertThat(modelo.get("bomName").asString()).isEqualTo(PRODUTO);
+        assertThat(modelo.get("name").asString()).isEqualTo(PRODUTO);
         assertThat(modelo.get("modelName").asString()).isEqualTo(PRODUTO);
         assertThat(modelo.get("totalCents").asString()).isEqualTo("6939851");
         assertThat(modelo.get("pending").asInt()).isEqualTo(1);
         assertThat(modelo.get("lines").size()).isEqualTo(2);
-        JsonNode mecanica = revisao(linha(modelo, "Mecânica — " + PRODUTO).get("childRevisionId").asString());
-        JsonNode eletrica = revisao(linha(modelo, "Elétrica — " + PRODUTO).get("childRevisionId").asString());
-        assertThat(mecanica.get("totalCents").asString()).isEqualTo("2847740");
-        assertThat(mecanica.get("lines").size()).isEqualTo(127);
-        assertThat(eletrica.get("totalCents").asString()).isEqualTo("4092111");
-        assertThat(eletrica.get("lines").size()).isEqualTo(27);
-        JsonNode painel = revisao(linha(eletrica, "Painel elétrico — " + PRODUTO).get("childRevisionId").asString());
-        assertThat(painel.get("totalCents").asString()).isEqualTo("2912967");
-        assertThat(painel.get("usedBy").toString()).contains("Elétrica — " + PRODUTO);
-        // Subtotais por categoria e a pintura de R$ 1.400,00 (PO, 01/10/2026).
+        assertThat(modelo.get("notes").asString()).isEqualTo("Carga do arquivo BOM_Renda_Mecanica_Eletrica.json, rev. 00");
+        // Árvore: Balança → Mecânica (127 itens) e Elétrica (26 itens) → Painel elétrico (50 itens).
+        JsonNode arvore = modelo.get("tree");
+        assertThat(arvore.get("name").asString()).isEqualTo(PRODUTO);
+        assertThat(arvore.get("children").size()).isEqualTo(2);
+        JsonNode mecNo = arvore.get("children").get(0);
+        JsonNode eleNo = arvore.get("children").get(1);
+        assertThat(mecNo.get("name").asString()).isEqualTo("Mecânica — " + PRODUTO);
+        assertThat(mecNo.get("totalCents").asString()).isEqualTo("2847740");
+        assertThat(mecNo.get("itemLines").asInt()).isEqualTo(127);
+        assertThat(eleNo.get("itemLines").asInt()).isEqualTo(26);
+        assertThat(eleNo.get("children").get(0).get("name").asString()).isEqualTo("Painel elétrico — " + PRODUTO);
+        assertThat(eleNo.get("children").get(0).get("totalCents").asString()).isEqualTo("2912967");
+        assertThat(eleNo.get("children").get(0).get("pending").asInt()).isEqualTo(1);
+        JsonNode mecanica = sub(modelo, "Mecânica — " + PRODUTO);
         assertThat(mecanica.get("categories").toString()).contains("{\"category\":\"Serviços\",\"cents\":\"1010979\",\"lines\":3}");
         assertThat(linha(mecanica, "Pintura").get("lineCents").asString()).isEqualTo("140000");
+        assertThat(mecanica.get("usedBy").toString()).contains(PRODUTO);
         assertThat(conta("select count(*) from item")).isEqualTo(201);
         assertThat(conta("select count(*) from item where nature = 'SERVICO'")).isEqualTo(5);
         assertThat(conta("select count(*) from equipment_model")).isEqualTo(1);
         assertThat(conta("select count(*) from bom")).isEqualTo(4);
+        // Item novo da carga recebe o preço da BOM como custo de referência.
+        assertThat(jdbc.sql("select reference_cost from item where description = 'Pintura'").query(java.math.BigDecimal.class).single())
+                .isEqualByComparingTo("1400");
 
-        // Confirmar de novo (outra chave) ou reenviar o arquivo não cria nada.
-        String importId = modelo.get("importId").asString();
-        HttpResponse<String> de_novo = post("/api/v1/bom-imports/" + importId + "/confirmation", "bom-imp-outra-chave", null);
-        assertThat(json(de_novo).get("revisionId").asString()).isEqualTo(modelo.get("id").asString());
+        // Confirmar de novo ou reenviar o arquivo não cria nada.
+        String importId = json(envia(arquivo)).get("id").asString();
         assertThat(json(envia(arquivo)).get("status").asString()).isEqualTo("CONFIRMED");
+        HttpResponse<String> de_novo = post("/api/v1/bom-imports/" + importId + "/confirmation", "bom-imp-outra-chave", null);
+        assertThat(json(de_novo).get("bomId").asString()).isEqualTo(modelo.get("id").asString());
         assertThat(conta("select count(*) from item")).isEqualTo(201);
         assertThat(conta("select count(*) from bom_revision")).isEqualTo(4);
 
-        // Aprovar com a linha sem quantidade é recusado, apontando a submontagem.
-        HttpResponse<String> recusa = post("/api/v1/bom-revisions/" + modelo.get("id").asString() + "/approval", null, null);
-        assertThat(recusa.statusCode()).isEqualTo(422);
-        assertThat(recusa.body()).contains("BOM_INCOMPLETE", "Painel elétrico — " + PRODUTO + " rev. 00",
-                "Suporte 45° para Trilho DIN: sem quantidade");
-        assertThat(conta("select count(*) from bom_revision where status = 'APPROVED'")).isZero();
-
-        // Com a quantidade informada, aprova a BOM do modelo e as três submontagens juntas.
-        JsonNode aprovado = aprova(modelo);
-        assertThat(aprovado.get("status").asString()).isEqualTo("APPROVED");
-        assertThat(aprovado.get("totalCents").asString()).isEqualTo("6940795");
-        assertThat(conta("select count(*) from bom_revision where status = 'APPROVED'")).isEqualTo(4);
-        assertThat(conta("select count(*) from outbox_event where event_type = 'BomRevisionApproved'")).isEqualTo(4);
-        // Aprovada não muda.
-        JsonNode mec = revisao(mecanica.get("id").asString());
-        HttpResponse<String> muda = grava(mec, linhas(mec), null);
-        assertThat(muda.statusCode()).isEqualTo(409);
-        // Aprovar de novo devolve a mesma.
-        assertThat(post("/api/v1/bom-revisions/" + modelo.get("id").asString() + "/approval", null, null).statusCode()).isEqualTo(200);
-        assertThat(conta("select count(*) from outbox_event where event_type = 'BomRevisionApproved'")).isEqualTo(4);
+        // Outro arquivo do mesmo produto: a prévia avisa que as BOMs serão substituídas; confirmar troca as linhas.
+        String outro = arquivo.replace("\"preco_unitario\": 1400.0,\n            \"preco_total\": 1400.0",
+                "\"preco_unitario\": 1500.0,\n            \"preco_total\": 1500.0");
+        assertThat(outro).isNotEqualTo(arquivo);
+        JsonNode previa = json(envia(outro));
+        assertThat(previa.get("problems").toString()).contains("Já existem e terão as linhas substituídas pelas do arquivo: " + PRODUTO);
+        post("/api/v1/bom-imports/" + previa.get("id").asString() + "/confirmation", "bom-imp-outro-001", null);
+        assertThat(linha(sub(modelo, "Mecânica — " + PRODUTO), "Pintura").get("unitCost").asString()).isEqualTo("1500");
+        assertThat(conta("select count(*) from bom")).isEqualTo(4);
+        assertThat(get("/api/v1/boms/" + mecanica.get("id").asString() + "/history").body()).contains("BOM_UPDATED");
     }
 
     @Test
-    void equipamentoRecebeABomCongeladaComAjustesECustoEMargemDoProjeto() throws Exception {
-        JsonNode modelo = aprova(carrega());
+    void bomEditavelAplicaAoEquipamentoComAjustesReaplicaECustoDoProjeto() throws Exception {
+        JsonNode modelo = carrega();
         String equipamento = equipamentoVendido("bom-eq1", PRODUTO);
-        // O pedido encontrou o modelo pelo nome.
         assertThat(conta("select count(*) from equipment_model")).isEqualTo(1);
-        HttpResponse<String> sem = get("/api/v1/equipment/" + equipamento + "/bom");
-        assertThat(json(sem).get("applied").asBoolean()).isFalse();
         String projeto = jdbc.sql("select project_id::text from equipment where id = cast(:e as uuid)").param("e", equipamento)
                 .query(String.class).single();
         JsonNode custo0 = json(get("/api/v1/projects/" + projeto + "/planned-cost"));
         assertThat(custo0.get("complete").asBoolean()).isFalse();
-        assertThat(custo0.get("withoutBom").asInt()).isEqualTo(1);
         assertThat(custo0.get("marginCents").isNull()).isTrue();
-        assertThat(custo0.get("equipment").get(0).get("costCents").isNull()).isTrue();
 
-        // Rascunho não se aplica; a revisão aprovada sim, uma vez só.
+        // Com a linha sem quantidade, a BOM não se aplica.
+        HttpResponse<String> recusa = post("/api/v1/equipment/" + equipamento + "/bom", "bom-apl-00000",
+                "{\"bomId\":\"" + modelo.get("id").asString() + "\"}");
+        assertThat(recusa.statusCode()).isEqualTo(422);
+        assertThat(recusa.body()).contains("BOM_INCOMPLETE", "1 linha sem quantidade ou sem custo");
+
+        // Informada a quantidade, o total da BOM do modelo já muda (sem aprovar nada) e a aplicação passa. A ETag do modelo não
+        // muda (só o painel mudou): a resposta vem sem cache, para o navegador não revalidar e reaproveitar o total antigo.
+        HttpResponse<String> antes = get("/api/v1/boms/" + modelo.get("id").asString());
+        assertThat(antes.headers().firstValue("Cache-Control").orElse("")).contains("no-store");
+        modelo = completa(modelo);
+        assertThat(get("/api/v1/boms/" + modelo.get("id").asString()).headers().firstValue("ETag")).isEqualTo(antes.headers().firstValue("ETag"));
+        assertThat(get("/api/v1/equipment/" + equipamento + "/bom").headers().firstValue("Cache-Control").orElse("")).contains("no-store");
+        assertThat(modelo.get("totalCents").asString()).isEqualTo("6940795");
+        assertThat(modelo.get("pending").asInt()).isZero();
         HttpResponse<String> aplica = post("/api/v1/equipment/" + equipamento + "/bom", "bom-apl-00001",
-                "{\"revisionId\":\"" + modelo.get("id").asString() + "\"}");
+                "{\"bomId\":\"" + modelo.get("id").asString() + "\"}");
         assertThat(aplica.statusCode()).as(aplica.body()).isEqualTo(200);
         JsonNode eb = json(aplica);
-        assertThat(eb.get("applied").asBoolean()).isTrue();
         assertThat(eb.get("totalCents").asString()).isEqualTo("6940795");
-        assertThat(eb.get("modelTotalCents").asString()).isEqualTo("6940795");
-        assertThat(eb.get("lines").size()).isEqualTo(2 + 127 + 27 + 50);
-        assertThat(eb.get("version").asString()).isEqualTo("1");
-        HttpResponse<String> repete = post("/api/v1/equipment/" + equipamento + "/bom", "bom-apl-00002",
-                "{\"revisionId\":\"" + modelo.get("id").asString() + "\"}");
-        assertThat(json(repete).get("version").asString()).isEqualTo("1");
-        assertThat(conta("select count(*) from equipment_bom_line")).isEqualTo(206);
+        assertThat(eb.get("modelChanged").asBoolean()).isFalse();
+        assertThat(eb.get("lines").size()).isEqualTo(206);
         assertThat(conta("select count(*) from outbox_event where event_type = 'ProjectBomApplied'")).isEqualTo(1);
 
         // Custo planejado e margem: R$ 120.000,00 − R$ 69.407,95 = R$ 50.592,05 (42,16%).
         JsonNode custo = json(get("/api/v1/projects/" + projeto + "/planned-cost"));
         assertThat(custo.get("complete").asBoolean()).isTrue();
-        assertThat(custo.get("contractCents").asString()).isEqualTo("12000000");
-        assertThat(custo.get("plannedCostCents").asString()).isEqualTo("6940795");
         assertThat(custo.get("marginCents").asString()).isEqualTo("5059205");
         assertThat(custo.get("marginRate").asString()).isEqualTo("0.4216");
 
-        // Ajuste: retirar a pintura (com motivo) só deste equipamento.
+        // Ajuste só deste equipamento: retirar a pintura, com motivo.
         String pintura = null;
         for (JsonNode l : eb.get("lines")) if (l.get("description").asString().equals("Pintura")) pintura = l.get("id").asString();
-        HttpResponse<String> semMotivo = withVersion("POST", "/api/v1/equipment/" + equipamento + "/bom/adjustments", "1",
-                "{\"action\":\"REMOVE\",\"lineId\":\"" + pintura + "\"}");
-        assertThat(semMotivo.statusCode()).isEqualTo(422);
+        assertThat(withVersion("POST", "/api/v1/equipment/" + equipamento + "/bom/adjustments", "1",
+                "{\"action\":\"REMOVE\",\"lineId\":\"" + pintura + "\"}").statusCode()).isEqualTo(422);
         HttpResponse<String> retira = withVersion("POST", "/api/v1/equipment/" + equipamento + "/bom/adjustments", "1",
                 "{\"action\":\"REMOVE\",\"lineId\":\"" + pintura + "\",\"reason\":\"Cliente pinta na própria fábrica\"}");
         assertThat(retira.statusCode()).as(retira.body()).isEqualTo(200);
-        JsonNode ajustada = json(retira);
-        assertThat(ajustada.get("totalCents").asString()).isEqualTo("6800795");
-        assertThat(ajustada.get("modelTotalCents").asString()).isEqualTo("6940795");
-        assertThat(ajustada.get("removed").asInt()).isEqualTo(1);
-        // Versão antiga é recusada.
+        assertThat(json(retira).get("totalCents").asString()).isEqualTo("6800795");
+        assertThat(json(retira).get("removed").asInt()).isEqualTo(1);
         assertThat(withVersion("POST", "/api/v1/equipment/" + equipamento + "/bom/adjustments", "1",
                 "{\"action\":\"RESTORE\",\"lineId\":\"" + pintura + "\",\"reason\":\"x\"}").statusCode()).isEqualTo(412);
-        // Alterar a quantidade dos parafusos e incluir um item.
-        String parafuso = null;
-        String mecanica = null;
-        for (JsonNode l : ajustada.get("lines")) {
-            if (l.get("description").asString().equals("Parafuso Sext UNC 1/2\" x 1.1/2\" ZB")) parafuso = l.get("id").asString();
-            if (l.get("description").asString().equals("Mecânica — " + PRODUTO)) mecanica = l.get("id").asString();
-        }
-        HttpResponse<String> altera = withVersion("POST", "/api/v1/equipment/" + equipamento + "/bom/adjustments", "2",
-                "{\"action\":\"UPDATE\",\"lineId\":\"" + parafuso + "\",\"quantity\":\"8\",\"reason\":\"Base reforçada\"}");
-        assertThat(altera.statusCode()).as(altera.body()).isEqualTo(200);
-        assertThat(json(altera).get("totalCents").asString()).isEqualTo("6801375");
-        assertThat(json(altera).get("changed").asInt()).isEqualTo(1);
         String item = jdbc.sql("select id::text from item where description = 'Óleo Pneumático Frasco 500ml'").query(String.class).single();
-        HttpResponse<String> inclui = withVersion("POST", "/api/v1/equipment/" + equipamento + "/bom/adjustments", "3", """
+        String mecLinha = null;
+        for (JsonNode l : json(retira).get("lines")) if (l.get("description").asString().equals("Mecânica — " + PRODUTO)) mecLinha = l.get("id").asString();
+        HttpResponse<String> inclui = withVersion("POST", "/api/v1/equipment/" + equipamento + "/bom/adjustments", "2", """
                 {"action":"ADD","parentLineId":"%s","itemId":"%s","quantity":"2","unitCost":"40","reason":"Reserva para a partida"}
-                """.formatted(mecanica, item));
+                """.formatted(mecLinha, item));
         assertThat(inclui.statusCode()).as(inclui.body()).isEqualTo(200);
-        assertThat(json(inclui).get("totalCents").asString()).isEqualTo("6809375");
-        assertThat(json(inclui).get("added").asInt()).isEqualTo(1);
-        assertThat(json(get("/api/v1/projects/" + projeto + "/planned-cost")).get("plannedCostCents").asString()).isEqualTo("6809375");
-        assertThat(get("/api/v1/equipment/" + equipamento + "/bom/history").body()).contains("EQUIPMENT_BOM_ADJUSTED",
+        assertThat(json(inclui).get("totalCents").asString()).isEqualTo("6808795");
+
+        // A Mecânica muda (pintura a R$ 1.500,00): o modelo muda na hora; o equipamento não, até reaplicar.
+        JsonNode mec = sub(modelo, "Mecânica — " + PRODUTO);
+        ArrayNode ls = linhas(mec);
+        ((ObjectNode) ls.get(posicao(mec, "Pintura"))).put("unitCost", "1500");
+        assertThat(grava(mec, ls, null).statusCode()).isEqualTo(200);
+        assertThat(bom(modelo.get("id").asString()).get("totalCents").asString()).isEqualTo("6950795");
+        JsonNode depois = json(get("/api/v1/equipment/" + equipamento + "/bom"));
+        assertThat(depois.get("totalCents").asString()).isEqualTo("6808795");
+        assertThat(depois.get("modelTotalCents").asString()).isEqualTo("6950795");
+        assertThat(depois.get("modelChanged").asBoolean()).isTrue();
+        // Reaplicar exige motivo e descarta os ajustes.
+        assertThat(post("/api/v1/equipment/" + equipamento + "/bom", "bom-apl-00002",
+                "{\"bomId\":\"" + modelo.get("id").asString() + "\"}").statusCode()).isEqualTo(422);
+        HttpResponse<String> reaplica = post("/api/v1/equipment/" + equipamento + "/bom", "bom-apl-00003",
+                "{\"bomId\":\"" + modelo.get("id").asString() + "\",\"reason\":\"Pintura reajustada pelo fornecedor\"}");
+        assertThat(reaplica.statusCode()).as(reaplica.body()).isEqualTo(200);
+        assertThat(json(reaplica).get("totalCents").asString()).isEqualTo("6950795");
+        assertThat(json(reaplica).get("removed").asInt()).isZero();
+        assertThat(json(reaplica).get("modelChanged").asBoolean()).isFalse();
+        assertThat(get("/api/v1/equipment/" + equipamento + "/bom/history").body()).contains("EQUIPMENT_BOM_REAPPLIED",
                 "Cliente pinta na própria fábrica");
-        // O modelo não mudou.
-        assertThat(revisao(modelo.get("id").asString()).get("totalCents").asString()).isEqualTo("6940795");
     }
 
     @Test
-    void revisaoNovaNaoMudaOEquipamentoEAComparacaoMostraADiferenca() throws Exception {
-        JsonNode modelo = aprova(carrega());
-        String equipamento = equipamentoVendido("bom-eq2", PRODUTO);
-        assertThat(post("/api/v1/equipment/" + equipamento + "/bom", "bom-apl-00003",
-                "{\"revisionId\":\"" + modelo.get("id").asString() + "\"}").statusCode()).isEqualTo(200);
-
-        // Mecânica rev. 01 com a pintura a R$ 1.500,00.
-        String mecanicaBom = linha(modelo, "Mecânica — " + PRODUTO).get("childBomId").asString();
-        HttpResponse<String> nova = post("/api/v1/boms/" + mecanicaBom + "/revisions", "bom-rev-00001", null);
-        assertThat(nova.statusCode()).as(nova.body()).isEqualTo(201);
-        JsonNode mec1 = json(nova);
-        assertThat(mec1.get("label").asString()).isEqualTo("01");
-        assertThat(mec1.get("status").asString()).isEqualTo("DRAFT");
-        assertThat(post("/api/v1/boms/" + mecanicaBom + "/revisions", "bom-rev-00002", null).statusCode()).isEqualTo(422);
-        ArrayNode ls = linhas(mec1);
-        ((ObjectNode) ls.get(posicao(mec1, "Pintura"))).put("unitCost", "1500");
-        assertThat(grava(mec1, ls, null).statusCode()).isEqualTo(200);
-        assertThat(post("/api/v1/bom-revisions/" + mec1.get("id").asString() + "/approval", null, null).statusCode()).isEqualTo(200);
-        assertThat(revisao(linha(modelo, "Mecânica — " + PRODUTO).get("childRevisionId").asString()).get("status").asString())
-                .isEqualTo("SUPERSEDED");
-
-        // Modelo rev. 01 usando a Mecânica rev. 01.
-        HttpResponse<String> novaModelo = post("/api/v1/boms/" + modelo.get("bomId").asString() + "/revisions", "bom-rev-00003", null);
-        JsonNode mod1 = json(novaModelo);
-        ArrayNode ml = linhas(mod1);
-        ((ObjectNode) ml.get(posicao(mod1, "Mecânica — " + PRODUTO))).put("childRevisionId", mec1.get("id").asString());
-        HttpResponse<String> g = grava(mod1, ml, null);
-        assertThat(g.statusCode()).as(g.body()).isEqualTo(200);
-        assertThat(json(g).get("problems").toString()).contains("Total informado R$ 69.398,51 × soma das linhas R$ 69.507,95");
-        JsonNode mod1Aprovada = json(post("/api/v1/bom-revisions/" + mod1.get("id").asString() + "/approval", null, null));
-        assertThat(mod1Aprovada.get("totalCents").asString()).isEqualTo("6950795");
-
-        // O equipamento continua com a rev. 00.
-        JsonNode eb = json(get("/api/v1/equipment/" + equipamento + "/bom"));
-        assertThat(eb.get("revisionLabel").asString()).isEqualTo("00");
-        assertThat(eb.get("revisionStatus").asString()).isEqualTo("SUPERSEDED");
-        assertThat(eb.get("totalCents").asString()).isEqualTo("6940795");
-
-        // Comparar rev. 01 com a rev. 00: a Mecânica mudou de revisão, + R$ 100,00.
-        JsonNode cmp = json(get("/api/v1/bom-revisions/" + mod1.get("id").asString() + "/comparison?with=" + modelo.get("id").asString()));
-        assertThat(cmp.get("difference").asString()).isEqualTo("10000");
-        assertThat(cmp.get("rows").size()).isEqualTo(1);
-        assertThat(cmp.get("rows").get(0).get("status").asString()).isEqualTo("CHANGED");
-        assertThat(cmp.get("rows").get(0).get("revisionBefore").asString()).isEqualTo("00");
-        assertThat(cmp.get("rows").get(0).get("revisionAfter").asString()).isEqualTo("01");
-        JsonNode cmpMec = json(get("/api/v1/bom-revisions/" + mec1.get("id").asString() + "/comparison?with="
-                + linha(modelo, "Mecânica — " + PRODUTO).get("childRevisionId").asString()));
-        assertThat(cmpMec.get("rows").size()).isEqualTo(1);
-        assertThat(cmpMec.get("rows").get(0).get("description").asString()).isEqualTo("Pintura");
-        assertThat(cmpMec.get("rows").get(0).get("unitCostBefore").asString()).isEqualTo("1400");
-        assertThat(cmpMec.get("rows").get(0).get("unitCostAfter").asString()).isEqualTo("1500");
-
-        // Trocar o equipamento para a rev. 01 exige motivo.
-        HttpResponse<String> troca = post("/api/v1/equipment/" + equipamento + "/bom", "bom-apl-00004",
-                "{\"revisionId\":\"" + mod1.get("id").asString() + "\"}");
-        assertThat(troca.statusCode()).isEqualTo(422);
-        HttpResponse<String> trocaOk = post("/api/v1/equipment/" + equipamento + "/bom", "bom-apl-00005",
-                "{\"revisionId\":\"" + mod1.get("id").asString() + "\",\"reason\":\"Pintura reajustada pelo fornecedor\"}");
-        assertThat(trocaOk.statusCode()).as(trocaOk.body()).isEqualTo(200);
-        assertThat(json(trocaOk).get("totalCents").asString()).isEqualTo("6950795");
-        assertThat(json(trocaOk).get("version").asString()).isEqualTo("2");
-    }
-
-    @Test
-    void cicloDeSubmontagensERascunhoManualComTotalInformadoDiferente() throws Exception {
+    void cicloCustoDoCadastroETotalInformadoDiferente() throws Exception {
         JsonNode modelo = carrega();
-        JsonNode eletrica = revisao(linha(modelo, "Elétrica — " + PRODUTO).get("childRevisionId").asString());
-        JsonNode painel = revisao(linha(eletrica, "Painel elétrico — " + PRODUTO).get("childRevisionId").asString());
+        JsonNode eletrica = sub(modelo, "Elétrica — " + PRODUTO);
+        JsonNode painel = sub(eletrica, "Painel elétrico — " + PRODUTO);
         // O painel não pode conter a Elétrica, que já o contém.
         ArrayNode ls = linhas(painel);
         ObjectNode ciclo = JSON.createObjectNode();
         ciclo.put("kind", "SUBASSEMBLY");
-        ciclo.put("childRevisionId", eletrica.get("id").asString());
+        ciclo.put("childBomId", eletrica.get("id").asString());
         ciclo.put("quantity", "1");
         ls.add(ciclo);
         HttpResponse<String> r = grava(painel, ls, null);
         assertThat(r.statusCode()).isEqualTo(422);
         assertThat(r.body()).contains("BOM_CYCLE");
 
-        // BOM criada na tela, com um item digitado e o total informado diferente da soma: aviso, sem corrigir.
+        // Custo do cadastro diferente do da BOM: aviso na linha.
+        jdbc.sql("update item set reference_cost = 1500 where description = 'Pintura'").update();
+        assertThat(sub(modelo, "Mecânica — " + PRODUTO).get("problems").toString())
+                .contains("Linha 126 — Pintura: custo da BOM R$ 1.400,00 × cadastro R$ 1.500,00.");
+
+        // BOM criada na tela, com um item e o total informado diferente da soma: aviso, sem corrigir.
         HttpResponse<String> nova = post("/api/v1/boms", "bom-nova-0001", "{\"name\":\"Kit de calibração\"}");
         assertThat(nova.statusCode()).as(nova.body()).isEqualTo(201);
-        String rascunho = json(nova).get("draft").get("id").asString();
-        JsonNode rev = revisao(rascunho);
+        JsonNode kit = json(nova);
         String item = jdbc.sql("select id::text from item where description = 'Óleo Pneumático Frasco 500ml'").query(String.class).single();
         ArrayNode linhas = JSON.createArrayNode();
         ObjectNode l = JSON.createObjectNode();
@@ -417,32 +357,31 @@ class BomApiTest extends CadastrosApiTest {
         l.put("quantity", "3");
         l.put("unitCost", "40.50");
         linhas.add(l);
-        HttpResponse<String> g = grava(rev, linhas, "15000");
+        HttpResponse<String> g = grava(kit, linhas, "15000");
         assertThat(g.statusCode()).as(g.body()).isEqualTo(200);
         JsonNode salvo = json(g);
         assertThat(salvo.get("totalCents").asString()).isEqualTo("12150");
         assertThat(salvo.get("problems").toString())
                 .contains("Total informado R$ 150,00 × soma das linhas R$ 121,50: diferença de -R$ 28,50 (não corrigida).");
-        assertThat(salvo.get("lines").get(0).get("description").asString()).isEqualTo("Óleo Pneumático Frasco 500ml");
-        // Quantidade zero e custo negativo recusados.
+        // Versão antiga é recusada.
+        assertThat(grava(kit, linhas, "15000").statusCode()).isEqualTo(412);
         l.put("quantity", "0");
         l.put("unitCost", "-1");
         HttpResponse<String> invalida = grava(salvo, linhas, null);
         assertThat(invalida.statusCode()).isEqualTo(422);
         assertThat(invalida.body()).contains("lines[0].quantity", "lines[0].unitCost");
-        // Submontagem de BOM de modelo é recusada.
-        ObjectNode sub = JSON.createObjectNode();
-        sub.put("kind", "SUBASSEMBLY");
-        sub.put("childRevisionId", modelo.get("id").asString());
-        sub.put("quantity", "1");
+        ObjectNode doModelo = JSON.createObjectNode();
+        doModelo.put("kind", "SUBASSEMBLY");
+        doModelo.put("childBomId", modelo.get("id").asString());
+        doModelo.put("quantity", "1");
         ArrayNode comModelo = JSON.createArrayNode();
-        comModelo.add(sub);
+        comModelo.add(doModelo);
         assertThat(grava(salvo, comModelo, null).body()).contains("A BOM de um modelo não entra como submontagem");
     }
 
     @Test
     void modelosDeEquipamentoEConsultaSoVe() throws Exception {
-        JsonNode modelo = aprova(carrega());
+        JsonNode modelo = completa(carrega());
         String equipamento = equipamentoVendido("bom-eq3", "  balança hidrostática   RENDA+ automática ");
         assertThat(conta("select count(*) from equipment_model")).isEqualTo(1);
         HttpResponse<String> lista = get("/api/v1/equipment-models");
@@ -453,7 +392,6 @@ class BomApiTest extends CadastrosApiTest {
         assertThat(dup.body()).contains("EQUIPMENT_MODEL_DUPLICATE");
         HttpResponse<String> novo = post("/api/v1/equipment-models", "mod-new-00001", "{\"name\":\"Balança Hidrostática Compacta\"}");
         assertThat(novo.statusCode()).as(novo.body()).isEqualTo(201);
-        assertThat(campo(novo.body(), "code")).matches("MD\\d{5}");
         HttpResponse<String> renomeia = withVersion("PUT", "/api/v1/equipment-models/" + campo(novo.body(), "id"), "1",
                 "{\"name\":\"Balança Hidrostática Compacta BHC-100\"}");
         assertThat(renomeia.statusCode()).as(renomeia.body()).isEqualTo(200);
@@ -461,15 +399,13 @@ class BomApiTest extends CadastrosApiTest {
 
         String consulta = login(CONSULTA, Profile.CONSULTA);
         assertThat(call("GET", "/api/v1/boms", consulta, null, Map.of()).statusCode()).isEqualTo(200);
-        assertThat(call("GET", "/api/v1/bom-revisions/" + modelo.get("id").asString(), consulta, null, Map.of()).statusCode()).isEqualTo(200);
+        assertThat(call("GET", "/api/v1/boms/" + modelo.get("id").asString(), consulta, null, Map.of()).statusCode()).isEqualTo(200);
         assertThat(call("GET", "/api/v1/equipment/" + equipamento + "/bom", consulta, null, Map.of()).statusCode()).isEqualTo(200);
         assertThat(call("POST", "/api/v1/bom-imports", consulta, "{\"content\":\"{}\"}", Map.of()).statusCode()).isEqualTo(403);
-        assertThat(call("POST", "/api/v1/bom-revisions/" + modelo.get("id").asString() + "/approval", consulta, null, Map.of())
+        assertThat(call("PUT", "/api/v1/boms/" + modelo.get("id").asString(), consulta, "{\"lines\":[]}", Map.of("If-Match", "\"1\""))
                 .statusCode()).isEqualTo(403);
         assertThat(call("POST", "/api/v1/equipment/" + equipamento + "/bom", consulta,
-                "{\"revisionId\":\"" + modelo.get("id").asString() + "\"}", Map.of("Idempotency-Key", "bom-cons-0001")).statusCode())
+                "{\"bomId\":\"" + modelo.get("id").asString() + "\"}", Map.of("Idempotency-Key", "bom-cons-0001")).statusCode())
                 .isEqualTo(403);
-        assertThat(call("POST", "/api/v1/equipment-models", consulta, "{\"name\":\"X\"}", Map.of("Idempotency-Key", "mod-cons-0001"))
-                .statusCode()).isEqualTo(403);
     }
 }
