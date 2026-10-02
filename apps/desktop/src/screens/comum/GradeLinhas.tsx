@@ -46,7 +46,8 @@ export const totalDasLinhas = (linhas: LinhaForm[]): bigint =>
 /**
  * Tabela de edição das linhas de proposta e pedido (componente Tabela de edição): tipo, item do cadastro (produto ou
  * serviço da mesma natureza) ou modelo do equipamento, quantidade, preço, desconto e total calculado; a última linha
- * vazia cria um item; Ctrl+Insert adiciona e Ctrl+Delete remove a linha em foco; o rodapé repete o total.
+ * vazia cria um item; Ctrl+Insert adiciona e Ctrl+Delete remove a linha em foco. Os totais ficam fora da grade, em
+ * TotaisDocumento, embaixo e à direita do painel de abas, como no documento do cliente clássico.
  */
 export function GradeLinhas({ linhas, onChange, itens, somenteLeitura, adicao, erros, rotulo }: {
   linhas: LinhaForm[];
@@ -76,7 +77,6 @@ export function GradeLinhas({ linhas, onChange, itens, somenteLeitura, adicao, e
       const m = /\[(\d+)\]/.exec(k);
       return m ? `Linha ${Number(m[1]) + 1}: ${v}` : v;
     });
-  const total = totalDasLinhas(linhas);
   const ativos = (tipo: TipoLinha, atual: string) => itens.filter((it) => it.nature === tipo && (it.status === 'ATIVO' || it.id === atual));
 
   return (
@@ -162,13 +162,6 @@ export function GradeLinhas({ linhas, onChange, itens, somenteLeitura, adicao, e
             )}
             <LinhaResto colunas={10} />
           </tbody>
-          <tfoot>
-            <tr>
-              <td colSpan={8}>Total</td>
-              <td className="num" aria-label="Total das linhas">{reais(total.toString())}</td>
-              <td />
-            </tr>
-          </tfoot>
         </table>
       </div>
       {mensagens.map((m) => (
@@ -176,6 +169,38 @@ export function GradeLinhas({ linhas, onChange, itens, somenteLeitura, adicao, e
           <i className="rp-ico rp-ico-status-erro" aria-hidden="true" /> {m}
         </p>
       ))}
+    </div>
+  );
+}
+
+/** Soma dos valores brutos (quantidade × preço) e dos descontos das linhas; linhas incompletas não entram. */
+export function somasDasLinhas(linhas: LinhaForm[]): { bruto: bigint; desconto: bigint; total: bigint } {
+  let bruto = 0n;
+  let desconto = 0n;
+  for (const l of linhas) {
+    const b = brutoDaLinha(decimalParaApi(l.quantity), decimalParaApi(l.unitPrice));
+    const d = centavosParaApi(l.discount) ?? '0';
+    if (b === null || !/^\d+$/.test(d)) continue;
+    bruto += b;
+    desconto += BigInt(d);
+  }
+  return { bruto, desconto, total: bruto - desconto };
+}
+
+/**
+ * Totais do documento, embaixo e à direita do painel de abas (como Total Before Discount, Discount e Total do cliente
+ * clássico): total antes do desconto, desconto das linhas e total, só leitura.
+ */
+export function TotaisDocumento({ linhas, rotuloTotal }: { linhas: LinhaForm[]; rotuloTotal: string }) {
+  const { bruto, desconto, total } = somasDasLinhas(linhas);
+  return (
+    <div className="rp-form rp-ficha__totais">
+      <span className="rp-label">Total antes do desconto</span>
+      <input className="rp-field rp-field--readonly rp-field--num" readOnly aria-label="Total antes do desconto" value={reais(bruto.toString())} />
+      <span className="rp-label">Desconto</span>
+      <input className="rp-field rp-field--readonly rp-field--num" readOnly aria-label="Desconto do documento" value={reais(desconto.toString())} />
+      <span className="rp-label">Total</span>
+      <input className="rp-field rp-field--readonly rp-field--num" readOnly aria-label={rotuloTotal} value={reais(total.toString())} />
     </div>
   );
 }

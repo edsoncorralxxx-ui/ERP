@@ -11,7 +11,7 @@ import { DialogoConflito, DialogoMotivo } from './comum/Dialogos';
 import { tratarFalha } from './comum/Falhas';
 import { somaFaturamento, useFaturamento } from './comum/Faturamento';
 import { GradeHistorico } from './comum/GradeHistorico';
-import { GradeLinhas, linhaDaApi, linhaParaApi, totalDasLinhas, type LinhaForm } from './comum/GradeLinhas';
+import { GradeLinhas, linhaDaApi, linhaParaApi, TotaisDocumento, totalDasLinhas, type LinhaForm } from './comum/GradeLinhas';
 import { Selecao } from './comum/Selecao';
 import { ESTAGIO, seloEquipamento, seloPedido, seloTitulo } from './comum/Selos';
 import { novoDocumento } from './DocumentsWindow';
@@ -299,9 +299,6 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
                 <CampoData id={fid('prazo')} rotulo="Prazo prometido" className={`${classeCampo} rp-field--curto`} valor={form.promisedDate} somenteLeitura={somenteLeitura}
                   invalido={!!erros.promisedDate} onChange={(v) => set({ promisedDate: v })} />
                 {erroDe('promisedDate')}
-                <label className="rp-label" htmlFor={fid('obs')}>Observações</label>
-                <span />
-                <input id={fid('obs')} className={classeCampo} value={form.notes} maxLength={1000} readOnly={somenteLeitura} onChange={(e) => set({ notes: e.target.value })} />
               </div>
               <div className="rp-form rp-ficha__situacao">
                 <span className="rp-label">Situação</span>
@@ -317,8 +314,6 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
                   )}
                   <input className="rp-field rp-field--readonly" readOnly aria-label="Proposta" value={pedido?.proposalCode ? `${pedido.proposalCode} rev. ${pedido.proposalRevision}` : ''} />
                 </span>
-                <span className="rp-label">Total</span>
-                <input className="rp-field rp-field--readonly rp-field--num" readOnly aria-label="Total do pedido" value={reais(total.toString())} />
                 <span className="rp-label">Versão</span>
                 <input className="rp-field rp-field--readonly rp-field--num" readOnly value={pedido?.version ?? ''} aria-label="Versão" />
                 {pedido?.status === 'CANCELLED' && (
@@ -437,6 +432,13 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
               ) : (
                 <GradeHistorico historico={historico} rotulo="Histórico do pedido" />
               )}
+            </div>
+            <div className="rp-ficha__rodape">
+              <div className="rp-form rp-ficha__obs">
+                <label className="rp-label" htmlFor={fid('obs')}>Observações</label>
+                <input id={fid('obs')} className={classeCampo} value={form.notes} maxLength={1000} readOnly={somenteLeitura} onChange={(e) => set({ notes: e.target.value })} />
+              </div>
+              <TotaisDocumento linhas={form.lines} rotuloTotal="Total do pedido" />
             </div>
           </>
         )}
