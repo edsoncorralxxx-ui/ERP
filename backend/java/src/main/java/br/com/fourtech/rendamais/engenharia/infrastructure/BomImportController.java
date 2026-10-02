@@ -35,7 +35,7 @@ class BomImportController {
     record ImportDto(String id, String fileName, String status, String product, String revisionLabel, String revisionDate, int lineCount,
                      String totalCents, int pending, String informedTotalCents, List<GroupDto> groups,
                      List<BomController.ProblemDto> problems, int newItems, int existingItems, List<String> newUnits,
-                     List<String> newCategories, List<String> fileNotes, List<LineDto> lines, String revisionId, String bomId,
+                     List<String> newCategories, List<String> fileNotes, List<LineDto> lines, String bomId,
                      Instant createdAt, String createdBy, Instant confirmedAt, String confirmedBy) {
         static ImportDto of(BomImportService.Preview p) {
             var i = p.bomImport();
@@ -49,7 +49,7 @@ class BomImportController {
                             l.description(), BomController.plain(l.quantity()), l.uom(), BomController.plain(l.unitCost()),
                             l.lineCents() == null ? null : l.lineCents().toString(), l.itemCode(), l.newItem(), l.supplier(),
                             l.material())).toList(),
-                    BomController.str(p.revisionId()), BomController.str(p.bomId()), i.createdAt(), i.createdBy(), i.confirmedAt(),
+                    BomController.str(p.bomId()), i.createdAt(), i.createdBy(), i.confirmedAt(),
                     i.confirmedBy());
         }
     }

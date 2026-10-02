@@ -115,27 +115,8 @@ class JdbcBomRepository implements BomRepository {
     }
 
     @Override
-    public List<BomRevision> revisionsOf(UUID bomId) {
-        return jdbc.sql("select * from bom_revision where bom_id = :bom order by revision desc").param("bom", bomId)
-                .query(JdbcBomRepository::revision).list();
-    }
-
-    @Override
-    public Optional<BomRevision> approvedOf(UUID bomId) {
-        return jdbc.sql("select * from bom_revision where bom_id = :bom and status = 'APPROVED'").param("bom", bomId)
-                .query(JdbcBomRepository::revision).optional();
-    }
-
-    @Override
-    public Optional<BomRevision> draftOf(UUID bomId) {
-        return jdbc.sql("select * from bom_revision where bom_id = :bom and status = 'DRAFT'").param("bom", bomId)
-                .query(JdbcBomRepository::revision).optional();
-    }
-
-    @Override
-    public int nextRevisionNumber(UUID bomId) {
-        return jdbc.sql("select coalesce(max(revision) + 1, 0) from bom_revision where bom_id = :bom").param("bom", bomId)
-                .query(Integer.class).single();
+    public Optional<BomRevision> currentOf(UUID bomId) {
+        return jdbc.sql("select * from bom_revision where bom_id = :bom").param("bom", bomId).query(JdbcBomRepository::revision).optional();
     }
 
     @Override
@@ -167,23 +148,6 @@ class JdbcBomRepository implements BomRepository {
     public List<UUID> parentsOf(UUID revisionId) {
         return jdbc.sql("select distinct revision_id from bom_line where child_revision_id = :rev").param("rev", revisionId)
                 .query(UUID.class).list();
-    }
-
-    @Override
-    public List<UUID> approvedParentsUsingOtherRevision(UUID bomId, UUID revisionId) {
-        return jdbc.sql("""
-                select distinct p.id from bom_line l
-                  join bom_revision c on c.id = l.child_revision_id
-                  join bom_revision p on p.id = l.revision_id
-                 where c.bom_id = :bom and l.child_revision_id <> :rev and p.status = 'APPROVED' and p.bom_id <> :bom
-                """).param("bom", bomId).param("rev", revisionId).query(UUID.class).list();
-    }
-
-    @Override
-    public void deleteDraft(UUID revisionId) {
-        jdbc.sql("update bom_import set revision_id = null where revision_id = :rev").param("rev", revisionId).update();
-        jdbc.sql("delete from bom_line where revision_id = :rev").param("rev", revisionId).update();
-        jdbc.sql("delete from bom_revision where id = :rev and status = 'DRAFT'").param("rev", revisionId).update();
     }
 
     // ───────────── Carga do arquivo ─────────────

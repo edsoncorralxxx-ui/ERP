@@ -72,7 +72,7 @@ public class EquipmentBomService {
         this.clock = clock;
     }
 
-    public record ApplyRequest(String revisionId, String reason) { }
+    public record ApplyRequest(String bomId, String reason) { }
 
     /** Ajuste: ADD (incluir), UPDATE (alterar quantidade ou custo), REMOVE (retirar) ou RESTORE (devolver), sempre com motivo. */
     public record AdjustRequest(String action, String lineId, String parentLineId, String itemId, String description, String quantity,
@@ -81,12 +81,13 @@ public class EquipmentBomService {
     /** Linha na ordem da árvore, com o nível e o estado em relação ao modelo (MODEL, CHANGED, ADDED, REMOVED). */
     public record LineView(EquipmentBom.Line line, int depth, String itemCode, Long lineCents, String state) { }
 
-    public record EquipmentBomView(ProjectQueryApi.EquipmentRef equipment, EquipmentBom bom, Bom modelBom, BomRevision revision,
-                                   List<LineView> lines, long totalCents, int pending, long modelTotalCents, int added, int removed,
+    /** {@code modelChanged}: a BOM do modelo mudou depois de aplicada; Reaplicar traz o conteúdo atual. */
+    public record EquipmentBomView(ProjectQueryApi.EquipmentRef equipment, EquipmentBom bom, Bom modelBom, List<LineView> lines,
+                                   long totalCents, int pending, long modelTotalCents, boolean modelChanged, int added, int removed,
                                    int changed) { }
 
-    public record EquipmentCost(ProjectQueryApi.EquipmentRef equipment, boolean applied, UUID bomId, String bomName,
-                                UUID revisionId, String revisionLabel, Long costCents, int pending, boolean adjusted) { }
+    public record EquipmentCost(ProjectQueryApi.EquipmentRef equipment, boolean applied, UUID bomId, String bomName, Long costCents,
+                                int pending, boolean adjusted) { }
 
     /** Custo planejado do projeto: margem só quando todos os equipamentos ativos têm BOM sem pendência. */
     public record PlannedCost(ProjectQueryApi.CostBasis project, long contractCents, long plannedCostCents, boolean complete,
@@ -124,17 +125,16 @@ public class EquipmentBomService {
             EquipmentBom b = applied.get(e.id());
             if (b == null) {
                 without++;
-                rows.add(new EquipmentCost(e, false, null, null, null, null, null, 0, false));
+                rows.add(new EquipmentCost(e, false, null, null, null, 0, false));
                 continue;
             }
-            BomRevision rev = boms.revision0(b.revisionId());
-            Bom bom = boms.bom(rev.bomId());
+            Bom bom = modelBomOf(b);
             List<EquipmentBom.Line> lines = repository.equipmentLines(b.id());
             BomCost.Total t = BomCost.total(BomTrees.equipmentNodes(BomTrees.byParent(lines), null));
             boolean adjusted = lines.stream().anyMatch(l -> l.origin() == EquipmentBom.Origin.ADJUSTMENT || !l.active() || l.changed());
             total += t.cents();
             pending += t.pending();
-            rows.add(new EquipmentCost(e, true, bom.id(), bom.name(), rev.id(), rev.label(), t.cents(), t.pending(), adjusted));
+            rows.add(new EquipmentCost(e, true, bom.id(), bom.name(), t.cents(), t.pending(), adjusted));
         }
         boolean complete = !active.isEmpty() && without == 0 && pending == 0;
         Long margin = complete ? basis.contractCents() - total : null;
@@ -146,8 +146,9 @@ public class EquipmentBomService {
     // ───────────── Comandos ─────────────
 
     /**
-     * ApplyBomToProject: cópia congelada da revisão aprovada no equipamento. Aplicar de novo a mesma revisão não muda
-     * nada; trocar de revisão exige motivo e descarta os ajustes do equipamento (ficam na auditoria).
+     * ApplyBomToProject: cópia da BOM do modelo no equipamento, como está agora. Aplicar de novo (Reaplicar) traz o
+     * conteúdo atual da BOM, exige motivo e descarta os ajustes do equipamento (ficam na auditoria). BOM com linha sem
+     * quantidade ou sem custo não se aplica.
      */
     @Transactional
     public EquipmentBomView apply(String idempotencyKey, UUID equipmentId, ApplyRequest r) {
@@ -158,15 +159,17 @@ public class EquipmentBomService {
         ProjectQueryApi.EquipmentRef eq = equipment(equipmentId);
         if (done.isPresent()) return view(eq, repository.equipmentBomOf(equipmentId).orElse(null));
         if (!eq.active()) throw new InvalidStateException("O equipamento " + eq.code() + " foi cancelado e não recebe BOM.");
-        UUID revisionId = BomService.parseUuid(r == null ? null : r.revisionId(), "revisionId")
-                .orElseThrow(() -> BomService.invalid("BOM_INVALID", "revisionId", "Escolha a revisão aprovada."));
-        BomRevision rev = boms.revision0(revisionId);
-        Bom bom = boms.bom(rev.bomId());
-        if (rev.status() == BomRevision.Status.DRAFT) {
-            throw BomService.invalid("BOM_NOT_APPROVED", "revisionId", "A revisão " + rev.label() + " ainda está em rascunho; aprove antes de aplicar.");
-        }
+        UUID bomId = BomService.parseUuid(r == null ? null : r.bomId(), "bomId")
+                .orElseThrow(() -> BomService.invalid("BOM_INVALID", "bomId", "Escolha a BOM do modelo."));
+        Bom bom = boms.bom(bomId);
         if (!bom.isModelBom()) {
-            throw BomService.invalid("BOM_INVALID", "revisionId", "Aplique a BOM de um modelo; " + bom.name() + " é uma submontagem.");
+            throw BomService.invalid("BOM_INVALID", "bomId", "Aplique a BOM de um modelo; " + bom.name() + " é uma submontagem.");
+        }
+        BomRevision content = boms.content(bomId);
+        BomCost.Total modelTotal = trees.total(content.id());
+        if (modelTotal.pending() > 0) {
+            throw new RuleViolationException("BOM_INCOMPLETE", "A BOM " + bom.name() + " tem " + modelTotal.pending()
+                    + (modelTotal.pending() == 1 ? " linha" : " linhas") + " sem quantidade ou sem custo; complete antes de aplicar.", List.of());
         }
         Instant now = clock.instant();
         Optional<EquipmentBom> existing = repository.equipmentBomForUpdate(equipmentId);
@@ -176,31 +179,25 @@ public class EquipmentBomService {
         Map<String, AuditEntry.Change> changes = new LinkedHashMap<>();
         if (existing.isPresent()) {
             EquipmentBom current = existing.get();
-            if (current.revisionId().equals(revisionId)) {
-                receipts.complete(user.username(), key, current.id().toString());
-                return view(eq, current);
-            }
             if (reason == null || reason.length() > 500) {
-                throw new RuleViolationException("EQUIPMENT_BOM_INVALID", "Informe o motivo da troca de revisão.",
+                throw new RuleViolationException("EQUIPMENT_BOM_INVALID", "Informe o motivo de reaplicar a BOM.",
                         List.of(new FieldIssue("reason", reason == null ? "Obrigatório." : "Máximo de 500 caracteres.")));
             }
-            BomRevision old = boms.revision0(current.revisionId());
+            Bom old = modelBomOf(current);
             long oldTotal = trees.equipmentTotal(current.id()).cents();
             repository.deleteEquipmentLines(current.id());
-            saved = new EquipmentBom(current.id(), equipmentId, revisionId, current.version() + 1, now, user.username(), now, user.username());
+            saved = new EquipmentBom(current.id(), equipmentId, content.id(), current.version() + 1, now, user.username(), now, user.username());
             repository.update(saved);
-            copy(saved.id(), revisionId, null);
-            action = "EQUIPMENT_BOM_REVISION_CHANGED";
-            changes.put("bom", BomService.change(boms.bom(old.bomId()).name(), bom.name()));
-            changes.put("revision", BomService.change(old.label(), rev.label()));
+            copy(saved.id(), content.id(), null);
+            action = "EQUIPMENT_BOM_REAPPLIED";
+            changes.put("bom", BomService.change(old.name(), bom.name()));
             changes.put("totalCents", BomService.change(Long.toString(oldTotal), Long.toString(trees.equipmentTotal(saved.id()).cents())));
         } else {
-            saved = new EquipmentBom(UUID.randomUUID(), equipmentId, revisionId, 1, now, user.username(), now, user.username());
+            saved = new EquipmentBom(UUID.randomUUID(), equipmentId, content.id(), 1, now, user.username(), now, user.username());
             repository.insert(saved);
-            copy(saved.id(), revisionId, null);
+            copy(saved.id(), content.id(), null);
             action = "EQUIPMENT_BOM_APPLIED";
             changes.put("bom", BomService.change(null, bom.name()));
-            changes.put("revision", BomService.change(null, rev.label()));
             changes.put("totalCents", BomService.change(null, Long.toString(trees.equipmentTotal(saved.id()).cents())));
         }
         changes.put("equipment", BomService.change(null, eq.code()));
@@ -210,8 +207,6 @@ public class EquipmentBomService {
         payload.put("projectId", eq.projectId().toString());
         payload.put("equipmentId", equipmentId.toString());
         payload.put("bomId", bom.id().toString());
-        payload.put("revisionId", rev.id().toString());
-        payload.put("revision", rev.revision());
         outbox.append("ProjectBomApplied", ENTITY, saved.id().toString(), payload, user.username());
         receipts.complete(user.username(), key, saved.id().toString());
         return view(eq, saved);
@@ -342,9 +337,9 @@ public class EquipmentBomService {
     }
 
     private EquipmentBomView view(ProjectQueryApi.EquipmentRef eq, EquipmentBom b) {
-        if (b == null) return new EquipmentBomView(eq, null, null, null, List.of(), 0, 0, 0, 0, 0, 0);
-        BomRevision rev = boms.revision0(b.revisionId());
-        Bom modelBom = boms.bom(rev.bomId());
+        if (b == null) return new EquipmentBomView(eq, null, null, List.of(), 0, 0, 0, false, 0, 0, 0);
+        BomRevision content = repository.findRevision(b.revisionId()).orElseThrow();
+        Bom modelBom = boms.bom(content.bomId());
         List<EquipmentBom.Line> lines = repository.equipmentLines(b.id());
         Map<UUID, List<EquipmentBom.Line>> byParent = BomTrees.byParent(lines);
         Map<UUID, Optional<ItemQueryApi.ItemRef>> cache = new HashMap<>();
@@ -352,8 +347,14 @@ public class EquipmentBomService {
         int[] counts = new int[3];
         walk(byParent, null, 0, true, out, cache, counts);
         BomCost.Total total = BomCost.total(BomTrees.equipmentNodes(byParent, null));
-        return new EquipmentBomView(eq, b, modelBom, rev, out, total.cents(), total.pending(), trees.total(rev.id()).cents(),
+        java.time.Instant last = boms.lastChange(content.id());
+        boolean changed = last != null && b.appliedAt() != null && last.isAfter(b.appliedAt());
+        return new EquipmentBomView(eq, b, modelBom, out, total.cents(), total.pending(), trees.total(content.id()).cents(), changed,
                 counts[0], counts[1], counts[2]);
+    }
+
+    private Bom modelBomOf(EquipmentBom b) {
+        return boms.bom(repository.findRevision(b.revisionId()).orElseThrow().bomId());
     }
 
     private void walk(Map<UUID, List<EquipmentBom.Line>> byParent, UUID parentId, int depth, boolean parentActive, List<LineView> out,

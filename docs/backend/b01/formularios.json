@@ -447,10 +447,9 @@
       "tipo": "documento",
       "modulo": "engenharia",
       "conceito": "BOM",
-      "significado": "Composição versionada do modelo; a revisão aplicada ao projeto não muda com o modelo",
+      "significado": "Composição do modelo, editável a qualquer momento; a cópia aplicada ao equipamento só muda ao reaplicar",
       "campos": [
         {"nome": "modelo", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
-        {"nome": "revisao", "tipo": "inteiro", "obrigatorio": true, "origem": "sistema"},
         {
           "nome": "linhas",
           "tipo": "lista",
@@ -459,29 +458,26 @@
           "origem": "usuario"
         },
         {"nome": "totalReferencial", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
-        {"nome": "totalInformadoOrigem", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": false, "origem": "importacao"},
-        {"nome": "situacao", "tipo": "enum", "valores": ["DRAFT", "APPROVED", "SUPERSEDED"], "obrigatorio": true, "origem": "sistema"}
+        {"nome": "totalInformadoOrigem", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": false, "origem": "importacao"}
       ],
       "classificacoes": ["categoria", "subsistema", "atividade"],
       "validacoes": [
         {"regra": "Linha exige item, quantidade > 0, unidade compatível, custo referencial e categoria"},
         {"regra": "Diferença entre Σ linhas e total informado da origem é exibida como divergência, não corrigida"},
-        {"regra": "Revisão aprovada é imutável"},
-        {"regra": "Submontagem é outra BOM usada pela revisão escolhida; ciclo de submontagens é recusado"},
-        {"regra": "Aprovar leva junto as submontagens em rascunho; linha sem quantidade ou custo impede a aprovação"},
-        {"regra": "Revisão igual à aprovada não é aprovada; o rascunho é alterado ou descartado"}
+        {"regra": "Submontagem é outra BOM, usada com o conteúdo atual; ciclo de submontagens é recusado"},
+        {"regra": "Linha sem quantidade ou custo impede aplicar a BOM ao equipamento"},
+        {"regra": "Cada gravação fica na trilha de auditoria; reaplicar ao equipamento exige motivo e descarta os ajustes"}
       ],
       "comandos": [
         {"nome": "ImportBom", "permissao": "bom.update", "idempotente": true, "eventos": ["BomImported"]},
-        {"nome": "ApproveBomRevision", "permissao": "bom.approve", "idempotente": true, "eventos": ["BomRevisionApproved"]},
-        {"nome": "PropagateBomRevision", "permissao": "bom.approve", "idempotente": true, "eventos": ["BomRevisionApproved"]},
+        {"nome": "UpdateBom", "permissao": "bom.update", "idempotente": false, "eventos": ["BomUpdated"]},
         {"nome": "ApplyBomToProject", "permissao": "project_bom.apply", "idempotente": true, "eventos": ["ProjectBomApplied"]},
         {"nome": "AdjustEquipmentBom", "permissao": "project_bom.apply", "idempotente": false, "eventos": ["EquipmentBomAdjusted"]}
       ],
       "indicadores": ["IND-011"],
       "analises": ["AN-020"],
-      "acoes": ["Criar revisão", "Aplicar ao projeto", "Comparar revisões", "Comparar estimado × realizado"],
-      "permissoes": ["bom.read", "bom.update", "bom.approve", "project_bom.apply"]
+      "acoes": ["Editar BOM", "Ver diagrama da estrutura", "Aplicar ao projeto", "Reaplicar BOM", "Comparar estimado × realizado"],
+      "permissoes": ["bom.read", "bom.update", "project_bom.apply"]
     },
     {
       "id": "cronograma",

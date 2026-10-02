@@ -53,25 +53,25 @@ class EquipmentBomController {
     }
 
     record EquipmentBomDto(EquipmentRefDto equipment, boolean applied, String id, String bomId, String bomCode, String bomName,
-                           String revisionId, String revisionLabel, String revisionStatus, String version, Instant appliedAt,
-                           String appliedBy, Instant updatedAt, String updatedBy, String totalCents, int pending, String modelTotalCents,
-                           int added, int removed, int changed, List<LineDto> lines) {
+                           String version, Instant appliedAt, String appliedBy, Instant updatedAt, String updatedBy, String totalCents,
+                           int pending, String modelTotalCents, boolean modelChanged, int added, int removed, int changed,
+                           List<LineDto> lines) {
         static EquipmentBomDto of(EquipmentBomService.EquipmentBomView v) {
             EquipmentRefDto eq = EquipmentRefDto.of(v.equipment());
             if (v.bom() == null) {
-                return new EquipmentBomDto(eq, false, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, null,
-                        0, 0, 0, List.of());
+                return new EquipmentBomDto(eq, false, null, null, null, null, null, null, null, null, null, null, 0, null, false, 0, 0, 0,
+                        List.of());
             }
             return new EquipmentBomDto(eq, true, v.bom().id().toString(), v.modelBom().id().toString(), v.modelBom().code(),
-                    v.modelBom().name(), v.revision().id().toString(), v.revision().label(), v.revision().status().name(),
-                    Long.toString(v.bom().version()), v.bom().appliedAt(), v.bom().appliedBy(), v.bom().updatedAt(), v.bom().updatedBy(),
-                    Long.toString(v.totalCents()), v.pending(), Long.toString(v.modelTotalCents()), v.added(), v.removed(), v.changed(),
+                    v.modelBom().name(), Long.toString(v.bom().version()), v.bom().appliedAt(), v.bom().appliedBy(), v.bom().updatedAt(),
+                    v.bom().updatedBy(), Long.toString(v.totalCents()), v.pending(), Long.toString(v.modelTotalCents()), v.modelChanged(),
+                    v.added(), v.removed(), v.changed(),
                     v.lines().stream().map(LineDto::of).toList());
         }
     }
 
-    record EquipmentCostDto(EquipmentRefDto equipment, boolean applied, String bomId, String bomName, String revisionId,
-                            String revisionLabel, String costCents, int pending, boolean adjusted) { }
+    record EquipmentCostDto(EquipmentRefDto equipment, boolean applied, String bomId, String bomName, String costCents, int pending,
+                            boolean adjusted) { }
 
     record PlannedCostDto(String projectId, String projectCode, String projectName, String stage, String contractCents,
                           String plannedCostCents, boolean complete, int withoutBom, String marginCents, String marginRate,
@@ -107,8 +107,7 @@ class EquipmentBomController {
                 c.marginCents() == null ? null : c.marginCents().toString(),
                 c.marginRate() == null ? null : c.marginRate().stripTrailingZeros().toPlainString(),
                 c.equipment().stream().map(e -> new EquipmentCostDto(EquipmentRefDto.of(e.equipment()), e.applied(),
-                        BomController.str(e.bomId()), e.bomName(), BomController.str(e.revisionId()), e.revisionLabel(),
-                        e.costCents() == null ? null : e.costCents().toString(), e.pending(), e.adjusted())).toList());
+                        BomController.str(e.bomId()), e.bomName(), e.costCents() == null ? null : e.costCents().toString(), e.pending(), e.adjusted())).toList());
     }
 
     private static ResponseEntity<EquipmentBomDto> respond(EquipmentBomService.EquipmentBomView v) {
