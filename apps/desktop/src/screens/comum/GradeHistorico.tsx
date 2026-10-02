@@ -1,5 +1,6 @@
 import type { HistoryEntry } from '../../api/types';
 import { competenciaDaApi, dataDaApi, dataHora, reais } from '../../format';
+import { LinhaResto } from './LinhaResto';
 
 const ROTULO: Record<string, string> = {
   code: 'Código', legalName: 'Razão social', tradeName: 'Nome fantasia', cnpj: 'CNPJ', group: 'Grupo', status: 'Situação',
@@ -81,6 +82,7 @@ export function GradeHistorico({ historico, rotulo }: { historico: HistoryEntry[
                 </tr>
               ));
             })}
+            <LinhaResto colunas={7} numerada={false} />
           </tbody>
         </table>
       )}

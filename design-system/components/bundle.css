@@ -980,6 +980,69 @@
 .rp-grid th[aria-label="Abrir"], .rp-jlista .rp-grid td:nth-child(2) { width: 18px; padding-right: 0; border-right-color: transparent; }
 .rp-jlista .rp-grid td:nth-child(2) + td { padding-left: var(--space-1); }
 
+/* ───────────── Documento como na referência (02/10/2026, 2ª rodada) ─────────────
+   Abas largas e altas; painel de abas que ocupa a altura da janela; grade que continua até o pé do painel com fios de
+   coluna, coluna # e linhas vazias; rolagem clara; amarelo do foco e caixa de seleção medidos de novo. */
+
+/* Abas: 185px × 25px, rótulo em ink; não selecionada em degradê azul-claro, selecionada chapada com brilho de 2px */
+.rp-window .rp-tab, .rp-janela-mdi .rp-tab { height: 25px; min-width: 185px; color: var(--ink); }
+.rp-tab { background: linear-gradient(var(--field) 0, var(--tab-top) 2px, var(--tab)); border-color: var(--tab-border); }
+.rp-tab[aria-selected=true] { background: linear-gradient(var(--tab-active-top) 0, var(--tab-active-top) 2px, var(--tab-active) 4px, var(--tab-active));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.5); }
+.rp-tab[aria-disabled=true] { color: var(--ink-muted); }
+.rp-tab { border-radius: 16px 4px 0 0 / 25px 4px 0 0; }
+
+/* Painel de abas: contorno cinza-azulado e, na janela de documento, toda a altura que sobra */
+.rp-window .rp-tabpanel, .rp-janela-mdi .rp-tabpanel { border-color: var(--panel-border); }
+.rp-janela-mdi__corpo:has(> .rp-tabpanel), .rp-window-body:has(> .rp-tabpanel) { display: flex; flex-direction: column; }
+.rp-janela-mdi__corpo:has(> .rp-tabpanel) > *, .rp-window-body:has(> .rp-tabpanel) > * { flex: none; }
+.rp-janela-mdi__corpo > .rp-tabpanel, .rp-window-body > .rp-tabpanel { flex: 1 0 240px; display: flex; flex-direction: column; min-height: 240px; }
+.rp-tabpanel > * { flex: none; }
+.rp-tabpanel > .rp-tabela, .rp-tabpanel > .rp-grid-rolagem, .rp-tabpanel > .rp-tabela > .rp-grid-rolagem { flex: 1 1 0; min-height: 120px; max-height: none; }
+.rp-tabpanel > .rp-tabela { display: flex; flex-direction: column; border: 0; background: none; }
+
+/* Grade: contorno simples; a tabela ocupa a área de rolagem e a linha de preenchimento (rp-grid-resto) fica com o resto */
+.rp-grid-rolagem { border: 1px solid var(--panel-border); }
+.rp-grid-rolagem > .rp-grid:has(.rp-grid-resto) { height: 100%; }
+.rp-grid-rolagem > .rp-grid > thead th { position: sticky; top: 0; z-index: 1; }
+.rp-grid-rolagem > .rp-grid > tfoot td { position: sticky; bottom: 0; z-index: 1; }
+.rp-grid tr.rp-grid-resto td { height: auto; padding: 0; border-bottom: 0; vertical-align: top;
+  background: repeating-linear-gradient(var(--grid-row) 0, var(--grid-row) var(--row-grid), var(--grid-row-alt) var(--row-grid), var(--grid-row-alt) calc(var(--row-grid) + 1px)); }
+.rp-grid tr.rp-grid-resto td.rownum { background: repeating-linear-gradient(var(--grid-rownum) 0, var(--grid-rownum) var(--row-grid),
+  var(--grid-row-alt) var(--row-grid), var(--grid-row-alt) calc(var(--row-grid) + 1px)); }
+.rp-jlista .rp-grid tr.rp-grid-resto td:not(.rownum) { background: repeating-linear-gradient(var(--field-readonly) 0, var(--field-readonly) var(--row-grid),
+  var(--grid-row-alt) var(--row-grid), var(--grid-row-alt) calc(var(--row-grid) + 1px)); }
+.rp-grid tr.rp-grid-resto:hover td { cursor: default; }
+
+/* Rolagem clara da referência: trilho scroll-track, polegar e botões em degradê claro com contorno scroll-edge */
+.rp-window .rp-rolagem, .rp-janela-mdi .rp-rolagem { scrollbar-color: auto; }
+.rp-window .rp-rolagem::-webkit-scrollbar, .rp-janela-mdi .rp-rolagem::-webkit-scrollbar { width: 17px; height: 17px; background: var(--scroll-track); }
+.rp-window .rp-rolagem::-webkit-scrollbar-track, .rp-janela-mdi .rp-rolagem::-webkit-scrollbar-track { background: var(--scroll-track); border: 0; }
+.rp-window .rp-rolagem::-webkit-scrollbar-track:vertical, .rp-janela-mdi .rp-rolagem::-webkit-scrollbar-track:vertical { border-left: 1px solid var(--scroll-edge); }
+.rp-window .rp-rolagem::-webkit-scrollbar-track:horizontal, .rp-janela-mdi .rp-rolagem::-webkit-scrollbar-track:horizontal { border-top: 1px solid var(--scroll-edge); }
+.rp-window .rp-rolagem::-webkit-scrollbar-thumb, .rp-janela-mdi .rp-rolagem::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, var(--field), var(--scroll-track) 50%, var(--tab-top)); border: 1px solid var(--scroll-edge); border-radius: var(--radius-sm); }
+.rp-window .rp-rolagem::-webkit-scrollbar-thumb:horizontal, .rp-janela-mdi .rp-rolagem::-webkit-scrollbar-thumb:horizontal {
+  background: linear-gradient(var(--field), var(--scroll-track) 50%, var(--tab-top)); }
+.rp-window .rp-rolagem::-webkit-scrollbar-thumb:hover, .rp-janela-mdi .rp-rolagem::-webkit-scrollbar-thumb:hover { background: linear-gradient(90deg, var(--field), var(--tab-top)); }
+.rp-window .rp-rolagem::-webkit-scrollbar-button:single-button, .rp-janela-mdi .rp-rolagem::-webkit-scrollbar-button:single-button {
+  display: block; width: 17px; height: 17px; background-color: var(--scroll-track); background-repeat: no-repeat; background-size: 7px 4px; background-position: center; }
+.rp-window .rp-rolagem::-webkit-scrollbar-button:vertical:decrement, .rp-janela-mdi .rp-rolagem::-webkit-scrollbar-button:vertical:decrement {
+  background-image: conic-gradient(from 140deg at 50% 0, var(--ink-muted) 80deg, transparent 0); }
+.rp-window .rp-rolagem::-webkit-scrollbar-button:vertical:increment, .rp-janela-mdi .rp-rolagem::-webkit-scrollbar-button:vertical:increment {
+  background-image: conic-gradient(from -40deg at 50% 100%, var(--ink-muted) 80deg, transparent 0); }
+.rp-window .rp-rolagem::-webkit-scrollbar-button:horizontal:decrement, .rp-janela-mdi .rp-rolagem::-webkit-scrollbar-button:horizontal:decrement {
+  background-size: 4px 7px; background-image: conic-gradient(from 50deg at 0 50%, var(--ink-muted) 80deg, transparent 0); }
+.rp-window .rp-rolagem::-webkit-scrollbar-button:horizontal:increment, .rp-janela-mdi .rp-rolagem::-webkit-scrollbar-button:horizontal:increment {
+  background-size: 4px 7px; background-image: conic-gradient(from 230deg at 100% 50%, var(--ink-muted) 80deg, transparent 0); }
+.rp-window .rp-rolagem::-webkit-scrollbar-corner, .rp-janela-mdi .rp-rolagem::-webkit-scrollbar-corner { background: var(--scroll-track); }
+
+/* Caixa de seleção: quadrado branco de 13px, contorno cinza, visto preto */
+.rp-choice input { background: var(--field); border-color: var(--ink-muted); box-shadow: inset 1px 1px 0 rgba(31,32,38,.08); }
+.rp-choice input:focus-visible { background: var(--field-active); }
+
+/* Campos: fio do somente leitura em scroll-edge, como os valores calculados da referência */
+.rp-window .rp-field[readonly], .rp-window .rp-field--readonly, .rp-janela-mdi .rp-field[readonly], .rp-janela-mdi .rp-field--readonly { border-color: var(--scroll-edge); }
 
 /* Botões com o visual original e as medidas da versão de 02/10/2026 (pedido do PO): 23px de altura, 95px de largura
    mínima dentro das janelas e o texto do corpo (12px) */
