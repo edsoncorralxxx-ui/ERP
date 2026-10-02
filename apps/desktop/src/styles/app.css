@@ -19,44 +19,21 @@ body { background: var(--ground); }
 .rp-menu-item[aria-disabled=true]:hover { background: none; }
 
 /* Gaveta em coluna própria (pedido do PO e protótipo Mock): começa um pouco abaixo do topo do trilho e desce até o
-   rodapé; a boas-vindas e as janelas ficam ao lado dela, sem sobreposição. Desliza na largura em 0,25 s. */
-.rp-appbody > .rp-drawer { position: relative; z-index: 1; align-self: stretch; margin-top: var(--space-3);
-  border: 0 solid var(--window-border); transition: width .25s ease, border-width .25s ease; }
-.rp-appbody > .rp-drawer[data-open=true] { width: 330px; border-width: 1px 1px 0 0; }
+   rodapé; a boas-vindas e as janelas ficam ao lado dela, sem sobreposição. Desliza na largura em 0,25 s. A aparência
+   (moldura, sulcos, degradês) vem do design system, seção "Barra lateral fiel à referência". */
+.rp-appbody > .rp-drawer { position: relative; z-index: 1; align-self: stretch; margin-top: var(--space-3); transition: width .25s ease; }
+.rp-appbody > .rp-drawer[data-open=true] { width: 330px; }
 .rp-appbody > .rp-drawer .rp-drawer-inner { width: 330px; height: 100%; display: flex; flex-direction: column; }
-.rp-appbody > .rp-drawer .rp-drawer-head { flex: none; background: var(--panel-head); }
+.rp-appbody > .rp-drawer .rp-drawer-head { flex: none; }
 .rp-appbody > .rp-drawer .rp-drawer-view[data-active=true] { flex: 1; min-height: 0; height: auto; }
-.rp-gaveta .rp-nav-item { width: 100%; box-sizing: border-box; font: var(--text-nav-item); text-align: left;
-  color: var(--on-dark); border-left: 0; border-right: 0; cursor: pointer; }
+.rp-gaveta .rp-nav-item { width: 100%; text-align: left; border-left: 0; border-right: 0; cursor: pointer; }
 .rp-gaveta .rp-nav-item:focus-visible { outline: 2px solid var(--field-active); outline-offset: -3px; }
-
-/* Submódulos do protótipo: faixa em nav-selected, 36px, rótulo branco; no hover o fundo volta ao nav,
-   o rótulo sublinha e o ícone avança 2px. */
-.rp-gaveta .rp-nav-subs { background: var(--nav-selected); }
-.rp-gaveta .rp-nav-group[data-open=true] > .rp-nav-subs { border-bottom: 1px solid var(--nav-deep); }
-.rp-gaveta .rp-nav-sub { height: 36px; box-sizing: border-box; padding: 0 12px 0 40px; display: flex; align-items: center; gap: 10px;
-  font: var(--text-label-strong); color: var(--on-dark); background: var(--nav-selected); cursor: pointer; }
+.rp-gaveta .rp-nav-sub { display: flex; align-items: center; cursor: pointer; }
 .rp-gaveta .rp-nav-sub .rp-ico { flex: none; transition: transform .15s ease; }
-.rp-gaveta .rp-nav-sub:not(.rp-nav-sub--indisponivel):hover { background: var(--nav); text-decoration: underline; }
 .rp-gaveta .rp-nav-sub:not(.rp-nav-sub--indisponivel):hover .rp-ico { transform: translateX(2px); }
 .rp-gaveta .rp-nav-sub:focus-visible { outline: 2px solid var(--field-active); outline-offset: -3px; text-decoration: underline; }
 .rp-gaveta .rp-nav--pastas .rp-nav-item { cursor: default; }
-
-/* Hover suave (pedido do PO): degradê não anima, então ele fica numa camada com transição de opacidade.
-   A linha continua chapada em nav por baixo, sem nenhum instante claro entre um estado e outro. */
-.rp-nav-item { position: relative; isolation: isolate; }
-.rp-nav-item, .rp-nav-item:hover, .rp-nav-item[aria-expanded=true], .rp-nav-group[data-open=true] > .rp-nav-item { background: var(--nav); }
-.rp-nav-item::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0;
-  background: linear-gradient(var(--nav-selected-top), var(--nav-selected) 55%); transition: opacity .2s ease; }
-.rp-nav-item:hover::before, .rp-nav-item[aria-expanded=true]::before, .rp-nav-group[data-open=true] > .rp-nav-item::before { opacity: 1; }
 .rp-nav-sub { transition: background-color .2s ease; }
-
-.rp-rail-tab { position: relative; isolation: isolate; transition: background-color .2s ease, color .2s ease; }
-.rp-rail-tab:not([aria-selected=true]):hover { background: var(--tab); }
-.rp-rail-tab[aria-selected=true] { background: var(--rail-selected); }
-.rp-rail-tab::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0;
-  background: linear-gradient(90deg, var(--nav-selected-top), var(--rail-selected)); transition: opacity .2s ease; }
-.rp-rail-tab[aria-selected=true]::before { opacity: 1; }
 
 /* Hover amarelo em todos os componentes, exceto o menu lateral e as abas, que ficam no azul do design system (pedido do PO). Amarelo = "você pode agir aqui". */
 .rp-btn, .rp-tool, .rp-campo-btn, .rp-pag button, .rp-tab, .rp-menubar > div > span, .rp-grid tbody tr td, .rp-cockpit-list div {
@@ -69,12 +46,12 @@ body { background: var(--ground); }
 
 @media (prefers-reduced-motion: reduce) {
   .rp-btn, .rp-tool, .rp-tab, .rp-menubar > div > span, .rp-grid tbody tr td,
-  .rp-nav-item::before, .rp-rail-tab, .rp-rail-tab::before, .rp-nav-sub, .rp-nav-sub .rp-ico, .rp-appbody > .rp-drawer { transition: none; }
+  .rp-nav-item, .rp-rail-tab, .rp-nav-sub, .rp-nav-sub .rp-ico, .rp-appbody > .rp-drawer { transition: none; }
 }
 
 /* Gaveta: itens ainda não implementados. */
 .rp-gaveta .rp-nav-sub--indisponivel { opacity: .6; cursor: default; }
-.rp-gaveta .rp-nav-sub--indisponivel:hover { text-decoration: none; background: var(--nav-selected); } /* mantém o azul: fundo transparente mostrava a gaveta clara (piscar branco) */
+.rp-gaveta .rp-nav-sub--indisponivel:hover { text-decoration: none; }
 .rp-nav-sub { min-width: 0; }
 .rp-nav-sub__rotulo { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rp-nav-sub__fase { flex: none; margin-right: var(--space-2); font: var(--text-caption); opacity: .85; }

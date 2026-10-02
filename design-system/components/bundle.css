@@ -797,3 +797,134 @@
 .rp-ico-w-formulario{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Crect x='2.5' y='1.5' width='11' height='13' fill='none' stroke='%23ffffff' stroke-width='1.1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M4.5 4.5h3M4.5 7.5h3M4.5 10.5h3' fill='none' stroke='%23ffffff' stroke-width='1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Crect x='8.5' y='3.8' width='3' height='1.6' fill='none' stroke='%23ffffff' stroke-width='0.8' stroke-linejoin='round' stroke-linecap='round'/%3E%3Crect x='8.5' y='6.8' width='3' height='1.6' fill='none' stroke='%23ffffff' stroke-width='0.8' stroke-linejoin='round' stroke-linecap='round'/%3E%3Crect x='8.5' y='9.8' width='3' height='1.6' fill='none' stroke='%23ffffff' stroke-width='0.8' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E")}
 .rp-ico-relatorio-lista{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Crect x='2.5' y='1.5' width='11' height='13' fill='%23ffffff' stroke='%232b4587' stroke-width='1.1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M2.5 5h11M2.5 8h11M2.5 11h11M6 1.5v13' fill='none' stroke='%232b4587' stroke-width='0.8' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E")}
 .rp-ico-w-relatorio-lista{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Crect x='2.5' y='1.5' width='11' height='13' fill='none' stroke='%23ffffff' stroke-width='1.1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M2.5 5h11M2.5 8h11M2.5 11h11M6 1.5v13' fill='none' stroke='%23ffffff' stroke-width='0.8' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E")}
+
+
+/* ───────────── Barra lateral fiel à referência (02/10/2026) ─────────────
+   Trilho de abas em relevo, gaveta com moldura e canto arredondado, linhas de módulo de 27px com sulco, módulo aberto
+   em degradê brilhante, sublinhas em azul claro com rótulo normal. Medido pixel a pixel nas telas de referência. */
+.rp-rail { width: 28px; padding: 4px 0 0 2px; box-sizing: border-box; gap: 0; background: linear-gradient(90deg, var(--rail), var(--rail-edge));
+  border-right: 1px solid var(--rail-border); box-shadow: 2px 0 3px rgba(64,70,86,.16); }
+.rp-rail-tab { position: relative; margin: 0 0 -1px; padding: 16px 0; font: var(--text-caption); color: var(--ink);
+  background: linear-gradient(90deg, var(--field), var(--rail) 25%, var(--rail-edge)); border: 1px solid var(--rail-border);
+  border-width: 1px 0 1px 1px; border-radius: 0; box-shadow: inset 0 1px 0 var(--field), inset 1px 0 0 var(--field);
+  transition: filter .2s ease; cursor: pointer; }
+.rp-rail-tab:first-child { border-top-left-radius: var(--radius-lg); }
+.rp-rail-tab:not([aria-selected=true]):hover { filter: brightness(1.05); }
+.rp-rail-tab[aria-selected=true] { z-index: 1; margin-right: -1px; color: var(--on-dark); font-weight: 400;
+  background: linear-gradient(90deg, var(--rail-selected), var(--rail-selected-deep)); border-color: var(--rail-selected-deep);
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  box-shadow: inset 1px 0 0 rgba(255,255,255,.35), inset 0 1px 0 rgba(255,255,255,.25), 0 1px 2px rgba(25,52,121,.35); }
+.rp-rail-tab[aria-selected=true]::before { display: none; }
+
+.rp-drawer { background: linear-gradient(var(--surface-panel) 80%, var(--rail-edge)); border: 1px solid var(--rail-border) !important;
+  border-left: 0 !important; border-top-right-radius: 12px; box-shadow: inset -1px 0 0 var(--field), 2px 0 3px rgba(64,70,86,.18); }
+.rp-drawer[data-open=false] { border-width: 0 !important; box-shadow: none; }
+.rp-drawer-head { height: 50px; background: linear-gradient(var(--drawer-head-top), var(--panel-head)) !important;
+  border-top-right-radius: 12px; border-bottom: 1px solid var(--field); }
+.rp-drawer-close::before { border-width: 4px; border-right-width: 5px; }
+.rp-drawer-view[data-active=true] { height: calc(100% - 50px); }
+
+.rp-nav-item, .rp-gaveta .rp-nav-item { height: var(--row-nav); box-sizing: border-box; gap: 6px; padding: 0 var(--space-3) 0 18px;
+  font: var(--text-nav-item); color: var(--on-dark); background: var(--nav) !important;
+  border-top: 1px solid var(--nav-groove); border-bottom: 1px solid var(--nav-deep); text-shadow: 0 1px 0 rgba(14,63,131,.35); }
+.rp-nav-item::before { display: none !important; }
+.rp-nav-item:hover { background: var(--nav-hover) !important; transition: background-color .15s ease; }
+.rp-nav-item[aria-expanded=true], .rp-nav-group[data-open=true] > .rp-nav-item {
+  background: linear-gradient(var(--nav-selected-top), var(--nav-selected) 60%) !important;
+  border-top-color: rgba(255,255,255,.35); box-shadow: inset 0 1px 0 rgba(255,255,255,.18); }
+.rp-nav-item .rp-ico { width: 16px; height: 16px; filter: drop-shadow(0 1px 0 rgba(14,63,131,.45)); }
+.rp-nav-subs, .rp-gaveta .rp-nav-subs { background: linear-gradient(var(--nav-selected) 0, var(--nav-sub) 8px, var(--nav-sub)); }
+.rp-gaveta .rp-nav-group[data-open=true] > .rp-nav-subs { border-bottom: 1px solid var(--nav-deep); }
+.rp-nav-sub, .rp-gaveta .rp-nav-sub { height: var(--row-nav); box-sizing: border-box; gap: 8px; padding: 0 var(--space-3) 0 38px;
+  font: var(--text-body); color: var(--on-dark); background: transparent; border: 0; }
+.rp-gaveta .rp-nav-sub:not(.rp-nav-sub--indisponivel):hover { background: rgba(255,255,255,.12); text-decoration: underline; }
+.rp-gaveta .rp-nav-sub--indisponivel:hover { background: transparent; }
+
+
+/* ───────────── Janelas e controles fiéis à referência (02/10/2026) ─────────────
+   Densidade da referência: texto 12px, campos de 18px, botões de 23px, barra de título de 32px. Degradês e brilhos
+   medidos nos pixels; só tokens. */
+.rp { font: var(--text-body); }
+
+/* Janela: barra de título com brilho no topo, escurecendo para baixo; inativa em azul-acinzentado */
+.rp-window { background: var(--surface-form); border-color: var(--window-border); border-radius: var(--radius-md) var(--radius-md) 0 0; }
+.rp-titlebar { height: var(--titlebar-h); padding: 0 var(--space-2) 0 var(--space-4); font: var(--text-window-title);
+  background: linear-gradient(var(--titlebar-shine) 0, var(--titlebar) 2px, var(--titlebar) 15%, var(--titlebar-bottom));
+  border-bottom: 1px solid var(--nav-deep); text-shadow: 0 1px 1px rgba(14,63,131,.5); }
+.rp-window--inactive .rp-titlebar { background: linear-gradient(var(--titlebar-inactive), var(--titlebar-inactive-bottom));
+  border-bottom-color: var(--titlebar-inactive-bottom); text-shadow: none; }
+.rp-winbtns { gap: 3px; }
+.rp-winbtns span, .rp-winbtns button { width: 19px; height: 18px; font-size: 11px;
+  background: linear-gradient(var(--titlebar-shine), var(--titlebar) 45%, var(--titlebar-bottom));
+  border: 1px solid var(--nav-deep); border-radius: var(--radius-sm); box-shadow: inset 0 1px 0 rgba(255,255,255,.45); color: var(--on-dark); }
+.rp-window--inactive .rp-winbtns span, .rp-window--inactive .rp-winbtns button {
+  background: linear-gradient(var(--titlebar-inactive), var(--titlebar-inactive-bottom)); border-color: var(--titlebar-inactive-bottom); }
+.rp-window-body { padding: var(--space-4) var(--space-4); }
+.rp-window-foot { padding: 0 var(--space-4) var(--space-4); }
+
+/* Campos: brancos, contorno fino, rebaixados; somente leitura em azul bem claro */
+.rp-field { height: 18px; font: var(--text-body); border-color: var(--field-border); box-shadow: inset 1px 1px 0 rgba(31,32,38,.08); }
+.rp-field:focus, .rp-field--active { box-shadow: inset 0 1px 2px rgba(110,90,10,.25); border-color: var(--gold); }
+.rp-field[readonly], .rp-field--readonly { background: linear-gradient(var(--field-readonly), var(--field-readonly)); border-color: var(--grid-rule); }
+.rp-form { row-gap: 3px; grid-auto-rows: minmax(var(--row-form), auto); }
+
+/* Botões: amarelos em duas metades (brilho em cima), contorno cinza-oliva */
+.rp-btn { height: var(--control-h); min-width: var(--control-w); padding: 0 var(--space-4); font: var(--text-body);
+  background: linear-gradient(var(--button-top), var(--button-top) 45%, var(--button) 55%, var(--button));
+  border-color: var(--button-border); border-radius: var(--radius-sm);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 0 rgba(31,32,38,.08); }
+.rp-btn:hover:not([disabled]) { background: linear-gradient(var(--field), var(--button-top) 45%, var(--field-active) 55%, var(--field-active)); }
+.rp-btn:active:not([disabled]) { background: var(--button); box-shadow: inset 0 2px 3px rgba(31,32,38,.20); }
+.rp-btn[disabled] { background: linear-gradient(var(--field), var(--surface-form)); border-color: var(--field-border); box-shadow: none; }
+.rp-btn--default { border-color: var(--nav-divider); box-shadow: inset 0 0 0 1px var(--button-default-mark), 0 1px 0 rgba(31,32,38,.08); }
+.rp-btn--default::before { display: none; }
+
+/* Abas: degradê azul-claro; a selecionada mais saturada e emendada no painel */
+.rp-tabs { gap: 1px; padding-left: var(--space-2); }
+.rp-tab { height: 21px; padding: 0 var(--space-4); font: var(--text-body); color: var(--ink);
+  background: linear-gradient(var(--tab-top), var(--tab)); border-color: var(--tab-border);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0; box-shadow: inset 0 1px 0 rgba(255,255,255,.7); }
+.rp-tab[aria-selected=true] { background: linear-gradient(var(--tab-active-top), var(--tab-active)); position: relative; z-index: 1; }
+.rp-tab:not([aria-selected=true]):not([aria-disabled=true]):hover { background: linear-gradient(var(--field), var(--tab-top)); }
+.rp-tabpanel { border-color: var(--tab-border); background: var(--surface-form); padding: var(--space-3) var(--space-4); }
+
+/* Grade: cabeçalho em degradê, linhas azul-claras separadas por fio, seleção amarela */
+.rp-grid { background: var(--grid-row); font: var(--text-body); }
+.rp-grid th { height: var(--row-grid); background: linear-gradient(var(--grid-header-top), var(--grid-header)) !important;
+  border: 1px solid var(--grid-rule); border-top-color: var(--field); color: var(--ink); }
+.rp-grid td { height: var(--row-grid); background: var(--grid-row); border-right: 1px solid var(--grid-row-alt); border-bottom: 1px solid var(--grid-row-alt); }
+.rp-grid td.rownum { background: linear-gradient(90deg, var(--grid-rownum), var(--grid-rownum)); color: var(--ink); }
+.rp-grid tr[aria-selected=true] td:not(.rownum) { background: var(--grid-row-selected); }
+
+/* Menus suspensos: claro com contorno azul; item em foco em amarelo com brilho */
+.rp-menu { background: var(--menu-surface); border: 1px solid var(--nav); box-shadow: 2px 3px 6px rgba(31,32,38,.25); font: var(--text-body); }
+.rp-menu-item:hover:not([aria-disabled=true]), .rp-menu-item[aria-selected=true] {
+  background: linear-gradient(var(--field-note), var(--field-active) 45%, var(--grid-row-selected)); outline: 1px solid var(--gold-light); }
+
+/* Rodapé: compartimentos azul-claros com fio e mensagem de sucesso verde-clara com texto escuro */
+.rp-slots span { background: var(--field-readonly); border-color: var(--grid-rule); font: var(--text-caption); line-height: 16px; }
+.rp-status-tab { background: linear-gradient(var(--tab-top), var(--tab)); border: 1px solid var(--tab-border); border-bottom: 0; font: var(--text-body); }
+/* Aba em forma de pasta: lado esquerdo inclinado, como na referência */
+.rp-tab { border-radius: 14px 4px 0 0 / 21px 4px 0 0; padding-left: var(--space-5); }
+
+/* Barra de ferramentas: ícones de 20px, botões de 30px, como na referência */
+.rp-toolbar { height: var(--toolbar-h); gap: 3px; }
+.rp-tool { width: 30px; height: 30px; }
+.rp-tool .rp-ico { width: 20px; height: 20px; }
+.rp-tool-sep { height: 26px; margin: 0 5px; }
+
+/* Busca global: campo amarelo rebaixado e botão azul com brilho, lupa branca */
+.rp-search input { height: 22px; background: var(--field-active); border: 1px solid var(--gold-light);
+  box-shadow: inset 0 2px 2px rgba(110,90,10,.18); font: var(--text-body); }
+.rp-search button { width: 60px; height: 24px; border: 1px solid var(--nav-deep); border-radius: var(--radius-sm);
+  background: linear-gradient(var(--search-button), var(--search-button) 45%, var(--search-button-bottom) 55%, var(--search-button-bottom));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55); }
+.rp-search button:hover { background: linear-gradient(var(--titlebar-shine), var(--search-button) 50%, var(--titlebar)); border-color: var(--nav-deep); }
+.rp-search button:active { background: var(--search-button-bottom); box-shadow: inset 0 2px 3px rgba(14,63,131,.4); }
+.rp-search button svg * { stroke: var(--on-dark) !important; }
+
+/* Grade: a área vazia continua com as linhas azul-claras; selos ficam na altura da linha */
+.rp-grid-rolagem { background: repeating-linear-gradient(var(--grid-row) 0, var(--grid-row) calc(var(--row-grid) + 1px), var(--grid-row-alt) calc(var(--row-grid) + 1px), var(--grid-row-alt) calc(var(--row-grid) + 2px)); }
+.rp-grid .rp-badge { height: 15px; padding: 0 6px; font: var(--text-caption); }
+.rp-status-msg--sucesso { background: linear-gradient(color-mix(in srgb, var(--status-success-bar), var(--field) 25%), var(--status-success-bar)); color: var(--ink); font-weight: 400; }
+.rp-status-msg--sucesso::before { background: var(--status-success); color: var(--on-dark); }
