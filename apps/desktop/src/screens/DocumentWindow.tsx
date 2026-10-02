@@ -159,7 +159,11 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
    * Proposta do servidor para o pedido, o tipo (vazio = o servidor escolhe: produto, se houver produto a emitir) e o
    * valor (vazio = todo o a emitir do tipo); o tipo e o valor voltam preenchidos.
    */
+  // Só a resposta da consulta mais recente vale: abrir a nota consulta sem valor e de novo quando o tipo chega; se essa
+  // resposta chegasse depois da validação do valor digitado, apagaria o aviso de "acima do a emitir".
+  const ultimaProposta = useRef(0);
   const propor = useCallback(async (orderId: string, kind: DocumentLineKind | '', valor?: string) => {
+    const vez = ++ultimaProposta.current;
     if (!orderId) {
       setProposta(null);
       return;
@@ -170,6 +174,7 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
     if (cents && /^\d+$/.test(cents)) q.set('amountCents', cents);
     try {
       const r = await api.get<OrderInvoicing>(`/api/v1/invoicing/orders/${orderId}${q.size ? `?${q.toString()}` : ''}`);
+      if (vez !== ultimaProposta.current) return;
       setProposta(r.data);
       setForm((f) => (f.orderId === orderId ? { ...f, kind: r.data.kind, amount: centavos(r.data.proposedCents) } : f));
       setErros((m) => {
@@ -177,6 +182,7 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
         return resto;
       });
     } catch (e) {
+      if (vez !== ultimaProposta.current) return;
       const x = e as ApiError;
       const campo = x.details.find((d) => d.field === 'amountCents')?.message;
       if (campo) setErros((m) => ({ ...m, amountCents: campo }));
