@@ -113,7 +113,7 @@ export const NEEDS: Partial<Record<WindowKind, string>> = {
   'tax-periods': 'tax.read',
   'company-profile': 'company.read',
   boms: 'bom.read',
-  'bom-revision': 'bom.read',
+  bom: 'bom.read',
   'bom-import': 'bom.update',
   'equipment-models': 'bom.read',
 };

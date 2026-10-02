@@ -1,18 +1,18 @@
-import type { BomProblem, BomRevisionStatus, EquipmentBomLine } from '../../api/types';
+import type { BomProblem, EquipmentBomLine } from '../../api/types';
 import { decimalDaApi } from '../../format';
+
+/** Avisado depois de gravar uma BOM ou a BOM de um equipamento, para as listas e outras janelas recarregarem. */
+export const BOM_ALTERADA = 'renda:bom-alterada';
 
 /** Selos e apoio das janelas da BOM (Sprint 10). */
 const selo = (classe: string, texto: string) => <span className={`rp-badge${classe ? ` rp-badge--${classe}` : ''}`}>{texto}</span>;
-
-export const REVISAO_BOM: Record<BomRevisionStatus, string> = { DRAFT: 'Rascunho', APPROVED: 'Aprovada', SUPERSEDED: 'Substituída' };
-export const seloRevisaoBom = (s: BomRevisionStatus) => selo(s === 'DRAFT' ? '' : s === 'APPROVED' ? 'aprovado' : 'fechado', REVISAO_BOM[s]);
 
 export const ESTADO_LINHA: Record<EquipmentBomLine['state'], string> = { MODEL: 'Do modelo', CHANGED: 'Alterada', ADDED: 'Incluída', REMOVED: 'Retirada' };
 export const seloEstadoLinha = (s: EquipmentBomLine['state']) =>
   s === 'MODEL' ? null : selo(s === 'CHANGED' ? 'pendente' : s === 'ADDED' ? 'aberto' : 'cancelado', ESTADO_LINHA[s]);
 
 const ICONE: Record<BomProblem['severity'], string> = { BLOCKING: 'erro', WARNING: 'aviso', INFO: 'info' };
-export const SEVERIDADE: Record<BomProblem['severity'], string> = { BLOCKING: 'Impede a aprovação', WARNING: 'Aviso', INFO: 'Informação' };
+export const SEVERIDADE: Record<BomProblem['severity'], string> = { BLOCKING: 'Impede aplicar ao equipamento', WARNING: 'Aviso', INFO: 'Informação' };
 
 /** Lista de problemas com ícone e palavra (nunca só a cor). */
 export function ListaProblemas({ problemas, rotulo }: { problemas: BomProblem[]; rotulo: string }) {

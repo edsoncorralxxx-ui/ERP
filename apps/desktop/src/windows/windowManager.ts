@@ -36,7 +36,7 @@ export type WindowKind =
   | 'tax-period'
   | 'tax-parameters'
   | 'boms'
-  | 'bom-revision'
+  | 'bom'
   | 'bom-import'
   | 'equipment-models'
   | 'users'

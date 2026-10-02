@@ -4,7 +4,7 @@ import type { BomImport } from '../api/types';
 import { centavos, dataDaApi, dataHora, reais } from '../format';
 import { useSession } from '../shell/SessionContext';
 import { useWindow } from '../windows/WindowContext';
-import { BOM_ALTERADA } from './BomRevisionWindow';
+import { BOM_ALTERADA } from './comum/Bom';
 import { custo, ListaProblemas, quantidade } from './comum/Bom';
 import { novaChave } from './comum/Cadastros';
 import { MODELOS_ALTERADOS } from './EquipmentModelsWindow';
@@ -12,7 +12,7 @@ import { MODELOS_ALTERADOS } from './EquipmentModelsWindow';
 /**
  * Importar BOM (Sprint 10): o arquivo JSON da engenharia vai ao servidor, que devolve a prévia — submontagens, totais,
  * itens e unidades novos, códigos gerados e os problemas da origem — sem gravar nada além do arquivo. Confirmar grava o
- * modelo, as BOMs e as revisões em rascunho; o mesmo arquivo não carrega duas vezes.
+ * modelo e as BOMs (as que já existem têm as linhas substituídas); o mesmo arquivo não carrega duas vezes.
  */
 export function BomImportWindow() {
   const win = useWindow();
@@ -47,10 +47,10 @@ export function BomImportWindow() {
     try {
       const r = await api.post<BomImport>(`/api/v1/bom-imports/${previa.id}/confirmation`, null, { 'Idempotency-Key': chave.current });
       setPrevia(r.data);
-      win.notify({ tone: 'sucesso', text: `BOM ${r.data.product} rev. ${r.data.revisionLabel ?? ''} carregada com sucesso: ${r.data.lineCount} linhas em rascunho` });
+      win.notify({ tone: 'sucesso', text: `BOM ${r.data.product} rev. ${r.data.revisionLabel ?? ''} carregada com sucesso: ${r.data.lineCount} linhas gravadas` });
       window.dispatchEvent(new Event(BOM_ALTERADA));
       window.dispatchEvent(new Event(MODELOS_ALTERADOS));
-      if (r.data.revisionId) win.open('bom-revision', r.data.revisionId);
+      if (r.data.bomId) win.open('bom', r.data.bomId);
     } catch (e) {
       const x = e as ApiError;
       if (!x.isNetwork) chave.current = novaChave();
@@ -98,7 +98,7 @@ export function BomImportWindow() {
                 <span className="rp-label">Revisão</span>
                 <span />
                 <input className="rp-field rp-field--readonly" readOnly aria-label="Revisão do arquivo"
-                  value={`${previa.revisionLabel ?? 'Próxima livre'}${previa.revisionDate ? ` de ${dataDaApi(previa.revisionDate)}` : ''}`} />
+                  value={`${previa.revisionLabel ?? 'Sem revisão'}${previa.revisionDate ? ` de ${dataDaApi(previa.revisionDate)}` : ''}`} />
                 <span className="rp-label">Arquivo</span>
                 <span />
                 <input className="rp-field rp-field--readonly" readOnly aria-label="Arquivo" value={previa.fileName} />
@@ -230,8 +230,8 @@ export function BomImportWindow() {
               <span><u>C</u>onfirmar carga</span>
             </button>
           ) : (
-            previa?.revisionId && (
-              <button type="button" className="rp-btn rp-btn--default" onClick={() => win.open('bom-revision', previa.revisionId!)}>
+            previa?.bomId && (
+              <button type="button" className="rp-btn rp-btn--default" onClick={() => win.open('bom', previa.bomId!)}>
                 <span><u>A</u>brir BOM</span>
               </button>
             )

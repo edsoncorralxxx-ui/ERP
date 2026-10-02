@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, type ApiError } from '../api/client';
-import type { Bom, EquipmentModel } from '../api/types';
-import { centavos } from '../format';
+import type { Bom, BomSummary, EquipmentModel } from '../api/types';
+import { centavos, dataHora } from '../format';
 import { Dialog } from '../shell/Dialog';
 import { useSession } from '../shell/SessionContext';
 import { useWindow } from '../windows/WindowContext';
-import { BOM_ALTERADA } from './BomRevisionWindow';
-import { seloRevisaoBom } from './comum/Bom';
+import { BOM_ALTERADA } from './comum/Bom';
 import { novaChave } from './comum/Cadastros';
 import { JanelaLista } from './comum/JanelaLista';
 import { Selecao } from './comum/Selecao';
@@ -14,50 +13,41 @@ import { Selecao } from './comum/Selecao';
 const carregar = async (busca: string) => {
   const q = new URLSearchParams();
   if (busca) q.set('search', busca);
-  return (await api.get<Bom[]>(`/api/v1/boms?${q.toString()}`)).data;
+  return (await api.get<BomSummary[]>(`/api/v1/boms?${q.toString()}`)).data;
 };
 
-/** Revisão que a lista abre: a aprovada; sem ela, o rascunho. */
-const revisaoDe = (b: Bom) => b.approved?.id ?? b.draft?.id ?? '';
-
 /**
- * Janela de lista "BOM — composição de custos" (Sprint 10): as BOMs dos modelos e as submontagens, com a revisão
- * aprovada, o total dela e o rascunho em andamento. Abre a revisão; Novo cadastra uma BOM e Importar BOM abre a carga
- * do arquivo.
+ * Janela de lista "BOM — composição de custos" (Sprint 10): as BOMs dos modelos e as submontagens, com o total, as
+ * pendências e a última alteração. Abre a BOM (árvore, linhas e diagrama); Novo cadastra uma BOM e Importar BOM abre a
+ * carga do arquivo.
  */
 export function BomsWindow() {
   const win = useWindow();
   const { can } = useSession();
   const [nova, setNova] = useState(false);
-  const lidas = useRef<Bom[]>([]);
   // Função estável: a lista registra o Novo na barra de ferramentas a cada mudança dela.
   const podeCriar = can('bom.update');
   const novo = useMemo(() => (podeCriar ? () => setNova(true) : undefined), [podeCriar]);
   return (
     <>
-      <JanelaLista<Bom & { status: string }>
+      <JanelaLista<BomSummary & { status: string }>
         nome={['BOM', 'BOMs']}
         rotulo="BOMs"
         placeholder="Código, nome da BOM ou do modelo"
-        carregar={async (busca) => {
-          lidas.current = await carregar(busca);
-          return lidas.current.map((b) => ({ ...b, status: b.approved ? 'APPROVED' : 'DRAFT' }));
-        }}
+        carregar={async (busca) => (await carregar(busca)).map((b) => ({ ...b, status: b.pending ? 'PENDENTE' : 'COMPLETA' }))}
         evento={BOM_ALTERADA}
-        abrir={(id) => {
-          const b = lidas.current.find((x) => x.id === id);
-          if (b && revisaoDe(b)) win.open('bom-revision', revisaoDe(b));
-        }}
+        abrir={(id) => win.open('bom', id)}
         rotuloLinha={(b) => `Abrir BOM ${b.code}`}
         situacoes={[{ valor: 'TODOS', rotulo: 'Todas' }]}
-        selo={(b) => (b.approved ? seloRevisaoBom('APPROVED') : seloRevisaoBom('DRAFT'))}
+        selo={(b) =>
+          b.pending ? <span className="rp-badge rp-badge--pendente">{b.pending} {b.pending === 1 ? 'pendência' : 'pendências'}</span> : <span className="rp-badge rp-badge--aprovado">Completa</span>}
         colunas={[
           { titulo: 'BOM', valor: (b) => b.code },
           { titulo: 'Nome', valor: (b) => b.name },
           { titulo: 'Modelo', valor: (b) => (b.modelName ? `${b.modelCode} — ${b.modelName}` : 'Submontagem') },
-          { titulo: 'Revisão aprovada', valor: (b) => b.approved?.label ?? '' },
-          { titulo: 'Total aprovado', num: true, valor: (b) => (b.approved ? centavos(b.approved.totalCents) : '') },
-          { titulo: 'Rascunho', valor: (b) => (b.draft ? `Rev. ${b.draft.label}${b.draft.pending ? ` — ${b.draft.pending} pendente(s)` : ''}` : '') },
+          { titulo: 'Linhas', num: true, valor: (b) => String(b.lineCount) },
+          { titulo: 'Total', num: true, valor: (b) => centavos(b.totalCents) },
+          { titulo: 'Atualizada em', valor: (b) => (b.updatedAt ? `${dataHora(b.updatedAt)} por ${b.updatedBy}` : '') },
         ]}
         novo={novo}
         acoes={
@@ -73,7 +63,7 @@ export function BomsWindow() {
   );
 }
 
-/** Nova BOM: de um modelo (uma por modelo) ou submontagem; nasce com a revisão 00 em rascunho. */
+/** Nova BOM: de um modelo (uma por modelo) ou submontagem; nasce sem linhas e abre para editar. */
 function DialogoNovaBom({ idBase, onFechar }: { idBase: string; onFechar: () => void }) {
   const win = useWindow();
   const [nome, setNome] = useState('');
@@ -91,7 +81,7 @@ function DialogoNovaBom({ idBase, onFechar }: { idBase: string; onFechar: () => 
       win.notify({ tone: 'sucesso', text: `BOM ${r.data.code} — ${r.data.name} adicionada com sucesso` });
       window.dispatchEvent(new Event(BOM_ALTERADA));
       onFechar();
-      if (r.data.draft) win.open('bom-revision', r.data.draft.id);
+      win.open('bom', r.data.id);
     } catch (e) {
       const x = e as ApiError;
       if (!x.isNetwork) chave.current = novaChave();

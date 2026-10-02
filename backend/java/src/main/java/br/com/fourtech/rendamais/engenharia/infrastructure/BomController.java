@@ -5,6 +5,7 @@ import br.com.fourtech.rendamais.engenharia.domain.Bom;
 import br.com.fourtech.rendamais.engenharia.domain.BomLine;
 import br.com.fourtech.rendamais.plataforma.web.HistoryEntry;
 import br.com.fourtech.rendamais.plataforma.web.Versions;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -118,8 +119,12 @@ class BomController {
         return service.history(id).stream().map(HistoryEntry::of).toList();
     }
 
+    /**
+     * A ETag é a versão do conteúdo desta BOM (If-Match do PUT), mas os totais da árvore mudam quando uma submontagem muda:
+     * sem cache, o navegador não revalida com If-None-Match e não recebe 304 com os totais antigos.
+     */
     private static ResponseEntity<BomDto> respond(HttpStatus status, BomService.BomView v) {
-        return ResponseEntity.status(status).eTag("\"" + v.content().version() + "\"").body(BomDto.of(v));
+        return ResponseEntity.status(status).eTag("\"" + v.content().version() + "\"").cacheControl(CacheControl.noStore()).body(BomDto.of(v));
     }
 
     static String plain(BigDecimal v) {

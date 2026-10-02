@@ -3,7 +3,7 @@ import { api, type ApiError } from '../api/client';
 import type { PlannedCost } from '../api/types';
 import { centavos, reais } from '../format';
 import { useWindow } from '../windows/WindowContext';
-import { BOM_ALTERADA } from './BomRevisionWindow';
+import { BOM_ALTERADA } from './comum/Bom';
 import { margem } from './comum/Bom';
 
 /**
@@ -68,7 +68,6 @@ export function PlannedCostPanel({ projectId }: { projectId: string }) {
               <th>Equipamento</th>
               <th>Modelo</th>
               <th>BOM</th>
-              <th>Revisão</th>
               <th>Ajustada</th>
               <th className="num">Custo planejado</th>
             </tr>
@@ -84,7 +83,6 @@ export function PlannedCostPanel({ projectId }: { projectId: string }) {
                 <td>{e.equipment.code}</td>
                 <td>{e.equipment.modelName}</td>
                 <td>{e.bomName ?? ''}</td>
-                <td>{e.revisionLabel ?? ''}</td>
                 <td>{e.applied ? (e.adjusted ? 'Sim' : 'Não') : ''}</td>
                 <td className="num">{e.applied ? centavos(e.costCents) : <span className="rp-badge rp-badge--pendente">Sem custo planejado</span>}</td>
               </tr>
@@ -92,7 +90,7 @@ export function PlannedCostPanel({ projectId }: { projectId: string }) {
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={7}>{custo.complete ? 'Custo planejado' : 'Custo planejado (parcial)'}</td>
+              <td colSpan={6}>{custo.complete ? 'Custo planejado' : 'Custo planejado (parcial)'}</td>
               <td className="num" aria-label="Soma do custo planejado">{centavos(custo.plannedCostCents)}</td>
             </tr>
           </tfoot>

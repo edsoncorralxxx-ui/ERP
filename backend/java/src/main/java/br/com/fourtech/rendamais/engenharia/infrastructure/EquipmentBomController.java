@@ -5,6 +5,7 @@ import br.com.fourtech.rendamais.engenharia.domain.EquipmentBom;
 import br.com.fourtech.rendamais.plataforma.web.HistoryEntry;
 import br.com.fourtech.rendamais.plataforma.web.Versions;
 import br.com.fourtech.rendamais.projetos.api.ProjectQueryApi;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -110,8 +111,9 @@ class EquipmentBomController {
                         BomController.str(e.bomId()), e.bomName(), e.costCents() == null ? null : e.costCents().toString(), e.pending(), e.adjusted())).toList());
     }
 
+    /** Sem cache: o total atual do modelo e o aviso de modelo alterado mudam sem mudar a versão da BOM do equipamento. */
     private static ResponseEntity<EquipmentBomDto> respond(EquipmentBomService.EquipmentBomView v) {
-        ResponseEntity.BodyBuilder b = ResponseEntity.ok();
+        ResponseEntity.BodyBuilder b = ResponseEntity.ok().cacheControl(CacheControl.noStore());
         if (v.bom() != null) b = b.eTag("\"" + v.bom().version() + "\"");
         return b.body(EquipmentBomDto.of(v));
     }

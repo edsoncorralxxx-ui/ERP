@@ -256,8 +256,13 @@ class BomApiTest extends CadastrosApiTest {
         assertThat(recusa.statusCode()).isEqualTo(422);
         assertThat(recusa.body()).contains("BOM_INCOMPLETE", "1 linha sem quantidade ou sem custo");
 
-        // Informada a quantidade, o total da BOM do modelo já muda (sem aprovar nada) e a aplicação passa.
+        // Informada a quantidade, o total da BOM do modelo já muda (sem aprovar nada) e a aplicação passa. A ETag do modelo não
+        // muda (só o painel mudou): a resposta vem sem cache, para o navegador não revalidar e reaproveitar o total antigo.
+        HttpResponse<String> antes = get("/api/v1/boms/" + modelo.get("id").asString());
+        assertThat(antes.headers().firstValue("Cache-Control").orElse("")).contains("no-store");
         modelo = completa(modelo);
+        assertThat(get("/api/v1/boms/" + modelo.get("id").asString()).headers().firstValue("ETag")).isEqualTo(antes.headers().firstValue("ETag"));
+        assertThat(get("/api/v1/equipment/" + equipamento + "/bom").headers().firstValue("Cache-Control").orElse("")).contains("no-store");
         assertThat(modelo.get("totalCents").asString()).isEqualTo("6940795");
         assertThat(modelo.get("pending").asInt()).isZero();
         HttpResponse<String> aplica = post("/api/v1/equipment/" + equipamento + "/bom", "bom-apl-00001",
