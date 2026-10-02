@@ -994,3 +994,13 @@
 .rp-window .rp-rolagem::-webkit-scrollbar-button, .rp-janela-mdi .rp-rolagem::-webkit-scrollbar-button { width: 14px; height: 14px; background: var(--scroll-track); }
 .rp-janela-mdi .rp-rolagem::-webkit-scrollbar-thumb:hover, .rp-window .rp-rolagem::-webkit-scrollbar-thumb:hover { background: linear-gradient(90deg, var(--field), var(--tab-top)); }
 .rp-window .rp-form, .rp-janela-mdi .rp-form { row-gap: 1px; grid-auto-rows: minmax(20px, auto); }
+
+/* Lista: a seta de abrir encosta no valor da coluna seguinte, sem fio entre elas, como na referência */
+.rp-grid th[aria-label="Abrir"], .rp-jlista .rp-grid td:nth-child(2) { width: 18px; padding-right: 0; border-right-color: transparent; }
+.rp-jlista .rp-grid td:nth-child(2) + td { padding-left: var(--space-1); }
+
+/* Botões: um pouco mais largos, fio claro na base; o padrão com brilho azul estreito e contorno mais escuro */
+.rp-window .rp-btn, .rp-janela-mdi .rp-btn { min-width: 95px; box-shadow: inset 0 1px 0 rgba(255,255,255,.85), inset 0 -1px 0 rgba(255,255,255,.55); }
+.rp-btn--default:not([disabled]) { border-color: var(--ink); background:
+  linear-gradient(90deg, var(--button-default-mark), transparent 11px),
+  linear-gradient(var(--button-top), var(--button-top) 45%, var(--button) 55%, var(--button)); }
