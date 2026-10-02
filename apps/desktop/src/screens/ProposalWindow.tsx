@@ -10,7 +10,7 @@ import { CampoData } from './comum/CampoData';
 import { DialogoConflito, DialogoMotivo } from './comum/Dialogos';
 import { tratarFalha } from './comum/Falhas';
 import { GradeHistorico } from './comum/GradeHistorico';
-import { GradeLinhas, linhaDaApi, linhaParaApi, totalDasLinhas, type LinhaForm } from './comum/GradeLinhas';
+import { GradeLinhas, linhaDaApi, linhaParaApi, TotaisDocumento, type LinhaForm } from './comum/GradeLinhas';
 import { Selecao } from './comum/Selecao';
 import { seloProposta, seloRevisao } from './comum/Selos';
 import { PROPOSTAS_ALTERADAS } from './ProposalsWindow';
@@ -280,8 +280,6 @@ export function ProposalWindow({ recordKey }: { recordKey: string }) {
                 ) : (
                   <input id={fid('revisao')} className="rp-field rp-field--readonly" readOnly value="1 — rascunho" />
                 )}
-                <span className="rp-label">Total</span>
-                <input className="rp-field rp-field--readonly rp-field--num" readOnly aria-label="Total" value={reais(totalDasLinhas(form.lines).toString())} />
                 <span className="rp-label">Versão</span>
                 <input className="rp-field rp-field--readonly rp-field--num" readOnly value={proposta?.version ?? ''} aria-label="Versão" />
                 {proposta?.status === 'PERDIDA' && (
@@ -351,6 +349,10 @@ export function ProposalWindow({ recordKey }: { recordKey: string }) {
               ) : (
                 <GradeHistorico historico={historico} rotulo="Histórico da proposta" />
               )}
+            </div>
+            <div className="rp-ficha__rodape">
+              <span />
+              <TotaisDocumento linhas={form.lines} rotuloTotal="Total" />
             </div>
           </>
         )}

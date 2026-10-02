@@ -190,6 +190,12 @@ body { background: var(--ground); }
 /* Ficha do cliente. */
 .rp-ficha__cabecalho .rp-ficha__principal { grid-template-columns: 110px 14px minmax(220px, 320px); }
 .rp-ficha__cabecalho .rp-ficha__situacao { grid-template-columns: 110px 220px; align-content: start; }
+/* Documento como no cliente clássico: a coluna de situação encosta na borda direita, com folga antes das abas; embaixo do
+   painel, observações à esquerda e totais à direita. */
+.rp-ficha__cabecalho { justify-content: space-between; margin-bottom: var(--space-6); }
+.rp-ficha__rodape { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-5); margin-top: var(--space-3); }
+.rp-ficha__obs { grid-template-columns: 124px minmax(220px, 320px); }
+.rp-ficha__totais { grid-template-columns: 160px 220px; }
 .rp-ficha__grade { max-height: 300px; overflow: auto; }
 .rp-ficha__col-num { width: 28px; }
 .rp-ficha__col-curta { width: 60px; }
