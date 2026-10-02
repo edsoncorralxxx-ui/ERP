@@ -981,5 +981,7 @@
 .rp-jlista .rp-grid td:nth-child(2) + td { padding-left: var(--space-1); }
 
 
-/* Botões como eram originalmente (pedido do PO em 02/10/2026): texto de 13px, mesmo com o corpo da janela em 12px */
-.rp-btn { font-size: 13px; line-height: 18px; }
+/* Botões com o visual original e as medidas da versão de 02/10/2026 (pedido do PO): 23px de altura, 95px de largura
+   mínima dentro das janelas e o texto do corpo (12px) */
+.rp-btn { font: var(--text-body); }
+.rp-window .rp-btn, .rp-janela-mdi .rp-btn { min-width: 95px; }
