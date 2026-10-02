@@ -877,16 +877,6 @@
 .rp-field[readonly], .rp-field--readonly { background: linear-gradient(var(--field-readonly), var(--field-readonly)); border-color: var(--grid-rule); }
 .rp-form { row-gap: 3px; grid-auto-rows: minmax(var(--row-form), auto); }
 
-/* Botões: amarelos em duas metades (brilho em cima), contorno cinza-oliva */
-.rp-btn { height: var(--control-h); min-width: var(--control-w); padding: 0 var(--space-4); font: var(--text-body);
-  background: linear-gradient(var(--button-top), var(--button-top) 45%, var(--button) 55%, var(--button));
-  border-color: var(--button-border); border-radius: var(--radius-sm);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 0 rgba(31,32,38,.08); }
-.rp-btn:hover:not([disabled]) { background: linear-gradient(var(--field), var(--button-top) 45%, var(--field-active) 55%, var(--field-active)); }
-.rp-btn:active:not([disabled]) { background: var(--button); box-shadow: inset 0 2px 3px rgba(31,32,38,.20); }
-.rp-btn[disabled] { background: linear-gradient(var(--field), var(--surface-form)); border-color: var(--field-border); box-shadow: none; }
-.rp-btn--default { border-color: var(--nav-divider); box-shadow: inset 0 0 0 1px var(--button-default-mark), 0 1px 0 rgba(31,32,38,.08); }
-.rp-btn--default::before { display: none; }
 
 /* Abas: degradê azul-claro; a selecionada mais saturada e emendada no painel */
 .rp-tabs { gap: 1px; padding-left: var(--space-2); }
@@ -954,15 +944,6 @@
 .rp-window .rp-field[readonly], .rp-window .rp-field--readonly, .rp-janela-mdi .rp-field[readonly], .rp-janela-mdi .rp-field--readonly {
   background: var(--field-readonly); border-color: var(--grid-rule); }
 
-/* Botões: contorno cinza-escuro; o padrão (OK, Atualizar) com brilho azul entrando pela esquerda */
-.rp-btn { border-color: var(--button-border); }
-.rp-btn--default:not([disabled]) { background:
-  linear-gradient(90deg, var(--button-default-mark), transparent 16px),
-  linear-gradient(var(--button-top), var(--button-top) 45%, var(--button) 55%, var(--button)); box-shadow: inset 0 1px 0 rgba(255,255,255,.85); }
-.rp-btn--default:hover:not([disabled]) { background:
-  linear-gradient(90deg, var(--button-default-mark), transparent 16px),
-  linear-gradient(var(--field), var(--button-top) 45%, var(--field-active) 55%, var(--field-active)); }
-
 /* Abas largas, rótulo centrado, sobre o painel de contorno cinza */
 .rp-window .rp-tabs, .rp-janela-mdi .rp-tabs { gap: 2px; padding-left: 0; }
 .rp-window .rp-tab, .rp-janela-mdi .rp-tab { min-width: 118px; justify-content: center; padding: 0 var(--space-5); }
@@ -999,8 +980,6 @@
 .rp-grid th[aria-label="Abrir"], .rp-jlista .rp-grid td:nth-child(2) { width: 18px; padding-right: 0; border-right-color: transparent; }
 .rp-jlista .rp-grid td:nth-child(2) + td { padding-left: var(--space-1); }
 
-/* Botões: um pouco mais largos, fio claro na base; o padrão com brilho azul estreito e contorno mais escuro */
-.rp-window .rp-btn, .rp-janela-mdi .rp-btn { min-width: 95px; box-shadow: inset 0 1px 0 rgba(255,255,255,.85), inset 0 -1px 0 rgba(255,255,255,.55); }
-.rp-btn--default:not([disabled]) { border-color: var(--ink); background:
-  linear-gradient(90deg, var(--button-default-mark), transparent 11px),
-  linear-gradient(var(--button-top), var(--button-top) 45%, var(--button) 55%, var(--button)); }
+
+/* Botões como eram originalmente (pedido do PO em 02/10/2026): texto de 13px, mesmo com o corpo da janela em 12px */
+.rp-btn { font-size: 13px; line-height: 18px; }
