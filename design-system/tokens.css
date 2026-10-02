@@ -4,7 +4,7 @@
   --ground: #fcfcfc;
   --menu-surface: #edf5f8;
   --chrome: #f9fafd;
-  --surface-form: #f5f6f6;
+  --surface-form: #edf3f8;
   --surface-panel: #f2f7f7;
   --panel-head: #f3f6f7;
   --drawer-head-top: #e6ecf2;
@@ -34,7 +34,7 @@
   --search-button-bottom: #5381c0;
   --field-note: #fbf8cd;
   --field-border: #c4c8cc;
-  --form-rule: #dedede;
+  --form-rule: #dce2e7;
   --button: #fceeb0;
   --button-top: #fefbea;
   --button-border: #71716f;
@@ -44,13 +44,14 @@
   --tab: #c3dcef;
   --tab-top: #e2f3fb;
   --tab-border: #8b9fb9;
-  --panel-border: #adb4bd;
-  --grid-header: #e6ecef;
-  --grid-header-top: #eef5f7;
+  --panel-border: #a8b1be;
+  --grid-header: #e6e9ec;
+  --grid-header-top: #eef3f8;
   --grid-row: #ffffff;
-  --grid-rownum: #dae0e4;
+  --grid-rownum: #d7dde2;
   --grid-row-selected: #fee08b;
-  --grid-row-alt: #d4d4d4;
+  --grid-row-alt: #dadada;
+  --grid-rule-readonly: #cbd6e2;
   --grid-rule: #c1c8d3;
   --scroll-track: #f4f7fa;
   --scroll-edge: #cfdbe8;

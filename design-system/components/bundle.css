@@ -1048,3 +1048,21 @@
    mínima dentro das janelas e o texto do corpo (12px) */
 .rp-btn { font: var(--text-body); }
 .rp-window .rp-btn, .rp-janela-mdi .rp-btn { min-width: 95px; }
+
+/* ───────────── Tabelas e fundo como na referência (02/10/2026, 3ª rodada) ─────────────
+   Corpo das janelas em surface-form azul bem claro; grade editável branca com fio cinza grid-row-alt; grade só de
+   leitura (janelas de lista) em field-readonly com fio azulado grid-rule-readonly, inclusive na área vazia. */
+.rp-jlista .rp-grid td { border-right-color: var(--grid-rule-readonly); border-bottom-color: var(--grid-rule-readonly); }
+.rp-jlista .rp-grid-rolagem { background: repeating-linear-gradient(var(--field-readonly) 0, var(--field-readonly) calc(var(--row-grid) + 1px),
+  var(--grid-rule-readonly) calc(var(--row-grid) + 1px), var(--grid-rule-readonly) calc(var(--row-grid) + 2px)); }
+.rp-jlista .rp-grid tr.rp-grid-resto td:not(.rownum) { background: repeating-linear-gradient(var(--field-readonly) 0, var(--field-readonly) var(--row-grid),
+  var(--grid-rule-readonly) var(--row-grid), var(--grid-rule-readonly) calc(var(--row-grid) + 1px)); }
+.rp-jlista .rp-grid tr.rp-grid-resto td.rownum { background: repeating-linear-gradient(var(--grid-rownum) 0, var(--grid-rownum) var(--row-grid),
+  var(--grid-rule-readonly) var(--row-grid), var(--grid-rule-readonly) calc(var(--row-grid) + 1px)); }
+.rp-grid th { border-bottom-color: var(--panel-border); }
+/* Linhas vazias em ladrilhos do passo da linha (row-grid, fio no último pixel), meio pixel acima como as linhas da tabela
+   com border-collapse: o fio fica nítido, sem meio pixel borrado */
+.rp-grid tr.rp-grid-resto td { background: linear-gradient(transparent calc(var(--row-grid) - 1px), var(--grid-row-alt) 0) 0 -0.5px / 100% var(--row-grid) var(--grid-row); }
+.rp-grid tr.rp-grid-resto td.rownum { background: linear-gradient(transparent calc(var(--row-grid) - 1px), var(--grid-row-alt) 0) 0 -0.5px / 100% var(--row-grid) var(--grid-rownum); }
+.rp-jlista .rp-grid tr.rp-grid-resto td:not(.rownum) { background: linear-gradient(transparent calc(var(--row-grid) - 1px), var(--grid-rule-readonly) 0) 0 -0.5px / 100% var(--row-grid) var(--field-readonly); }
+.rp-jlista .rp-grid tr.rp-grid-resto td.rownum { background: linear-gradient(transparent calc(var(--row-grid) - 1px), var(--grid-rule-readonly) 0) 0 -0.5px / 100% var(--row-grid) var(--grid-rownum); }
