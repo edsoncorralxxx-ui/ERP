@@ -861,6 +861,9 @@ export type BomLine = {
   supplier: string | null;
   material: string | null;
   notes: string | null;
+  itemReferenceCost: string | null;
+  childLatestId: string | null;
+  childLatestLabel: string | null;
 };
 
 export type BomProblem = { severity: 'BLOCKING' | 'WARNING' | 'INFO'; position: number | null; message: string };
@@ -894,7 +897,10 @@ export type BomRevision = {
   problems: BomProblem[];
   usedBy: { bomId: string; bomName: string; revisionId: string; revisionLabel: string; status: BomRevisionStatus }[];
   revisions: BomRevisionRef[];
+  outdatedParents: { bomId: string; bomName: string; revisionId: string; revisionLabel: string; usesLabel: string; hasDraft: boolean }[];
 };
+
+export type BomPropagationStep = { bomId: string; bomName: string; fromLabel: string; toLabel: string; revisionId: string; action: 'APPROVED' | 'DRAFT_UPDATED' };
 
 export type BomLineRequest = {
   kind: 'ITEM' | 'SUBASSEMBLY';

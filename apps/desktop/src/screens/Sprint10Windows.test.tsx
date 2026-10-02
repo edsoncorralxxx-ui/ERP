@@ -2,8 +2,9 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { setTransport, type TransportRequest, type TransportResponse } from '../api/client';
-import type { Bom, BomImport, BomLine, BomRevision, EquipmentBom, EquipmentBomLine, PlannedCost, SessionUser } from '../api/types';
+import type { Bom, BomImport, BomLine, BomRevision, EquipmentBom, EquipmentBomLine, ItemSummary, PlannedCost, SessionUser } from '../api/types';
 import { SessionContext, sessionOf } from '../shell/SessionContext';
+import { escolher } from '../test/selecao';
 import { WindowContext, type WindowApi } from '../windows/WindowContext';
 import { BomImportWindow } from './BomImportWindow';
 import { BomRevisionWindow } from './BomRevisionWindow';
@@ -33,7 +34,8 @@ function abrir(janela: ReactNode, user: SessionUser = ADMIN) {
 const linha = (p: Partial<BomLine>): BomLine => ({
   id: 'l-1', position: 1, kind: 'ITEM', itemId: 'i-1', itemCode: 'P00001', itemActive: true, childRevisionId: null, childBomId: null, childBomCode: null,
   childBomName: null, childRevisionLabel: null, childRevisionStatus: null, referenceCode: 'ELE-0038', description: 'Suporte 45° para Trilho DIN',
-  quantity: null, uom: 'UN', unitCost: '9.44', lineCents: null, pending: 1, category: 'Painel elétrico', supplier: null, material: null, notes: null, ...p,
+  quantity: null, uom: 'UN', unitCost: '9.44', lineCents: null, pending: 1, category: 'Painel elétrico', supplier: null, material: null, notes: null,
+  itemReferenceCost: null, childLatestId: null, childLatestLabel: null, ...p,
 });
 
 const painel = (p: Partial<BomRevision> = {}): BomRevision => ({
@@ -45,6 +47,7 @@ const painel = (p: Partial<BomRevision> = {}): BomRevision => ({
   problems: [{ severity: 'BLOCKING', position: 1, message: 'Linha 1 — Suporte 45° para Trilho DIN: sem quantidade.' }],
   usedBy: [{ bomId: 'b-ele', bomName: 'Elétrica — Balança', revisionId: 'r-ele', revisionLabel: '00', status: 'DRAFT' }],
   revisions: [{ id: 'r-painel', label: '00', status: 'DRAFT', totalCents: '2912967', pending: 1, approvedAt: null, approvedBy: null }],
+  outdatedParents: [],
   ...p,
 });
 
@@ -131,6 +134,109 @@ describe('Revisão da BOM', () => {
     expect(screen.queryByRole('button', { name: 'Incluir linha' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Aprovar revisão' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Nova revisão' })).not.toBeInTheDocument();
+  });
+});
+
+describe('Revisões da BOM (ajustes da Review)', () => {
+  const sub = linha({ id: 'l-s', kind: 'SUBASSEMBLY', itemId: null, itemCode: null, childRevisionId: 'r-p0', childBomId: 'b-p', childBomCode: 'BOM00004',
+    childBomName: 'Painel elétrico', childRevisionLabel: '00', childRevisionStatus: 'SUPERSEDED', referenceCode: 'BOM00004', description: 'Painel elétrico',
+    quantity: '1', uom: 'CJ', unitCost: null, lineCents: '2913911', pending: 0, childLatestId: 'r-p3', childLatestLabel: '03' });
+  const eletrica = (p: Partial<BomRevision> = {}) => painel({
+    id: 'r-e1', bomId: 'b-e', bomName: 'Elétrica', label: '01', revision: 1, pending: 0, problems: [], usedBy: [], lines: [sub],
+    revisions: [
+      { id: 'r-e1', label: '01', status: 'DRAFT', totalCents: '2913911', pending: 0, approvedAt: null, approvedBy: null },
+      { id: 'r-e0', label: '00', status: 'APPROVED', totalCents: '2913911', pending: 0, approvedAt: null, approvedBy: null },
+    ],
+    ...p,
+  });
+
+  it('troca de revisão na mesma janela, usa a submontagem mais nova e descarta o rascunho', async () => {
+    const pedidos: TransportRequest[] = [];
+    setTransport(async (req) => {
+      pedidos.push(req);
+      if (req.path === '/api/v1/bom-revisions/r-e1' && req.method === 'GET') return resposta(200, eletrica(), { etag: '"1"' });
+      if (req.path === '/api/v1/bom-revisions/r-e0' && req.method === 'GET') {
+        return resposta(200, eletrica({ id: 'r-e0', label: '00', revision: 0, status: 'APPROVED', approvedAt: '2026-10-01T12:00:00Z', approvedBy: 'ana' }), { etag: '"2"' });
+      }
+      if (req.path === '/api/v1/bom-revisions/r-e1' && req.method === 'PUT') return resposta(200, eletrica({ version: '2' }), { etag: '"2"' });
+      if (req.path === '/api/v1/bom-revisions/r-e1' && req.method === 'DELETE') {
+        return resposta(200, { id: 'b-e', approved: { id: 'r-e0', label: '00', status: 'APPROVED', totalCents: '2913911', pending: 0, approvedAt: null, approvedBy: null } });
+      }
+      return naoAchou();
+    });
+    const win = abrir(<BomRevisionWindow recordKey="r-e1" />);
+    const user = userEvent.setup();
+    const grade = await screen.findByRole('table', { name: 'Linhas da revisão' });
+    expect(within(grade).getByText('Há rev. 03 aprovada')).toBeInTheDocument();
+    await user.click(within(grade).getByRole('button', { name: 'Usar a rev. 03' }));
+    await waitFor(() => expect(pedidos.some((r) => r.method === 'PUT')).toBe(true));
+    expect(JSON.parse(pedidos.find((r) => r.method === 'PUT')!.body!).lines[0]).toMatchObject({ kind: 'SUBASSEMBLY', childRevisionId: 'r-p3' });
+
+    await user.click(screen.getByRole('button', { name: 'Descartar rascunho' }));
+    await user.click(within(screen.getByRole('alertdialog', { name: 'Descartar rascunho' })).getByRole('button', { name: 'Descartar' }));
+    // Depois de descartar, a mesma janela mostra a revisão aprovada.
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Revisão' })).toHaveTextContent('00 — Aprovada'));
+    expect(pedidos.some((r) => r.method === 'DELETE' && r.path === '/api/v1/bom-revisions/r-e1')).toBe(true);
+    await escolher(user, screen.getByRole('combobox', { name: 'Revisão' }), '01 — Rascunho');
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Revisão' })).toHaveTextContent('01 — Rascunho'));
+    expect(win.open).not.toHaveBeenCalled();
+  });
+
+  it('depois de aprovar a submontagem oferece atualizar as BOMs de cima', async () => {
+    const posts: TransportRequest[] = [];
+    let estado = painel({ pending: 0, problems: [], lines: [painel().lines[1]] });
+    setTransport(async (req) => {
+      if (req.path === '/api/v1/bom-revisions/r-painel' && req.method === 'GET') return resposta(200, estado, { etag: `"${estado.version}"` });
+      if (req.path === '/api/v1/bom-revisions/r-painel/approval') {
+        estado = painel({ status: 'APPROVED', version: '2', pending: 0, problems: [], lines: [painel().lines[1]], approvedAt: '2026-10-02T12:00:00Z', approvedBy: 'ana',
+          outdatedParents: [{ bomId: 'b-e', bomName: 'Elétrica', revisionId: 'r-e0', revisionLabel: '00', usesLabel: '00', hasDraft: false }],
+          revisions: [{ id: 'r-painel', label: '00', status: 'APPROVED', totalCents: '2912967', pending: 0, approvedAt: null, approvedBy: null }] });
+        return resposta(200, estado, { etag: '"2"' });
+      }
+      if (req.path === '/api/v1/bom-revisions/r-painel/propagation') {
+        posts.push(req);
+        estado = { ...estado, outdatedParents: [] };
+        return resposta(200, [
+          { bomId: 'b-e', bomName: 'Elétrica', fromLabel: '00', toLabel: '01', revisionId: 'r-e1', action: 'APPROVED' },
+          { bomId: 'b-m', bomName: 'Balança', fromLabel: '00', toLabel: '01', revisionId: 'r-m1', action: 'APPROVED' },
+        ]);
+      }
+      return naoAchou();
+    });
+    const win = abrir(<BomRevisionWindow recordKey="r-painel" />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Aprovar revisão' }));
+    await user.click(within(screen.getByRole('alertdialog', { name: 'Aprovar revisão' })).getByRole('button', { name: 'Aprovar' }));
+    const dialogo = await screen.findByRole('alertdialog', { name: 'Atualizar BOMs de cima' });
+    expect(within(dialogo).getByRole('list', { name: 'BOMs desatualizadas' })).toHaveTextContent('Elétrica rev. 00 usa a rev. 00 — ganha uma revisão nova, aprovada');
+    await user.click(within(dialogo).getByRole('button', { name: 'Atualizar' }));
+    await waitFor(() => expect(posts).toHaveLength(1));
+    await waitFor(() => expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'BOMs atualizadas: Elétrica rev. 01 aprovada; Balança rev. 01 aprovada' }));
+  });
+
+  it('ao incluir um item, o custo unitário vem do custo de referência do cadastro', async () => {
+    const item: ItemSummary = { id: 'i-7', code: 'P00129', description: 'Painel de Comando 400x300x250mm', nature: 'MATERIAL', uom: 'UN',
+      category: 'Painel elétrico', stockControlled: false, referenceCost: '135.560000', ncm: null, serviceCode: null, status: 'ATIVO', version: '2' };
+    const puts: TransportRequest[] = [];
+    setTransport(async (req) => {
+      if (req.path === '/api/v1/bom-revisions/r-painel' && req.method === 'GET') return resposta(200, painel(), { etag: '"1"' });
+      if (req.path.startsWith('/api/v1/items?search=')) return resposta(200, [item]);
+      if (req.path === '/api/v1/bom-revisions/r-painel' && req.method === 'PUT') {
+        puts.push(req);
+        return resposta(200, painel({ version: '2' }), { etag: '"2"' });
+      }
+      return naoAchou();
+    });
+    abrir(<BomRevisionWindow recordKey="r-painel" />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Incluir linha' }));
+    const dialogo = screen.getByRole('alertdialog', { name: 'Incluir linha' });
+    await user.type(within(dialogo).getByLabelText('Item'), 'P00129');
+    await user.click(within(dialogo).getByRole('button', { name: 'Buscar item' }));
+    await waitFor(() => expect(within(dialogo).getByLabelText('Custo unitário')).toHaveValue('135,56'));
+    await user.click(within(dialogo).getByRole('button', { name: 'Incluir' }));
+    await waitFor(() => expect(puts).toHaveLength(1));
+    expect(JSON.parse(puts[0].body!).lines[2]).toMatchObject({ kind: 'ITEM', itemId: 'i-7', unitCost: '135.56', quantity: '1' });
   });
 });
 

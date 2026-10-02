@@ -297,7 +297,10 @@ function DialogoAjuste({ idBase, eb, acao, linha, onAjustado, onConflito, onCanc
     if (!busca.trim()) return;
     const r = (await api.get<ItemSummary[]>(`/api/v1/items?search=${encodeURIComponent(busca.trim())}`)).data.filter((i) => i.status === 'ATIVO');
     setItens(r);
-    if (r.length === 1) setItemId(r[0].id);
+    if (r.length === 1) {
+      setItemId(r[0].id);
+      if (!preco.trim() && r[0].referenceCost) setPreco(custo(r[0].referenceCost));
+    }
     if (r.length === 0) setErro('Nenhum registro correspondente encontrado.');
   };
 
@@ -349,7 +352,12 @@ function DialogoAjuste({ idBase, eb, acao, linha, onAjustado, onConflito, onCanc
             {itens.length > 0 && (
               <>
                 <label className="rp-label" htmlFor={`${idBase}-item`}>Encontrados</label>
-                <Selecao id={`${idBase}-item`} valor={itemId} onChange={setItemId}
+                <Selecao id={`${idBase}-item`} valor={itemId}
+                  onChange={(v) => {
+                    setItemId(v);
+                    const it = itens.find((i) => i.id === v);
+                    if (!preco.trim() && it?.referenceCost) setPreco(custo(it.referenceCost));
+                  }}
                   opcoes={[{ valor: '', rotulo: 'Escolha o item' }, ...itens.map((i) => ({ valor: i.id, rotulo: `${i.code} — ${i.description}` }))]} />
               </>
             )}

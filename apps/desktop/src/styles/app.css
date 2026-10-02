@@ -330,6 +330,8 @@ body { background: var(--ground); }
 .rp-bom__comparar { margin-top: var(--space-4); }
 .rp-bom__comparar .rp-field { min-width: 320px; }
 .rp-bom__margem { max-width: 240px; }
+.rp-bom__aviso { display: flex; align-items: center; gap: var(--space-3); }
+.rp-bom__usar { margin-left: var(--space-2); }
 .rp-bom__retirada td:not(.rownum) { color: var(--ink-muted); text-decoration: line-through; }
 .rp-bom__nivel-1 { padding-left: var(--space-5) !important; }
 .rp-bom__nivel-2 { padding-left: calc(var(--space-5) * 2) !important; }

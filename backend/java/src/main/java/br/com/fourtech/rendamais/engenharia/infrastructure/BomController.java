@@ -8,6 +8,7 @@ import br.com.fourtech.rendamais.plataforma.web.HistoryEntry;
 import br.com.fourtech.rendamais.plataforma.web.Versions;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -54,14 +55,15 @@ class BomController {
     record LineDto(String id, int position, String kind, String itemId, String itemCode, boolean itemActive, String childRevisionId,
                    String childBomId, String childBomCode, String childBomName, String childRevisionLabel, String childRevisionStatus,
                    String referenceCode, String description, String quantity, String uom, String unitCost, String lineCents, int pending,
-                   String category, String supplier, String material, String notes) {
+                   String category, String supplier, String material, String notes, String itemReferenceCost, String childLatestId,
+                   String childLatestLabel) {
         static LineDto of(BomService.LineView v) {
             BomLine l = v.line();
             return new LineDto(l.id().toString(), l.position(), l.kind().name(), str(l.itemId()), v.itemCode(), v.itemActive(),
                     str(l.childRevisionId()), str(v.childBomId()), v.childBomCode(), v.childBomName(), v.childRevisionLabel(),
                     v.childRevisionStatus(), l.referenceCode(), l.description(), plain(l.quantity()), l.uom(), plain(l.unitCost()),
                     v.lineCents() == null ? null : v.lineCents().toString(), v.pending(), l.category(), l.supplier(), l.material(),
-                    l.notes());
+                    l.notes(), plain(v.itemReferenceCost()), str(v.childLatestId()), v.childLatestLabel());
         }
     }
 
@@ -75,12 +77,16 @@ class BomController {
 
     record ParentDto(String bomId, String bomName, String revisionId, String revisionLabel, String status) { }
 
+    record OutdatedDto(String bomId, String bomName, String revisionId, String revisionLabel, String usesLabel, boolean hasDraft) { }
+
+    record PropagationDto(String bomId, String bomName, String fromLabel, String toLabel, String revisionId, String action) { }
+
     record RevisionDto(String id, String bomId, String bomCode, String bomName, String modelId, String modelCode, String modelName,
                        int revision, String label, String status, String basedOnId, String informedTotalCents, String notes,
                        String importId, Instant approvedAt, String approvedBy, String version, Instant createdAt, String createdBy,
                        Instant updatedAt, String updatedBy, String totalCents, int pending, List<LineDto> lines,
                        List<CategoryDto> categories, List<ProblemDto> problems, List<ParentDto> usedBy,
-                       List<RevisionRefDto> revisions) {
+                       List<RevisionRefDto> revisions, List<OutdatedDto> outdatedParents) {
         static RevisionDto of(BomService.RevisionView v) {
             BomRevision r = v.revision();
             Bom b = v.bom();
@@ -93,7 +99,9 @@ class BomController {
                     v.problems().stream().map(ProblemDto::of).toList(),
                     v.usedBy().stream().map(p -> new ParentDto(p.bomId().toString(), p.bomName(), p.revisionId().toString(),
                             p.revisionLabel(), p.status())).toList(),
-                    v.revisions().stream().map(RevisionRefDto::of).toList());
+                    v.revisions().stream().map(RevisionRefDto::of).toList(),
+                    v.outdatedParents().stream().map(o -> new OutdatedDto(o.bomId().toString(), o.bomName(), o.revisionId().toString(),
+                            o.revisionLabel(), o.usesLabel(), o.hasDraft())).toList());
         }
     }
 
@@ -146,6 +154,17 @@ class BomController {
     @PostMapping("/bom-revisions/{id}/approval")
     ResponseEntity<RevisionDto> approve(@PathVariable UUID id) {
         return respond(HttpStatus.OK, service.approve(id));
+    }
+
+    @DeleteMapping("/bom-revisions/{id}")
+    BomDto discard(@PathVariable UUID id) {
+        return BomDto.of(service.discardDraft(id));
+    }
+
+    @PostMapping("/bom-revisions/{id}/propagation")
+    List<PropagationDto> propagate(@PathVariable UUID id) {
+        return service.propagate(id).stream().map(p -> new PropagationDto(p.bomId().toString(), p.bomName(), p.fromLabel(), p.toLabel(),
+                p.revisionId().toString(), p.action())).toList();
     }
 
     @GetMapping("/bom-revisions/{id}/comparison")

@@ -93,7 +93,8 @@ public class BomService {
     public record Problem(String severity, Integer position, String message) { }
 
     public record LineView(BomLine line, String itemCode, boolean itemActive, UUID childBomId, String childBomCode, String childBomName,
-                           String childRevisionLabel, String childRevisionStatus, Long lineCents, int pending) { }
+                           String childRevisionLabel, String childRevisionStatus, Long lineCents, int pending, BigDecimal itemReferenceCost,
+                           UUID childLatestId, String childLatestLabel) { }
 
     public record CategoryTotal(String category, long cents, int lines) { }
 
@@ -101,7 +102,7 @@ public class BomService {
 
     public record RevisionView(Bom bom, String modelCode, String modelName, BomRevision revision, List<LineView> lines,
                                long totalCents, int pending, List<CategoryTotal> categories, List<Problem> problems,
-                               List<ParentRef> usedBy, List<RevisionRef> revisions) { }
+                               List<ParentRef> usedBy, List<RevisionRef> revisions, List<OutdatedParent> outdatedParents) { }
 
     public record RevisionRef(UUID id, String label, String status, long totalCents, int pending, Instant approvedAt, String approvedBy) { }
 
@@ -242,31 +243,150 @@ public class BomService {
         if (!blocking.isEmpty()) {
             throw new RuleViolationException("BOM_INCOMPLETE", "A revisão tem pendências; resolva antes de aprovar.", blocking);
         }
+        // Revisão igual à aprovada não vira revisão nova (decisão do PO em 02/10/2026): altere ou descarte o rascunho.
+        List<FieldIssue> unchanged = new ArrayList<>();
+        for (BomRevision r : drafts) {
+            repository.approvedOf(r.bomId()).filter(prev -> sameContent(prev, r)).ifPresent(prev -> unchanged.add(new FieldIssue(
+                    bom(r.bomId()).name() + " rev. " + r.label(), "Nada mudou desde a rev. " + prev.label() + "; altere as linhas ou descarte o rascunho.")));
+        }
+        if (!unchanged.isEmpty()) {
+            throw new RuleViolationException("BOM_UNCHANGED", "A revisão é igual à aprovada; não há o que aprovar.", unchanged);
+        }
         Instant now = clock.instant();
         // As submontagens primeiro, para o evento da BOM de cima sair com tudo aprovado.
         List<BomRevision> ordered = new ArrayList<>(drafts.subList(1, drafts.size()));
         ordered.add(target);
-        for (BomRevision r : ordered) {
-            Optional<BomRevision> previous = repository.approvedOf(r.bomId());
-            previous.ifPresent(p -> repository.update(p.supersede(now, user.username()), p.version()));
-            BomRevision approved = r.approve(now, user.username());
-            repository.update(approved, r.version());
-            Bom b = bom(r.bomId());
-            long total = trees.total(r.id()).cents();
-            Map<String, AuditEntry.Change> changes = new LinkedHashMap<>();
-            changes.put("revision", change(null, approved.label()));
-            changes.put("status", change(r.status().name(), approved.status().name()));
-            changes.put("totalCents", change(null, Long.toString(total)));
-            previous.ifPresent(p -> changes.put("superseded", change(p.label(), BomRevision.Status.SUPERSEDED.name())));
-            record(user.username(), "BOM_REVISION_APPROVED", b, r == target ? null : "Aprovada com a revisão que a usa", changes);
-            Map<String, Object> payload = new LinkedHashMap<>();
-            payload.put("bomId", b.id().toString());
-            payload.put("revisionId", approved.id().toString());
-            payload.put("revision", approved.revision());
-            payload.put("totalReferenceCents", Long.toString(total));
-            outbox.append("BomRevisionApproved", ENTITY, b.id().toString(), payload, user.username());
-        }
+        for (BomRevision r : ordered) markApproved(r, now, user.username(), r == target ? null : "Aprovada com a revisão que a usa");
         return view(repository.findRevision(revisionId).orElseThrow());
+    }
+
+    /** Aprova o rascunho (a aprovada antes fica substituída), com auditoria e o evento BomRevisionApproved. */
+    private BomRevision markApproved(BomRevision r, Instant now, String actor, String reason) {
+        Optional<BomRevision> previous = repository.approvedOf(r.bomId());
+        previous.ifPresent(p -> repository.update(p.supersede(now, actor), p.version()));
+        BomRevision approved = r.approve(now, actor);
+        repository.update(approved, r.version());
+        Bom b = bom(r.bomId());
+        long total = trees.total(r.id()).cents();
+        Map<String, AuditEntry.Change> changes = new LinkedHashMap<>();
+        changes.put("revision", change(null, approved.label()));
+        changes.put("status", change(r.status().name(), approved.status().name()));
+        changes.put("totalCents", change(null, Long.toString(total)));
+        previous.ifPresent(p -> changes.put("superseded", change(p.label(), BomRevision.Status.SUPERSEDED.name())));
+        record(actor, "BOM_REVISION_APPROVED", b, reason, changes);
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("bomId", b.id().toString());
+        payload.put("revisionId", approved.id().toString());
+        payload.put("revision", approved.revision());
+        payload.put("totalReferenceCents", Long.toString(total));
+        outbox.append("BomRevisionApproved", ENTITY, b.id().toString(), payload, actor);
+        return approved;
+    }
+
+    /** Mesmas linhas (na ordem, com os mesmos valores), mesmo total informado e mesmas observações. */
+    private boolean sameContent(BomRevision a, BomRevision b) {
+        return java.util.Objects.equals(a.informedTotalCents(), b.informedTotalCents()) && java.util.Objects.equals(a.notes(), b.notes())
+                && contentOf(repository.linesOf(a.id())).equals(contentOf(repository.linesOf(b.id())));
+    }
+
+    private static List<String> contentOf(List<BomLine> lines) {
+        return lines.stream().map(l -> String.join("|", l.kind().name(), String.valueOf(l.itemId()), String.valueOf(l.childRevisionId()),
+                String.valueOf(l.referenceCode()), l.description(), plain(l.quantity()), l.uom(), plain(l.unitCost()),
+                String.valueOf(l.category()), String.valueOf(l.supplier()), String.valueOf(l.material()), String.valueOf(l.notes()))).toList();
+    }
+
+    private static String plain(BigDecimal v) {
+        return v == null ? "null" : v.stripTrailingZeros().toPlainString();
+    }
+
+    /**
+     * DiscardBomDraft: apaga o rascunho (nunca a revisão aprovada). Recusa se for a única revisão da BOM ou se outro
+     * rascunho o usa como submontagem.
+     */
+    @Transactional
+    public BomSummary discardDraft(UUID revisionId) {
+        CurrentUser user = CurrentUserHolder.require(Permissions.BOM_UPDATE);
+        BomRevision draft = repository.findRevisionForUpdate(revisionId).orElseThrow(BomService::revisionNotFound);
+        draft.requireDraft();
+        Bom bom = bom(draft.bomId());
+        if (repository.revisionsOf(bom.id()).size() == 1) {
+            throw new RuleViolationException("BOM_DRAFT_ONLY_REVISION", "A revisão " + draft.label()
+                    + " é a única da BOM " + bom.name() + "; complete-a e aprove em vez de descartar.", List.of());
+        }
+        List<String> users = new ArrayList<>();
+        for (UUID parentId : repository.parentsOf(revisionId)) {
+            repository.findRevision(parentId).ifPresent(p -> users.add(bom(p.bomId()).name() + " rev. " + p.label()));
+        }
+        if (!users.isEmpty()) {
+            throw new RuleViolationException("BOM_DRAFT_IN_USE", "O rascunho é usado como submontagem em " + String.join(", ", users)
+                    + "; troque a revisão nessas linhas antes de descartar.", List.of());
+        }
+        repository.deleteDraft(revisionId);
+        record(user.username(), "BOM_DRAFT_DISCARDED", bom, null, Map.of("revision", change(draft.label(), null)));
+        return summary(bom);
+    }
+
+    /** BOM e revisão aprovadas que ainda usam outra revisão desta submontagem. */
+    public record OutdatedParent(UUID bomId, String bomName, UUID revisionId, String revisionLabel, String usesLabel, boolean hasDraft) { }
+
+    /** O que a atualização fez em cada BOM de cima: revisão nova aprovada, ou o rascunho aberto atualizado. */
+    public record PropagationStep(UUID bomId, String bomName, String fromLabel, String toLabel, UUID revisionId, String action) { }
+
+    /**
+     * PropagateBomRevision: leva a revisão aprovada da submontagem às BOMs que usam uma revisão anterior dela, subindo
+     * até a BOM do modelo. Cada uma ganha uma revisão nova (cópia da aprovada com a submontagem trocada), aprovada na
+     * hora; se a BOM já tem rascunho aberto, só o rascunho é atualizado e espera a aprovação. Equipamentos não mudam.
+     */
+    @Transactional
+    public List<PropagationStep> propagate(UUID revisionId) {
+        CurrentUser user = CurrentUserHolder.require(Permissions.BOM_APPROVE);
+        CurrentUserHolder.require(Permissions.BOM_UPDATE);
+        BomRevision rev = revision0(revisionId);
+        if (rev.status() != BomRevision.Status.APPROVED) {
+            throw new RuleViolationException("BOM_NOT_APPROVED", "Aprove a revisão " + rev.label() + " antes de levá-la às BOMs que a usam.", List.of());
+        }
+        List<PropagationStep> steps = new ArrayList<>();
+        propagateFrom(rev, clock.instant(), user.username(), steps, 0);
+        return steps;
+    }
+
+    private void propagateFrom(BomRevision rev, Instant now, String actor, List<PropagationStep> steps, int depth) {
+        if (depth > BomTrees.MAX_DEPTH) return;
+        for (UUID parentId : repository.approvedParentsUsingOtherRevision(rev.bomId(), rev.id())) {
+            BomRevision parent = repository.findRevisionForUpdate(parentId).orElseThrow();
+            if (parent.status() != BomRevision.Status.APPROVED) continue;
+            Bom pb = bom(parent.bomId());
+            Optional<BomRevision> draft = repository.draftOf(pb.id());
+            if (draft.isPresent()) {
+                BomRevision d = repository.findRevisionForUpdate(draft.get().id()).orElseThrow();
+                repository.replaceLines(d.id(), repointed(repository.linesOf(d.id()), d.id(), rev));
+                repository.update(d.edit(d.informedTotalCents(), d.notes(), now, actor), d.version());
+                record(actor, "BOM_DRAFT_UPDATED", pb, "Submontagem atualizada para a rev. " + rev.label(), Map.of("revision", change(d.label(), d.label())));
+                steps.add(new PropagationStep(pb.id(), pb.name(), parent.label(), d.label(), d.id(), "DRAFT_UPDATED"));
+                continue;
+            }
+            BomRevision created = BomRevision.draft(pb.id(), repository.nextRevisionNumber(pb.id()), parent.id(), parent.informedTotalCents(),
+                    parent.notes(), null, now, actor);
+            repository.insert(created);
+            repository.replaceLines(created.id(), repointed(repository.linesOf(parent.id()), created.id(), rev));
+            record(actor, "BOM_REVISION_CREATED", pb, "Submontagem atualizada para a rev. " + rev.label(),
+                    Map.of("revision", change(null, created.label()), "basedOn", change(null, parent.label())));
+            BomRevision approved = markApproved(created, now, actor, "Submontagem " + bom(rev.bomId()).name() + " na rev. " + rev.label());
+            steps.add(new PropagationStep(pb.id(), pb.name(), parent.label(), approved.label(), approved.id(), "APPROVED"));
+            propagateFrom(approved, now, actor, steps, depth + 1);
+        }
+    }
+
+    /** Cópia das linhas com toda linha da BOM da submontagem apontando para a revisão {@code rev}. */
+    private List<BomLine> repointed(List<BomLine> lines, UUID revisionId, BomRevision rev) {
+        List<BomLine> out = new ArrayList<>();
+        for (BomLine l : lines) {
+            boolean same = l.kind() == BomCost.Kind.SUBASSEMBLY
+                    && repository.findRevision(l.childRevisionId()).map(c -> c.bomId().equals(rev.bomId())).orElse(false);
+            out.add(new BomLine(UUID.randomUUID(), revisionId, l.position(), l.kind(), l.itemId(), same ? rev.id() : l.childRevisionId(),
+                    l.referenceCode(), l.description(), l.quantity(), l.uom(), l.unitCost(), l.category(), l.supplier(), l.material(), l.notes()));
+        }
+        return out;
     }
 
     /** CreateBomRevision: rascunho novo a partir da última revisão (cópia das linhas); só um rascunho por BOM. */
@@ -435,9 +555,20 @@ public class BomService {
         usedBy.sort(Comparator.comparing(ParentRef::bomName).thenComparing(ParentRef::revisionLabel));
         Optional<EquipmentModelApi.ModelRef> model = b.modelId() == null ? Optional.empty() : models.model(b.modelId());
         List<RevisionRef> revisions = repository.revisionsOf(b.id()).stream().map(this::ref).toList();
+        List<OutdatedParent> outdated = new ArrayList<>();
+        if (r.status() == BomRevision.Status.APPROVED) {
+            for (UUID parentId : repository.approvedParentsUsingOtherRevision(b.id(), r.id())) {
+                BomRevision p = revision0(parentId);
+                Bom pb = bom(p.bomId());
+                String uses = repository.linesOf(p.id()).stream().filter(l -> l.kind() == BomCost.Kind.SUBASSEMBLY)
+                        .map(l -> repository.findRevision(l.childRevisionId()).orElse(null))
+                        .filter(c -> c != null && c.bomId().equals(b.id())).map(BomRevision::label).findFirst().orElse("?");
+                outdated.add(new OutdatedParent(pb.id(), pb.name(), p.id(), p.label(), uses, repository.draftOf(pb.id()).isPresent()));
+            }
+        }
         return new RevisionView(b, model.map(EquipmentModelApi.ModelRef::code).orElse(null),
                 model.map(EquipmentModelApi.ModelRef::name).orElse(null), r, lines, total.cents(), total.pending(), cats,
-                problems(r, lines, total), usedBy, revisions);
+                problems(r, lines, total), usedBy, revisions, outdated);
     }
 
     private List<LineView> linesOf(BomRevision r) {
@@ -457,12 +588,16 @@ public class BomService {
             if (l.kind() == BomCost.Kind.ITEM) {
                 Optional<ItemQueryApi.ItemRef> item = itemCache.computeIfAbsent(l.itemId(), items::item);
                 out.add(new LineView(l, item.map(ItemQueryApi.ItemRef::code).orElse(null), item.map(ItemQueryApi.ItemRef::active)
-                        .orElse(false), null, null, null, null, null, cents, t.pending()));
+                        .orElse(false), null, null, null, null, null, cents, t.pending(),
+                        item.map(ItemQueryApi.ItemRef::referenceCost).orElse(null), null, null));
             } else {
                 BomRevision child = repository.findRevision(l.childRevisionId()).orElseThrow();
                 Bom childBom = bom(child.bomId());
+                BomRevision latest = repository.approvedOf(childBom.id()).filter(a -> !a.id().equals(child.id())
+                        && a.revision() > child.revision()).orElse(null);
                 out.add(new LineView(l, null, true, childBom.id(), childBom.code(), childBom.name(), child.label(),
-                        child.status().name(), cents, t.pending()));
+                        child.status().name(), cents, t.pending(), null, latest == null ? null : latest.id(),
+                        latest == null ? null : latest.label()));
             }
         }
         return out;
@@ -478,11 +613,20 @@ public class BomService {
             if (l.kind() == BomCost.Kind.ITEM) {
                 if (l.unitCost() == null) out.add(new Problem("BLOCKING", l.position(), where + ": sem custo unitário."));
                 if (!v.itemActive()) out.add(new Problem("WARNING", l.position(), where + ": o item " + v.itemCode() + " está inativo."));
+                if (r.status() == BomRevision.Status.DRAFT && l.unitCost() != null && v.itemReferenceCost() != null
+                        && l.unitCost().compareTo(v.itemReferenceCost()) != 0) {
+                    out.add(new Problem("WARNING", l.position(), where + ": custo da BOM " + brl(l.unitCost()) + " × cadastro "
+                            + brl(v.itemReferenceCost()) + "."));
+                }
             } else {
                 int inside = v.pending() - (l.quantity() == null ? 1 : 0);
                 if (inside > 0) {
                     out.add(new Problem("BLOCKING", l.position(), "Submontagem " + v.childBomName() + " rev. " + v.childRevisionLabel()
                             + ": " + inside + (inside == 1 ? " linha pendente." : " linhas pendentes.")));
+                }
+                if (v.childLatestLabel() != null && r.status() == BomRevision.Status.DRAFT) {
+                    out.add(new Problem("INFO", l.position(), "Submontagem " + v.childBomName() + ": a linha usa a rev. " + v.childRevisionLabel()
+                            + " e há a rev. " + v.childLatestLabel() + " aprovada."));
                 }
                 if ("DRAFT".equals(v.childRevisionStatus()) && r.status() == BomRevision.Status.DRAFT) {
                     out.add(new Problem("INFO", l.position(), "Submontagem " + v.childBomName() + " rev. " + v.childRevisionLabel()
@@ -600,6 +744,16 @@ public class BomService {
         if (s == null) return null;
         String t = s.strip();
         return t.isEmpty() ? null : t;
+    }
+
+    /** Custo unitário em reais, com 2 a 6 casas: R$ 145,00, R$ 0,333333. */
+    static String brl(BigDecimal v) {
+        BigDecimal s = v.stripTrailingZeros();
+        if (s.scale() < 2) s = s.setScale(2);
+        String[] p = s.toPlainString().split("\\.");
+        StringBuilder inteiro = new StringBuilder(p[0]);
+        for (int i = inteiro.length() - 3; i > 0; i -= 3) inteiro.insert(i, '.');
+        return "R$ " + inteiro + "," + p[1];
     }
 
     private static String str(Long v) {

@@ -169,6 +169,23 @@ class JdbcBomRepository implements BomRepository {
                 .query(UUID.class).list();
     }
 
+    @Override
+    public List<UUID> approvedParentsUsingOtherRevision(UUID bomId, UUID revisionId) {
+        return jdbc.sql("""
+                select distinct p.id from bom_line l
+                  join bom_revision c on c.id = l.child_revision_id
+                  join bom_revision p on p.id = l.revision_id
+                 where c.bom_id = :bom and l.child_revision_id <> :rev and p.status = 'APPROVED' and p.bom_id <> :bom
+                """).param("bom", bomId).param("rev", revisionId).query(UUID.class).list();
+    }
+
+    @Override
+    public void deleteDraft(UUID revisionId) {
+        jdbc.sql("update bom_import set revision_id = null where revision_id = :rev").param("rev", revisionId).update();
+        jdbc.sql("delete from bom_line where revision_id = :rev").param("rev", revisionId).update();
+        jdbc.sql("delete from bom_revision where id = :rev and status = 'DRAFT'").param("rev", revisionId).update();
+    }
+
     // ───────────── Carga do arquivo ─────────────
 
     @Override

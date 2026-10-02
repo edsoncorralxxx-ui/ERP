@@ -468,11 +468,13 @@
         {"regra": "Diferença entre Σ linhas e total informado da origem é exibida como divergência, não corrigida"},
         {"regra": "Revisão aprovada é imutável"},
         {"regra": "Submontagem é outra BOM usada pela revisão escolhida; ciclo de submontagens é recusado"},
-        {"regra": "Aprovar leva junto as submontagens em rascunho; linha sem quantidade ou custo impede a aprovação"}
+        {"regra": "Aprovar leva junto as submontagens em rascunho; linha sem quantidade ou custo impede a aprovação"},
+        {"regra": "Revisão igual à aprovada não é aprovada; o rascunho é alterado ou descartado"}
       ],
       "comandos": [
         {"nome": "ImportBom", "permissao": "bom.update", "idempotente": true, "eventos": ["BomImported"]},
         {"nome": "ApproveBomRevision", "permissao": "bom.approve", "idempotente": true, "eventos": ["BomRevisionApproved"]},
+        {"nome": "PropagateBomRevision", "permissao": "bom.approve", "idempotente": true, "eventos": ["BomRevisionApproved"]},
         {"nome": "ApplyBomToProject", "permissao": "project_bom.apply", "idempotente": true, "eventos": ["ProjectBomApplied"]},
         {"nome": "AdjustEquipmentBom", "permissao": "project_bom.apply", "idempotente": false, "eventos": ["EquipmentBomAdjusted"]}
       ],

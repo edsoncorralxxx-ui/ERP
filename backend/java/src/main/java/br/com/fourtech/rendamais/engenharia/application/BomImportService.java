@@ -242,7 +242,7 @@ public class BomImportService {
             ref = String.format("%s-%04d", g.prefix, n);
         }
         ItemProvisioningApi.ProvisionedItem item = itemCatalog.provision(new ItemProvisioningApi.ItemRequest(ref, l.description,
-                l.nature(), l.uom, UOM_NAMES.get(l.uom), sentence(c.name)));
+                l.nature(), l.uom, UOM_NAMES.get(l.uom), sentence(c.name), l.unitCost));
         return line(revisionId, position, item.id(), ref, g, c, l);
     }
 

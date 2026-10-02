@@ -472,4 +472,65 @@ class BomApiTest extends CadastrosApiTest {
         assertThat(call("POST", "/api/v1/equipment-models", consulta, "{\"name\":\"X\"}", Map.of("Idempotency-Key", "mod-cons-0001"))
                 .statusCode()).isEqualTo(403);
     }
+
+    @Test
+    void custoDeReferenciaRevisaoSemMudancaDescartarEAtualizarAsBomsDeCima() throws Exception {
+        JsonNode modelo = aprova(carrega());
+        // Item novo da carga recebe o preço da BOM como custo de referência.
+        assertThat(jdbc.sql("select reference_cost from item where description = 'Pintura'").query(java.math.BigDecimal.class).single())
+                .isEqualByComparingTo("1400");
+        String mecanicaBom = linha(modelo, "Mecânica — " + PRODUTO).get("childBomId").asString();
+        String mec0 = linha(modelo, "Mecânica — " + PRODUTO).get("childRevisionId").asString();
+
+        // Rascunho igual à aprovada: aprovar é recusado; descartar apaga o rascunho.
+        JsonNode igual = json(post("/api/v1/boms/" + mecanicaBom + "/revisions", "bom-rev-igual-1", null));
+        HttpResponse<String> recusa = post("/api/v1/bom-revisions/" + igual.get("id").asString() + "/approval", null, null);
+        assertThat(recusa.statusCode()).isEqualTo(422);
+        assertThat(recusa.body()).contains("BOM_UNCHANGED", "Nada mudou desde a rev. 00");
+        HttpResponse<String> descarta = call("DELETE", "/api/v1/bom-revisions/" + igual.get("id").asString(), admin, null, Map.of());
+        assertThat(descarta.statusCode()).as(descarta.body()).isEqualTo(200);
+        assertThat(conta("select count(*) from bom_revision where bom_id = '" + mecanicaBom + "'")).isEqualTo(1);
+        assertThat(call("DELETE", "/api/v1/bom-revisions/" + mec0, admin, null, Map.of()).statusCode()).isEqualTo(409);
+
+        // O cadastro com outro custo: o rascunho avisa a diferença.
+        jdbc.sql("update item set reference_cost = 1500 where description = 'Pintura'").update();
+        JsonNode mec1 = json(post("/api/v1/boms/" + mecanicaBom + "/revisions", "bom-rev-pint-1", null));
+        assertThat(mec1.get("problems").toString()).contains("Linha 126 — Pintura: custo da BOM R$ 1.400,00 × cadastro R$ 1.500,00.");
+        ArrayNode ls = linhas(mec1);
+        ((ObjectNode) ls.get(posicao(mec1, "Pintura"))).put("unitCost", "1500");
+        assertThat(grava(mec1, ls, null).statusCode()).isEqualTo(200);
+        JsonNode mec1Aprovada = json(post("/api/v1/bom-revisions/" + mec1.get("id").asString() + "/approval", null, null));
+        // A Balança aprovada ainda usa a Mecânica rev. 00: aparece como desatualizada, e a linha dela aponta a rev. 01.
+        assertThat(mec1Aprovada.get("outdatedParents").toString()).contains("\"bomName\":\"" + PRODUTO + "\"", "\"usesLabel\":\"00\"");
+        assertThat(linha(revisao(modelo.get("id").asString()), "Mecânica — " + PRODUTO).get("childLatestLabel").asString()).isEqualTo("01");
+
+        // Elétrica com rascunho aberto e Painel rev. 01: a atualização só mexe no rascunho da Elétrica.
+        String eletricaBom = linha(modelo, "Elétrica — " + PRODUTO).get("childBomId").asString();
+        JsonNode ele1 = json(post("/api/v1/boms/" + eletricaBom + "/revisions", "bom-rev-ele-1", null));
+        String painelBom = linha(ele1, "Painel elétrico — " + PRODUTO).get("childBomId").asString();
+        JsonNode pai1 = json(post("/api/v1/boms/" + painelBom + "/revisions", "bom-rev-pai-1", null));
+        ArrayNode pl = linhas(pai1);
+        ((ObjectNode) pl.get(posicao(pai1, "Trilho DIN"))).put("quantity", "3");
+        assertThat(grava(pai1, pl, null).statusCode()).isEqualTo(200);
+        post("/api/v1/bom-revisions/" + pai1.get("id").asString() + "/approval", null, null);
+        JsonNode passosPainel = json(post("/api/v1/bom-revisions/" + pai1.get("id").asString() + "/propagation", null, null));
+        assertThat(passosPainel.toString()).contains("\"action\":\"DRAFT_UPDATED\"", "\"bomName\":\"Elétrica — " + PRODUTO + "\"");
+        assertThat(linha(revisao(ele1.get("id").asString()), "Painel elétrico — " + PRODUTO).get("childRevisionLabel").asString())
+                .isEqualTo("01");
+
+        // Mecânica rev. 01 levada até a Balança: revisão 01 da Balança aprovada na hora, + R$ 100,00.
+        JsonNode passos = json(post("/api/v1/bom-revisions/" + mec1.get("id").asString() + "/propagation", null, null));
+        assertThat(passos.size()).isEqualTo(1);
+        assertThat(passos.get(0).get("action").asString()).isEqualTo("APPROVED");
+        assertThat(passos.get(0).get("fromLabel").asString()).isEqualTo("00");
+        assertThat(passos.get(0).get("toLabel").asString()).isEqualTo("01");
+        JsonNode balanca1 = revisao(passos.get(0).get("revisionId").asString());
+        assertThat(balanca1.get("status").asString()).isEqualTo("APPROVED");
+        assertThat(balanca1.get("totalCents").asString()).isEqualTo("6950795");
+        assertThat(json(get("/api/v1/bom-revisions/" + mec1.get("id").asString())).get("outdatedParents").size()).isZero();
+        // Consulta não atualiza.
+        String consulta = login(CONSULTA, Profile.CONSULTA);
+        assertThat(call("POST", "/api/v1/bom-revisions/" + mec1.get("id").asString() + "/propagation", consulta, null, Map.of()).statusCode())
+                .isEqualTo(403);
+    }
 }

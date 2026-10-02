@@ -52,6 +52,12 @@ public interface BomRepository {
     /** Revisões que usam a revisão como submontagem. */
     List<UUID> parentsOf(UUID revisionId);
 
+    /** Revisões aprovadas de outras BOMs que usam uma revisão da BOM {@code bomId} diferente de {@code revisionId}. */
+    List<UUID> approvedParentsUsingOtherRevision(UUID bomId, UUID revisionId);
+
+    /** Apaga o rascunho e as linhas dele; a carga do arquivo que o criou perde a referência. */
+    void deleteDraft(UUID revisionId);
+
     // ───────────── Carga do arquivo ─────────────
 
     record BomImport(UUID id, String fileName, String fileHash, String content, String product, String status, UUID revisionId,

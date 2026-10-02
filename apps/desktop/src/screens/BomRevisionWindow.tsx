@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { api, type ApiError } from '../api/client';
-import type { Bom, BomComparison, BomLine, BomLineRequest, BomRevision, HistoryEntry, ItemSummary } from '../api/types';
+import type { Bom, BomComparison, BomLine, BomLineRequest, BomPropagationStep, BomRevision, HistoryEntry, ItemSummary } from '../api/types';
 import { centavos, centavosParaApi, dataHora, decimalParaApi, reais } from '../format';
 import { Dialog } from '../shell/Dialog';
 import { useSession } from '../shell/SessionContext';
@@ -58,6 +58,10 @@ export function BomRevisionWindow({ recordKey }: { recordKey: string }) {
   const [comparar, setComparar] = useState('');
   const [comparacao, setComparacao] = useState<BomComparison | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [descartar, setDescartar] = useState(false);
+  const [atualizarCima, setAtualizarCima] = useState(false);
+  // A revisão mostrada: começa na que abriu a janela e troca na própria janela (campo Revisão, Nova revisão).
+  const [revId, setRevId] = useState(recordKey);
   const chaveNova = useRef(novaChave());
 
   const rascunho = rev?.status === 'DRAFT';
@@ -73,14 +77,14 @@ export function BomRevisionWindow({ recordKey }: { recordKey: string }) {
   const carregar = useCallback(async () => {
     setErroCarga(null);
     try {
-      const r = await api.get<BomRevision>(`/api/v1/bom-revisions/${recordKey}`);
+      const r = await api.get<BomRevision>(`/api/v1/bom-revisions/${revId}`);
       aplicar(r.data, r.etag);
     } catch (e) {
       const x = e as ApiError;
       setErroCarga(x.isNetwork ? 'Sem conexão com o servidor. Tente de novo quando a conexão voltar.' : `${x.message} (${x.code})`);
       winRef.current.notify({ tone: 'erro', text: `${x.message} (${x.code}) [${x.correlationId ?? '—'}]` });
     }
-  }, [recordKey, aplicar]);
+  }, [revId, aplicar]);
 
   useEffect(() => void carregar(), [carregar]);
 
@@ -153,6 +157,7 @@ export function BomRevisionWindow({ recordKey }: { recordKey: string }) {
       aplicar(r.data, r.etag);
       win.notify({ tone: 'sucesso', text: `Revisão ${r.data.label} da BOM ${r.data.bomName} aprovada com sucesso` });
       window.dispatchEvent(new Event(BOM_ALTERADA));
+      if (r.data.outdatedParents.length > 0 && can('bom.update')) setAtualizarCima(true);
     } catch (e) {
       const x = e as ApiError;
       if (x.status === 422) setRecusa({ mensagem: x.message, itens: x.details.map((d) => (d.field ? `${d.field}: ${d.message}` : d.message)) });
@@ -169,8 +174,8 @@ export function BomRevisionWindow({ recordKey }: { recordKey: string }) {
       const r = await api.post<BomRevision>(`/api/v1/boms/${rev.bomId}/revisions`, null, { 'Idempotency-Key': chaveNova.current });
       chaveNova.current = novaChave();
       win.notify({ tone: 'sucesso', text: `Revisão ${r.data.label} da BOM ${r.data.bomName} criada em rascunho` });
+      setRevId(r.data.id);
       window.dispatchEvent(new Event(BOM_ALTERADA));
-      win.open('bom-revision', r.data.id);
     } catch (e) {
       const x = e as ApiError;
       if (!x.isNetwork) chaveNova.current = novaChave();
@@ -178,6 +183,49 @@ export function BomRevisionWindow({ recordKey }: { recordKey: string }) {
     } finally {
       setOcupado(false);
     }
+  };
+
+  const descartarRascunho = async () => {
+    if (!rev) return;
+    setDescartar(false);
+    setOcupado(true);
+    try {
+      const r = await api.del<Bom>(`/api/v1/bom-revisions/${rev.id}`);
+      win.notify({ tone: 'sucesso', text: `Rascunho da revisão ${rev.label} da BOM ${rev.bomName} descartado` });
+      window.dispatchEvent(new Event(BOM_ALTERADA));
+      if (r.data.approved) setRevId(r.data.approved.id);
+      else win.requestClose();
+    } catch (e) {
+      const x = e as ApiError;
+      win.notify({ tone: 'erro', text: `${x.message} (${x.code}) [${x.correlationId ?? '—'}]` });
+    } finally {
+      setOcupado(false);
+    }
+  };
+
+  const atualizarBomsDeCima = async () => {
+    if (!rev) return;
+    setAtualizarCima(false);
+    setOcupado(true);
+    try {
+      const passos = (await api.post<BomPropagationStep[]>(`/api/v1/bom-revisions/${rev.id}/propagation`, null)).data;
+      const texto = passos.map((p) => (p.action === 'APPROVED' ? `${p.bomName} rev. ${p.toLabel} aprovada` : `rascunho rev. ${p.toLabel} de ${p.bomName} atualizado`)).join('; ');
+      win.notify({ tone: 'sucesso', text: passos.length ? `BOMs atualizadas: ${texto}` : 'Nenhuma BOM precisava ser atualizada' });
+      window.dispatchEvent(new Event(BOM_ALTERADA));
+    } catch (e) {
+      const x = e as ApiError;
+      win.notify({ tone: 'erro', text: `${x.message} (${x.code}) [${x.correlationId ?? '—'}]` });
+    } finally {
+      setOcupado(false);
+    }
+  };
+
+  /** Troca a submontagem da linha para a revisão aprovada mais nova (grava o rascunho). */
+  const usarMaisNova = (i: number) => {
+    if (!rev) return;
+    const l = rev.lines[i];
+    const linhas = linhasAtuais().map((x, j) => (j === i ? { ...x, childRevisionId: l.childLatestId } : x));
+    void gravar(linhas, rev.informedTotalCents, rev.notes, `Linha ${l.position} passou a usar ${l.childBomName} rev. ${l.childLatestLabel}`);
   };
 
   const fazerComparacao = async (outra: string) => {
@@ -253,7 +301,7 @@ export function BomRevisionWindow({ recordKey }: { recordKey: string }) {
                 <input className="rp-field rp-field--readonly" readOnly aria-label="Modelo" value={rev.modelName ? `${rev.modelCode} — ${rev.modelName}` : 'Submontagem'} />
                 <label className="rp-label" htmlFor={fid('rev')}>Revisão</label>
                 <span />
-                <Selecao id={fid('rev')} valor={rev.id} onChange={(id) => id !== rev.id && win.open('bom-revision', id)}
+                <Selecao id={fid('rev')} valor={rev.id} onChange={(id) => id !== rev.id && (setRevId(id), setComparacao(null), setComparar(''))}
                   opcoes={rev.revisions.map((r) => ({ valor: r.id, rotulo: `${r.label} — ${REVISAO_BOM[r.status]}` }))} />
                 <span className="rp-label">Observações</span>
                 <span />
@@ -275,6 +323,19 @@ export function BomRevisionWindow({ recordKey }: { recordKey: string }) {
                   value={rev.approvedAt ? `${dataHora(rev.approvedAt)} por ${rev.approvedBy}` : `${dataHora(rev.updatedAt ?? rev.createdAt)} por ${rev.updatedBy ?? rev.createdBy}`} />
               </div>
             </div>
+
+            {rev.outdatedParents.length > 0 && (
+              <p className="rp-tip rp-bom__aviso" role="note">
+                <span>
+                  Ainda usam uma revisão anterior desta BOM: {rev.outdatedParents.map((o) => `${o.bomName} rev. ${o.revisionLabel} (usa a ${o.usesLabel})`).join('; ')}.
+                </span>
+                {can('bom.update') && can('bom.approve') && (
+                  <button type="button" className="rp-btn" disabled={ocupado} onClick={() => setAtualizarCima(true)}>
+                    Atuali<u>z</u>ar BOMs de cima
+                  </button>
+                )}
+              </p>
+            )}
 
             {rev.pending > 0 && (
               <p className="rp-tip" role="note">
@@ -322,6 +383,14 @@ export function BomRevisionWindow({ recordKey }: { recordKey: string }) {
                             {l.kind === 'SUBASSEMBLY' ? (
                               <>
                                 <b>{l.description}</b> <span className="rp-bom__rev">rev. {l.childRevisionLabel}</span> {seloRevisaoBom(l.childRevisionStatus!)}
+                                {l.childLatestLabel && (
+                                  <span className="rp-badge rp-badge--pendente rp-janela-mdi__selo">Há rev. {l.childLatestLabel} aprovada</span>
+                                )}
+                                {l.childLatestLabel && editavel && (
+                                  <button type="button" className="rp-btn rp-bom__usar" disabled={ocupado} onClick={(e) => (e.stopPropagation(), usarMaisNova(i))}>
+                                    Usar a rev. {l.childLatestLabel}
+                                  </button>
+                                )}
                               </>
                             ) : (
                               l.description
@@ -483,6 +552,9 @@ export function BomRevisionWindow({ recordKey }: { recordKey: string }) {
               <button type="button" className="rp-btn" disabled={ocupado || !linhaSel} onClick={() => setDialogo('alterar')}><span><u>A</u>lterar linha</span></button>
               <button type="button" className="rp-btn" disabled={ocupado || !linhaSel} onClick={() => setDialogo('retirar')}><span><u>R</u>etirar linha</span></button>
               <button type="button" className="rp-btn" disabled={ocupado} onClick={() => setDialogo('dados')}><span><u>D</u>ados da revisão</span></button>
+              {rev.revisions.length > 1 && (
+                <button type="button" className="rp-btn" disabled={ocupado} onClick={() => setDescartar(true)}><span>Descar<u>t</u>ar rascunho</span></button>
+              )}
             </>
           )}
         </div>
@@ -546,6 +618,35 @@ export function BomRevisionWindow({ recordKey }: { recordKey: string }) {
           {rev.lines.some((l) => l.childRevisionStatus === 'DRAFT') ? ' e as submontagens em rascunho abaixo dela são aprovadas junto' : ''}. Depois de aprovada, a revisão não muda mais.
           <br />
           Deseja aprovar a revisão?
+        </Dialog>
+      )}
+      {rev && descartar && (
+        <Dialog icon="aviso" label="Descartar rascunho" onEscape={() => setDescartar(false)}
+          buttons={[
+            { label: 'Descartar', primary: true, onClick: () => void descartarRascunho() },
+            { label: 'Cancelar', onClick: () => setDescartar(false) },
+          ]}>
+          O rascunho da revisão {rev.label} da BOM {rev.bomName} é apagado; a revisão aprovada continua como está.
+          <br />
+          Deseja descartar o rascunho?
+        </Dialog>
+      )}
+      {rev && atualizarCima && (
+        <Dialog icon="info" label="Atualizar BOMs de cima" onEscape={() => setAtualizarCima(false)}
+          buttons={[
+            { label: 'Atualizar', primary: true, onClick: () => void atualizarBomsDeCima() },
+            { label: 'Agora não', onClick: () => setAtualizarCima(false) },
+          ]}>
+          A revisão {rev.label} de {rev.bomName} está aprovada, mas estas BOMs ainda usam uma revisão anterior:
+          <ul className="rp-bom__problemas" aria-label="BOMs desatualizadas">
+            {rev.outdatedParents.map((o) => (
+              <li key={o.revisionId}>
+                <i className="rp-ico rp-ico-status-info" aria-hidden="true" /> {o.bomName} rev. {o.revisionLabel} usa a rev. {o.usesLabel}
+                {o.hasDraft ? ' — tem rascunho aberto: só o rascunho é atualizado' : ' — ganha uma revisão nova, aprovada'}
+              </li>
+            ))}
+          </ul>
+          A atualização sobe até a BOM do modelo. Equipamentos que já têm BOM continuam com a revisão deles.
         </Dialog>
       )}
       {recusa && (
@@ -624,6 +725,7 @@ function DialogoLinha({ idBase, rev, linha, onConfirmar, onCancelar }: {
       if (r.length === 1) {
         setItemId(r[0].id);
         setDescricao(r[0].description);
+        if (!preco.trim() && r[0].referenceCost) setPreco(custo(r[0].referenceCost));
       } else if (r.length === 0) {
         setErro('Nenhum registro correspondente encontrado.');
       }
@@ -683,7 +785,13 @@ function DialogoLinha({ idBase, rev, linha, onConfirmar, onCancelar }: {
             {itens.length > 1 && (
               <>
                 <label className="rp-label" htmlFor={fid('item')}>Encontrados</label>
-                <Selecao id={fid('item')} valor={itemId} onChange={(v) => (setItemId(v), setDescricao(itens.find((i) => i.id === v)?.description ?? ''))}
+                <Selecao id={fid('item')} valor={itemId}
+                  onChange={(v) => {
+                    const it = itens.find((i) => i.id === v);
+                    setItemId(v);
+                    setDescricao(it?.description ?? '');
+                    if (!preco.trim() && it?.referenceCost) setPreco(custo(it.referenceCost));
+                  }}
                   opcoes={[{ valor: '', rotulo: 'Escolha o item' }, ...itens.map((i) => ({ valor: i.id, rotulo: `${i.code} — ${i.description}` }))]} />
               </>
             )}

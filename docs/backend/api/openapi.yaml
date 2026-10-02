@@ -1582,6 +1582,42 @@ paths:
         '409': { $ref: '#/components/responses/Erro' }
         '412': { $ref: '#/components/responses/Erro' }
         '422': { $ref: '#/components/responses/Erro' }
+    delete:
+      tags: [BOM]
+      summary: >-
+        Descarta o rascunho — DiscardBomDraft (bom.update). Revisão aprovada: 409. Única revisão da BOM: 422 BOM_DRAFT_ONLY_REVISION;
+        usado como submontagem por outro rascunho: 422 BOM_DRAFT_IN_USE
+      responses:
+        '200': { description: BOM sem o rascunho, content: { application/json: { schema: { $ref: '#/components/schemas/Bom' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/bom-revisions/{id}/propagation:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [BOM]
+      summary: >-
+        Leva a revisão aprovada da submontagem às BOMs que usam uma revisão anterior dela, subindo até a BOM do modelo —
+        PropagateBomRevision (bom.update e bom.approve). Cada BOM ganha uma revisão nova aprovada na hora (APPROVED); a que tem
+        rascunho aberto só tem o rascunho atualizado (DRAFT_UPDATED). Equipamentos não mudam
+      responses:
+        '200':
+          description: O que mudou em cada BOM
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    bomId: { type: string, format: uuid }
+                    bomName: { type: string }
+                    fromLabel: { type: string }
+                    toLabel: { type: string }
+                    revisionId: { type: string, format: uuid }
+                    action: { type: string, enum: [APPROVED, DRAFT_UPDATED] }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
 
   /api/v1/bom-revisions/{id}/approval:
     parameters: [{ $ref: '#/components/parameters/Id' }]
@@ -1589,7 +1625,8 @@ paths:
       tags: [BOM]
       summary: >-
         Aprova — ApproveBomRevision (bom.approve): a revisão e as submontagens em rascunho abaixo dela, juntas; a aprovada antes fica
-        substituída. Pendência: 422 BOM_INCOMPLETE com cada linha em details. Aprovada de novo: devolve a mesma. Evento BomRevisionApproved
+        substituída. Pendência: 422 BOM_INCOMPLETE com cada linha em details; igual à aprovada: 422 BOM_UNCHANGED. Aprovada de novo:
+        devolve a mesma. Evento BomRevisionApproved
       responses:
         '200': { description: Revisão aprovada, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/BomRevision' } } } }
         '403': { $ref: '#/components/responses/Erro' }
@@ -1858,7 +1895,7 @@ components:
             PROPOSAL_LOST, PROPOSAL_WON, SALES_ORDER_DRAFTED, SALES_ORDER_UPDATED, SALES_ORDER_CONFIRMED, SALES_ORDER_CANCELLED,
             PROJECT_CREATED, PROJECT_CLOSED, EQUIPMENT_CREATED, EQUIPMENT_UPDATED, EQUIPMENT_CANCELLED,
             EQUIPMENT_MODEL_REGISTERED, EQUIPMENT_MODEL_UPDATED, EQUIPMENT_MODEL_DEACTIVATED, BOM_CREATED, BOM_DRAFT_UPDATED,
-            BOM_REVISION_CREATED, BOM_REVISION_APPROVED, BOM_IMPORTED, EQUIPMENT_BOM_APPLIED, EQUIPMENT_BOM_REVISION_CHANGED,
+            BOM_REVISION_CREATED, BOM_REVISION_APPROVED, BOM_DRAFT_DISCARDED, BOM_IMPORTED, EQUIPMENT_BOM_APPLIED, EQUIPMENT_BOM_REVISION_CHANGED,
             EQUIPMENT_BOM_ADJUSTED
         version: { type: integer }
         reason: { type: [string, 'null'] }
@@ -2961,12 +2998,19 @@ components:
               supplier: { type: [string, 'null'] }
               material: { type: [string, 'null'] }
               notes: { type: [string, 'null'] }
+              itemReferenceCost: { $ref: '#/components/schemas/Decimal' }
+              childLatestId: { type: [string, 'null'], format: uuid, description: 'Revisão aprovada mais nova da submontagem, quando a linha usa outra' }
+              childLatestLabel: { type: [string, 'null'] }
         categories: { type: array, items: { type: object, properties: { category: { type: string }, cents: { type: string }, lines: { type: integer } } } }
         problems: { type: array, items: { $ref: '#/components/schemas/BomProblem' } }
         usedBy:
           type: array
           items: { type: object, properties: { bomId: { type: string }, bomName: { type: string }, revisionId: { type: string }, revisionLabel: { type: string }, status: { type: string } } }
         revisions: { type: array, items: { $ref: '#/components/schemas/BomRevisionRef' } }
+        outdatedParents:
+          type: array
+          description: Revisão aprovada só — BOMs aprovadas que ainda usam uma revisão anterior desta submontagem
+          items: { type: object, properties: { bomId: { type: string }, bomName: { type: string }, revisionId: { type: string }, revisionLabel: { type: string }, usesLabel: { type: string }, hasDraft: { type: boolean } } }
     BomComparison:
       type: object
       properties:
