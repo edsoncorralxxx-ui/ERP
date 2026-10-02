@@ -29,11 +29,10 @@ body { background: var(--ground); }
 .rp-gaveta .rp-nav-item { width: 100%; text-align: left; border-left: 0; border-right: 0; cursor: pointer; }
 .rp-gaveta .rp-nav-item:focus-visible { outline: 2px solid var(--field-active); outline-offset: -3px; }
 .rp-gaveta .rp-nav-sub { display: flex; align-items: center; cursor: pointer; }
-.rp-gaveta .rp-nav-sub .rp-ico { flex: none; transition: transform .15s ease; }
+.rp-gaveta .rp-nav-sub .rp-ico { flex: none; transition: transform .3s ease; }
 .rp-gaveta .rp-nav-sub:not(.rp-nav-sub--indisponivel):hover .rp-ico { transform: translateX(2px); }
 .rp-gaveta .rp-nav-sub:focus-visible { outline: 2px solid var(--field-active); outline-offset: -3px; text-decoration: underline; }
 .rp-gaveta .rp-nav--pastas .rp-nav-item { cursor: default; }
-.rp-nav-sub { transition: background-color .2s ease; }
 
 /* Hover amarelo em todos os componentes, exceto o menu lateral e as abas, que ficam no azul do design system (pedido do PO). Amarelo = "você pode agir aqui". */
 .rp-btn, .rp-tool, .rp-campo-btn, .rp-pag button, .rp-tab, .rp-menubar > div > span, .rp-grid tbody tr td, .rp-cockpit-list div {

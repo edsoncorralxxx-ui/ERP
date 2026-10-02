@@ -807,7 +807,7 @@
 .rp-rail-tab { position: relative; margin: 0 0 -1px; padding: 16px 0; font: var(--text-caption); color: var(--ink);
   background: linear-gradient(90deg, var(--field), var(--rail) 25%, var(--rail-edge)); border: 1px solid var(--rail-border);
   border-width: 1px 0 1px 1px; border-radius: 0; box-shadow: inset 0 1px 0 var(--field), inset 1px 0 0 var(--field);
-  transition: filter .2s ease; cursor: pointer; }
+  transition: filter .3s ease; cursor: pointer; }
 .rp-rail-tab:first-child { border-top-left-radius: var(--radius-lg); }
 .rp-rail-tab:not([aria-selected=true]):hover { filter: brightness(1.05); }
 .rp-rail-tab[aria-selected=true] { z-index: 1; margin-right: -1px; color: var(--on-dark); font-weight: 400;
@@ -824,21 +824,30 @@
 .rp-drawer-close::before { border-width: 4px; border-right-width: 5px; }
 .rp-drawer-view[data-active=true] { height: calc(100% - 50px); }
 
-.rp-nav-item, .rp-gaveta .rp-nav-item { height: var(--row-nav); box-sizing: border-box; gap: 6px; padding: 0 var(--space-3) 0 18px;
-  font: var(--text-nav-item); color: var(--on-dark); background: var(--nav) !important;
-  border-top: 1px solid var(--nav-groove); border-bottom: 1px solid var(--nav-deep); text-shadow: 0 1px 0 rgba(14,63,131,.35); }
-.rp-nav-item::before { display: none !important; }
-.rp-nav-item:hover { background: var(--nav-hover) !important; transition: background-color .15s ease; }
-.rp-nav-item[aria-expanded=true], .rp-nav-group[data-open=true] > .rp-nav-item {
-  background: linear-gradient(var(--nav-selected-top), var(--nav-selected) 60%) !important;
-  border-top-color: rgba(255,255,255,.35); box-shadow: inset 0 1px 0 rgba(255,255,255,.18); }
+.rp-nav-item, .rp-gaveta .rp-nav-item { position: relative; isolation: isolate; height: var(--row-nav); box-sizing: border-box;
+  gap: 6px; padding: 0 var(--space-3) 0 18px; font: var(--text-nav-item); color: var(--on-dark);
+  background: var(--nav) !important; border-top: 1px solid var(--nav-groove); border-bottom: 1px solid var(--nav-deep);
+  text-shadow: 0 1px 0 rgba(14,63,131,.35); transition: background-color .3s ease, border-top-color .3s ease; }
+/* Hover suave e sem piscar: a linha nunca fica transparente (o fundo claro da gaveta apareceria). O azul sólido muda de
+   tom por transição de cor; o degradê do módulo aberto fica numa camada própria que entra e sai por opacidade. */
+.rp-nav-item:hover { background-color: var(--nav-hover) !important; }
+.rp-nav-item::before { content: "" !important; display: block !important; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  opacity: 0; background: linear-gradient(var(--nav-selected-top), var(--nav-selected) 60%); box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+  transition: opacity .3s ease; }
+.rp-nav-item[aria-expanded=true], .rp-nav-group[data-open=true] > .rp-nav-item { background-color: var(--nav-selected) !important;
+  border-top-color: rgba(255,255,255,.35); }
+.rp-nav-item[aria-expanded=true]::before, .rp-nav-group[data-open=true] > .rp-nav-item::before { opacity: 1; }
+.rp-nav-item[aria-expanded=true]:hover::before, .rp-nav-group[data-open=true] > .rp-nav-item:hover::before { opacity: .82; }
 .rp-nav-item .rp-ico { width: 16px; height: 16px; filter: drop-shadow(0 1px 0 rgba(14,63,131,.45)); }
 .rp-nav-subs, .rp-gaveta .rp-nav-subs { background: linear-gradient(var(--nav-selected) 0, var(--nav-sub) 8px, var(--nav-sub)); }
 .rp-gaveta .rp-nav-group[data-open=true] > .rp-nav-subs { border-bottom: 1px solid var(--nav-deep); }
 .rp-nav-sub, .rp-gaveta .rp-nav-sub { height: var(--row-nav); box-sizing: border-box; gap: 8px; padding: 0 var(--space-3) 0 38px;
-  font: var(--text-body); color: var(--on-dark); background: transparent; border: 0; }
-.rp-gaveta .rp-nav-sub:not(.rp-nav-sub--indisponivel):hover { background: rgba(255,255,255,.12); text-decoration: underline; }
-.rp-gaveta .rp-nav-sub--indisponivel:hover { background: transparent; }
+  font: var(--text-body); color: var(--on-dark); background: transparent; border: 0;
+  transition: background-color .3s ease, color .3s ease; }
+.rp-gaveta .rp-nav-sub:not(.rp-nav-sub--indisponivel):hover { background-color: var(--nav-hover); text-decoration: underline; }
+.rp-gaveta .rp-nav-sub--indisponivel:hover { background-color: transparent; }
+.rp-nav-group > .rp-nav-subs { transition: max-height .35s cubic-bezier(.4, 0, .2, 1); }
+.rp-gaveta .rp-nav-sub .rp-ico { transition: transform .3s ease; }
 
 
 /* ───────────── Janelas e controles fiéis à referência (02/10/2026) ─────────────
@@ -928,3 +937,70 @@
 .rp-grid .rp-badge { height: 15px; padding: 0 6px; font: var(--text-caption); }
 .rp-status-msg--sucesso { background: linear-gradient(color-mix(in srgb, var(--status-success-bar), var(--field) 25%), var(--status-success-bar)); color: var(--ink); font-weight: 400; }
 .rp-status-msg--sucesso::before { background: var(--status-success); color: var(--on-dark); }
+
+
+/* ───────────── Janelas internas fiéis às referências de documento (02/10/2026) ─────────────
+   Só o que fica dentro das janelas: linhas de formulário com fio, botões com contorno escuro, botão padrão com brilho
+   azul, abas largas sobre painel cinza, grade branca com células só de leitura azuis, caixa de seleção e rolagem. */
+
+/* Formulário: cada linha de rótulo tem um fio cinza claro embaixo, até o campo */
+.rp-window .rp-form > .rp-label, .rp-janela-mdi .rp-form > .rp-label { align-self: stretch; display: flex; align-items: center;
+  border-bottom: 1px solid var(--form-rule); }
+.rp-window .rp-form > .rp-label + span:empty, .rp-janela-mdi .rp-form > .rp-label + span:empty { align-self: stretch;
+  border-bottom: 1px solid var(--form-rule); }
+
+/* Campos */
+.rp-window .rp-field, .rp-janela-mdi .rp-field { border-color: var(--field-border); }
+.rp-window .rp-field[readonly], .rp-window .rp-field--readonly, .rp-janela-mdi .rp-field[readonly], .rp-janela-mdi .rp-field--readonly {
+  background: var(--field-readonly); border-color: var(--grid-rule); }
+
+/* Botões: contorno cinza-escuro; o padrão (OK, Atualizar) com brilho azul entrando pela esquerda */
+.rp-btn { border-color: var(--button-border); }
+.rp-btn--default:not([disabled]) { background:
+  linear-gradient(90deg, var(--button-default-mark), transparent 16px),
+  linear-gradient(var(--button-top), var(--button-top) 45%, var(--button) 55%, var(--button)); box-shadow: inset 0 1px 0 rgba(255,255,255,.85); }
+.rp-btn--default:hover:not([disabled]) { background:
+  linear-gradient(90deg, var(--button-default-mark), transparent 16px),
+  linear-gradient(var(--field), var(--button-top) 45%, var(--field-active) 55%, var(--field-active)); }
+
+/* Abas largas, rótulo centrado, sobre o painel de contorno cinza */
+.rp-window .rp-tabs, .rp-janela-mdi .rp-tabs { gap: 2px; padding-left: 0; }
+.rp-window .rp-tab, .rp-janela-mdi .rp-tab { min-width: 118px; justify-content: center; padding: 0 var(--space-5); }
+.rp-window .rp-tabpanel, .rp-janela-mdi .rp-tabpanel { border-color: var(--panel-border); }
+
+/* Grade: células brancas com fio cinza; coluna # cinza-azulada; janelas de lista em azul claro (só leitura) */
+.rp-grid td { background: var(--grid-row); border-right: 1px solid var(--grid-row-alt); border-bottom: 1px solid var(--grid-row-alt); }
+.rp-grid th { border-color: var(--grid-row-alt); border-bottom-color: var(--grid-rule); }
+.rp-grid td.rownum { background: var(--grid-rownum); }
+.rp-grid tfoot td { background: var(--field-readonly); }
+.rp-jlista .rp-grid td:not(.rownum) { background: var(--field-readonly); }
+.rp-jlista .rp-grid tr[aria-selected=true] td:not(.rownum), .rp-grid tr[aria-selected=true] td:not(.rownum) { background: var(--grid-row-selected); }
+.rp-grid-rolagem { background: repeating-linear-gradient(var(--grid-row) 0, var(--grid-row) calc(var(--row-grid) + 1px),
+  var(--grid-row-alt) calc(var(--row-grid) + 1px), var(--grid-row-alt) calc(var(--row-grid) + 2px)); border-color: var(--panel-border); }
+.rp-jlista .rp-grid-rolagem { background: repeating-linear-gradient(var(--field-readonly) 0, var(--field-readonly) calc(var(--row-grid) + 1px),
+  var(--grid-row-alt) calc(var(--row-grid) + 1px), var(--grid-row-alt) calc(var(--row-grid) + 2px)); }
+
+/* Caixa de seleção e rádio: claros com degradê e contorno cinza */
+.rp-choice input { width: 13px; height: 13px; background: linear-gradient(var(--field), var(--grid-header)); border-color: var(--panel-border); }
+.rp-choice input[type=checkbox] { border-radius: 2px; }
+
+/* Rolagem dentro das janelas: trilho azul-acinzentado, polegar claro com contorno */
+.rp-window .rp-rolagem::-webkit-scrollbar, .rp-janela-mdi .rp-rolagem::-webkit-scrollbar { width: 14px; height: 14px; background: var(--scroll-track); }
+.rp-window .rp-rolagem::-webkit-scrollbar-track, .rp-janela-mdi .rp-rolagem::-webkit-scrollbar-track { background: var(--scroll-track); border-left: 1px solid var(--grid-row-alt); }
+.rp-window .rp-rolagem::-webkit-scrollbar-thumb, .rp-janela-mdi .rp-rolagem::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, var(--field), var(--surface-form) 50%, var(--grid-header)); border: 1px solid var(--grid-rule); border-radius: var(--radius-sm); }
+.rp-window .rp-rolagem::-webkit-scrollbar-thumb:horizontal, .rp-janela-mdi .rp-rolagem::-webkit-scrollbar-thumb:horizontal {
+  background: linear-gradient(var(--field), var(--surface-form) 50%, var(--grid-header)); }
+.rp-window .rp-rolagem::-webkit-scrollbar-button, .rp-janela-mdi .rp-rolagem::-webkit-scrollbar-button { width: 14px; height: 14px; background: var(--scroll-track); }
+.rp-janela-mdi .rp-rolagem::-webkit-scrollbar-thumb:hover, .rp-window .rp-rolagem::-webkit-scrollbar-thumb:hover { background: linear-gradient(90deg, var(--field), var(--tab-top)); }
+.rp-window .rp-form, .rp-janela-mdi .rp-form { row-gap: 1px; grid-auto-rows: minmax(20px, auto); }
+
+/* Lista: a seta de abrir encosta no valor da coluna seguinte, sem fio entre elas, como na referência */
+.rp-grid th[aria-label="Abrir"], .rp-jlista .rp-grid td:nth-child(2) { width: 18px; padding-right: 0; border-right-color: transparent; }
+.rp-jlista .rp-grid td:nth-child(2) + td { padding-left: var(--space-1); }
+
+/* Botões: um pouco mais largos, fio claro na base; o padrão com brilho azul estreito e contorno mais escuro */
+.rp-window .rp-btn, .rp-janela-mdi .rp-btn { min-width: 95px; box-shadow: inset 0 1px 0 rgba(255,255,255,.85), inset 0 -1px 0 rgba(255,255,255,.55); }
+.rp-btn--default:not([disabled]) { border-color: var(--ink); background:
+  linear-gradient(90deg, var(--button-default-mark), transparent 11px),
+  linear-gradient(var(--button-top), var(--button-top) 45%, var(--button) 55%, var(--button)); }
