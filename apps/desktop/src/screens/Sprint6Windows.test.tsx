@@ -170,6 +170,35 @@ describe('Documento de faturamento pelo caixa', () => {
     expect(screen.getByRole('tab', { name: /Vínculos/ })).toHaveAttribute('aria-selected', 'true');
   });
 
+  it('resposta atrasada de uma consulta anterior não apaga o aviso do valor acima do a emitir', async () => {
+    let lenta = 0;
+    setTransport(async (req) => {
+      if (req.path === '/api/v1/invoicing/orders?status=A_EMITIR') return resposta(200, [pedidoCaixa()]);
+      if (req.path === '/api/v1/invoicing/orders/o-1?kind=PRODUTO&amountCents=1286175') {
+        return resposta(422, { code: 'DOCUMENT_EXCEEDS_RECEIVED', message: 'O valor passa do recebido de produto sem nota do pedido PV00001 (R$ 12.861,74).',
+          details: [{ field: 'amountCents', message: 'A emitir de produto: R$ 12.861,74.' }] });
+      }
+      // A segunda consulta da abertura (com o tipo) só responde depois da validação do valor digitado.
+      if (req.path === '/api/v1/invoicing/orders/o-1?kind=PRODUTO') {
+        lenta++;
+        await new Promise((r) => setTimeout(r, 600));
+      }
+      if (req.path.startsWith('/api/v1/invoicing/orders/o-1')) return resposta(200, propostaDa(req.path));
+      return naoAchou();
+    });
+    abrir(<DocumentWindow recordKey="novo-1:o-1" />);
+    const user = userEvent.setup();
+    await waitFor(() => expect(screen.getByLabelText('Valor da nota')).toHaveValue('12.861,74'));
+    await user.clear(screen.getByLabelText('Valor da nota'));
+    await user.type(screen.getByLabelText('Valor da nota'), '12.861,75');
+    await user.tab();
+    expect(await screen.findByText('A emitir de produto: R$ 12.861,74.')).toBeInTheDocument();
+    await new Promise((r) => setTimeout(r, 800));
+    expect(lenta).toBeGreaterThan(0);
+    expect(screen.getByText('A emitir de produto: R$ 12.861,74.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Valor da nota')).toHaveValue('12.861,75');
+  });
+
   it('aponta no valor da nota o que passa do a emitir do tipo e não deixa registrar pedido sem nada a emitir', async () => {
     setTransport(async (req) => {
       if (req.path === '/api/v1/invoicing/orders?status=A_EMITIR') return resposta(200, [pedidoCaixa()]);
