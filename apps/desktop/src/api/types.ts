@@ -624,7 +624,15 @@ export type BusinessDocument = {
   totalCents: string;
   linkedCents: string;
   unlinkedCents: string;
-  lines: { seq: number; description: string; kind: DocumentLineKind; amountCents: string }[];
+  lines: {
+    seq: number;
+    description: string;
+    kind: DocumentLineKind;
+    amountCents: string;
+    itemId?: string | null;
+    annex?: string;
+    annexSource?: 'CLASSIFICACAO' | 'EQUIPAMENTO' | 'PADRAO' | 'MIGRACAO';
+  }[];
   links: DocumentLink[];
   notes: string | null;
   operationNature: OperationNature | null;
@@ -638,6 +646,8 @@ export type BusinessDocument = {
   createdBy: string;
   updatedAt: string | null;
   updatedBy: string | null;
+  authorization?: 'AUTORIZADA' | 'PENDENTE';
+  authorizationProtocol?: string | null;
 };
 
 /** Faturado e a faturar de uma parcela, com as notas vinculadas. */
@@ -690,113 +700,319 @@ export type OrderInvoicing = {
   lines: { seq: number; description: string; kind: DocumentLineKind; amountCents: string }[];
 };
 
-// ───────────── Fiscal gerencial (Sprint 7) ─────────────
+// ───────────── Fiscal (Sprints 7 e 12) ─────────────
 
-export type TaxPeriodStatus = 'ABERTA' | 'FECHADA';
+export type TaxPeriodStatus = 'EM_APURACAO' | 'ENCERRADA';
+export type Annex = 'I' | 'II' | 'III' | 'IV' | 'V';
 
-/** Linha da lista Impostos gerenciais: receita das notas, última simulação, valor do contador e diferença. */
+/** Guia DAS (valor declarado no PGDAS-D) com o título a pagar. */
+export type TaxGuide = {
+  id: string;
+  seq: number;
+  documentNumber: string | null;
+  principalCents: string;
+  fineCents: string;
+  interestCents: string;
+  totalCents: string;
+  dueDate: string;
+  notes: string | null;
+  titleId: string | null;
+  titleCode: string | null;
+  titleStatus: string | null;
+  titleBalanceCents: string | null;
+  status: 'ABERTO' | 'PAGO' | 'SUBSTITUIDA';
+  paidOn: string | null;
+  createdAt: string;
+  createdBy: string;
+};
+
+/** Linha do Histórico de competências. */
 export type TaxPeriodSummary = {
   competence: string;
   status: TaxPeriodStatus;
   version: string;
-  revenueKnown: boolean;
-  productRevenueCents: string;
-  serviceRevenueCents: string;
   revenueCents: string;
-  documentCount: number;
-  simulationResult: 'CALCULADA' | 'NAO_CALCULAVEL' | null;
-  simulationCents: string | null;
-  confirmedCents: string | null;
-  dueDate: string | null;
-  differenceCents: string | null;
+  revenueKnown: boolean;
+  rbt12Cents: string | null;
+  effectiveRate: string | null;
+  calculatedCents: string | null;
+  calculationStored: boolean;
+  guide: TaxGuide | null;
 };
 
-export type TaxBracket = { upToCents: string; rate: string; deductionCents: string };
+export type TaxBracket = { upToCents: string; rate: string; deductionCents: string; shares: string[] };
+export type TaxAnnexTable = { annex: Annex; label: string; taxes: string[]; brackets: TaxBracket[] };
 
-/** Revisão dos parâmetros do Simples Nacional; alíquotas como fração ("0.078"). */
+/** Revisão dos parâmetros do Simples Nacional por anexo; alíquotas e repartição como fração ("0.078"). */
 export type TaxParameters = {
   id: string;
   revision: number;
   regime: 'SIMPLES_NACIONAL';
   validFrom: string;
-  productAnnex: string;
-  serviceAnnex: string;
-  brackets: Record<DocumentLineKind, TaxBracket[]>;
+  annexes: TaxAnnexTable[];
   source: string;
   notes: string | null;
   createdAt: string;
   createdBy: string;
 };
 
-/** Memória do cálculo gravada com a simulação. */
-export type TaxSimulationMemory = {
-  competence: string;
-  parameterRevision: number | null;
-  parameterValidFrom: string | null;
-  parameterSource: string | null;
-  rbt12Cents: string | null;
-  rbt12Origin: 'CALCULADO' | 'INFORMADO' | null;
-  rbt12Months: { competence: string; cents: string }[];
-  rbt12Missing: string[];
-  informedRbt12Cents: string | null;
-  productRevenueCents: string;
-  serviceRevenueCents: string;
-  reasons: string[];
-  warnings: string[];
-  kinds: {
-    kind: DocumentLineKind; annex: string; bracket: number; nominalRate: string; deductionCents: string; effectiveRate: string;
-    revenueCents: string; taxCents: string;
-  }[];
+/** Resultado de um anexo na memória do cálculo. */
+export type TaxAnnexResult = {
+  annex: Annex;
+  label: string;
+  bracket: number;
+  nominalRate: string;
+  deductionCents: string;
+  effectiveRate: string;
+  revenueCents: string;
+  taxCents: string;
+  issExcessCents: string;
+  taxes: { tax: string; share: string; cents: string }[];
 };
 
-export type TaxSimulation = {
-  id: string;
-  seq: number;
+/** Memória do cálculo (gravada com o cálculo ou da prévia). */
+export type TaxMemory = {
+  competence: string;
+  parameterRevision: number | null;
+  parameterSource?: string | null;
+  rbt12Cents: string | null;
+  rbt12Origin: 'CALCULADO' | 'INFORMADO' | null;
+  rbt12Months?: { competence: string; cents: string; origin: string }[];
+  rbt12Missing?: string[];
+  revenue?: Record<string, string>;
+  revenueCents?: string;
+  totalTaxCents?: string | null;
+  reasons: string[];
+  warnings: string[];
+  annexes?: TaxAnnexResult[];
+  taxes?: Record<string, string>;
+};
+
+export type TaxCalculation = {
+  source: 'GRAVADO' | 'PREVIA';
+  seq: number | null;
   result: 'CALCULADA' | 'NAO_CALCULAVEL';
   parameterRevision: number | null;
   rbt12Cents: string | null;
   rbt12Origin: 'CALCULADO' | 'INFORMADO' | null;
-  productRevenueCents: string;
-  serviceRevenueCents: string;
-  productTaxCents: string | null;
-  serviceTaxCents: string | null;
+  revenueCents: string;
   totalTaxCents: string | null;
-  memory: TaxSimulationMemory;
-  createdAt: string;
-  createdBy: string;
+  memory: TaxMemory;
+  createdAt: string | null;
+  createdBy: string | null;
 };
 
-/** Conferência do contador; `titleId` é o título a pagar do DAS que ela criou (Sprint 8), nulo quando o valor é zero. */
-export type TaxConfirmation = {
-  id: string; seq: number; amountCents: string; dueDate: string; notes: string | null; simulationSeq: number | null;
-  titleId: string | null; titleCode: string | null; titleStatus: TitleStatus | null; titleBalanceCents: string | null;
-  createdAt: string; createdBy: string;
+export type TaxDocumentPart = {
+  documentId: string;
+  code: string;
+  kind: 'PRODUTO' | 'SERVICO' | 'MISTO';
+  series: string;
+  number: string;
+  issueDate: string;
+  customerCode: string;
+  customerName: string;
+  orderCode: string | null;
+  description: string;
+  annex: Annex;
+  cents: string;
+  defaultLines: number;
+  authorization: 'AUTORIZADA' | 'PENDENTE';
+  version: string;
+};
+
+export type TaxStep = {
+  code: string;
+  name: string;
+  responsible: string;
+  automatic: boolean;
+  done: boolean;
+  doneAt: string | null;
+  doneBy: string | null;
+  detail: string | null;
 };
 
 export type TaxClosure = { action: 'FECHAMENTO' | 'REABERTURA'; reason: string | null; revenueCents: string | null; occurredAt: string; actor: string };
 
-/** Ficha da competência: receita, notas, RBT12, parâmetros vigentes, simulações, conferências e fechamentos. */
+/** Apuração da competência. */
 export type TaxPeriod = {
   competence: string;
   status: TaxPeriodStatus;
   version: string;
-  revenueKnown: boolean;
-  productRevenueCents: string;
-  serviceRevenueCents: string;
   revenueCents: string;
-  documents: {
-    id: string; code: string; kind: DocumentLineKind | 'MISTO'; series: string; number: string; issueDate: string; customerCode: string;
-    customerName: string; orderCode: string | null; productCents: string; serviceCents: string; totalCents: string;
-  }[];
+  revenueByAnnex: Record<string, string>;
+  documentCount: number;
+  documents: TaxDocumentPart[];
   rbt12: {
-    calculatedCents: string | null; informedCents: string | null; informedBy: string | null; informedNotes: string | null;
-    usedCents: string | null; usedOrigin: 'CALCULADO' | 'INFORMADO' | null; missing: string[];
+    calculatedCents: string | null;
+    informedCents: string | null;
+    informedBy: string | null;
+    informedNotes: string | null;
+    usedCents: string | null;
+    usedOrigin: 'CALCULADO' | 'INFORMADO' | null;
+    missing: string[];
+    months: { competence: string; cents: string; origin: 'HISTORICO' | 'NOTAS' }[];
   };
   parameters: TaxParameters | null;
-  simulations: TaxSimulation[];
-  confirmations: TaxConfirmation[];
+  calculation: TaxCalculation;
+  simulations: { id: string; seq: number; result: 'CALCULADA' | 'NAO_CALCULAVEL'; parameterRevision: number | null; rbt12Cents: string | null; rbt12Origin: string | null; revenueCents: string; totalTaxCents: string | null; createdAt: string; createdBy: string }[];
+  guides: TaxGuide[];
+  declarations: { id: string; seq: number; transmittedOn: string; receiptNumber: string; declaredRevenueCents: string; notes: string | null; createdAt: string; createdBy: string }[];
+  steps: TaxStep[];
   closures: TaxClosure[];
+  rbt12Months: { competence: string; revenueCents: string | null; rbt12Cents: string | null; bracket: number | null; effectiveRate: string | null }[];
+  dasDueDate: string;
   differenceCents: string | null;
+  yearToDateCents: string;
+  limits: { annualLimitCents: string; sublimitCents: string; tolerance: string; alertThreshold: string };
+  alerts: string[];
+};
+
+export type TaxObligationStatus = 'A_ENTREGAR' | 'EM_PREPARACAO' | 'EM_APURACAO' | 'ABERTO' | 'DECISAO_PENDENTE' | 'ENTREGUE' | 'PAGO';
+
+export type TaxObligation = {
+  id: string;
+  code: string;
+  templateCode: string | null;
+  name: string;
+  competence: string;
+  dueDate: string;
+  sphere: 'FEDERAL' | 'ESTADUAL' | 'MUNICIPAL';
+  kind: 'DECLARACAO' | 'GUIA';
+  responsible: string;
+  detail: string | null;
+  status: TaxObligationStatus;
+  deliveredOn: string | null;
+  receiptNumber: string | null;
+  notes: string | null;
+  daysToDue: number;
+  late: boolean;
+  dueThisWeek: boolean;
+  linked: boolean;
+  version: string;
+  updatedAt: string;
+  updatedBy: string;
+};
+
+export type FiscalDashboard = {
+  competence: string;
+  status: TaxPeriodStatus;
+  dasCents: string | null;
+  effectiveRate: string | null;
+  dasDueDate: string;
+  rbt12Cents: string | null;
+  bracket: number | null;
+  yearToDateCents: string;
+  sublimitCents: string;
+  limitCents: string;
+  nextWeek: TaxObligation[];
+  upcoming: TaxObligation[];
+  series: { competence: string; revenueCents: string; rbt12Cents: string | null; dasByAnnex: Record<string, string | null>; dasCents: string | null }[];
+  taxes: Record<string, string>;
+  guides: { competence: string; dueDate: string; totalCents: string | null; status: 'ABERTO' | 'PAGO' | 'SUBSTITUIDA' | 'SEM_GUIA'; paidOn: string | null }[];
+  stepsDone: number;
+  stepsTotal: number;
+  alerts: string[];
+  ibsCbsChoice: 'DENTRO_DAS' | 'FORA_DAS' | null;
+  daysToIbsDeadline: number;
+  period: TaxPeriod;
+};
+
+export type ItemFiscalStatus = 'SEM_CLASSIFICACAO' | 'REVISAR' | 'CLASSIFICADO';
+
+export type ItemFiscalProfile = {
+  itemId: string;
+  code: string;
+  description: string;
+  nature: 'MATERIAL' | 'SERVICO';
+  type: 'PRODUTO' | 'MATERIAL' | 'SERVICO';
+  category: string;
+  ncm: string | null;
+  serviceCode: string | null;
+  cfopInternal: string | null;
+  cfopInterstate: string | null;
+  csosn: string | null;
+  origin: string | null;
+  annex: Annex | 'INSUMO' | null;
+  activityId: string | null;
+  activityName: string | null;
+  nbs: string | null;
+  issRetention: 'SIM' | 'NAO' | 'CONFORME_MUNICIPIO' | null;
+  review: boolean;
+  reviewNote: string | null;
+  status: ItemFiscalStatus;
+  reasons: string[];
+  version: string;
+};
+
+export type TaxActivity = {
+  id: string;
+  position: number;
+  name: string;
+  framing: string;
+  annex: Annex;
+  annexLabel: string;
+  taxes: string;
+  status: 'ATIVO' | 'INATIVO';
+  items: number;
+  version: string;
+};
+
+export type TaxIbsCbsOption = {
+  id: string;
+  period: string;
+  choice: 'DENTRO_DAS' | 'FORA_DAS';
+  deadline: string;
+  withdrawalUntil: string;
+  notes: string | null;
+  createdAt: string;
+  createdBy: string;
+};
+
+export type TaxSetup = {
+  profile: {
+    regime: 'SIMPLES_NACIONAL';
+    optedSince: string | null;
+    cnaeMain: string | null;
+    cnaeSecondary: string | null;
+    revenueRecognition: 'COMPETENCIA';
+    nfseIssuer: string | null;
+    annualLimitCents: string;
+    sublimitCents: string;
+    tolerance: string;
+    alertThreshold: string;
+    version: string;
+    updatedAt: string;
+    updatedBy: string;
+  };
+  activities: TaxActivity[];
+  ibsCbs: { period: string; deadline: string; validFrom: string; validTo: string; withdrawalUntil: string; current: TaxIbsCbsOption | null; history: TaxIbsCbsOption[] };
+  revenueStart: string;
+};
+
+export type TaxRevenueHistory = {
+  competence: string;
+  annexICents: string;
+  annexIICents: string;
+  annexIIICents: string;
+  annexIVCents: string;
+  annexVCents: string;
+  totalCents: string;
+  source: 'DIGITADO' | 'ARQUIVO';
+  informedBy: string;
+  notes: string | null;
+  version: string;
+  updatedAt: string;
+  updatedBy: string;
+};
+
+export type TaxRevenueImport = {
+  fileName: string | null;
+  hash: string;
+  alreadyLoaded: boolean;
+  confirmed: boolean;
+  months: number;
+  lines: { line: number; competence: string; annexes: Record<string, string>; totalCents: string; problem: string | null; warning: string | null }[];
+  problems: string[];
 };
 
 // ───────────── Engenharia: modelos, BOM e custo planejado (Sprint 10) ─────────────

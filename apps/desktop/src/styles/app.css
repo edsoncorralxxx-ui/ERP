@@ -366,3 +366,32 @@ body { background: var(--ground); }
 .rp-crm-funil__bloco { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
 .rp-crm-funil__bloco .rp-grid { width: 100%; }
 .rp-crm-funil__titulo { margin: 0; font: var(--text-section); color: var(--ink-heading); text-decoration: underline; }
+
+/* Fiscal (Sprint 12): painel, apuração, obrigações, classificação e tabelas, no desenho do mock Renda+ ERP. */
+.rp-fiscal { display: flex; flex-direction: column; gap: var(--space-3); }
+.rp-fiscal__cab { grid-template-columns: 160px minmax(180px, 260px); align-content: start; }
+.rp-fiscal__dica { display: inline-flex; align-items: center; gap: var(--space-1); margin-left: var(--space-2); color: var(--ink-muted); }
+.rp-fiscal__painel { flex: 1; min-height: 0; overflow: auto; }
+.rp-fiscal__aba { display: flex; flex-direction: column; gap: var(--space-3); }
+.rp-fiscal__duas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-5); align-items: start; }
+.rp-fiscal__participacao { display: flex; align-items: center; gap: var(--space-2); min-width: 120px; }
+.rp-fiscal__participacao .rp-barra-celula { flex: none; max-width: 80px; }
+.rp-fiscal__msg { flex: none; }
+.rp-fiscal__guia, .rp-fiscal__parametros, .rp-fiscal__ficha-obrigacao, .rp-fiscal__ficha-item { grid-template-columns: 160px minmax(160px, 1fr); }
+.rp-fiscal__subtitulo { grid-column: 1 / -1; font: var(--text-label-strong); color: var(--ink-heading); }
+.rp-fiscal__nota { display: block; color: var(--ink-muted); font: var(--text-caption); margin: 0; }
+.rp-fiscal__progresso { display: flex; flex-direction: column; gap: var(--space-1); margin: var(--space-2) 0; }
+.rp-fiscal__corte { border-top: 0; }
+.rp-fiscal__alertas { min-width: 0; display: flex; flex-direction: column; }
+.rp-fiscal__alertas-corpo { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); }
+.rp-fiscal__dash { padding: 0; background: transparent; }
+.rp-fiscal__linha { grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); }
+.rp-fiscal__grade-cartao { max-height: 240px; overflow: auto; margin: var(--space-2) var(--space-3); }
+.rp-fiscal__barras { padding: var(--space-2) var(--space-3); }
+.rp-fiscal__lista-lado { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--space-4); }
+.rp-fiscal__lado { display: flex; flex-direction: column; gap: var(--space-3); min-height: 0; overflow: auto; }
+.rp-fiscal__lado .rp-grupo-corpo { display: flex; flex-direction: column; gap: var(--space-2); }
+.rp-fiscal__prazo-curto { color: var(--ink-danger); }
+.rp-fiscal__ponto { display: block; width: 4px; height: 4px; margin: 0 auto; border-radius: 50%; background: var(--gold); }
+.rp-fiscal__ponto--ok { background: var(--status-success); }
+.rp-fiscal__previa { max-height: 260px; overflow: auto; }

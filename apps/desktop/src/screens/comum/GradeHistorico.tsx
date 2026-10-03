@@ -21,6 +21,14 @@ const ROTULO: Record<string, string> = {
   nextActionDate: 'Próxima ação em', nextActionNote: 'Próxima ação', lead: 'Prospecção', interest: 'Interesse',
   potentialCents: 'Potencial', expectedClose: 'Previsão de fechamento', lossReason: 'Motivo da perda', lossNote: 'Detalhe da perda',
   wonOrder: 'Pedido ganho', competitors: 'Concorrentes', closePercent: 'Fechamento (%)', file: 'Arquivo', leads: 'Prospecções',
+  simulation: 'Cálculo', result: 'Resultado', informedRbt12: 'RBT12 informado', informedBy: 'Informado por', pgdasReceipt: 'Recibo do PGDAS-D',
+  transmittedOn: 'Transmitido em', declaredRevenue: 'Receita declarada', dasTotal: 'Total da guia DAS', documentNumber: 'Nº do documento',
+  difference: 'Diferença guia − cálculo', dasTitle: 'Título do DAS', step: 'Etapa', revenue: 'Receita', optedSince: 'Optante desde',
+  cnaeMain: 'CNAE principal', cnaeSecondary: 'CNAE secundário', nfseIssuer: 'Emissor de NFS-e', annualLimit: 'Limite anual',
+  sublimit: 'Sublimite', tolerance: 'Excesso tolerado', alertThreshold: 'Avisar ao atingir', ibsCbsOption: 'Opção IBS/CBS', framing: 'Enquadramento',
+  annex: 'Anexo', taxes: 'Tributos no DAS', cfopInternal: 'CFOP interno', cfopInterstate: 'CFOP interestadual', csosn: 'CSOSN', nbs: 'NBS',
+  issRetention: 'Retenção de ISS', review: 'Revisar', receiptNumber: 'Recibo', deliveredOn: 'Entregue em', responsible: 'Responsável',
+  detail: 'Detalhe', authorization: 'Autorização', authorizationProtocol: 'Protocolo', months: 'Meses',
 };
 const ACAO: Record<string, string> = {
   PARTNER_REGISTERED: 'Cadastro', PARTNER_UPDATED: 'Alteração', PARTNER_DEACTIVATED: 'Inativação', PARTNER_ROLE_ENABLED: 'Novo papel',
@@ -38,6 +46,12 @@ const ACAO: Record<string, string> = {
   LEAD_CONVERTED: 'Convertida em cliente', LEAD_CUSTOMER_LINKED: 'Ligada a cliente', OPPORTUNITY_OPENED: 'Abertura',
   OPPORTUNITY_UPDATED: 'Alteração', OPPORTUNITY_STAGE_CHANGED: 'Mudança de etapa', OPPORTUNITY_LOST: 'Perda', OPPORTUNITY_WON: 'Ganho',
   OPPORTUNITY_INTERACTION_RECORDED: 'Interação', OPPORTUNITY_CUSTOMER_LINKED: 'Cliente ligado', OPPORTUNITY_STAGE_CONFIGURED: 'Configuração da etapa',
+  TAX_SIMULATION_RECORDED: 'Cálculo do DAS', TAX_RBT12_INFORMED: 'RBT12 informado', TAX_DECLARATION_RECORDED: 'Transmissão do PGDAS-D',
+  TAX_DAS_GUIDE_ISSUED: 'Guia DAS', TAX_PERIOD_CONFIRMED: 'Conferência do contador', TAX_CLOSING_STEP_COMPLETED: 'Etapa concluída',
+  TAX_CLOSING_STEP_UNDONE: 'Etapa desfeita', TAX_PERIOD_CLOSED: 'Encerramento', TAX_PERIOD_REOPENED: 'Reabertura',
+  TAX_PROFILE_UPDATED: 'Dados da empresa no Simples', TAX_ACTIVITY_REGISTERED: 'Nova atividade', TAX_ACTIVITY_UPDATED: 'Atividade alterada',
+  TAX_IBS_CBS_OPTION_RECORDED: 'Opção IBS/CBS', TAX_OBLIGATION_REGISTERED: 'Cadastro', TAX_OBLIGATION_UPDATED: 'Alteração',
+  TAX_OBLIGATION_DELIVERED: 'Entrega', ITEM_FISCAL_PROFILE_UPDATED: 'Classificação fiscal', DOCUMENT_AUTHORIZATION_RECORDED: 'Autorização',
 };
 const VALOR: Record<string, string> = {
   ATIVO: 'Ativo', INATIVO: 'Inativo', MATERIAL: 'Produto', SERVICO: 'Serviço', ABERTA: 'Aberta', GANHA: 'Ganha', PERDIDA: 'Perdida',
@@ -48,6 +62,9 @@ const VALOR: Record<string, string> = {
   PROPOSTA: 'Proposta', NEGOCIACAO: 'Negociação', PRECO: 'Preço', PRAZO: 'Prazo', CONCORRENTE: 'Concorrente', SEM_ORCAMENTO: 'Sem orçamento',
   DESISTIU: 'Desistiu', OUTRO: 'Outro', INDICACAO: 'Indicação', FEIRA: 'Feira', SITE: 'Site', LISTA: 'Lista de prospecção',
   PROSPECCAO_ATIVA: 'Prospecção ativa', CLIENTE_ATUAL: 'Cliente atual',
+  AUTORIZADA: 'Autorizada', PENDENTE: 'Pendente', EM_APURACAO: 'Em apuração', ENCERRADA: 'Encerrada', ENTREGUE: 'Entregue', PAGO: 'Pago',
+  A_ENTREGAR: 'A entregar', EM_PREPARACAO: 'Em preparação', DECISAO_PENDENTE: 'Decisão pendente', CONFORME_MUNICIPIO: 'Conforme o município',
+  INSUMO: 'Insumo',
   VENDA_PRODUCAO: 'Venda de produção própria', VENDA_MERCADORIA: 'Venda de mercadoria', PRESTACAO_SERVICO: 'Prestação de serviço', REMESSA: 'Remessa',
 };
 

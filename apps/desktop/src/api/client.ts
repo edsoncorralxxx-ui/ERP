@@ -78,7 +78,8 @@ function newCorrelationId(): string {
     : `c-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
 }
 
-export type ApiResult<T> = { data: T; etag?: string; correlationId?: string };
+/** `text` é o corpo como veio (para respostas que não são JSON, como a agenda .ics). */
+export type ApiResult<T> = { data: T; etag?: string; correlationId?: string; text?: string };
 
 /** Avisado quando uma chamada autenticada recebe 401 (sessão expirada ou revogada): o app mostra o login por cima. */
 let onUnauthorized: (() => void) | null = null;
@@ -99,7 +100,7 @@ async function send<T>(method: string, path: string, body?: unknown, extraHeader
   const headerMap = Object.fromEntries(Object.entries(res.headers).map(([k, v]) => [k.toLowerCase(), v]));
   const parsed = res.body ? safeJson(res.body) : undefined;
   if (res.status >= 200 && res.status < 300) {
-    return { data: parsed as T, etag: headerMap['etag'], correlationId: headerMap['x-correlation-id'] ?? correlationId };
+    return { data: parsed as T, etag: headerMap['etag'], correlationId: headerMap['x-correlation-id'] ?? correlationId, text: res.body };
   }
   const err = (parsed ?? {}) as { code?: string; message?: string; details?: ApiErrorDetail[]; correlationId?: string };
   if (res.status === 401 && err.code === 'UNAUTHENTICATED') onUnauthorized?.();
