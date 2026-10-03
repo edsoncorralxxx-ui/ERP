@@ -956,7 +956,14 @@
         {"nome": "LinkDocumentToTitles", "permissao": "document.link", "idempotente": true, "eventos": ["DocumentLinkedToTitles"]},
         {"nome": "RemoveDocumentLink", "permissao": "document.link", "idempotente": true, "eventos": ["DocumentLinkRemoved"]},
         {"nome": "ClassifyDocument", "permissao": "document.classify", "idempotente": true, "eventos": ["DocumentClassified"]},
-        {"nome": "CancelDocument", "permissao": "document.cancel", "idempotente": true, "eventos": ["DocumentCancelled"]}
+        {"nome": "CancelDocument", "permissao": "document.cancel", "idempotente": true, "eventos": ["DocumentCancelled"]},
+        {
+          "nome": "RecordDocumentAuthorization",
+          "permissao": "document.classify",
+          "idempotente": true,
+          "eventos": ["DocumentAuthorizationRecorded"],
+          "observacao": "Sprint 12: situação de autorização da nota (Autorizada com protocolo ou Pendente); a pendente trava a etapa de autorização do fechamento fiscal"
+        }
       ],
       "indicadores": ["IND-003", "IND-005"],
       "analises": ["AN-018", "AN-019"],
@@ -1231,48 +1238,131 @@
     },
     {
       "id": "impostos",
-      "versao": 1,
-      "nome": "Impostos gerenciais",
+      "versao": 2,
+      "nome": "Fiscal — apuração do Simples, obrigações, classificação e parâmetros",
       "tipo": "documento",
       "modulo": "fiscal",
       "conceito": "COMPETENCIA_FISCAL",
-      "significado": "Receita documentada, RBT12 informado, simulação gerencial e valor do contador separados por competência",
+      "significado": "Painel fiscal; apuração do Simples Nacional por anexo com repartição por tributo; histórico de receita e RBT12; PGDAS-D e guia DAS; fechamento por etapas; obrigações fiscais e acessórias; classificação fiscal dos itens; tabelas e parâmetros do Simples (Sprint 12, mock Renda+ ERP)",
       "campos": [
         {"nome": "competencia", "tipo": "competencia", "obrigatorio": true, "origem": "usuario"},
-        {"nome": "receitaDocumentada", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "receitaPorAnexo", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": true, "origem": "derivado"},
+        {"nome": "historicoReceita", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "rbt12", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": false, "origem": "derivado"},
         {"nome": "rbt12Informado", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": false, "origem": "usuario"},
-        {"nome": "valorSimulado", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": false, "origem": "derivado"},
-        {"nome": "valorContador", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "dasCalculado", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": false, "origem": "derivado"},
+        {"nome": "reciboPgdas", "tipo": "texto", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "guiaDas", "tipo": "dinheiro", "unidade": "BRL", "obrigatorio": false, "origem": "usuario"},
         {"nome": "vencimento", "tipo": "data", "obrigatorio": false, "origem": "usuario"},
         {"nome": "revisaoParametros", "tipo": "inteiro", "obrigatorio": false, "origem": "referencia"},
-        {"nome": "situacao", "tipo": "enum", "valores": ["ABERTA", "FECHADA"], "obrigatorio": true, "origem": "sistema"}
-      ],
-      "classificacoes": ["tipoProdutoServico", "anexo"],
-      "validacoes": [
-        {"regra": "Sem parâmetros vigentes ou RBT12 conhecido, simulação é NAO_CALCULAVEL; mês desconhecido não vira zero"},
         {
-          "regra": "RBT12 = receita total dos 12 meses anteriores; calculado das notas só quando o Renda+ conhece os 12 meses, senão o informado",
+          "nome": "etapasFechamento",
+          "tipo": "lista",
+          "itens": "etapa, responsável, concluída em",
+          "obrigatorio": false,
+          "origem": "derivado"
+        },
+        {
+          "nome": "obrigacoes",
+          "tipo": "lista",
+          "itens": "obrigação, competência, vencimento, esfera, responsável, situação, recibo",
+          "obrigatorio": false,
+          "origem": "usuario"
+        },
+        {
+          "nome": "classificacaoFiscal",
+          "tipo": "lista",
+          "itens": "item, NCM ou LC 116, CFOP, CSOSN, origem, anexo, NBS, retenção de ISS",
+          "obrigatorio": false,
+          "origem": "usuario"
+        },
+        {"nome": "situacao", "tipo": "enum", "valores": ["EM_APURACAO", "ENCERRADA"], "obrigatorio": true, "origem": "sistema"}
+      ],
+      "classificacoes": ["anexo", "tributo", "esfera"],
+      "validacoes": [
+        {"regra": "Sem parâmetros vigentes ou RBT12 conhecido, o cálculo é NAO_CALCULAVEL; mês desconhecido não vira zero"},
+        {
+          "regra": "RBT12 = receita dos 12 meses anteriores: histórico antes do início do Renda+, notas depois; sem eles, o informado",
           "pendencia": "PD-013"
         },
-        {"regra": "Fechar exige conferência do contador; reabertura exige permissão e motivo"}
+        {
+          "regra": "DAS por anexo = receita do anexo × alíquota efetiva (HALF_EVEN); repartição por tributo com o centavo no de maior participação; ISS limitado a 5% da receita do anexo"
+        },
+        {"regra": "Encerrar exige as 7 etapas do fechamento; reabertura exige permissão e motivo"},
+        {"regra": "A guia DAS é o valor declarado; o cálculo do Renda+ não o substitui (ADR-011)"}
       ],
       "comandos": [
         {"nome": "ReviseTaxParameters", "permissao": "tax_parameter.admin", "idempotente": true, "eventos": ["TaxParameterRevised"]},
         {"nome": "SimulateTaxPeriod", "permissao": "tax_period.simulate", "idempotente": true, "eventos": ["TaxSimulationRecorded"]},
         {
-          "nome": "ConfirmTaxPeriod",
-          "permissao": "tax_period.confirm",
+          "nome": "RecordTaxDeclaration",
+          "permissao": "tax_period.declare",
           "idempotente": true,
-          "eventos": ["TaxPeriodConfirmed", "FinancialTitleCreated", "FinancialTitleCancelled"],
-          "observacao": "Cria o título a pagar do DAS (Sprint 8); reconferir cancela o DAS sem pagamento e cria outro; DAS com pagamento recusa (TAX_DAS_PAID)"
+          "eventos": ["TaxDeclarationRecorded"],
+          "observacao": "Registra a transmissão do PGDAS-D feita no portal"
         },
+        {
+          "nome": "IssueDasGuide",
+          "permissao": "tax_das.issue",
+          "idempotente": true,
+          "eventos": ["TaxDasGuideIssued", "FinancialTitleCreated", "FinancialTitleCancelled"],
+          "observacao": "Cria o título a pagar do DAS; nova guia cancela o anterior sem pagamento; DAS com pagamento recusa (TAX_DAS_PAID)"
+        },
+        {"nome": "CompleteClosingStep", "permissao": "tax_period.close_step", "idempotente": true, "eventos": ["TaxClosingStepCompleted"]},
         {"nome": "CloseTaxPeriod", "permissao": "tax_period.close", "idempotente": true, "eventos": ["TaxPeriodClosed"]},
-        {"nome": "ReopenTaxPeriod", "permissao": "tax_period.reopen", "idempotente": true, "eventos": ["TaxPeriodReopened"]}
+        {"nome": "ReopenTaxPeriod", "permissao": "tax_period.reopen", "idempotente": true, "eventos": ["TaxPeriodReopened"]},
+        {
+          "nome": "RecordTaxRevenueHistory",
+          "permissao": "tax_profile.admin",
+          "idempotente": true,
+          "eventos": ["TaxRevenueHistoryRecorded"],
+          "observacao": "Digitado ou carregado do arquivo (prévia e confirmação, hash)"
+        },
+        {"nome": "UpdateTaxProfile", "permissao": "tax_profile.admin", "idempotente": true, "eventos": ["TaxProfileUpdated"]},
+        {"nome": "RecordIbsCbsOption", "permissao": "tax_profile.admin", "idempotente": true, "eventos": ["TaxIbsCbsOptionRecorded"]},
+        {"nome": "RegisterTaxObligation", "permissao": "tax_obligation.update", "idempotente": true, "eventos": ["TaxObligationRegistered"]},
+        {"nome": "UpdateTaxObligation", "permissao": "tax_obligation.update", "idempotente": true, "eventos": ["TaxObligationUpdated"]},
+        {"nome": "DeliverTaxObligation", "permissao": "tax_obligation.update", "idempotente": true, "eventos": ["TaxObligationDelivered"]},
+        {
+          "nome": "UpdateItemFiscalProfile",
+          "permissao": "tax_classification.update",
+          "idempotente": true,
+          "eventos": ["ItemFiscalProfileUpdated", "ItemUpdated"],
+          "observacao": "NCM e item da LC 116 gravados no cadastro do item"
+        }
       ],
       "indicadores": ["IND-005"],
       "analises": ["AN-019"],
-      "acoes": ["Informar RBT12", "Simular", "Registrar conferência", "Anexar apuração externa", "Fechar", "Reabrir com motivo"],
-      "permissoes": ["tax.read", "tax_parameter.admin", "tax_period.simulate", "tax_period.confirm", "tax_period.close", "tax_period.reopen"]
+      "acoes": [
+        "Calcular",
+        "Transmitir PGDAS-D",
+        "Gerar DAS",
+        "Registrar pagamento",
+        "Concluir etapa",
+        "Encerrar",
+        "Reabrir com motivo",
+        "Imprimir memória",
+        "Carregar histórico",
+        "Nova obrigação",
+        "Entregue",
+        "Exportar agenda",
+        "Classificar item",
+        "Registrar opção IBS/CBS",
+        "Nova revisão dos parâmetros"
+      ],
+      "permissoes": [
+        "tax.read",
+        "tax_parameter.admin",
+        "tax_period.simulate",
+        "tax_period.declare",
+        "tax_das.issue",
+        "tax_period.close_step",
+        "tax_period.close",
+        "tax_period.reopen",
+        "tax_obligation.update",
+        "tax_classification.update",
+        "tax_profile.admin"
+      ]
     },
     {
       "id": "assistencia",

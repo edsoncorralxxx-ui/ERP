@@ -77,7 +77,7 @@ tags:
   - name: Transferências
   - name: Fluxo de caixa
   - name: Documentos e faturamento
-  - name: Impostos gerenciais
+  - name: Fiscal
   - name: Modelos de equipamento
   - name: BOM
   - name: BOM do equipamento
@@ -1286,6 +1286,30 @@ paths:
         '412': { $ref: '#/components/responses/Erro' }
         '422': { $ref: '#/components/responses/Erro' }
 
+  /api/v1/documents/{id}/authorization:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    put:
+      tags: [Documentos e faturamento]
+      summary: >-
+        Situação de autorização da nota (document.classify): AUTORIZADA (com o protocolo) ou PENDENTE. Nota pendente continua na
+        receita e trava a etapa "Autorizar as notas pendentes" do fechamento; evento DocumentAuthorizationRecorded
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [AUTORIZADA, PENDENTE] }
+                protocol: { type: [string, 'null'], maxLength: 60 }
+      responses:
+        '200': { description: Documento, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/BusinessDocument' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
   /api/v1/documents/{id}/history:
     parameters: [{ $ref: '#/components/parameters/Id' }]
     get:
@@ -1334,12 +1358,25 @@ paths:
         '200': { description: Pedido, content: { application/json: { schema: { $ref: '#/components/schemas/OrderInvoicing' } } } }
         '422': { $ref: '#/components/responses/Erro' }
 
+  /api/v1/fiscal/dashboard:
+    get:
+      tags: [Fiscal]
+      summary: >-
+        Painel fiscal da competência (tax.read; padrão: o mês anterior ao corrente): DAS, RBT12, receita do ano × sublimite,
+        obrigações dos próximos 7 dias, séries de 12 competências (RBT12, DAS por anexo — prévia quando não há cálculo gravado),
+        DAS por tributo, últimas guias, etapas do fechamento e alertas por regra
+      parameters:
+        - { name: competence, in: query, required: false, schema: { type: string, example: '2026-09' } }
+      responses:
+        '200': { description: Painel, content: { application/json: { schema: { $ref: '#/components/schemas/FiscalDashboard' } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
   /api/v1/tax-periods:
     get:
-      tags: [Impostos gerenciais]
+      tags: [Fiscal]
       summary: >-
-        Competências do ano, de janeiro a dezembro (tax.read): receita de produto e de serviço das notas ativas, última simulação,
-        último valor do contador e a diferença (contador − simulação)
+        Histórico de competências do ano (tax.read), da mais recente para a mais antiga, até o mês corrente: receita, RBT12,
+        alíquota efetiva, DAS calculado (gravado ou prévia) e a guia mais recente
       parameters:
         - { name: year, in: query, required: false, schema: { type: integer, example: 2026 }, description: 'Padrão: o ano corrente' }
       responses:
@@ -1348,8 +1385,10 @@ paths:
   /api/v1/tax-periods/{competence}:
     parameters: [{ $ref: '#/components/parameters/Competence' }]
     get:
-      tags: [Impostos gerenciais]
-      summary: Ficha da competência (tax.read) — receita, notas, RBT12, parâmetros vigentes, simulações, conferências e fechamentos
+      tags: [Fiscal]
+      summary: >-
+        Apuração da competência (tax.read): receita por anexo com as notas, RBT12 mês a mês, cálculo (o último gravado ou a
+        prévia), guias, transmissões do PGDAS-D, etapas do fechamento, fechamentos e alertas
       responses:
         '200': { description: Competência, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/TaxPeriod' } } } }
         '422': { $ref: '#/components/responses/Erro' }
@@ -1357,8 +1396,8 @@ paths:
   /api/v1/tax-periods/{competence}/rbt12:
     parameters: [{ $ref: '#/components/parameters/Competence' }]
     put:
-      tags: [Impostos gerenciais]
-      summary: Informa o RBT12 que o contador usou no PGDAS-D (tax_period.confirm); nova versão da competência
+      tags: [Fiscal]
+      summary: Informa o RBT12 da competência (tax_period.declare) — reserva para mês sem histórico de receita; nova versão da competência
       parameters: [{ $ref: '#/components/parameters/IfMatch' }]
       requestBody:
         required: true
@@ -1371,51 +1410,92 @@ paths:
   /api/v1/tax-periods/{competence}/simulations:
     parameters: [{ $ref: '#/components/parameters/Competence' }]
     post:
-      tags: [Impostos gerenciais]
+      tags: [Fiscal]
       summary: >-
-        Simula a competência — RecordTaxSimulation (tax_period.simulate), com os parâmetros vigentes e o RBT12 calculado (12 meses
-        conhecidos) ou informado; sem eles, resultado NAO_CALCULAVEL com o motivo. Cada simulação é preservada; evento TaxSimulationRecorded
+        Calcula o DAS — RecordTaxSimulation (tax_period.simulate): por anexo e por tributo, com os parâmetros vigentes e o RBT12
+        (histórico + notas, ou o informado); sem eles, NAO_CALCULAVEL com o motivo. ISS limitado a 5% da receita do anexo;
+        centavo do arredondamento no tributo de maior participação. Cada cálculo é preservado; evento TaxSimulationRecorded
       parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
       responses:
-        '201': { description: Competência com a nova simulação, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/TaxPeriod' } } } }
+        '201': { description: Competência com o novo cálculo, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/TaxPeriod' } } } }
         '422': { $ref: '#/components/responses/Erro' }
 
-  /api/v1/tax-periods/{competence}/confirmations:
+  /api/v1/tax-periods/{competence}/declarations:
     parameters: [{ $ref: '#/components/parameters/Competence' }]
     post:
-      tags: [Impostos gerenciais]
+      tags: [Fiscal]
       summary: >-
-        Registra o valor apurado pelo contador e o vencimento — ConfirmTaxPeriod (tax_period.confirm); a anterior fica no histórico.
-        Na mesma transação cria o título a pagar do DAS (valor, vencimento e competência da conferência; beneficiário Receita
-        Federal — DAS; categoria IMPOSTOS_SIMPLES). Reconferir cancela o DAS anterior sem pagamento e cria outro; DAS com pagamento:
-        422 TAX_DAS_PAID; valor zero não cria título. Evento TaxPeriodConfirmed com o titleId
+        Registra a transmissão do PGDAS-D feita no portal (tax_period.declare): data (não futura), recibo e receita declarada
+        (padrão: a receita da competência). A obrigação PGDAS-D passa a Entregue; evento TaxDeclarationRecorded
       parameters: [{ $ref: '#/components/parameters/IfMatch' }]
       requestBody:
         required: true
-        content: { application/json: { schema: { $ref: '#/components/schemas/TaxConfirmationRequest' } } }
+        content: { application/json: { schema: { $ref: '#/components/schemas/TaxDeclarationRequest' } } }
       responses:
         '201': { description: Competência, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/TaxPeriod' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/tax-periods/{competence}/das-guides:
+    parameters: [{ $ref: '#/components/parameters/Competence' }]
+    post:
+      tags: [Fiscal]
+      summary: >-
+        Gera a guia DAS (tax_das.issue): número do documento, vencimento, principal (o declarado), multa e juros. Na mesma
+        transação cria o título a pagar do total (beneficiário Receita Federal — DAS; categoria IMPOSTOS_SIMPLES). Gerar de novo
+        cancela o título anterior sem pagamento; DAS com pagamento: 422 TAX_DAS_PAID; total zero não cria título. Evento TaxDasGuideIssued
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/TaxDasGuideRequest' } } }
+      responses:
+        '201': { description: Competência, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/TaxPeriod' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/tax-periods/{competence}/closing-steps/{step}:
+    parameters:
+      - { $ref: '#/components/parameters/Competence' }
+      - { name: step, in: path, required: true, schema: { type: string, enum: [NOTAS_CONFERIDAS, CANCELAMENTOS_CONFERIDOS, RBT12_CONFERIDO] } }
+    put:
+      tags: [Fiscal]
+      summary: >-
+        Conclui ou desfaz uma etapa manual do fechamento (tax_period.close_step); as etapas automáticas seguem os dados (422).
+        Evento TaxClosingStepCompleted
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                done: { type: boolean, default: true }
+                notes: { type: [string, 'null'], maxLength: 500 }
+      responses:
+        '200': { description: Competência, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/TaxPeriod' } } } }
         '412': { $ref: '#/components/responses/Erro' }
         '422': { $ref: '#/components/responses/Erro' }
 
   /api/v1/tax-periods/{competence}/closures:
     parameters: [{ $ref: '#/components/parameters/Competence' }]
     post:
-      tags: [Impostos gerenciais]
+      tags: [Fiscal]
       summary: >-
-        Fecha a competência conferida (tax_period.close): congela receita, simulação e conferência; notas dessa competência não são
-        registradas nem canceladas (TAX_PERIOD_CLOSED). Sem conferência: 422 TAX_PERIOD_INVALID. Fechar de novo devolve a mesma; evento TaxPeriodClosed
+        Encerra a competência (tax_period.close) com as 7 etapas concluídas: congela receita, cálculo e guia; notas dessa
+        competência não são registradas nem canceladas (TAX_PERIOD_CLOSED). Etapa pendente: 422 TAX_PERIOD_INVALID. Encerrar de
+        novo devolve a mesma; evento TaxPeriodClosed
       parameters: [{ $ref: '#/components/parameters/IfMatch' }]
       responses:
-        '200': { description: Competência fechada, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/TaxPeriod' } } } }
+        '200': { description: Competência encerrada, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/TaxPeriod' } } } }
         '412': { $ref: '#/components/responses/Erro' }
         '422': { $ref: '#/components/responses/Erro' }
 
   /api/v1/tax-periods/{competence}/reopenings:
     parameters: [{ $ref: '#/components/parameters/Competence' }]
     post:
-      tags: [Impostos gerenciais]
-      summary: Reabre a competência fechada, com motivo (tax_period.reopen); competência aberta → 409; evento TaxPeriodReopened
+      tags: [Fiscal]
+      summary: Reabre a competência encerrada, com motivo (tax_period.reopen); não encerrada → 409; evento TaxPeriodReopened
       parameters: [{ $ref: '#/components/parameters/IfMatch' }]
       requestBody:
         required: true
@@ -1429,22 +1509,22 @@ paths:
   /api/v1/tax-periods/{competence}/history:
     parameters: [{ $ref: '#/components/parameters/Competence' }]
     get:
-      tags: [Impostos gerenciais]
+      tags: [Fiscal]
       summary: Trilha da competência (tax.read)
       responses:
         '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
 
   /api/v1/tax-parameters:
     get:
-      tags: [Impostos gerenciais]
-      summary: Revisões dos parâmetros do Simples Nacional, da mais recente para a mais antiga (tax.read)
+      tags: [Fiscal]
+      summary: Revisões dos parâmetros do Simples Nacional por anexo, da mais recente para a mais antiga (tax.read)
       responses:
         '200': { description: Revisões, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/TaxParameters' } } } } }
     post:
-      tags: [Impostos gerenciais]
+      tags: [Fiscal]
       summary: >-
-        Nova revisão dos parâmetros, com vigência (tax_parameter.admin). Faixas crescentes por tipo, alíquota entre 0 e 1; a revisão
-        gravada não muda. Inválida: 422 TAX_PARAMETER_INVALID; evento TaxParameterRevised
+        Nova revisão dos parâmetros, com vigência (tax_parameter.admin): por anexo (I a V), tributos e faixas com a repartição
+        (somando 100%). A revisão gravada não muda. Inválida: 422 TAX_PARAMETER_INVALID; evento TaxParameterRevised
       parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody:
         required: true
@@ -1452,6 +1532,251 @@ paths:
       responses:
         '201': { description: Revisão criada, content: { application/json: { schema: { $ref: '#/components/schemas/TaxParameters' } } } }
         '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/tax-setup:
+    get:
+      tags: [Fiscal]
+      summary: Dados da empresa no Simples, limites, atividades e anexos (com quantos itens) e a opção IBS/CBS (tax.read)
+      responses:
+        '200': { description: Parâmetros da empresa, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/TaxSetup' } } } }
+
+  /api/v1/tax-setup/profile:
+    put:
+      tags: [Fiscal]
+      summary: Altera os dados da empresa no Simples e os limites (tax_profile.admin); evento TaxProfileUpdated
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/TaxProfileRequest' } } }
+      responses:
+        '200': { description: Parâmetros da empresa, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/TaxSetup' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/tax-setup/history:
+    get:
+      tags: [Fiscal]
+      summary: Histórico de alterações dos dados da empresa no Simples (tax.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/tax-activities:
+    post:
+      tags: [Fiscal]
+      summary: Nova atividade com o enquadramento e o anexo (tax_profile.admin); evento TaxProfileUpdated
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/TaxActivityRequest' } } }
+      responses:
+        '201': { description: Parâmetros da empresa, content: { application/json: { schema: { $ref: '#/components/schemas/TaxSetup' } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/tax-activities/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    put:
+      tags: [Fiscal]
+      summary: Altera ou inativa a atividade (tax_profile.admin); evento TaxProfileUpdated
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/TaxActivityRequest' } } }
+      responses:
+        '200': { description: Parâmetros da empresa, content: { application/json: { schema: { $ref: '#/components/schemas/TaxSetup' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/tax-ibs-cbs-options:
+    post:
+      tags: [Fiscal]
+      summary: >-
+        Registra a opção por IBS e CBS do 1º semestre de 2027 (tax_profile.admin): dentro ou fora do DAS. A obrigação do prazo
+        passa a Entregue; evento TaxIbsCbsOptionRecorded
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [choice]
+              properties:
+                choice: { type: string, enum: [DENTRO_DAS, FORA_DAS] }
+                notes: { type: [string, 'null'], maxLength: 500 }
+      responses:
+        '201': { description: Parâmetros da empresa, content: { application/json: { schema: { $ref: '#/components/schemas/TaxSetup' } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/tax-revenue-history:
+    get:
+      tags: [Fiscal]
+      summary: Histórico de receita das competências anteriores ao Renda+, por anexo, da mais recente para a mais antiga (tax.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/TaxRevenueHistory' } } } } }
+
+  /api/v1/tax-revenue-history/{competence}:
+    parameters: [{ $ref: '#/components/parameters/Competence' }]
+    put:
+      tags: [Fiscal]
+      summary: >-
+        Digita a receita de uma competência anterior ao início da receita no Renda+ (tax_profile.admin; If-Match 0 quando ainda
+        não há); evento TaxRevenueHistoryRecorded
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/TaxRevenueHistoryRequest' } } }
+      responses:
+        '200': { description: Competência do histórico, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/TaxRevenueHistory' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/tax-revenue-history/imports:
+    post:
+      tags: [Fiscal]
+      summary: >-
+        Carga do histórico pelo arquivo JSON (tax_profile.admin): sem confirm, a prévia com os problemas de cada linha; com confirm,
+        grava as linhas sem problema. O mesmo conteúdo (hash) não carrega duas vezes; evento TaxRevenueHistoryRecorded
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                fileName: { type: [string, 'null'] }
+                content: { type: string, description: 'Conteúdo do arquivo com "historicoReceita" (exemplos/fiscal-exemplo.json)' }
+                confirm: { type: boolean, default: false }
+      responses:
+        '200': { description: Prévia, content: { application/json: { schema: { $ref: '#/components/schemas/TaxRevenueImport' } } } }
+        '201': { description: Carga confirmada, content: { application/json: { schema: { $ref: '#/components/schemas/TaxRevenueImport' } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/tax-obligations:
+    get:
+      tags: [Fiscal]
+      summary: >-
+        Obrigações fiscais e acessórias pelo vencimento (tax.read), com as ocorrências dos modelos recorrentes garantidas até o
+        mês corrente; PGDAS-D e DAS seguem a apuração; prazo, atrasada e vence esta semana calculados
+      responses:
+        '200': { description: Obrigações, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/TaxObligation' } } } } }
+    post:
+      tags: [Fiscal]
+      summary: Nova obrigação avulsa (tax_obligation.update); evento TaxObligationRegistered
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/TaxObligationRequest' } } }
+      responses:
+        '201': { description: Obrigação, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/TaxObligation' } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/tax-obligations/calendar.ics:
+    get:
+      tags: [Fiscal]
+      summary: Agenda das obrigações pendentes em iCalendar (tax.read)
+      responses:
+        '200': { description: Agenda, content: { text/calendar: { schema: { type: string } } } }
+
+  /api/v1/tax-obligations/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Fiscal]
+      summary: Obrigação (tax.read)
+      responses:
+        '200': { description: Obrigação, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/TaxObligation' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Fiscal]
+      summary: Altera vencimento, responsável, detalhe ou a situação de trabalho (tax_obligation.update); evento TaxObligationUpdated
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dueDate: { type: [string, 'null'], format: date }
+                responsible: { type: [string, 'null'] }
+                detail: { type: [string, 'null'] }
+                status: { type: [string, 'null'], enum: [A_ENTREGAR, EM_PREPARACAO, EM_APURACAO, ABERTO, DECISAO_PENDENTE, null] }
+      responses:
+        '200': { description: Obrigação, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/TaxObligation' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/tax-obligations/{id}/deliveries:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Fiscal]
+      summary: >-
+        Entrega a obrigação (tax_obligation.update): Entregue (declaração) ou Pago (guia), com data (não futura) e recibo. PGDAS-D
+        e DAS seguem a apuração: 422 TAX_OBLIGATION_LINKED. Evento TaxObligationDelivered
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deliveredOn: { type: [string, 'null'], format: date }
+                receiptNumber: { type: [string, 'null'], maxLength: 60 }
+                notes: { type: [string, 'null'], maxLength: 500 }
+      responses:
+        '200': { description: Obrigação, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/TaxObligation' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/tax-obligations/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Fiscal]
+      summary: Trilha da obrigação (tax.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/fiscal-classification:
+    get:
+      tags: [Fiscal]
+      summary: Itens ativos com o perfil fiscal, a situação (SEM_CLASSIFICACAO, REVISAR, CLASSIFICADO) e o que falta (tax.read)
+      responses:
+        '200': { description: Itens, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ItemFiscalProfile' } } } } }
+
+  /api/v1/fiscal-classification/{itemId}:
+    parameters: [{ name: itemId, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      tags: [Fiscal]
+      summary: Classificação fiscal do item (tax.read); ETag = versão do perfil (0 quando nunca classificado)
+      responses:
+        '200': { description: Item, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/ItemFiscalProfile' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Fiscal]
+      summary: >-
+        Grava o perfil fiscal (tax_classification.update) e o NCM ou o item da LC 116 no cadastro do item (item.update). O anexo
+        vai para as linhas das notas registradas depois; evento ItemFiscalProfileUpdated
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ItemFiscalProfileRequest' } } }
+      responses:
+        '200': { description: Item, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/ItemFiscalProfile' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/fiscal-classification/{itemId}/history:
+    parameters: [{ name: itemId, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      tags: [Fiscal]
+      summary: Trilha da classificação fiscal do item (tax.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
 
   /api/v1/equipment-models:
     get:
@@ -3085,6 +3410,11 @@ components:
               description: { type: string }
               kind: { type: string, enum: [PRODUTO, SERVICO] }
               amountCents: { $ref: '#/components/schemas/Cents' }
+              itemId: { type: [string, 'null'], format: uuid }
+              annex: { type: string, enum: [I, II, III, IV, V], description: 'Anexo do Simples no registro (Sprint 12)' }
+              annexSource: { type: string, enum: [CLASSIFICACAO, EQUIPAMENTO, PADRAO, MIGRACAO] }
+        authorization: { type: string, enum: [AUTORIZADA, PENDENTE], description: 'Situação de autorização da nota (Sprint 12)' }
+        authorizationProtocol: { type: [string, 'null'] }
         links:
           type: array
           description: Vínculos ativos e desfeitos (na lista, as linhas vêm vazias)
@@ -3193,28 +3523,47 @@ components:
         receivedCents: { $ref: '#/components/schemas/Cents' }
         invoicedCents: { $ref: '#/components/schemas/Cents' }
         toIssueCents: { $ref: '#/components/schemas/Cents' }
+    TaxGuide:
+      type: object
+      description: Guia DAS (o valor declarado no PGDAS-D) com o título a pagar
+      properties:
+        id: { type: string, format: uuid }
+        seq: { type: integer }
+        documentNumber: { type: [string, 'null'] }
+        principalCents: { $ref: '#/components/schemas/Cents' }
+        fineCents: { $ref: '#/components/schemas/Cents' }
+        interestCents: { $ref: '#/components/schemas/Cents' }
+        totalCents: { $ref: '#/components/schemas/Cents' }
+        dueDate: { type: string, format: date }
+        notes: { type: [string, 'null'] }
+        titleId: { type: [string, 'null'], format: uuid }
+        titleCode: { type: [string, 'null'] }
+        titleStatus: { type: [string, 'null'] }
+        titleBalanceCents: { type: [string, 'null'] }
+        status: { type: string, enum: [ABERTO, PAGO, SUBSTITUIDA] }
+        paidOn: { type: [string, 'null'], format: date }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
     TaxPeriodSummary:
       type: object
       properties:
         competence: { type: string, example: '2026-09' }
-        status: { type: string, enum: [ABERTA, FECHADA] }
+        status: { type: string, enum: [EM_APURACAO, ENCERRADA] }
         version: { type: string }
-        revenueKnown: { type: boolean, description: 'Falso antes do início da receita no Renda+' }
-        productRevenueCents: { $ref: '#/components/schemas/Cents' }
-        serviceRevenueCents: { $ref: '#/components/schemas/Cents' }
         revenueCents: { $ref: '#/components/schemas/Cents' }
-        documentCount: { type: integer }
-        simulationResult: { type: [string, 'null'], enum: [CALCULADA, NAO_CALCULAVEL, null] }
-        simulationCents: { type: [string, 'null'] }
-        confirmedCents: { type: [string, 'null'] }
-        dueDate: { type: [string, 'null'], format: date }
-        differenceCents: { type: [string, 'null'], description: 'Contador − simulação' }
+        revenueKnown: { type: boolean }
+        rbt12Cents: { type: [string, 'null'] }
+        effectiveRate: { type: [string, 'null'], description: 'DAS ÷ receita, fração' }
+        calculatedCents: { type: [string, 'null'] }
+        calculationStored: { type: boolean, description: 'Falso quando o valor é a prévia' }
+        guide: { oneOf: [{ $ref: '#/components/schemas/TaxGuide' }, { type: 'null' }] }
     TaxBracket:
       type: object
       properties:
         upToCents: { $ref: '#/components/schemas/Cents' }
         rate: { type: string, example: '0.078', description: 'Alíquota nominal como fração' }
         deductionCents: { $ref: '#/components/schemas/Cents' }
+        shares: { type: array, items: { type: string }, description: 'Repartição da faixa (frações, na ordem dos tributos)' }
     TaxParameters:
       type: object
       properties:
@@ -3222,29 +3571,32 @@ components:
         revision: { type: integer }
         regime: { type: string, enum: [SIMPLES_NACIONAL] }
         validFrom: { type: string, example: '2026-09' }
-        productAnnex: { type: string, example: II }
-        serviceAnnex: { type: string, example: III }
-        brackets:
-          type: object
-          properties:
-            PRODUTO: { type: array, items: { $ref: '#/components/schemas/TaxBracket' } }
-            SERVICO: { type: array, items: { $ref: '#/components/schemas/TaxBracket' } }
+        annexes:
+          type: array
+          items:
+            type: object
+            properties:
+              annex: { type: string, enum: [I, II, III, IV, V] }
+              label: { type: string }
+              taxes: { type: array, items: { type: string } }
+              brackets: { type: array, items: { $ref: '#/components/schemas/TaxBracket' } }
         source: { type: string }
         notes: { type: [string, 'null'] }
         createdAt: { type: string, format: date-time }
         createdBy: { type: string }
     TaxParametersRequest:
       type: object
-      required: [validFrom, productAnnex, serviceAnnex, brackets, source]
+      required: [validFrom, annexes, source]
       properties:
         validFrom: { type: string, example: '2027-01' }
-        productAnnex: { type: string, maxLength: 10 }
-        serviceAnnex: { type: string, maxLength: 10 }
-        brackets:
+        annexes:
           type: object
-          properties:
-            PRODUTO: { type: array, items: { $ref: '#/components/schemas/TaxBracket' } }
-            SERVICO: { type: array, items: { $ref: '#/components/schemas/TaxBracket' } }
+          description: 'Por anexo (I a V): tributos e faixas'
+          additionalProperties:
+            type: object
+            properties:
+              taxes: { type: array, items: { type: string } }
+              brackets: { type: array, items: { $ref: '#/components/schemas/TaxBracket' } }
         source: { type: string, maxLength: 300, description: 'De onde vieram as tabelas' }
         notes: { type: [string, 'null'], maxLength: 500 }
     TaxRbt12Request:
@@ -3254,29 +3606,40 @@ components:
         amountCents: { $ref: '#/components/schemas/Cents' }
         informedBy: { type: string, maxLength: 100 }
         notes: { type: [string, 'null'], maxLength: 500 }
-    TaxConfirmationRequest:
+    TaxDeclarationRequest:
       type: object
-      required: [amountCents, dueDate]
+      required: [transmittedOn, receiptNumber]
       properties:
-        amountCents: { $ref: '#/components/schemas/Cents' }
+        transmittedOn: { type: string, format: date }
+        receiptNumber: { type: string, maxLength: 40 }
+        declaredRevenueCents: { type: [string, 'null'] }
+        notes: { type: [string, 'null'], maxLength: 500 }
+    TaxDasGuideRequest:
+      type: object
+      required: [dueDate, principalCents]
+      properties:
+        documentNumber: { type: [string, 'null'], maxLength: 30 }
         dueDate: { type: string, format: date }
+        principalCents: { $ref: '#/components/schemas/Cents' }
+        fineCents: { type: [string, 'null'] }
+        interestCents: { type: [string, 'null'] }
         notes: { type: [string, 'null'], maxLength: 500 }
     TaxPeriod:
       type: object
       properties:
         competence: { type: string }
-        status: { type: string, enum: [ABERTA, FECHADA] }
+        status: { type: string, enum: [EM_APURACAO, ENCERRADA] }
         version: { type: string, description: '"0" enquanto nada foi feito na competência' }
-        revenueKnown: { type: boolean }
-        productRevenueCents: { $ref: '#/components/schemas/Cents' }
-        serviceRevenueCents: { $ref: '#/components/schemas/Cents' }
         revenueCents: { $ref: '#/components/schemas/Cents' }
+        revenueByAnnex: { type: object, additionalProperties: { type: string } }
+        documentCount: { type: integer }
         documents:
           type: array
+          description: Uma linha por nota e anexo
           items:
             type: object
             properties:
-              id: { type: string, format: uuid }
+              documentId: { type: string, format: uuid }
               code: { type: string }
               kind: { type: string, enum: [PRODUTO, SERVICO, MISTO] }
               series: { type: string }
@@ -3285,68 +3648,226 @@ components:
               customerCode: { type: string }
               customerName: { type: string }
               orderCode: { type: [string, 'null'] }
-              productCents: { $ref: '#/components/schemas/Cents' }
-              serviceCents: { $ref: '#/components/schemas/Cents' }
-              totalCents: { $ref: '#/components/schemas/Cents' }
+              description: { type: string }
+              annex: { type: string }
+              cents: { $ref: '#/components/schemas/Cents' }
+              defaultLines: { type: integer, description: 'Linhas com o anexo padrão (item sem classificação)' }
+              authorization: { type: string, enum: [AUTORIZADA, PENDENTE] }
+              version: { type: string }
         rbt12:
           type: object
           properties:
-            calculatedCents: { type: [string, 'null'], description: 'Só quando o Renda+ conhece os 12 meses anteriores' }
+            calculatedCents: { type: [string, 'null'] }
             informedCents: { type: [string, 'null'] }
             informedBy: { type: [string, 'null'] }
             informedNotes: { type: [string, 'null'] }
             usedCents: { type: [string, 'null'] }
             usedOrigin: { type: [string, 'null'], enum: [CALCULADO, INFORMADO, null] }
-            missing: { type: array, items: { type: string }, description: 'Meses que o Renda+ não conhece' }
+            missing: { type: array, items: { type: string } }
+            months: { type: array, items: { type: object, properties: { competence: { type: string }, cents: { type: string }, origin: { type: string, enum: [HISTORICO, NOTAS] } } } }
         parameters: { oneOf: [{ $ref: '#/components/schemas/TaxParameters' }, { type: 'null' }] }
-        simulations:
-          type: array
-          description: Da mais recente para a mais antiga
-          items:
-            type: object
-            properties:
-              id: { type: string, format: uuid }
-              seq: { type: integer }
-              result: { type: string, enum: [CALCULADA, NAO_CALCULAVEL] }
-              parameterRevision: { type: [integer, 'null'] }
-              rbt12Cents: { type: [string, 'null'] }
-              rbt12Origin: { type: [string, 'null'] }
-              productRevenueCents: { $ref: '#/components/schemas/Cents' }
-              serviceRevenueCents: { $ref: '#/components/schemas/Cents' }
-              productTaxCents: { type: [string, 'null'] }
-              serviceTaxCents: { type: [string, 'null'] }
-              totalTaxCents: { type: [string, 'null'] }
-              memory: { type: object, description: 'RBT12 (origem e meses), revisão, faixa, alíquota nominal e efetiva por tipo, motivos e avisos' }
-              createdAt: { type: string, format: date-time }
-              createdBy: { type: string }
-        confirmations:
+        calculation:
+          type: object
+          properties:
+            source: { type: string, enum: [GRAVADO, PREVIA] }
+            seq: { type: [integer, 'null'] }
+            result: { type: string, enum: [CALCULADA, NAO_CALCULAVEL] }
+            parameterRevision: { type: [integer, 'null'] }
+            rbt12Cents: { type: [string, 'null'] }
+            rbt12Origin: { type: [string, 'null'] }
+            revenueCents: { $ref: '#/components/schemas/Cents' }
+            totalTaxCents: { type: [string, 'null'] }
+            memory: { type: object, description: 'Receita por anexo, RBT12 (origem e meses), anexos com faixa, alíquotas e repartição, tributos, avisos e motivos' }
+            createdAt: { type: [string, 'null'], format: date-time }
+            createdBy: { type: [string, 'null'] }
+        simulations: { type: array, items: { type: object } }
+        guides: { type: array, items: { $ref: '#/components/schemas/TaxGuide' } }
+        declarations: { type: array, items: { type: object } }
+        steps:
           type: array
           items:
             type: object
             properties:
-              id: { type: string, format: uuid }
-              seq: { type: integer }
-              amountCents: { $ref: '#/components/schemas/Cents' }
-              dueDate: { type: string, format: date }
-              notes: { type: [string, 'null'] }
-              simulationSeq: { type: [integer, 'null'] }
-              titleId: { type: [string, 'null'], format: uuid, description: 'Título a pagar do DAS criado pela conferência' }
-              titleCode: { type: [string, 'null'], example: CP00001 }
-              titleStatus: { type: [string, 'null'], enum: [OPEN, PARTIAL, SETTLED, RENEGOTIATED, CANCELLED, null] }
-              titleBalanceCents: { type: [string, 'null'] }
-              createdAt: { type: string, format: date-time }
-              createdBy: { type: string }
-        closures:
-          type: array
-          items:
-            type: object
-            properties:
-              action: { type: string, enum: [FECHAMENTO, REABERTURA] }
-              reason: { type: [string, 'null'] }
-              revenueCents: { type: [string, 'null'] }
-              occurredAt: { type: string, format: date-time }
-              actor: { type: string }
-        differenceCents: { type: [string, 'null'], description: 'Contador − última simulação calculada' }
+              code: { type: string }
+              name: { type: string }
+              responsible: { type: string }
+              automatic: { type: boolean }
+              done: { type: boolean }
+              doneAt: { type: [string, 'null'], format: date-time }
+              doneBy: { type: [string, 'null'] }
+              detail: { type: [string, 'null'] }
+        closures: { type: array, items: { type: object } }
+        rbt12Months: { type: array, items: { type: object } }
+        dasDueDate: { type: string, format: date }
+        differenceCents: { type: [string, 'null'], description: 'Guia − cálculo' }
+        yearToDateCents: { $ref: '#/components/schemas/Cents' }
+        limits: { type: object }
+        alerts: { type: array, items: { type: string } }
+    FiscalDashboard:
+      type: object
+      properties:
+        competence: { type: string }
+        status: { type: string }
+        dasCents: { type: [string, 'null'] }
+        effectiveRate: { type: [string, 'null'] }
+        dasDueDate: { type: string, format: date }
+        rbt12Cents: { type: [string, 'null'] }
+        bracket: { type: [integer, 'null'] }
+        yearToDateCents: { $ref: '#/components/schemas/Cents' }
+        sublimitCents: { $ref: '#/components/schemas/Cents' }
+        limitCents: { $ref: '#/components/schemas/Cents' }
+        nextWeek: { type: array, items: { $ref: '#/components/schemas/TaxObligation' } }
+        upcoming: { type: array, items: { $ref: '#/components/schemas/TaxObligation' } }
+        series: { type: array, items: { type: object } }
+        taxes: { type: object, additionalProperties: { type: string } }
+        guides: { type: array, items: { type: object } }
+        stepsDone: { type: integer }
+        stepsTotal: { type: integer }
+        alerts: { type: array, items: { type: string } }
+        ibsCbsChoice: { type: [string, 'null'] }
+        daysToIbsDeadline: { type: integer }
+        period: { $ref: '#/components/schemas/TaxPeriod' }
+    TaxSetup:
+      type: object
+      properties:
+        profile: { type: object }
+        activities: { type: array, items: { type: object } }
+        ibsCbs: { type: object }
+        revenueStart: { type: string }
+    TaxProfileRequest:
+      type: object
+      required: [annualLimitCents, sublimitCents, tolerance, alertThreshold]
+      properties:
+        optedSince: { type: [string, 'null'], format: date }
+        cnaeMain: { type: [string, 'null'] }
+        cnaeSecondary: { type: [string, 'null'] }
+        nfseIssuer: { type: [string, 'null'] }
+        annualLimitCents: { $ref: '#/components/schemas/Cents' }
+        sublimitCents: { $ref: '#/components/schemas/Cents' }
+        tolerance: { type: string, example: '0.2' }
+        alertThreshold: { type: string, example: '0.9' }
+    TaxActivityRequest:
+      type: object
+      required: [name, framing, annex, taxes]
+      properties:
+        name: { type: string, maxLength: 150 }
+        framing: { type: string, maxLength: 60 }
+        annex: { type: string, enum: [I, II, III, IV, V] }
+        taxes: { type: string, maxLength: 150 }
+        active: { type: [boolean, 'null'] }
+    TaxRevenueHistory:
+      type: object
+      properties:
+        competence: { type: string }
+        annexICents: { type: string }
+        annexIICents: { type: string }
+        annexIIICents: { type: string }
+        annexIVCents: { type: string }
+        annexVCents: { type: string }
+        totalCents: { type: string }
+        source: { type: string, enum: [DIGITADO, ARQUIVO] }
+        informedBy: { type: string }
+        notes: { type: [string, 'null'] }
+        version: { type: string }
+        updatedAt: { type: string, format: date-time }
+        updatedBy: { type: string }
+    TaxRevenueHistoryRequest:
+      type: object
+      required: [informedBy]
+      properties:
+        annexICents: { type: [string, 'null'] }
+        annexIICents: { type: [string, 'null'] }
+        annexIIICents: { type: [string, 'null'] }
+        annexIVCents: { type: [string, 'null'] }
+        annexVCents: { type: [string, 'null'] }
+        informedBy: { type: string, maxLength: 100 }
+        notes: { type: [string, 'null'], maxLength: 500 }
+    TaxRevenueImport:
+      type: object
+      properties:
+        fileName: { type: [string, 'null'] }
+        hash: { type: string }
+        alreadyLoaded: { type: boolean }
+        confirmed: { type: boolean }
+        months: { type: integer }
+        lines: { type: array, items: { type: object } }
+        problems: { type: array, items: { type: string } }
+    TaxObligation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: OB00001 }
+        templateCode: { type: [string, 'null'] }
+        name: { type: string }
+        competence: { type: string }
+        dueDate: { type: string, format: date }
+        sphere: { type: string, enum: [FEDERAL, ESTADUAL, MUNICIPAL] }
+        kind: { type: string, enum: [DECLARACAO, GUIA] }
+        responsible: { type: string }
+        detail: { type: [string, 'null'] }
+        status: { type: string, enum: [A_ENTREGAR, EM_PREPARACAO, EM_APURACAO, ABERTO, DECISAO_PENDENTE, ENTREGUE, PAGO] }
+        deliveredOn: { type: [string, 'null'], format: date }
+        receiptNumber: { type: [string, 'null'] }
+        notes: { type: [string, 'null'] }
+        daysToDue: { type: integer }
+        late: { type: boolean }
+        dueThisWeek: { type: boolean }
+        linked: { type: boolean, description: 'PGDAS-D e DAS: seguem a apuração' }
+        version: { type: string }
+        updatedAt: { type: string, format: date-time }
+        updatedBy: { type: string }
+    TaxObligationRequest:
+      type: object
+      required: [name, competence, dueDate, sphere, responsible]
+      properties:
+        name: { type: string, maxLength: 150 }
+        competence: { type: string, example: '2026-09' }
+        dueDate: { type: string, format: date }
+        sphere: { type: string, enum: [FEDERAL, ESTADUAL, MUNICIPAL] }
+        kind: { type: [string, 'null'], enum: [DECLARACAO, GUIA, null] }
+        responsible: { type: string, maxLength: 100 }
+        detail: { type: [string, 'null'], maxLength: 500 }
+        status: { type: [string, 'null'] }
+    ItemFiscalProfile:
+      type: object
+      properties:
+        itemId: { type: string, format: uuid }
+        code: { type: string }
+        description: { type: string }
+        nature: { type: string, enum: [MATERIAL, SERVICO] }
+        type: { type: string, enum: [PRODUTO, MATERIAL, SERVICO] }
+        category: { type: string }
+        ncm: { type: [string, 'null'] }
+        serviceCode: { type: [string, 'null'] }
+        cfopInternal: { type: [string, 'null'] }
+        cfopInterstate: { type: [string, 'null'] }
+        csosn: { type: [string, 'null'] }
+        origin: { type: [string, 'null'] }
+        annex: { type: [string, 'null'], enum: [I, II, III, IV, V, INSUMO, null] }
+        activityId: { type: [string, 'null'], format: uuid }
+        activityName: { type: [string, 'null'] }
+        nbs: { type: [string, 'null'] }
+        issRetention: { type: [string, 'null'], enum: [SIM, NAO, CONFORME_MUNICIPIO, null] }
+        review: { type: boolean }
+        reviewNote: { type: [string, 'null'] }
+        status: { type: string, enum: [SEM_CLASSIFICACAO, REVISAR, CLASSIFICADO] }
+        reasons: { type: array, items: { type: string } }
+        version: { type: string }
+    ItemFiscalProfileRequest:
+      type: object
+      properties:
+        ncm: { type: [string, 'null'] }
+        serviceCode: { type: [string, 'null'] }
+        cfopInternal: { type: [string, 'null'], example: '5.101' }
+        cfopInterstate: { type: [string, 'null'], example: '6.101' }
+        csosn: { type: [string, 'null'] }
+        origin: { type: [string, 'null'] }
+        annex: { type: [string, 'null'] }
+        activityId: { type: [string, 'null'], format: uuid }
+        nbs: { type: [string, 'null'], example: '1.2001.10.00' }
+        issRetention: { type: [string, 'null'] }
+        review: { type: [boolean, 'null'] }
+        reviewNote: { type: [string, 'null'], maxLength: 500 }
     Decimal:
       type: [string, 'null']
       pattern: '^\d{1,13}(\.\d{1,6})?$'

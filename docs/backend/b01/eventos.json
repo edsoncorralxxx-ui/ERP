@@ -328,6 +328,13 @@
       "consumidores": ["fiscal"]
     },
     {
+      "type": "DocumentAuthorizationRecorded",
+      "produtor": "documentos",
+      "conceito": "FATURAMENTO",
+      "payload": ["documentId", "competence", "authorization"],
+      "consumidores": []
+    },
+    {
       "type": "DocumentLinkRemoved",
       "produtor": "documentos",
       "conceito": "FATURAMENTO",
@@ -461,10 +468,10 @@
       "consumidores": []
     },
     {
-      "type": "TaxPeriodConfirmed",
+      "type": "TaxDasGuideIssued",
       "produtor": "fiscal",
       "conceito": "COMPETENCIA_FISCAL",
-      "payload": ["taxPeriodId", "confirmedAmountCents", "titleId"],
+      "payload": ["taxPeriodId", "competence", "documentNumber", "totalCents", "dueDate", "titleId"],
       "consumidores": []
     },
     {"type": "TaxPeriodClosed", "produtor": "fiscal", "conceito": "COMPETENCIA_FISCAL", "payload": ["taxPeriodId"], "consumidores": []},
@@ -636,6 +643,63 @@
       "produtor": "fiscal",
       "conceito": "COMPETENCIA_FISCAL",
       "payload": ["parameterId", "revision", "validFrom", "confirmedBy"],
+      "consumidores": []
+    },
+    {
+      "type": "TaxDeclarationRecorded",
+      "produtor": "fiscal",
+      "conceito": "COMPETENCIA_FISCAL",
+      "payload": ["taxPeriodId", "competence", "receiptNumber", "transmittedOn", "declaredRevenueCents"],
+      "consumidores": []
+    },
+    {
+      "type": "TaxClosingStepCompleted",
+      "produtor": "fiscal",
+      "conceito": "COMPETENCIA_FISCAL",
+      "payload": ["taxPeriodId", "competence", "step"],
+      "consumidores": []
+    },
+    {
+      "type": "TaxRevenueHistoryRecorded",
+      "produtor": "fiscal",
+      "conceito": "COMPETENCIA_FISCAL",
+      "payload": ["competences", "source"],
+      "consumidores": []
+    },
+    {"type": "TaxProfileUpdated", "produtor": "fiscal", "conceito": "COMPETENCIA_FISCAL", "payload": ["changedFields"], "consumidores": []},
+    {
+      "type": "TaxIbsCbsOptionRecorded",
+      "produtor": "fiscal",
+      "conceito": "COMPETENCIA_FISCAL",
+      "payload": ["period", "choice"],
+      "consumidores": []
+    },
+    {
+      "type": "TaxObligationRegistered",
+      "produtor": "fiscal",
+      "conceito": "COMPETENCIA_FISCAL",
+      "payload": ["obligationId", "name", "dueDate"],
+      "consumidores": []
+    },
+    {
+      "type": "TaxObligationUpdated",
+      "produtor": "fiscal",
+      "conceito": "COMPETENCIA_FISCAL",
+      "payload": ["obligationId", "changedFields"],
+      "consumidores": []
+    },
+    {
+      "type": "TaxObligationDelivered",
+      "produtor": "fiscal",
+      "conceito": "COMPETENCIA_FISCAL",
+      "payload": ["obligationId", "status", "deliveredOn", "receiptNumber"],
+      "consumidores": []
+    },
+    {
+      "type": "ItemFiscalProfileUpdated",
+      "produtor": "fiscal",
+      "conceito": "ITEM",
+      "payload": ["itemId", "annex", "changedFields"],
       "consumidores": []
     },
     {
