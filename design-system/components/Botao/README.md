@@ -7,3 +7,4 @@ Botão amarelo-claro usado para todo comando de uma janela: OK, Cancelar, Copiar
 - OK e Cancelar ficam embaixo à esquerda da janela; botões de registros relacionados embaixo à direita, separados por `space-3`.
 - Letra de atalho sublinhada no rótulo (`<u>C</u>ancelar`), como na Barra de menus: é ela que o Alt aciona. Uma letra por botão, sem repetir dentro da mesma janela; OK e Cancelar, que já têm Enter e Esc, podem ficar sem.
 - Não faça: colorir botão por significado (sem Excluir vermelho); não coloque ícones dentro de botões — ícones vão na Barra de ferramentas.
+- Sob o mouse o botão fica amarelo `field-active` (transição de 0,18 s); desabilitado não muda.

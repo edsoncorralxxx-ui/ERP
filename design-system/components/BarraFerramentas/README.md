@@ -6,3 +6,4 @@ Faixa de botões de ícone abaixo da barra de menus: ações sobre o documento a
 - Indisponível: `disabled` deixa o ícone cinza e esmaecido (tons de cinza a 45%), como na barra original — a maior parte da barra fica assim até um documento estar aberto.
 - Todo botão tem `title` com o nome da ação. Ferramenta ligada: `aria-pressed="true"`.
 - Não coloque texto na barra; comandos com rótulo são Botões.
+- Sob o mouse a ferramenta fica amarela (`field-active`) com contorno `gold-light`; ferramenta desabilitada não muda.

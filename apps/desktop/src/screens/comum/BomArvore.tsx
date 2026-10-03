@@ -71,14 +71,14 @@ export function ArvoreBom({ raiz, selecionado, abertos, onSelecionar, onAlternar
     }
   };
   return (
-    <ul className="rp-bom__arvore rp-rolagem" role="tree" aria-label={rotulo} tabIndex={0} onKeyDown={onKeyDown}
+    <ul className="rp-arvore rp-rolagem" role="tree" aria-label={rotulo} tabIndex={0} onKeyDown={onKeyDown}
       aria-activedescendant={`no-${selecionado}`}>
       {lista.map(({ caminho, no, nivel }) => {
         const tem = no.children.length > 0;
         const aberto = abertos.has(caminho);
         return (
           <li key={caminho} id={`no-${caminho}`} role="treeitem" aria-level={nivel + 1} aria-selected={caminho === selecionado}
-            aria-expanded={tem ? aberto : undefined} className="rp-bom__no" style={{ paddingLeft: `calc(var(--space-5) * ${nivel} + var(--space-2))` }}
+            aria-expanded={tem ? aberto : undefined} className="rp-arvore__no" style={{ paddingLeft: `calc(var(--space-5) * ${nivel} + var(--space-2))` }}
             onClick={() => onSelecionar(caminho)}>
             <i className={`rp-ico ${tem ? (aberto ? 'rp-ico-pasta-aberta' : 'rp-ico-pasta') : 'rp-ico-formulario'}`} aria-hidden="true"
               onClick={(e) => {
@@ -86,12 +86,12 @@ export function ArvoreBom({ raiz, selecionado, abertos, onSelecionar, onAlternar
                 e.stopPropagation();
                 onAlternar(caminho);
               }} />
-            <span className="rp-bom__no-nome" title={`${no.code} — ${no.name}`}>
+            <span className="rp-arvore__nome" title={`${no.code} — ${no.name}`}>
               {nivel > 0 && no.quantity && no.quantity !== '1' ? `${quantidade(no.quantity)} × ` : ''}
               {no.name}
             </span>
             {no.pending > 0 && <i className="rp-ico rp-ico-status-aviso" role="img" aria-label={pendencias(no.pending)} title={pendencias(no.pending)} />}
-            <span className="rp-bom__no-total">{reais(no.totalCents)}</span>
+            <span className="rp-arvore__total">{reais(no.totalCents)}</span>
           </li>
         );
       })}
@@ -144,9 +144,9 @@ export function DiagramaBom({ raiz, selecionado, onSelecionar, onAbrir }: {
 }) {
   const { caixas, ligacoes, largura, altura } = useMemo(() => posicionar(raiz), [raiz]);
   return (
-    <div className="rp-bom-diagrama rp-rolagem">
-      <div className="rp-bom-diagrama__tela" style={{ width: largura, height: altura }}>
-        <svg className="rp-bom-diagrama__ligacoes" width={largura} height={altura} aria-hidden="true">
+    <div className="rp-diagrama rp-rolagem">
+      <div className="rp-diagrama__tela" style={{ width: largura, height: altura }}>
+        <svg className="rp-diagrama__ligacoes" width={largura} height={altura} aria-hidden="true">
           {ligacoes.map(({ de, para }) => {
             const x1 = de.x + W;
             const y1 = de.y + H / 2;
@@ -156,29 +156,29 @@ export function DiagramaBom({ raiz, selecionado, onSelecionar, onAbrir }: {
             return <path key={para.caminho} d={`M ${x1} ${y1} H ${meio} V ${y2} H ${x2}`} />;
           })}
         </svg>
-        <ul className="rp-bom-diagrama__caixas" role="tree" aria-label="Diagrama da estrutura">
+        <ul className="rp-diagrama__caixas" role="tree" aria-label="Diagrama da estrutura">
           {caixas.map(({ caminho, no, x, y, nivel }) => {
-            const classes = ['rp-bom-diagrama__no'];
-            if (nivel === 0) classes.push('rp-bom-diagrama__no--raiz');
-            if (caminho === selecionado) classes.push('rp-bom-diagrama__no--sel');
-            if (no.pending > 0) classes.push('rp-bom-diagrama__no--pendente');
+            const classes = ['rp-diagrama__no'];
+            if (nivel === 0) classes.push('rp-diagrama__no--raiz');
+            if (caminho === selecionado) classes.push('rp-diagrama__no--sel');
+            if (no.pending > 0) classes.push('rp-diagrama__no--pendente');
             return (
               <li key={caminho} role="treeitem" aria-level={nivel + 1} aria-selected={caminho === selecionado} tabIndex={0}
                 aria-label={`${no.name}, ${reais(no.totalCents)}${no.pending ? `, ${pendencias(no.pending)}` : ''}`}
                 className={classes.join(' ')} style={{ left: x, top: y, width: W, height: H }}
                 onClick={() => onSelecionar(caminho)} onDoubleClick={() => onAbrir(caminho)}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), onAbrir(caminho))}>
-                <span className="rp-bom-diagrama__nome" title={no.name}>
+                <span className="rp-diagrama__nome" title={no.name}>
                   <i className={`rp-ico ${no.children.length ? 'rp-ico-pasta-aberta' : 'rp-ico-formulario'}`} aria-hidden="true" /> {no.name}
                 </span>
-                <span className="rp-bom-diagrama__meta">
+                <span className="rp-diagrama__meta">
                   {no.code}
                   {nivel > 0 && ` · Qtd. ${quantidade(no.quantity) || '—'}`} · {conteudo(no)}
                 </span>
-                <span className="rp-bom-diagrama__total">
+                <span className="rp-diagrama__total">
                   {reais(no.totalCents)}
                   {no.pending > 0 && (
-                    <span className="rp-bom-diagrama__pendente">
+                    <span className="rp-diagrama__pendente">
                       <i className="rp-ico rp-ico-status-aviso" aria-hidden="true" /> {pendencias(no.pending)}
                     </span>
                   )}

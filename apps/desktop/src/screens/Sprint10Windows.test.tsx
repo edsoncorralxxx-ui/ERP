@@ -139,7 +139,7 @@ describe('BOM', () => {
     expect(caixas[0]).toHaveTextContent('BOM00001 · 2 submontagens');
     expect(caixas[2]).toHaveTextContent('BOM00003 · Qtd. 1 · 26 itens · 1 submontagem');
     // Uma linha de ligação por submontagem.
-    expect(document.querySelectorAll('.rp-bom-diagrama__ligacoes path')).toHaveLength(3);
+    expect(document.querySelectorAll('.rp-diagrama__ligacoes path')).toHaveLength(3);
     expect(document.querySelector('.rp-ico-rosca, canvas')).toBeNull();
     await user.dblClick(painel);
     await screen.findByRole('table', { name: 'Linhas da BOM' });

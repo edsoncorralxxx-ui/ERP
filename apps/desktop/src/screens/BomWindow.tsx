@@ -225,13 +225,13 @@ export function BomWindow({ recordKey }: { recordKey: string }) {
   return (
     <>
       <div className="rp-window-body rp-janela-mdi__corpo rp-bom" onKeyDown={onKeyDown}>
-        <section className="rp-bom__lado" aria-label="Estrutura">
-          <div className="rp-bom__lado-tit">
+        <section className="rp-arvore-painel" aria-label="Estrutura">
+          <div className="rp-arvore-painel__tit">
             <span>Estrutura</span>
-            <span className="rp-bom__lado-total">{reais(raiz.totalCents)}</span>
+            <span className="rp-arvore-painel__total">{reais(raiz.totalCents)}</span>
           </div>
           <ArvoreBom raiz={raiz.tree} selecionado={caminho} abertos={abertos} onSelecionar={selecionar} onAlternar={alternar} rotulo="Estrutura da BOM" />
-          <p className="rp-bom__lado-nota">
+          <p className="rp-arvore-painel__nota">
             {raiz.pending > 0
               ? `${raiz.pending} ${raiz.pending === 1 ? 'linha sem quantidade ou custo' : 'linhas sem quantidade ou custo'} na estrutura: a BOM ainda não se aplica a equipamento.`
               : 'Estrutura completa: pode ser aplicada aos equipamentos.'}

@@ -6,3 +6,5 @@ Janela flutuante de documento ou dados mestre: barra de título azul, corpo clar
 - **Janela de lista** (consulta, Arrastar e relacionar, resultado de busca): a grade ocupa o corpo e o rodapé vira `.rp-lista-foot` — Cancelar à esquerda e o **funil de filtro** (`.rp-funil`) no canto inferior direito, que abre a janela Filtrar tabela. Com filtro aplicado, o funil fica `aria-pressed="true"` em `field-active`.
 - `rp-window--login` adiciona a faixa `gold-light` sob a barra de título, para login e telas de abertura.
 - Título = só o nome do objeto ("Cotação de venda", "Dados mestre do item"); sem número de registro no título.
+- Minimizar: a janela vira um botão `.rp-minimizada` (26px, degradê da barra de título, título com reticências) na fila `.rp-minimizadas`, embaixo à esquerda da área de trabalho e atrás das janelas abertas; sob o mouse, o degradê de `nav-selected-top` a `nav-selected`.
+- Títulos de seção dentro do corpo (blocos de um painel, partes de um relatório): `<h3 class="rp-secao-tit">`, texto `section` em `ink-heading` sublinhado.

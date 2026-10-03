@@ -112,7 +112,7 @@ export function FunnelWindow() {
 
             <div className="rp-crm-funil__linha">
               <section className="rp-crm-funil__bloco" aria-label="Funil por etapa">
-                <h3 className="rp-crm-funil__titulo">Abertas por etapa</h3>
+                <h3 className="rp-secao-tit">Abertas por etapa</h3>
                 <Chart altura={220} label="Potencial e ponderado por etapa"
                   spec={{
                     tipo: 'Barras3D', unidade: 'R$', categorias: funil.stages.map((s) => s.name),
@@ -157,7 +157,7 @@ export function FunnelWindow() {
               </section>
 
               <section className="rp-crm-funil__bloco" aria-label="Conversão e perdas">
-                <h3 className="rp-crm-funil__titulo">Conversão por etapa no período</h3>
+                <h3 className="rp-secao-tit">Conversão por etapa no período</h3>
                 <div className="rp-grid-rolagem rp-rolagem">
                   <table className="rp-grid rp-janela-mdi__grade" aria-label="Conversão por etapa">
                     <thead>
@@ -180,7 +180,7 @@ export function FunnelWindow() {
                     </tbody>
                   </table>
                 </div>
-                <h3 className="rp-crm-funil__titulo">Perdas por motivo</h3>
+                <h3 className="rp-secao-tit">Perdas por motivo</h3>
                 <div className="rp-grid-rolagem rp-rolagem">
                   <table className="rp-grid rp-janela-mdi__grade" aria-label="Perdas por motivo">
                     <thead>

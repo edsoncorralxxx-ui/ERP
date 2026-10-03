@@ -6,3 +6,4 @@ Abas de pasta que dividem uma janela de dados mestre em páginas.
 - Na janela de documento, o `.rp-tabpanel` filho direto do corpo ocupa toda a altura que sobra (contorno `panel-border`), e a grade dentro dele vai até o pé do painel.
 - Rótulos de uma ou duas palavras, com a letra de atalho sublinhada (`<u>G</u>eral`); Geral sempre primeiro, Observações sempre por último.
 - Tudo acima das abas (código, nome, saldos) continua visível em todas as abas.
+- Sob o mouse a aba não selecionada fica em `tab-active` (azul, não o amarelo de ação); aba indisponível (`aria-disabled="true"`) não reage.
