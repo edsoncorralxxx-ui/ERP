@@ -78,8 +78,8 @@ export function FunnelWindow() {
         {!funil ? (
           !erro && <p className="rp-janela-mdi__aviso">Carregando</p>
         ) : (
-          <div className="rp-rolagem rp-funil">
-            <div className="rp-funil__kpis">
+          <div className="rp-rolagem rp-crm-funil">
+            <div className="rp-crm-funil__kpis">
               <div className="rp-kpi">
                 <div className="rp-kpi-head">
                   <i className="rp-ico rp-ico-crm" aria-hidden="true" /> Abertas
@@ -110,9 +110,9 @@ export function FunnelWindow() {
               </div>
             </div>
 
-            <div className="rp-funil__linha">
-              <section className="rp-funil__bloco" aria-label="Funil por etapa">
-                <h3 className="rp-funil__titulo">Abertas por etapa</h3>
+            <div className="rp-crm-funil__linha">
+              <section className="rp-crm-funil__bloco" aria-label="Funil por etapa">
+                <h3 className="rp-crm-funil__titulo">Abertas por etapa</h3>
                 <Chart altura={220} label="Potencial e ponderado por etapa"
                   spec={{
                     tipo: 'Barras3D', unidade: 'R$', categorias: funil.stages.map((s) => s.name),
@@ -156,8 +156,8 @@ export function FunnelWindow() {
                 </div>
               </section>
 
-              <section className="rp-funil__bloco" aria-label="Conversão e perdas">
-                <h3 className="rp-funil__titulo">Conversão por etapa no período</h3>
+              <section className="rp-crm-funil__bloco" aria-label="Conversão e perdas">
+                <h3 className="rp-crm-funil__titulo">Conversão por etapa no período</h3>
                 <div className="rp-grid-rolagem rp-rolagem">
                   <table className="rp-grid rp-janela-mdi__grade" aria-label="Conversão por etapa">
                     <thead>
@@ -180,7 +180,7 @@ export function FunnelWindow() {
                     </tbody>
                   </table>
                 </div>
-                <h3 className="rp-funil__titulo">Perdas por motivo</h3>
+                <h3 className="rp-crm-funil__titulo">Perdas por motivo</h3>
                 <div className="rp-grid-rolagem rp-rolagem">
                   <table className="rp-grid rp-janela-mdi__grade" aria-label="Perdas por motivo">
                     <thead>

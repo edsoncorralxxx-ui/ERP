@@ -10,7 +10,7 @@ Ordenado por prioridade. Épicos correspondem às fases do roteiro (`../backend/
 | 2 | Base executável (servidor, worker, banco, CI) | B02 | Próximo |
 | 3 | Acesso, cadastros e metadados | B03 | Backlog |
 | 4 | Arquivos, importação e conferência | B04 | Backlog |
-| 5 | Comercial e primeiro fluxo transacional | B05 | Em execução (Sprints 4 e 5) |
+| 5 | Comercial e primeiro fluxo transacional | B05 | Em execução (Sprints 4 e 5; Sprint 11: CRM) |
 | 6 | Financeiro, conciliação e caixa | B06 | Em execução (Sprint 5: recebimentos, estornos e contas; Sprint 6: documentos e faturamento; Sprint 8: contas a pagar; Sprint 9: fluxo de caixa e transferências) |
 | 7 | Engenharia e planejamento | B07 | Em execução (Sprint 10: BOM) |
 | 8 | Suprimentos, estoque e terceiros | B08 | Backlog |
@@ -41,8 +41,10 @@ Decidido com o PO em 25/09/2026: cada sprint entrega uma **fatia vertical comple
 | 8 | Contas a pagar: títulos manuais com parcelas, pagamento parcial com saída na conta, estorno, cancelamento, categorias financeiras (PD-010) e o DAS gerado pela conferência do contador — **entregue para Review** (`sprints/sprint-08.md`) | Registrar e pagar obrigações; DAS uma vez só | B06, B10 |
 | 9 | Fluxo de caixa mês a mês (realizado, em atraso e previsto, com a composição de cada valor), transferência entre contas e pendências fiscais — **entregue para Review** (`sprints/sprint-09.md`) | Ver o caixa previsto e o realizado | B06 |
 | 10 | BOM por modelo com submontagens (editável direto, árvore e diagrama), carga da BOM real em JSON, BOM do equipamento com ajustes, custo planejado e margem do projeto — **entregue para Review** (`sprints/sprint-10.md`) | Saber quanto custa cada equipamento antes de produzir | B07 |
+| 11 | CRM no desenho do SAP Business One: prospecção com estrelas e carga da lista, interações com próxima ação, oportunidades pelas etapas do funil com percentual de fechamento e valor ponderado, concorrentes, perda com motivo da lista, conversão em cliente, propostas ligadas à oportunidade, funil com conversão por etapa (IND-016) e agenda — **entregue para Review** (`sprints/sprint-11.md`) | Acompanhar cada empresa-alvo e cada negócio até o pedido | B05 |
 | — | Conciliação bancária com importação de extrato OFX/CSV — **adiada pelo PO em 01/10/2026**, sem sprint definida | Conferir o extrato do banco com os lançamentos | B04, B06 |
-| 11+ | Cronograma, compras, estoque, produção, qualidade, instalação, repasses, pós-venda, importação do histórico | Um fluxo novo por sprint | B04–B12 |
+| — | Cronograma do projeto (EAP, Gantt, caminho crítico, linha de base e avanço) — proposto em 03/10/2026 e **trocado pelo CRM** a pedido do PO; proposta e perguntas na conversa de planning da Sprint 11 | Saber se o projeto está no prazo | B07 |
+| 12+ | Cronograma, compras, estoque, produção, qualidade, instalação, repasses, pós-venda, importação do histórico | Um fluxo novo por sprint | B04–B12 |
 
 A ordem pode ser revista em cada refinamento. O worker Python entra na primeira sprint que precisar dele (importação de arquivos).
 

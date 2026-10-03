@@ -1,6 +1,6 @@
 # Sprint 11 — CRM: prospecção, interações e funil de oportunidades
 
-Situação: **Em execução** (03/10/2026). Planning aprovado pelo PO em 03/10/2026 ("1. SIM, porém estude o CRM do SAP também, 2. exemplo, 3. sim, 4. sim, 5. sim").
+Situação: **Entregue para Review** (03/10/2026). Planning aprovado pelo PO em 03/10/2026 ("1. SIM, porém estude o CRM do SAP também, 2. exemplo, 3. sim, 4. sim, 5. sim").
 
 O cronograma do projeto (EAP e Gantt, restante do B07), proposto antes desta sprint, voltou ao backlog por decisão do PO ("vamos implementar a sprint do CRM"). A proposta e as dez perguntas dele ficam para quando ele voltar.
 
@@ -102,3 +102,46 @@ Enviar e-mail ou WhatsApp pelo sistema; lembretes por notificação; campanhas e
 - **Migração das propostas existentes**: cada proposta vira uma oportunidade; as abertas ficam sem próxima ação e aparecem como pendência na Agenda, em vez de inventar uma data.
 - **Duplicidade na lista real**: nomes parecidos podem ser duas unidades legítimas (Alimentos Lopes) ou erro de digitação (AMAGIL × AMAFIL); a carga só avisa.
 - **Volume da sprint**: são cinco telas novas; a ordem acima diz o que sai primeiro.
+
+## Review — evidências
+
+| Item | Resultado | Evidência |
+|---|---|---|
+| S11-01 Prospecção | Pronto | Migração V17 (`lead`); `CrmApiTest.prospeccaoComEstrelaDesconhecidaInteracaoEDescarte`: estrela 0 → 422, vazia fica `null`; UF em maiúsculas; a mesma chave devolve a mesma prospecção; versão antiga → 412; descarte exige motivo; trilha `LEAD_REGISTERED`, `LEAD_INTERACTION_RECORDED`, `LEAD_UPDATED`, `LEAD_DISCARDED`; Consulta lê e recebe 403 ao cadastrar |
+| S11-02 Interações | Pronto | Data futura → 422; sem data = hoje; a próxima ação passa para a prospecção; Identificado → Contatado; repetir a chave não duplica (`crm_interaction` = 1); prospecção descartada recusa interação (409) |
+| S11-03 Oportunidade | Pronto | Sem próxima ação → 422 nos dois campos; aberta na Qualificação com 10% (R$ 150.000,00 → R$ 15.000,00); a prospecção passa a Interessado |
+| S11-04 Etapas e funil | Pronto | Mudar etapa exige a próxima ação; Visita técnica → R$ 37.500,00 e a linha na aba Etapas; perda "Outro" sem texto → 422; perdida não muda mais (409); etapa a 130% → 422, a 30% muda o ponderado para R$ 45.000,00; Consulta não configura (403) |
+| S11-05 Ligação com as propostas | Pronto | Emitir a proposta leva à etapa Proposta (R$ 75.000,00); converter em pedido → oportunidade Ganha com o pedido; proposta sem oportunidade cria uma na etapa Proposta com a validade como próxima ação; com proposta aberta, a perda vai pela proposta (409) e a perda da proposta perde a oportunidade com o motivo da lista. Migração conferida num banco com 3 propostas (aberta, ganha e perdida): OP00001 a OP00003 com a situação certa, a perdida com "Outro" e o motivo antigo, e a numeração seguindo em OP00004 |
+| S11-06 Converter em cliente | Pronto | Cliente cadastrado uma vez (com a cidade como unidade e o contato), ligado à prospecção e à oportunidade; converter de novo devolve o mesmo cliente |
+| S11-07 Carga da prospecção | Pronto | `cargaDaListaComPreviaAvisosEBloqueiosSemDuplicar` com `exemplos/prospeccao-exemplo.json`: 10 linhas, 7 carregadas, 3 com erro (estrela 7, empresa vazia, UF XX), 2 avisos (Beta repetida na mesma cidade, Gama em outra cidade); a prévia não cadastra; reenviar e confirmar de novo não duplica; empresa já cadastrada em outra lista vira aviso |
+| S11-08 Agenda e funil | Pronto | Exemplo do planning: abertas R$ 368.765,43, ponderado R$ 123.574,07 (R$ 74.074,0725 → R$ 74.074,07); Qualificação 3 entraram e 2 avançaram (66,67%); Proposta sem entradas → "não calculável" (`rate: null`); perdas por motivo; agenda com hoje e próximos 7 dias |
+| S11-09 Contratos | Pronto | `openapi.yaml` com `/leads`, `/lead-imports`, `/opportunities`, `/opportunity-stages`, `/crm/agenda`, `/crm/funnel`, `/crm/owners` (`OpenApiContractTest` passa); formulário `prospeccao` com os comandos e as permissões novas; eventos `LeadUpdated`, `LeadsImported`, `OpportunityUpdated`, `OpportunityStageConfigured`; `menu.json` com as cinco telas do CRM e "Propostas"; verificador B01 OK |
+| S11-10 Telas | Pronto | `Sprint11Windows.test.tsx` (8 testes): cadastro com estrela vazia e Idempotency-Key; interação e Abrir oportunidade; Consulta só vê; oportunidade nova exige a próxima ação e mostra o ponderado; Mudar etapa com If-Match e perda com o motivo da lista; funil com "Não calculável"; agenda com a seta; carga com erros, avisos e confirmação |
+| S11-11 Roteiro de ponta a ponta | Pronto | `apps/desktop/e2e/sprint-11.e2e.ts` no Chromium contra o servidor real: carga do exemplo (10/7/3/2), interação, oportunidade a R$ 15.000,00 e R$ 37.500,00, conversão em cliente, proposta e pedido pela API, oportunidade Ganha com o pedido no Resumo, funil e agenda. Passou em quatro execuções seguidas no mesmo banco (as empresas levam um sufixo por execução) |
+
+Testes executados: servidor **117** (PostgreSQL 16 real; eram 112), app **144** (eram 136), typecheck, build, verificador B01 + testes, roteiros Playwright das Sprints 5 a 11 contra o servidor real.
+
+**Corrigido junto:** o nome `rp-funil` já era do design system (o botão do funil de filtro); a tela usa `rp-crm-funil`. O roteiro de ponta a ponta achou isso no primeiro dia, como combinado na retrospectiva da Sprint 10.
+
+**Decisões tomadas na execução (para confirmar na Review):**
+- **Oportunidade sem cliente**: a oportunidade aberta a partir da prospecção pode existir sem cliente; a proposta só sai depois de **Converter em cliente** (como o lead do SAP B1, que vira cliente quando compra).
+- **Propostas antigas**: cada uma virou uma oportunidade na etapa Proposta, com o título da proposta como nome, o total da revisão vigente como potencial e você (quem criou a proposta) como responsável. As abertas ficam **sem próxima ação** e aparecem na Agenda como pendência, em vez de uma data inventada.
+- **Proposta feita fora do CRM** (direto em Vendas → Propostas): ganha uma oportunidade na hora, na etapa Proposta, com a validade da proposta como próxima ação.
+- **Perda da proposta**: o diálogo pede o motivo da lista e o texto; a oportunidade só é perdida junto se não tiver outra proposta aberta.
+- **Interação não muda**: corrigir uma interação é registrar outra (nota), para a trilha não perder o que foi dito.
+- **Duplicidade na carga**: o nome é comparado sem acentos, maiúsculas, pontuação e "Ltda./ME/Indústria"; isso pega "Fécula Exemplo Gama" × "FECULA EXEMPLO GAMA LTDA", mas não pega grafias diferentes como AMAGIL × AMAFIL — essas continuam para a sua conferência.
+- **"Oportunidades e propostas" virou "Propostas"** no menu de Vendas; as oportunidades ficam no CRM.
+
+**Não verificado aqui:** o app dentro do Electron no macOS; a migração V17 no seu banco com as propostas reais (conferida num banco de teste com uma proposta de cada situação); a lista real de fecularias (o arquivo de exemplo usa empresas fictícias com os mesmos casos difíceis).
+
+**Limitações conhecidas:**
+- Responsável é o usuário do sistema; enquanto só houver o Administrador e a Consulta, a agenda "por responsável" mostra tudo de quem cadastrou.
+- Lembretes por notificação, e-mail e WhatsApp pelo sistema ficaram fora (planning).
+- O roteiro da Sprint 4 continua falhando quando roda de novo no mesmo banco (a ficha do equipamento não fecha com Esc depois de gravar, quando o foco está no botão); é a tarefa à parte registrada na Sprint 9. O trecho dele que esta sprint mudou (Vendas → Propostas) passa.
+
+## Retrospectiva
+
+- Funcionou: estudar o CRM do SAP Business One antes de desenhar. A oportunidade com abas (Potencial, Etapas, Concorrentes, Resumo) e o valor ponderado por etapa vieram prontos do modelo que o app já imita.
+- Funcionou: rodar o roteiro de ponta a ponta logo que as telas existiram (ação da Sprint 10). Ele pegou o conflito de nome de classe com o design system, que os testes de componente não pegariam.
+- Melhorar: classe nova no `app.css` pode colidir com uma do `bundle.css` sem nenhum aviso.
+- Ação: na próxima sprint, prefixar as classes de tela com o nome do módulo (`rp-crm-`, `rp-bom-`) e conferir no `bundle.css` antes de criar.
