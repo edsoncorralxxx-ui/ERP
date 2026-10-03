@@ -1,7 +1,7 @@
 package br.com.fourtech.rendamais.fiscal.application;
 
 import br.com.fourtech.rendamais.financeiro.api.CashFlowPendingSource;
-import br.com.fourtech.rendamais.fiscal.domain.SimplesSimulation;
+import br.com.fourtech.rendamais.fiscal.domain.SimplesCalculation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 
 /**
  * Pendências fiscais do fluxo de caixa (Sprint 9): competência já encerrada, a partir do início da receita no Renda+, sem
- * conferência do contador. O DAS dela ainda não é título, então o caixa mostra a pendência no mês do vencimento (o
+ * guia DAS. O DAS dela ainda não é título, então o caixa mostra a pendência no mês do vencimento (o
  * seguinte), sem valor — imposto desconhecido não é zero.
  */
 @Component
@@ -39,13 +39,13 @@ class TaxCashFlowPendings implements CashFlowPendingSource {
         if (last.isBefore(first)) return List.of();
         Map<YearMonth, UUID> periods = repository.findBetween(first, last).stream()
                 .collect(Collectors.toMap(TaxRepository.Period::competence, TaxRepository.Period::id));
-        Map<UUID, TaxRepository.Confirmation> confirmed = repository.latestConfirmations(List.copyOf(periods.values()));
+        Map<UUID, TaxRepository.DasGuide> confirmed = repository.latestGuides(List.copyOf(periods.values()));
         List<Pending> out = new ArrayList<>();
         for (YearMonth c = first; !c.isAfter(last); c = c.plusMonths(1)) {
             UUID id = periods.get(c);
             if (id == null || !confirmed.containsKey(id)) {
                 out.add(new Pending(c.plusMonths(1), FiscalService.DAS_CATEGORY, c.toString(), "Pendência — imposto da competência "
-                        + SimplesSimulation.label(c) + " não conferido pelo contador (DAS sem valor)"));
+                        + SimplesCalculation.label(c) + " sem guia DAS (valor desconhecido)"));
             }
         }
         return out;

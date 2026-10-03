@@ -52,7 +52,7 @@ class SalesOrderQueries implements SalesOrderQueryApi {
                     .filter(java.util.Objects::nonNull).toList();
             return new OrderRef(o.id(), o.code(), o.customerId(), s.customerCode(), s.customerName(), o.status().name(), o.totalCents(),
                     o.confirmation() == null ? null : o.confirmation().projectId(),
-                    o.lines().stream().map(l -> new LineRef(l.kind().name(), l.description(), l.totalCents())).toList(), ids);
+                    o.lines().stream().map(l -> new LineRef(l.kind().name(), l.itemId(), l.description(), l.totalCents())).toList(), ids);
         }).toList();
     }
 }

@@ -21,8 +21,8 @@ public final class InvoiceProposal {
     /** Parcela do pedido com o que falta emitir (recebido − faturado, nunca negativo), na ordem de vencimento. */
     public record Parcel(UUID titleId, long toIssueCents) { }
 
-    /** Linha do pedido: EQUIPAMENTO, MATERIAL ou SERVICO, com o total em centavos. */
-    public record OrderLine(String kind, String description, long totalCents) { }
+    /** Linha do pedido: EQUIPAMENTO, MATERIAL ou SERVICO, o item do cadastro (vazio no equipamento) e o total em centavos. */
+    public record OrderLine(String kind, java.util.UUID itemId, String description, long totalCents) { }
 
     public record Result(List<BusinessDocument.LinkRequest> links, List<BusinessDocument.Line> lines, long productCents,
                          long serviceCents) { }
@@ -74,7 +74,9 @@ public final class InvoiceProposal {
                 BusinessDocument.LineKind kind = kindOf(weighted.get(i).kind());
                 if (kind == BusinessDocument.LineKind.SERVICO) service += part.cents();
                 else product += part.cents();
-                lines.add(new BusinessDocument.Line(lines.size() + 1, weighted.get(i).description(), kind, part));
+                OrderLine source = weighted.get(i);
+                lines.add(new BusinessDocument.Line(lines.size() + 1, source.description(), kind, part, source.kind(), source.itemId(),
+                        null, null));
             }
         }
         return new Result(links, lines, product, service);

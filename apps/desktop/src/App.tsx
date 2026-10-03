@@ -19,9 +19,11 @@ import { EquipmentModelsWindow } from './screens/EquipmentModelsWindow';
 import { DocumentsWindow } from './screens/DocumentsWindow';
 import { DocumentWindow } from './screens/DocumentWindow';
 import { ToIssueWindow } from './screens/ToIssueWindow';
-import { TaxParametersWindow } from './screens/TaxParametersWindow';
-import { TaxPeriodsWindow } from './screens/TaxPeriodsWindow';
+import { FiscalClassificationWindow } from './screens/FiscalClassificationWindow';
+import { FiscalDashboardWindow } from './screens/FiscalDashboardWindow';
+import { TaxObligationsWindow } from './screens/TaxObligationsWindow';
 import { TaxPeriodWindow } from './screens/TaxPeriodWindow';
+import { TaxTablesWindow } from './screens/TaxTablesWindow';
 import { ProjectsWindow } from './screens/ProjectsWindow';
 import { ProjectWindow } from './screens/ProjectWindow';
 import { ProposalsWindow } from './screens/ProposalsWindow';
@@ -98,9 +100,11 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   documents: { title: 'Documentos e faturamento', size: { w: 1160, h: 620 } },
   document: { title: 'Documento de faturamento', size: { w: 1080, h: 660 } },
   'to-issue': { title: 'Notas a emitir', size: { w: 1180, h: 600 } },
-  'tax-periods': { title: 'Impostos gerenciais', size: { w: 1180, h: 620 } },
-  'tax-period': { title: 'Competência fiscal', size: { w: 1120, h: 680 } },
-  'tax-parameters': { title: 'Parâmetros fiscais', size: { w: 900, h: 660 } },
+  'fiscal-dashboard': { title: 'Painel fiscal', size: { w: 1180, h: 760 } },
+  'tax-period': { title: 'Apuração do Simples Nacional', size: { w: 1180, h: 760 } },
+  'tax-obligations': { title: 'Obrigações fiscais e acessórias', size: { w: 1180, h: 720 } },
+  'fiscal-classification': { title: 'Classificação fiscal de itens', size: { w: 1180, h: 720 } },
+  'tax-tables': { title: 'Tabelas e parâmetros do Simples Nacional', size: { w: 1180, h: 720 } },
   boms: { title: 'BOM — composição de custos', size: { w: 1160, h: 620 } },
   bom: { title: 'BOM', size: { w: 1320, h: 720 } },
   'bom-import': { title: 'Importar BOM', size: { w: 1160, h: 700 } },
@@ -487,12 +491,16 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                         <DocumentWindow recordKey={w.recordKey} />
                       ) : w.kind === 'to-issue' ? (
                         <ToIssueWindow />
-                      ) : w.kind === 'tax-periods' ? (
-                        <TaxPeriodsWindow />
+                      ) : w.kind === 'fiscal-dashboard' ? (
+                        <FiscalDashboardWindow />
                       ) : w.kind === 'tax-period' ? (
                         <TaxPeriodWindow recordKey={w.recordKey} />
-                      ) : w.kind === 'tax-parameters' ? (
-                        <TaxParametersWindow />
+                      ) : w.kind === 'tax-obligations' ? (
+                        <TaxObligationsWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'fiscal-classification' ? (
+                        <FiscalClassificationWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'tax-tables' ? (
+                        <TaxTablesWindow recordKey={w.recordKey} />
                       ) : w.kind === 'boms' ? (
                         <BomsWindow />
                       ) : w.kind === 'bom' ? (

@@ -15,7 +15,7 @@ Ordenado por prioridade. Épicos correspondem às fases do roteiro (`../backend/
 | 7 | Engenharia e planejamento | B07 | Em execução (Sprint 10: BOM) |
 | 8 | Suprimentos, estoque e terceiros | B08 | Backlog |
 | 9 | Produção, qualidade e instalação | B09 | Backlog |
-| 10 | Repasses, fiscal e indicadores | B10 | Em execução (Sprint 7: fiscal gerencial) |
+| 10 | Repasses, fiscal e indicadores | B10 | Em execução (Sprint 7: fiscal gerencial; Sprint 12: fiscal refeito pelo mock — entregue para Review) |
 | 11 | Pós-venda | B11 | Backlog |
 | 12 | Migração do histórico | B12 | Backlog |
 | 13 | Piloto e implantação | B13 | Backlog |
@@ -42,6 +42,7 @@ Decidido com o PO em 25/09/2026: cada sprint entrega uma **fatia vertical comple
 | 9 | Fluxo de caixa mês a mês (realizado, em atraso e previsto, com a composição de cada valor), transferência entre contas e pendências fiscais — **entregue para Review** (`sprints/sprint-09.md`) | Ver o caixa previsto e o realizado | B06 |
 | 10 | BOM por modelo com submontagens (editável direto, árvore e diagrama), carga da BOM real em JSON, BOM do equipamento com ajustes, custo planejado e margem do projeto — **entregue para Review** (`sprints/sprint-10.md`) | Saber quanto custa cada equipamento antes de produzir | B07 |
 | 11 | CRM no desenho do SAP Business One: prospecção com estrelas e carga da lista, interações com próxima ação, oportunidades pelas etapas do funil com percentual de fechamento e valor ponderado, concorrentes, perda com motivo da lista, conversão em cliente, propostas ligadas à oportunidade, funil com conversão por etapa (IND-016) e agenda — **entregue para Review** (`sprints/sprint-11.md`) | Acompanhar cada empresa-alvo e cada negócio até o pedido | B05 |
+| 12 | Fiscal refeito pelo mock *Renda+ ERP MOCK*: painel fiscal, apuração do Simples por anexo (I, II e III) com repartição por tributo e ISS limitado, histórico de receita e RBT12 mês a mês, PGDAS-D e guia DAS com pagamento, fechamento por etapas, obrigações com calendário, classificação fiscal dos itens e tabelas e parâmetros (anexos I a V, limites, opção IBS/CBS) — **entregue para Review** (`sprints/sprint-12.md`) | Apurar, pagar e fechar o Simples por anexo e não perder prazo fiscal | B10 |
 | — | Conciliação bancária com importação de extrato OFX/CSV — **adiada pelo PO em 01/10/2026**, sem sprint definida | Conferir o extrato do banco com os lançamentos | B04, B06 |
 | — | Cronograma do projeto (EAP, Gantt, caminho crítico, linha de base e avanço) — proposto em 03/10/2026 e **trocado pelo CRM** a pedido do PO; proposta e perguntas na conversa de planning da Sprint 11 | Saber se o projeto está no prazo | B07 |
 | 12+ | Cronograma, compras, estoque, produção, qualidade, instalação, repasses, pós-venda, importação do histórico | Um fluxo novo por sprint | B04–B12 |

@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * Pendências do fluxo de caixa informadas por outros módulos: obrigações que ainda não viraram título e que o caixa
  * mostra como pendência, nunca como zero (formulário "caixa"). O módulo que conhece a obrigação implementa esta porta
- * (ex.: o fiscal, para a competência encerrada sem conferência do contador); o financeiro não depende dele.
+ * (ex.: o fiscal, para a competência encerrada sem guia DAS); o financeiro não depende dele.
  */
 public interface CashFlowPendingSource {
 

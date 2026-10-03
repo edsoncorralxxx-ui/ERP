@@ -143,7 +143,13 @@
     {
       "nome": "Fiscal",
       "icone": "fiscal",
-      "itens": [{"rotulo": "Impostos gerenciais", "tela": "impostos", "fase": "Sprint 7 · B10", "implementado": true}]
+      "itens": [
+        {"rotulo": "Painel fiscal", "tela": "impostos", "secao": "PAINEL", "fase": "Sprint 12 · B10", "implementado": true},
+        {"rotulo": "Apuração do Simples", "tela": "impostos", "fase": "Sprint 12 · B10", "implementado": true},
+        {"rotulo": "Obrigações", "tela": "impostos", "secao": "OBRIGACOES", "fase": "Sprint 12 · B10", "implementado": true},
+        {"rotulo": "Classificação fiscal", "tela": "impostos", "secao": "CLASSIFICACAO", "fase": "Sprint 12 · B10", "implementado": true},
+        {"rotulo": "Tabelas e parâmetros", "tela": "impostos", "secao": "TABELAS", "fase": "Sprint 12 · B10", "implementado": true}
+      ]
     },
     {"nome": "Custos", "icone": "custos", "itens": [{"rotulo": "Custos e resultado", "tela": "custos", "fase": "B08–B10"}]},
     {

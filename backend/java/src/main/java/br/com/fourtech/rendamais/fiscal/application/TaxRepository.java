@@ -10,28 +10,49 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Porta de persistência do fiscal: parâmetros, competências, simulações, conferências e fechamentos. */
+/**
+ * Porta de persistência da apuração: parâmetros, competências, cálculos, transmissões do PGDAS-D, guias DAS, etapas do
+ * fechamento e fechamentos.
+ */
 public interface TaxRepository {
 
-    /** Competência: situação, RBT12 informado e versão (0 = ainda sem alteração). */
+    String EM_APURACAO = "EM_APURACAO";
+    String ENCERRADA = "ENCERRADA";
+
+    /** Competência: situação, RBT12 informado (reserva) e versão (0 = ainda sem alteração). */
     record Period(UUID id, YearMonth competence, String status, Long informedRbt12Cents, String informedBy, String informedNotes,
                   long version, Instant createdAt, String createdBy, Instant updatedAt, String updatedBy) {
         public boolean closed() {
-            return "FECHADA".equals(status);
+            return ENCERRADA.equals(status);
         }
     }
 
-    /** Simulação preservada, com a revisão dos parâmetros usada e a memória do cálculo (JSON). */
+    /**
+     * Cálculo preservado, com a revisão dos parâmetros, o resultado por anexo e por tributo (JSON) e a memória. Produto =
+     * anexos I, II, IV e V; serviço = anexo III (as colunas da Sprint 7 continuam preenchidas).
+     */
     record Simulation(UUID id, UUID periodId, int seq, String result, UUID parameterRevisionId, Integer parameterRevision,
                       Long rbt12Cents, String rbt12Origin, long productRevenueCents, long serviceRevenueCents, Long productTaxCents,
-                      Long serviceTaxCents, Long totalTaxCents, String memory, Instant createdAt, String createdBy) { }
+                      Long serviceTaxCents, Long totalTaxCents, String annexes, String taxes, String memory, Instant createdAt,
+                      String createdBy) { }
 
-    /** Conferência do contador; {@code titleId} é o título a pagar do DAS criado por ela (nulo quando o valor é zero). */
-    record Confirmation(UUID id, UUID periodId, int seq, long amountCents, LocalDate dueDate, String notes, UUID simulationId,
-                        UUID titleId, Instant createdAt, String createdBy) { }
+    /** Guia DAS (o valor declarado no PGDAS-D); {@code titleId} é o título a pagar criado por ela (nulo quando o total é zero). */
+    record DasGuide(UUID id, UUID periodId, int seq, String documentNumber, long principalCents, long fineCents, long interestCents,
+                    LocalDate dueDate, String notes, UUID simulationId, UUID titleId, Instant createdAt, String createdBy) {
+        public long totalCents() {
+            return principalCents + fineCents + interestCents;
+        }
+    }
+
+    /** Transmissão do PGDAS-D registrada. */
+    record Declaration(UUID id, UUID periodId, int seq, LocalDate transmittedOn, String receiptNumber, long declaredRevenueCents,
+                       String notes, Instant createdAt, String createdBy) { }
+
+    /** Etapa do fechamento marcada à mão. */
+    record ClosingStep(UUID periodId, String step, Instant doneAt, String doneBy, String notes) { }
 
     record Closure(UUID id, UUID periodId, String action, String reason, Long productRevenueCents, Long serviceRevenueCents,
-                   UUID simulationId, UUID confirmationId, Instant occurredAt, String actor) { }
+                   UUID simulationId, UUID guideId, Instant occurredAt, String actor) { }
 
     /** Revisões, da mais recente para a mais antiga. */
     List<TaxParameters> parameters();
@@ -48,7 +69,10 @@ public interface TaxRepository {
 
     List<Period> findBetween(YearMonth from, YearMonth to);
 
-    /** Competência bloqueada para alteração; criada (aberta, versão 0) se ainda não existir. */
+    /** Competências encerradas. */
+    List<YearMonth> closedCompetences();
+
+    /** Competência bloqueada para alteração; criada (em apuração, versão 0) se ainda não existir. */
     Period lockOrCreate(YearMonth competence, Instant at, String actor);
 
     /** Grava situação, RBT12 informado e versão; confere a versão lida. */
@@ -56,23 +80,36 @@ public interface TaxRepository {
 
     /**
      * Situação da competência com bloqueio compartilhado até o fim da transação (a nota que consulta segura o
-     * fechamento simultâneo); vazio se a competência nunca foi usada no fiscal (aberta).
+     * encerramento simultâneo); vazio se a competência nunca foi usada no fiscal (em apuração).
      */
     Optional<String> statusForShare(YearMonth competence);
 
-    /** Simulações da competência, da mais recente para a mais antiga. */
+    /** Cálculos da competência, do mais recente para o mais antigo. */
     List<Simulation> simulations(UUID periodId);
 
     Map<UUID, Simulation> latestSimulations(List<UUID> periodIds);
 
     void insertSimulation(Simulation s);
 
-    /** Conferências da competência, da mais recente para a mais antiga. */
-    List<Confirmation> confirmations(UUID periodId);
+    /** Guias da competência, da mais recente para a mais antiga. */
+    List<DasGuide> guides(UUID periodId);
 
-    Map<UUID, Confirmation> latestConfirmations(List<UUID> periodIds);
+    Map<UUID, DasGuide> latestGuides(List<UUID> periodIds);
 
-    void insertConfirmation(Confirmation c);
+    void insertGuide(DasGuide g);
+
+    /** Transmissões da competência, da mais recente para a mais antiga. */
+    List<Declaration> declarations(UUID periodId);
+
+    Map<UUID, Declaration> latestDeclarations(List<UUID> periodIds);
+
+    void insertDeclaration(Declaration d);
+
+    List<ClosingStep> closingSteps(UUID periodId);
+
+    void insertClosingStep(ClosingStep s);
+
+    void deleteClosingStep(UUID periodId, String step);
 
     /** Fechamentos e reaberturas, do mais recente para o mais antigo. */
     List<Closure> closures(UUID periodId);

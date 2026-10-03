@@ -19,7 +19,7 @@ public record FinancialCategory(UUID id, String code, String name, Direction dir
 
     /** Categoria dos títulos a receber gerados pelos pedidos. */
     public static final String SALES_REVENUE = "RECEITA_VENDA";
-    /** Categoria do título do DAS gerado pela conferência do contador. */
+    /** Categoria do título do DAS gerado pela guia DAS da apuração. */
     public static final String SIMPLES_TAX = "IMPOSTOS_SIMPLES";
 
     /** Código derivado do nome: sem acentos, maiúsculo, com "_" no lugar do que não é letra ou número. */

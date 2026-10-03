@@ -34,6 +34,12 @@ export const NATUREZA: Record<OperationNature, string> = {
   REMESSA: 'Remessa',
 };
 
+function anexoDaLinha(linha: object) {
+  const l = linha as { annex?: string; annexSource?: string };
+  if (!l.annex) return '—';
+  return l.annexSource === 'PADRAO' ? `${l.annex} (padrão)` : l.annex;
+}
+
 const TIPO: Record<DocumentLineKind, string> = { PRODUTO: 'Produto', SERVICO: 'Serviço' };
 
 /** Tipo da nota (notas separadas, decisão do PO na Sprint 7): produto sai em NF-e, serviço em NFS-e. */
@@ -246,6 +252,19 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
 
   const podeGravar = adicao && !gravando && !somenteLeitura && !!form.orderId && !!proposta && BigInt(aEmitirDoTipo(proposta, proposta.kind)) > 0n;
   const podeCancelar = !!doc && ativo && can('document.cancel');
+  const podeAutorizar = !!doc && ativo && can('document.classify');
+
+  const alternarAutorizacao = async () => {
+    const status = doc!.authorization === 'AUTORIZADA' ? 'PENDENTE' : 'AUTORIZADA';
+    try {
+      const r = await api.put<BusinessDocument>(`/api/v1/documents/${doc!.id}/authorization`, { status }, etag);
+      aplicar(r.data, r.etag);
+      winRef.current.notify({ tone: 'sucesso', text: `Nota nº ${r.data.number} marcada como ${status === 'AUTORIZADA' ? 'autorizada' : 'pendente de autorização'}` });
+      avisar();
+    } catch (e) {
+      falha(e);
+    }
+  };
   useEffect(() => win.registerCommands({ save: podeGravar ? gravar : undefined }), [podeGravar, gravar, win]);
 
   const set = (patch: Partial<Form>) => setForm((f) => ({ ...f, ...patch }));
@@ -388,6 +407,21 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
                   {doc ? seloDocumento(doc.status) : <span className="rp-badge">Nova</span>}
                   {alterado && <span className="rp-badge rp-badge--pendente rp-janela-mdi__selo">Alterações não salvas</span>}
                 </span>
+                {doc?.authorization && (
+                  <>
+                    <span className="rp-label">Autorização</span>
+                    <span>
+                      <span className={`rp-badge ${doc.authorization === 'AUTORIZADA' ? 'rp-badge--aprovado' : 'rp-badge--pendente'}`}>
+                        {doc.authorization === 'AUTORIZADA' ? 'Autorizada' : 'Pendente'}
+                      </span>
+                      {podeAutorizar && (
+                        <button type="button" className="rp-btn rp-janela-mdi__selo" onClick={() => void alternarAutorizacao()}>
+                          {doc.authorization === 'AUTORIZADA' ? 'Marcar como pendente' : 'Marcar como autorizada'}
+                        </button>
+                      )}
+                    </span>
+                  </>
+                )}
                 {adicao ? (
                   <>
                     <span className="rp-label">Recebido</span>
@@ -470,6 +504,7 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
                         <th className="rownum">#</th>
                         <th>Descrição</th>
                         <th className="rp-linhas__tipo">Tipo</th>
+                        {doc && <th className="rp-linhas__tipo">Anexo</th>}
                         <th className="num rp-linhas__valor">Valor</th>
                       </tr>
                     </thead>
@@ -479,13 +514,14 @@ export function DocumentWindow({ recordKey }: { recordKey: string }) {
                           <td className="rownum">{l.seq}</td>
                           <td>{l.description}</td>
                           <td>{TIPO[l.kind]}</td>
+                          {doc && <td>{anexoDaLinha(l)}</td>}
                           <td className="num">{reais(l.amountCents)}</td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot>
                       <tr>
-                        <td colSpan={3}>Total da nota</td>
+                        <td colSpan={doc ? 4 : 3}>Total da nota</td>
                         <td className="num" aria-label="Soma das linhas">{reais(total)}</td>
                       </tr>
                     </tfoot>

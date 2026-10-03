@@ -7,7 +7,7 @@ import { useWindow } from '../windows/WindowContext';
 import { CONTAS_ALTERADAS } from './BankAccountsWindow';
 import { JanelaLista, type Situacao } from './comum/JanelaLista';
 import { seloTitulo } from './comum/Selos';
-import { IMPOSTOS_ALTERADOS } from './TaxPeriodsWindow';
+import { IMPOSTOS_ALTERADOS } from './comum/Fiscal';
 
 /** Avisado pela ficha e pelo novo título a pagar depois de gravar, pagar, estornar ou cancelar. */
 export const PAGAR_ALTERADOS = 'renda:pagar-alterados';

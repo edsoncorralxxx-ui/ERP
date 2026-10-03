@@ -3,10 +3,10 @@ import { expect, test, type APIRequestContext, type Locator, type Page } from '@
 /**
  * Sprint 8 — "Como verificar": título a pagar manual de R$ 3.000,00 em 3 parcelas pela tela; pagamento parcial de
  * R$ 400,00 pelo Banco (a conta cai para R$ 9.600,00, conferido pela API e no extrato); R$ 600,01 recusado; estorno
- * (a conta volta a R$ 10.000,00); cancelamento da 3ª parcela com motivo. Depois a conferência do contador na
- * competência D cria o DAS (seta da competência para o título) e reconferir deixa um só DAS ativo (conferido pela API).
- * A competência D é três meses depois da data do servidor, para não cruzar com o roteiro da Sprint 7. Fornecedor e
- * conta são criados pela API.
+ * (a conta volta a R$ 10.000,00); cancelamento da 3ª parcela com motivo. Depois a guia DAS da competência D, na
+ * Apuração do Simples (Sprint 12; era a conferência do contador), cria o título a pagar (seta da guia para o título) e
+ * uma nova guia substitui a anterior, deixando um só DAS ativo (conferido pela API). A competência D é três meses antes
+ * da data do servidor, para não cruzar com o roteiro da Sprint 12. Fornecedor e conta são criados pela API.
  */
 const API = process.env.RENDA_E2E_API ?? 'http://localhost:8080';
 const USUARIO = process.env.RENDA_E2E_USER ?? 'admin';
@@ -47,7 +47,7 @@ async function apiGet<T>(request: APIRequestContext, path: string): Promise<T> {
 }
 
 type Titulo = { id: string; code: string; status: string; balanceCents: string; paidCents: string; originType: string; competence: string; version: string };
-type Periodo = { status: string; version: string; confirmations: { titleId: string | null; titleStatus: string | null }[] };
+type Periodo = { status: string; version: string; guides: { titleId: string | null; status: string }[] };
 type Pagamento = { id: string; status: string; direction: string };
 
 const saldoDaConta = async (request: APIRequestContext) => (await apiGet<{ balanceCents: string }>(request, `/api/v1/bank-accounts/${contaId}`)).balanceCents;
@@ -57,18 +57,18 @@ test.beforeAll(async ({ request }) => {
   expect(login.ok(), await login.text()).toBeTruthy();
   auth = { Authorization: `Bearer ${(await login.json()).token}` };
   hoje = (await apiGet<{ businessDate: string }>(request, '/api/v1/status')).businessDate;
-  d = mes(hoje.slice(0, 7), 3);
+  d = mes(hoje.slice(0, 7), -3);
   rotulo = mmaaaa(d);
 
-  // Banco reaproveitado: a competência D volta aberta e o DAS dela sem pagamento (reconferir exige).
+  // Banco reaproveitado: a competência D volta em apuração e o DAS dela sem pagamento (a nova guia exige).
   const antes = await apiGet<Periodo>(request, `/api/v1/tax-periods/${d}`);
-  if (antes.status === 'FECHADA') {
+  if (antes.status === 'ENCERRADA') {
     const r = await request.post(`${API}/api/v1/tax-periods/${d}/reopenings`, {
       headers: { ...auth, 'If-Match': `"${antes.version}"` }, data: { reason: 'Roteiro de ponta a ponta' },
     });
     expect(r.ok(), await r.text()).toBeTruthy();
   }
-  for (const c of antes.confirmations.filter((x) => x.titleId && x.titleStatus !== 'CANCELLED')) {
+  for (const c of antes.guides.filter((x) => x.titleId && x.status !== 'SUBSTITUIDA')) {
     for (const s of await apiGet<Pagamento[]>(request, `/api/v1/settlements?titleId=${c.titleId}`)) {
       if (s.status !== 'POSTED') continue;
       const r = await request.post(`${API}/api/v1/settlements/${s.id}/reversals`, { headers: auth, data: { reason: 'Roteiro de ponta a ponta' } });
@@ -90,7 +90,7 @@ test.beforeAll(async ({ request }) => {
   contaCodigo = b.code;
 });
 
-test('título a pagar em parcelas, pagamento parcial, excedente, estorno, cancelamento e o DAS da conferência', async ({ page, request }) => {
+test('título a pagar em parcelas, pagamento parcial, excedente, estorno, cancelamento e o DAS da apuração', async ({ page, request }) => {
   await page.goto('/');
   await page.getByLabel('Usuário', { exact: true }).fill(USUARIO);
   await page.getByLabel('Senha', { exact: true }).fill(SENHA);
@@ -178,44 +178,38 @@ test('título a pagar em parcelas, pagamento parcial, excedente, estorno, cancel
   expect((await apiGet<Titulo>(request, `/api/v1/payables/${t3.id}`)).status).toBe('CANCELLED');
   await ficha3.getByRole('button', { name: 'OK', exact: true }).click();
 
-  // Fiscal → competência D → conferência do contador: nasce o DAS, com a seta para o título.
+  // Fiscal → Apuração do Simples → competência D → Guia DAS: nasce o título a pagar, com a seta da guia para ele.
   await gaveta.getByRole('button', { name: 'Fiscal', exact: true }).click();
-  await gaveta.getByRole('button', { name: /Impostos gerenciais/ }).click();
-  const impostos = page.getByRole('dialog', { name: 'Impostos gerenciais', exact: true });
-  if (d.slice(0, 4) !== hoje.slice(0, 4)) {
-    await impostos.getByRole('button', { name: 'Filtrar tabela' }).click();
-    await escolher(page, impostos.getByRole('combobox', { name: 'Ano' }), d.slice(0, 4));
-    await impostos.getByRole('dialog', { name: 'Filtrar tabela' }).getByRole('button', { name: 'OK', exact: true }).click();
-  }
-  await impostos.getByRole('link', { name: `Abrir competência ${rotulo}` }).click();
-  const competencia = page.getByRole('dialog', { name: 'Competência fiscal', exact: true });
-  await competencia.getByRole('tab', { name: /Conferência/ }).click();
-  const confere = async (valor: string) => {
-    await competencia.getByLabel('Valor do contador').fill(valor);
-    await competencia.getByRole('textbox', { name: 'Vencimento' }).last().fill(`20/${mmaaaa(mes(d, 1))}`);
-    await competencia.getByRole('button', { name: 'Registrar conferência' }).click();
+  await gaveta.getByRole('button', { name: /Apuração do Simples/ }).click();
+  const competencia = page.getByRole('dialog', { name: 'Apuração do Simples Nacional', exact: true });
+  await escolher(page, competencia.getByRole('combobox', { name: 'Competência' }), rotulo);
+  await competencia.getByRole('tab', { name: /Guia DAS/ }).click();
+  const guia = competencia.getByRole('tabpanel');
+  const gera = async (valor: string) => {
+    await guia.locator('input[id$="-princ"]').fill(valor);
+    await guia.getByRole('textbox', { name: 'Vencimento' }).last().fill(`20/${mmaaaa(mes(d, 1))}`);
+    await guia.getByRole('button', { name: 'Gerar DAS' }).click();
   };
-  await confere('1.330,00');
-  await expect(competencia.getByLabel('Contador', { exact: true })).toHaveValue('R$ 1.330,00');
-  const conferencias = competencia.getByRole('table', { name: 'Conferências do contador' });
-  await expect(conferencias).toContainText('Em aberto');
+  await gera('1.330,00');
+  await expect(guia.getByRole('textbox', { name: 'Total a pagar' })).toHaveValue('R$ 1.330,00');
+  await expect(guia).toContainText('Aberto');
   await foto(page, '05-das-criado');
 
-  // Reconferir: o DAS anterior fica cancelado e só um DAS fica ativo na competência (conferido pela API).
-  await confere('1.335,00');
-  await expect(competencia.getByLabel('Contador', { exact: true })).toHaveValue('R$ 1.335,00');
-  await expect(conferencias).toContainText('Cancelado');
+  // Nova guia: a anterior fica substituída e só um DAS fica ativo na competência (conferido pela API).
+  await gera('1.335,00');
+  await expect(guia.getByRole('textbox', { name: 'Total a pagar' })).toHaveValue('R$ 1.335,00');
+  await expect(guia.getByRole('table', { name: 'Guias anteriores' })).toContainText('Substituída');
   const p = await apiGet<Periodo>(request, `/api/v1/tax-periods/${d}`);
-  const ativos = p.confirmations.filter((c) => c.titleId && c.titleStatus !== 'CANCELLED');
+  const ativos = p.guides.filter((g) => g.status !== 'SUBSTITUIDA');
   expect(ativos).toHaveLength(1);
   const das = await apiGet<Titulo>(request, `/api/v1/payables/${ativos[0].titleId}`);
   expect(das).toMatchObject({ originType: 'TAX_PERIOD', competence: d, balanceCents: '133500', status: 'OPEN' });
   expect((await apiGet<Titulo[]>(request, `/api/v1/payables?search=${encodeURIComponent(`DAS ${rotulo}`)}`)).filter((t) => t.status !== 'CANCELLED'))
     .toHaveLength(1);
-  await foto(page, '06-reconferencia');
+  await foto(page, '06-nova-guia');
 
-  // A seta da conferência abre o DAS em Contas a pagar.
-  await conferencias.getByRole('link', { name: `Abrir DAS ${das.code}` }).click();
+  // A seta da guia abre o DAS em Contas a pagar.
+  await guia.getByRole('link', { name: `Abrir título ${das.code}` }).click();
   const fichaDas = page.getByRole('dialog', { name: 'Título a pagar', exact: true });
   await expect(fichaDas.getByLabel('Descrição')).toHaveValue(`DAS ${rotulo}`);
   await expect(fichaDas.getByLabel('Categoria')).toHaveValue('Impostos — Simples Nacional');

@@ -31,6 +31,7 @@ public abstract class CadastrosApiTest extends IntegrationTest {
         jdbc.sql("delete from outbox_event").update();
         jdbc.sql("delete from command_receipt").update();
         limpaDocumentos();
+        jdbc.sql("delete from item_fiscal_profile").update();
         jdbc.sql("delete from item").update();
         jdbc.sql("delete from partner where created_by <> 'sistema'").update();
         jdbc.sql("delete from item_category").update();

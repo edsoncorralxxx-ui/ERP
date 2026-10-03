@@ -208,7 +208,7 @@ public class PayableService {
         }
         if (!MANUAL_ORIGIN.equals(t.originType())) {
             throw new InvalidStateException("O título " + t.code() + " foi gerado por " + t.originLabel()
-                    + " e é cancelado pela origem (no DAS, por uma nova conferência do contador).");
+                    + " e é cancelado pela origem (no DAS, por uma nova guia na Apuração do Simples).");
         }
         if (t.version() != expectedVersion) throw new VersionConflictException(TitleService.ENTITY, expectedVersion, t.version());
         FinancialTitle after = t.cancel(why, clock.instant(), user.username());

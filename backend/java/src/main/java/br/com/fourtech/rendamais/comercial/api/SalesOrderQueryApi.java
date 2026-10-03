@@ -10,8 +10,8 @@ import java.util.UUID;
  */
 public interface SalesOrderQueryApi {
 
-    /** Linha do pedido: EQUIPAMENTO, MATERIAL ou SERVICO, com o total da linha em centavos. */
-    record LineRef(String kind, String description, long totalCents) { }
+    /** Linha do pedido: EQUIPAMENTO, MATERIAL ou SERVICO, o item do cadastro (vazio no equipamento) e o total em centavos. */
+    record LineRef(String kind, UUID itemId, String description, long totalCents) { }
 
     /**
      * Pedido confirmado (CONFIRMED, IN_EXECUTION ou COMPLETED) com as linhas e os ids dos títulos das parcelas, na ordem

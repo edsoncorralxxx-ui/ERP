@@ -8,7 +8,7 @@ import { useCategorias } from './comum/Categorias';
 import { Selecao } from './comum/Selecao';
 import { PAGAR_ALTERADOS } from './PayablesWindow';
 import { TITULOS_ALTERADOS } from './ReceivablesWindow';
-import { IMPOSTOS_ALTERADOS } from './TaxPeriodsWindow';
+import { IMPOSTOS_ALTERADOS } from './comum/Fiscal';
 
 const PERIODO: Record<CashFlowMonth['period'], string> = { REALIZADO: 'Realizado', CORRENTE: 'Corrente', PREVISTO: 'Previsto' };
 
