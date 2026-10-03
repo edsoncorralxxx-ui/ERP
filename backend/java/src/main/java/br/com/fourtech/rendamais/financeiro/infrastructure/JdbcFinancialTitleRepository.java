@@ -179,4 +179,21 @@ class JdbcFinancialTitleRepository implements FinancialTitleRepository {
     private static Timestamp ts(Instant i) {
         return i == null ? null : Timestamp.from(i);
     }
+
+    @Override
+    public java.util.Map<UUID, java.time.LocalDate> lastSettlementDates(List<UUID> ids) {
+        java.util.Map<UUID, java.time.LocalDate> out = new java.util.HashMap<>();
+        if (ids.isEmpty()) return out;
+        jdbc.sql("""
+                select a.title_id, max(s.effective_date) as paid_on
+                  from settlement_allocation a join settlement s on s.id = a.settlement_id
+                 where a.title_id in (:ids) and s.status = 'POSTED'
+                 group by a.title_id
+                """)
+                .param("ids", ids)
+                .query(rs -> {
+                    out.put(rs.getObject("title_id", UUID.class), rs.getDate("paid_on").toLocalDate());
+                });
+        return out;
+    }
 }

@@ -48,17 +48,27 @@ public final class Permissions {
     public static final String DOCUMENT_LINK = "document.link";
     public static final String DOCUMENT_CLASSIFY = "document.classify";
     public static final String DOCUMENT_CANCEL = "document.cancel";
-    /** Ver competências, simulações, conferências e parâmetros fiscais (Sprint 7). */
+    /** Ver o painel, a apuração, as obrigações, a classificação e os parâmetros fiscais (Sprints 7 e 12). */
     public static final String TAX_READ = "tax.read";
     /** Criar revisão dos parâmetros do Simples Nacional. */
     public static final String TAX_PARAMETER_ADMIN = "tax_parameter.admin";
-    /** Simular a competência (RecordTaxSimulation). */
+    /** Calcular o DAS da competência (RecordTaxSimulation). */
     public static final String TAX_PERIOD_SIMULATE = "tax_period.simulate";
-    /** Informar o RBT12 e registrar a conferência do contador (ConfirmTaxPeriod). */
-    public static final String TAX_PERIOD_CONFIRM = "tax_period.confirm";
+    /** Registrar a transmissão do PGDAS-D e informar o RBT12 (Sprint 12). */
+    public static final String TAX_PERIOD_DECLARE = "tax_period.declare";
+    /** Gerar a guia DAS, com o título a pagar (Sprint 12; era a conferência do contador). */
+    public static final String TAX_DAS_ISSUE = "tax_das.issue";
+    /** Concluir ou desfazer as etapas manuais do fechamento (Sprint 12). */
+    public static final String TAX_PERIOD_CLOSE_STEP = "tax_period.close_step";
     public static final String TAX_PERIOD_CLOSE = "tax_period.close";
-    /** Reabrir competência fechada, com motivo. */
+    /** Reabrir competência encerrada, com motivo. */
     public static final String TAX_PERIOD_REOPEN = "tax_period.reopen";
+    /** Incluir, alterar e entregar obrigações fiscais e acessórias (Sprint 12). */
+    public static final String TAX_OBLIGATION_UPDATE = "tax_obligation.update";
+    /** Gravar a classificação fiscal dos itens (Sprint 12). */
+    public static final String TAX_CLASSIFICATION_UPDATE = "tax_classification.update";
+    /** Dados da empresa no Simples, limites, atividades, opção IBS/CBS e histórico de receita (Sprint 12). */
+    public static final String TAX_PROFILE_ADMIN = "tax_profile.admin";
     /** Ver modelos de equipamento, BOMs, revisões e o custo planejado (Sprint 10). */
     public static final String BOM_READ = "bom.read";
     /** Cadastrar modelos e BOMs, editar a BOM e carregar a BOM do arquivo (só o Administrador). */

@@ -54,4 +54,7 @@ public interface FinancialTitleRepository {
      */
     List<Summary> list(FinancialTitle.Direction direction, String search, UUID projectId, UUID counterpartyId, Filter filter,
                        LocalDate today, int limit);
+
+    /** Data do último pagamento ou recebimento não estornado de cada título. */
+    java.util.Map<java.util.UUID, java.time.LocalDate> lastSettlementDates(List<java.util.UUID> ids);
 }

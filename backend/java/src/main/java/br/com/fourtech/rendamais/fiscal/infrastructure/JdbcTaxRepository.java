@@ -1,7 +1,7 @@
 package br.com.fourtech.rendamais.fiscal.infrastructure;
 
 import br.com.fourtech.rendamais.fiscal.application.TaxRepository;
-import br.com.fourtech.rendamais.fiscal.domain.RevenueKind;
+import br.com.fourtech.rendamais.fiscal.domain.Annex;
 import br.com.fourtech.rendamais.fiscal.domain.TaxParameters;
 import br.com.fourtech.rendamais.kernel.VersionConflictException;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -42,14 +42,14 @@ class JdbcTaxRepository implements TaxRepository {
 
     @Override
     public List<TaxParameters> parameters() {
-        return jdbc.sql("select *, brackets::text as brackets_json from tax_parameter_revision order by revision desc")
+        return jdbc.sql("select *, annexes::text as annexes_json from tax_parameter_revision order by revision desc")
                 .query(this::parameters).list();
     }
 
     @Override
     public Optional<TaxParameters> parametersFor(YearMonth competence) {
         return jdbc.sql("""
-                select *, brackets::text as brackets_json from tax_parameter_revision
+                select *, annexes::text as annexes_json from tax_parameter_revision
                  where valid_from <= :c order by valid_from desc, revision desc limit 1
                 """)
                 .param("c", competence.toString()).query(this::parameters).optional();
@@ -63,35 +63,41 @@ class JdbcTaxRepository implements TaxRepository {
 
     @Override
     public void insertParameters(TaxParameters p) {
-        Map<String, Object> brackets = new LinkedHashMap<>();
-        p.brackets().forEach((k, list) -> brackets.put(k.name(), list.stream().map(b -> Map.of("upToCents", Long.toString(b.upToCents()),
-                "rate", b.rate().toPlainString(), "deductionCents", Long.toString(b.deductionCents()))).toList()));
+        Map<String, Object> annexes = new LinkedHashMap<>();
+        p.annexes().forEach((k, t) -> annexes.put(k.name(), Map.of("taxes", t.taxes(), "brackets", t.brackets().stream()
+                .map(b -> Map.of("upToCents", Long.toString(b.upToCents()), "rate", b.rate().toPlainString(),
+                        "deductionCents", Long.toString(b.deductionCents()), "shares", b.shares().stream().map(BigDecimal::toPlainString).toList()))
+                .toList())));
         jdbc.sql("""
-                insert into tax_parameter_revision (id, revision, regime, valid_from, product_annex, service_annex, brackets, source, notes,
-                       created_at, created_by)
-                values (:id, :rev, :regime, :from, :pa, :sa, cast(:brackets as jsonb), :source, :notes, :at, :by)
+                insert into tax_parameter_revision (id, revision, regime, valid_from, annexes, source, notes, created_at, created_by)
+                values (:id, :rev, :regime, :from, cast(:annexes as jsonb), :source, :notes, :at, :by)
                 """)
                 .param("id", p.id()).param("rev", p.revision()).param("regime", p.regime()).param("from", p.validFrom().toString())
-                .param("pa", p.productAnnex()).param("sa", p.serviceAnnex()).param("brackets", json.writeValueAsString(brackets))
-                .param("source", p.source()).param("notes", p.notes()).param("at", ts(p.createdAt())).param("by", p.createdBy())
-                .update();
+                .param("annexes", json.writeValueAsString(annexes)).param("source", p.source()).param("notes", p.notes())
+                .param("at", ts(p.createdAt())).param("by", p.createdBy()).update();
     }
 
     private TaxParameters parameters(ResultSet rs, int n) throws SQLException {
-        JsonNode root = json.readTree(rs.getString("brackets_json"));
-        Map<RevenueKind, List<TaxParameters.Bracket>> brackets = new EnumMap<>(RevenueKind.class);
-        for (RevenueKind k : RevenueKind.values()) {
-            List<TaxParameters.Bracket> list = new ArrayList<>();
-            JsonNode arr = root.get(k.name());
-            if (arr != null) {
-                arr.forEach(b -> list.add(new TaxParameters.Bracket(Long.parseLong(b.get("upToCents").asString()),
-                        new BigDecimal(b.get("rate").asString()), Long.parseLong(b.get("deductionCents").asString()))));
-            }
-            brackets.put(k, List.copyOf(list));
+        JsonNode root = json.readTree(rs.getString("annexes_json"));
+        Map<Annex, TaxParameters.AnnexTable> annexes = new EnumMap<>(Annex.class);
+        for (Annex a : Annex.values()) {
+            JsonNode t = root.get(a.name());
+            if (t == null) continue;
+            List<String> taxes = new ArrayList<>();
+            t.get("taxes").forEach(x -> taxes.add(x.asString()));
+            List<TaxParameters.Bracket> brackets = new ArrayList<>();
+            t.get("brackets").forEach(b -> {
+                List<BigDecimal> shares = new ArrayList<>();
+                JsonNode sh = b.get("shares");
+                if (sh != null) sh.forEach(x -> shares.add(new BigDecimal(x.asString())));
+                brackets.add(new TaxParameters.Bracket(Long.parseLong(b.get("upToCents").asString()), new BigDecimal(b.get("rate").asString()),
+                        Long.parseLong(b.get("deductionCents").asString()), shares));
+            });
+            annexes.put(a, new TaxParameters.AnnexTable(taxes, brackets));
         }
         return new TaxParameters(rs.getObject("id", UUID.class), rs.getInt("revision"), rs.getString("regime"),
-                YearMonth.parse(rs.getString("valid_from")), rs.getString("product_annex"), rs.getString("service_annex"), brackets,
-                rs.getString("source"), rs.getString("notes"), instant(rs, "created_at"), rs.getString("created_by"));
+                YearMonth.parse(rs.getString("valid_from")), annexes, rs.getString("source"), rs.getString("notes"),
+                instant(rs, "created_at"), rs.getString("created_by"));
     }
 
     @Override
@@ -110,7 +116,7 @@ class JdbcTaxRepository implements TaxRepository {
     public Period lockOrCreate(YearMonth competence, Instant at, String actor) {
         jdbc.sql("""
                 insert into tax_period (id, competence, status, version, created_at, created_by)
-                values (:id, :c, 'ABERTA', 0, :at, :by) on conflict (competence) do nothing
+                values (:id, :c, 'EM_APURACAO', 0, :at, :by) on conflict (competence) do nothing
                 """)
                 .param("id", UUID.randomUUID()).param("c", competence.toString()).param("at", ts(at)).param("by", actor).update();
         return jdbc.sql("select * from tax_period where competence = :c for update").param("c", competence.toString())
@@ -158,45 +164,98 @@ class JdbcTaxRepository implements TaxRepository {
     public void insertSimulation(Simulation s) {
         jdbc.sql("""
                 insert into tax_simulation (id, period_id, seq, result, parameter_revision_id, rbt12_cents, rbt12_origin,
-                       product_revenue_cents, service_revenue_cents, product_tax_cents, service_tax_cents, total_tax_cents, memory,
-                       created_at, created_by)
-                values (:id, :p, :seq, :result, :rev, :rbt12, :origin, :pr, :sr, :pt, :st, :tt, cast(:memory as jsonb), :at, :by)
+                       product_revenue_cents, service_revenue_cents, product_tax_cents, service_tax_cents, total_tax_cents, annexes,
+                       taxes, memory, created_at, created_by)
+                values (:id, :p, :seq, :result, :rev, :rbt12, :origin, :pr, :sr, :pt, :st, :tt, cast(:annexes as jsonb),
+                        cast(:taxes as jsonb), cast(:memory as jsonb), :at, :by)
                 """)
                 .param("id", s.id()).param("p", s.periodId()).param("seq", s.seq()).param("result", s.result())
                 .param("rev", s.parameterRevisionId()).param("rbt12", s.rbt12Cents()).param("origin", s.rbt12Origin())
                 .param("pr", s.productRevenueCents()).param("sr", s.serviceRevenueCents()).param("pt", s.productTaxCents())
-                .param("st", s.serviceTaxCents()).param("tt", s.totalTaxCents()).param("memory", s.memory())
+                .param("st", s.serviceTaxCents()).param("tt", s.totalTaxCents()).param("annexes", s.annexes())
+                .param("taxes", s.taxes()).param("memory", s.memory())
                 .param("at", ts(s.createdAt())).param("by", s.createdBy()).update();
     }
 
     @Override
-    public List<Confirmation> confirmations(UUID periodId) {
-        return jdbc.sql("select * from accountant_confirmation where period_id = :p order by seq desc").param("p", periodId)
-                .query(JdbcTaxRepository::confirmation).list();
+    public List<DasGuide> guides(UUID periodId) {
+        return jdbc.sql("select * from tax_das_guide where period_id = :p order by seq desc").param("p", periodId)
+                .query(JdbcTaxRepository::guide).list();
     }
 
     @Override
-    public Map<UUID, Confirmation> latestConfirmations(List<UUID> periodIds) {
-        Map<UUID, Confirmation> out = new HashMap<>();
+    public Map<UUID, DasGuide> latestGuides(List<UUID> periodIds) {
+        Map<UUID, DasGuide> out = new HashMap<>();
         if (periodIds.isEmpty()) return out;
         jdbc.sql("""
-                select * from accountant_confirmation c where c.period_id in (:ids)
-                   and c.seq = (select max(x.seq) from accountant_confirmation x where x.period_id = c.period_id)
+                select * from tax_das_guide c where c.period_id in (:ids)
+                   and c.seq = (select max(x.seq) from tax_das_guide x where x.period_id = c.period_id)
                 """)
-                .param("ids", periodIds).query(JdbcTaxRepository::confirmation).list().forEach(c -> out.put(c.periodId(), c));
+                .param("ids", periodIds).query(JdbcTaxRepository::guide).list().forEach(c -> out.put(c.periodId(), c));
         return out;
     }
 
     @Override
-    public void insertConfirmation(Confirmation c) {
+    public void insertGuide(DasGuide g) {
         jdbc.sql("""
-                insert into accountant_confirmation (id, period_id, seq, amount_cents, due_date, notes, simulation_id, title_id, created_at,
-                       created_by)
-                values (:id, :p, :seq, :amount, :due, :notes, :sim, :title, :at, :by)
+                insert into tax_das_guide (id, period_id, seq, document_number, amount_cents, fine_cents, interest_cents, due_date, notes,
+                       simulation_id, title_id, created_at, created_by)
+                values (:id, :p, :seq, :number, :amount, :fine, :interest, :due, :notes, :sim, :title, :at, :by)
                 """)
-                .param("id", c.id()).param("p", c.periodId()).param("seq", c.seq()).param("amount", c.amountCents())
-                .param("due", Date.valueOf(c.dueDate())).param("notes", c.notes()).param("sim", c.simulationId())
-                .param("title", c.titleId()).param("at", ts(c.createdAt())).param("by", c.createdBy()).update();
+                .param("id", g.id()).param("p", g.periodId()).param("seq", g.seq()).param("number", g.documentNumber())
+                .param("amount", g.principalCents()).param("fine", g.fineCents()).param("interest", g.interestCents())
+                .param("due", Date.valueOf(g.dueDate())).param("notes", g.notes()).param("sim", g.simulationId())
+                .param("title", g.titleId()).param("at", ts(g.createdAt())).param("by", g.createdBy()).update();
+    }
+
+    @Override
+    public List<Declaration> declarations(UUID periodId) {
+        return jdbc.sql("select * from tax_pgdas_declaration where period_id = :p order by seq desc").param("p", periodId)
+                .query(JdbcTaxRepository::declaration).list();
+    }
+
+    @Override
+    public Map<UUID, Declaration> latestDeclarations(List<UUID> periodIds) {
+        Map<UUID, Declaration> out = new HashMap<>();
+        if (periodIds.isEmpty()) return out;
+        jdbc.sql("""
+                select * from tax_pgdas_declaration c where c.period_id in (:ids)
+                   and c.seq = (select max(x.seq) from tax_pgdas_declaration x where x.period_id = c.period_id)
+                """)
+                .param("ids", periodIds).query(JdbcTaxRepository::declaration).list().forEach(c -> out.put(c.periodId(), c));
+        return out;
+    }
+
+    @Override
+    public void insertDeclaration(Declaration d) {
+        jdbc.sql("""
+                insert into tax_pgdas_declaration (id, period_id, seq, transmitted_on, receipt_number, declared_revenue_cents, notes,
+                       created_at, created_by)
+                values (:id, :p, :seq, :on, :receipt, :revenue, :notes, :at, :by)
+                """)
+                .param("id", d.id()).param("p", d.periodId()).param("seq", d.seq()).param("on", Date.valueOf(d.transmittedOn()))
+                .param("receipt", d.receiptNumber()).param("revenue", d.declaredRevenueCents()).param("notes", d.notes())
+                .param("at", ts(d.createdAt())).param("by", d.createdBy()).update();
+    }
+
+    @Override
+    public List<ClosingStep> closingSteps(UUID periodId) {
+        return jdbc.sql("select * from tax_closing_step where period_id = :p").param("p", periodId)
+                .query((rs, n) -> new ClosingStep(rs.getObject("period_id", UUID.class), rs.getString("step"), instant(rs, "done_at"),
+                        rs.getString("done_by"), rs.getString("notes")))
+                .list();
+    }
+
+    @Override
+    public void insertClosingStep(ClosingStep s) {
+        jdbc.sql("insert into tax_closing_step (period_id, step, done_at, done_by, notes) values (:p, :s, :at, :by, :notes)")
+                .param("p", s.periodId()).param("s", s.step()).param("at", ts(s.doneAt())).param("by", s.doneBy())
+                .param("notes", s.notes()).update();
+    }
+
+    @Override
+    public void deleteClosingStep(UUID periodId, String step) {
+        jdbc.sql("delete from tax_closing_step where period_id = :p and step = :s").param("p", periodId).param("s", step).update();
     }
 
     @Override
@@ -218,7 +277,7 @@ class JdbcTaxRepository implements TaxRepository {
                 """)
                 .param("id", c.id()).param("p", c.periodId()).param("action", c.action()).param("reason", c.reason())
                 .param("pr", c.productRevenueCents()).param("sr", c.serviceRevenueCents()).param("sim", c.simulationId())
-                .param("conf", c.confirmationId()).param("at", ts(c.occurredAt())).param("by", c.actor()).update();
+                .param("conf", c.guideId()).param("at", ts(c.occurredAt())).param("by", c.actor()).update();
     }
 
     private static Period period(ResultSet rs, int n) throws SQLException {
@@ -233,14 +292,20 @@ class JdbcTaxRepository implements TaxRepository {
                 rs.getObject("parameter_revision_id", UUID.class), rev == null ? null : rev.intValue(), longOrNull(rs, "rbt12_cents"),
                 rs.getString("rbt12_origin"), rs.getLong("product_revenue_cents"), rs.getLong("service_revenue_cents"),
                 longOrNull(rs, "product_tax_cents"), longOrNull(rs, "service_tax_cents"), longOrNull(rs, "total_tax_cents"),
-                rs.getString("memory"), instant(rs, "created_at"), rs.getString("created_by"));
+                rs.getString("annexes"), rs.getString("taxes"), rs.getString("memory"), instant(rs, "created_at"), rs.getString("created_by"));
     }
 
-    private static Confirmation confirmation(ResultSet rs, int n) throws SQLException {
-        return new Confirmation(rs.getObject("id", UUID.class), rs.getObject("period_id", UUID.class), rs.getInt("seq"),
-                rs.getLong("amount_cents"), rs.getDate("due_date").toLocalDate(), rs.getString("notes"),
-                rs.getObject("simulation_id", UUID.class), rs.getObject("title_id", UUID.class), instant(rs, "created_at"),
-                rs.getString("created_by"));
+    private static DasGuide guide(ResultSet rs, int n) throws SQLException {
+        return new DasGuide(rs.getObject("id", UUID.class), rs.getObject("period_id", UUID.class), rs.getInt("seq"),
+                rs.getString("document_number"), rs.getLong("amount_cents"), rs.getLong("fine_cents"), rs.getLong("interest_cents"),
+                rs.getDate("due_date").toLocalDate(), rs.getString("notes"), rs.getObject("simulation_id", UUID.class),
+                rs.getObject("title_id", UUID.class), instant(rs, "created_at"), rs.getString("created_by"));
+    }
+
+    private static Declaration declaration(ResultSet rs, int n) throws SQLException {
+        return new Declaration(rs.getObject("id", UUID.class), rs.getObject("period_id", UUID.class), rs.getInt("seq"),
+                rs.getDate("transmitted_on").toLocalDate(), rs.getString("receipt_number"), rs.getLong("declared_revenue_cents"),
+                rs.getString("notes"), instant(rs, "created_at"), rs.getString("created_by"));
     }
 
     private static Long longOrNull(ResultSet rs, String col) throws SQLException {

@@ -281,51 +281,51 @@ class ContasAPagarApiTest extends CadastrosApiTest {
     }
 
     @Test
-    void dasNasceDaConferenciaEReconferirNaoDuplica() throws Exception {
+    void dasNasceDaGuiaEGerarDeNovoNaoDuplica() throws Exception {
         String c = "2026-09";
-        HttpResponse<String> conf = withVersion("POST", "/api/v1/tax-periods/" + c + "/confirmations", "0",
-                "{\"amountCents\":\"133000\",\"dueDate\":\"2026-10-20\"}");
+        HttpResponse<String> conf = withVersion("POST", "/api/v1/tax-periods/" + c + "/das-guides", "0",
+                "{\"principalCents\":\"133000\",\"dueDate\":\"2026-10-20\"}");
         assertThat(conf.statusCode()).as(conf.body()).isEqualTo(201);
         String das = campo(conf.body(), "titleId");
-        assertThat(conf.body()).contains("\"titleStatus\":\"OPEN\"", "\"titleBalanceCents\":\"133000\"");
+        assertThat(conf.body()).contains("\"titleStatus\":\"OPEN\"", "\"titleBalanceCents\":\"133000\"", "\"status\":\"ABERTO\"");
         String t = titulo(das);
         assertThat(t).contains("\"supplierId\":\"" + RECEITA_FEDERAL + "\"", "\"supplierName\":\"Receita Federal — DAS\"",
                 "\"originType\":\"TAX_PERIOD\"", "\"origin\":\"DAS 09/2026\"", "\"category\":\"IMPOSTOS_SIMPLES\"", "\"competence\":\"2026-09\"",
                 "\"dueDate\":\"2026-10-20\"", "\"originalCents\":\"133000\"");
         assertThat(campo(conf.body(), "titleCode")).isEqualTo(campo(t, "code"));
-        assertThat(jdbc.sql("select payload->>'titleId' from outbox_event where event_type = 'TaxPeriodConfirmed'").query(String.class).single())
+        assertThat(jdbc.sql("select payload->>'titleId' from outbox_event where event_type = 'TaxDasGuideIssued'").query(String.class).single())
                 .isEqualTo(das);
-        // O DAS só é cancelado pela reconferência.
+        // O DAS só é cancelado por uma nova guia.
         assertThat(withVersion("POST", "/api/v1/payables/" + das + "/cancellation", "1", "{\"reason\":\"x\"}").body())
-                .contains("nova conferência do contador");
+                .contains("nova guia na Apuração do Simples");
 
-        // Reconferir sem pagamento: o anterior é cancelado e nasce outro; um só DAS ativo.
-        HttpResponse<String> reconf = withVersion("POST", "/api/v1/tax-periods/" + c + "/confirmations", "1",
-                "{\"amountCents\":\"133500\",\"dueDate\":\"2026-10-20\",\"notes\":\"Retificação do PGDAS-D\"}");
+        // Nova guia sem pagamento: o título anterior é cancelado e nasce outro; um só DAS ativo.
+        HttpResponse<String> reconf = withVersion("POST", "/api/v1/tax-periods/" + c + "/das-guides", "1",
+                "{\"principalCents\":\"133000\",\"interestCents\":\"500\",\"dueDate\":\"2026-10-20\",\"notes\":\"Retificação do PGDAS-D\"}");
         assertThat(reconf.statusCode()).as(reconf.body()).isEqualTo(201);
         String das2 = campo(reconf.body(), "titleId");
         assertThat(das2).isNotEqualTo(das);
-        assertThat(titulo(das)).contains("\"status\":\"CANCELLED\"", "Substituído pela conferência 2 do contador.");
+        assertThat(titulo(das)).contains("\"status\":\"CANCELLED\"", "Substituído pela guia 2 do DAS.");
         assertThat(conta("select count(*) from financial_title where origin_type = 'TAX_PERIOD' and lifecycle = 'ACTIVE'")).isEqualTo(1);
         assertThat(get("/api/v1/tax-periods/" + c).body()).contains("\"titleStatus\":\"CANCELLED\"", "\"titleStatus\":\"OPEN\"");
 
-        // Com pagamento: reconferir é recusado até estornar o pagamento.
+        // Com pagamento: outra guia é recusada até estornar o pagamento.
         HttpResponse<String> p = paga("s8-pg-das", caixa, 133_500, aloca(das2, 133_500));
         assertThat(p.statusCode()).as(p.body()).isEqualTo(201);
-        HttpResponse<String> recusa = withVersion("POST", "/api/v1/tax-periods/" + c + "/confirmations", "2",
-                "{\"amountCents\":\"134000\",\"dueDate\":\"2026-10-20\"}");
+        HttpResponse<String> recusa = withVersion("POST", "/api/v1/tax-periods/" + c + "/das-guides", "2",
+                "{\"principalCents\":\"134000\",\"dueDate\":\"2026-10-20\"}");
         assertThat(recusa.statusCode()).isEqualTo(422);
         assertThat(recusa.body()).contains("TAX_DAS_PAID", "estorne o pagamento do DAS");
-        assertThat(conta("select count(*) from accountant_confirmation")).isEqualTo(2);
+        assertThat(conta("select count(*) from tax_das_guide")).isEqualTo(2);
         assertThat(post("/api/v1/settlements/" + campo(p.body(), "id") + "/reversals", null, "{\"reason\":\"Valor retificado\"}")
                 .statusCode()).isEqualTo(200);
 
-        // Conferência de R$ 0,00: cancela o DAS aberto e não cria outro.
-        HttpResponse<String> zero = withVersion("POST", "/api/v1/tax-periods/" + c + "/confirmations", "2",
-                "{\"amountCents\":\"0\",\"dueDate\":\"2026-10-20\"}");
+        // Guia de R$ 0,00: cancela o DAS aberto e não cria outro.
+        HttpResponse<String> zero = withVersion("POST", "/api/v1/tax-periods/" + c + "/das-guides", "2",
+                "{\"principalCents\":\"0\",\"dueDate\":\"2026-10-20\"}");
         assertThat(zero.statusCode()).as(zero.body()).isEqualTo(201);
         assertThat(conta("select count(*) from financial_title where origin_type = 'TAX_PERIOD' and lifecycle = 'ACTIVE'")).isZero();
-        assertThat(conta("select count(*) from accountant_confirmation where title_id is null")).isEqualTo(1);
+        assertThat(conta("select count(*) from tax_das_guide where title_id is null")).isEqualTo(1);
         assertThat(get("/api/v1/tax-periods/" + c + "/history").body()).contains("\"dasTitle\"");
     }
 

@@ -16,7 +16,7 @@ public interface DocumentRepository {
 
     /** Documento com o nome do parceiro, o código do projeto classificado, o pedido de origem e as parcelas dos vínculos. */
     record Summary(BusinessDocument document, String partnerCode, String partnerName, String projectCode, String orderCode,
-                   Map<UUID, TitleRef> titles) { }
+                   Map<UUID, TitleRef> titles, String authorization, String authorizationProtocol) { }
 
     /** Vínculo visto pela parcela: documento e valor. */
     record TitleLink(UUID titleId, UUID documentId, String documentCode, String series, String number, java.time.LocalDate issueDate,
@@ -32,6 +32,9 @@ public interface DocumentRepository {
 
     /** Grava o cabeçalho (situação, classificação, versão) e os vínculos novos ou desfeitos; confere a versão lida. */
     void update(BusinessDocument document, long expectedVersion);
+
+    /** Situação de autorização da nota (AUTORIZADA ou PENDENTE) e o protocolo; confere a versão lida e grava a nova. */
+    void updateAuthorization(UUID id, String status, String protocol, long version, long expectedVersion, java.time.Instant at, String by);
 
     /** Documento bloqueado para alteração. */
     Optional<BusinessDocument> findForUpdate(UUID id);

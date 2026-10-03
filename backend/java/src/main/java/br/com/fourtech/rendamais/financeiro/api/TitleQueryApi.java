@@ -20,6 +20,9 @@ public interface TitleQueryApi {
     /** Títulos pelos ids, na ordem de vencimento; ids inexistentes ficam de fora. Lê na transação do chamador. */
     List<TitleView> byIds(List<UUID> ids);
 
+    /** Data do último pagamento ou recebimento não estornado de cada título (títulos sem nenhum ficam de fora). */
+    java.util.Map<UUID, LocalDate> lastSettlementDates(List<UUID> ids);
+
     /** Títulos a receber do parceiro, não cancelados, na ordem de vencimento. */
     List<TitleView> activeReceivablesOf(UUID counterpartyId);
 }

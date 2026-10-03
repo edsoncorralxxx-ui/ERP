@@ -40,7 +40,7 @@ class DocumentController {
         this.service = service;
     }
 
-    record LineDto(int seq, String description, String kind, String amountCents) { }
+    record LineDto(int seq, String description, String kind, String amountCents, String itemId, String annex, String annexSource) { }
 
     record LinkDto(String id, String titleId, String titleCode, String titleLabel, String amountCents, String status,
                    String removedReason, Instant removedAt, String removedBy, Instant createdAt, String createdBy) { }
@@ -49,13 +49,15 @@ class DocumentController {
                        String orderId, String orderCode, String series, String number, LocalDate issueDate, String competence, String totalCents, String linkedCents,
                        String unlinkedCents, List<LineDto> lines, List<LinkDto> links, String notes, String operationNature,
                        String projectId, String projectCode, int classificationRevision, String status, String cancelReason,
-                       String version, Instant createdAt, String createdBy, Instant updatedAt, String updatedBy) {
+                       String version, Instant createdAt, String createdBy, Instant updatedAt, String updatedBy,
+                       String authorization, String authorizationProtocol) {
         static DocumentDto of(DocumentRepository.Summary s) {
             BusinessDocument d = s.document();
             return new DocumentDto(d.id().toString(), d.code(), d.direction().name(), d.kind(), d.partnerId().toString(), s.partnerCode(),
                     s.partnerName(), d.orderId() == null ? null : d.orderId().toString(), s.orderCode(), d.series(), d.number(), d.issueDate(), d.competence().toString(), d.total().centsAsString(),
                     d.linked().centsAsString(), d.unlinked().centsAsString(),
-                    d.lines().stream().map(l -> new LineDto(l.seq(), l.description(), l.kind().name(), l.amount().centsAsString())).toList(),
+                    d.lines().stream().map(l -> new LineDto(l.seq(), l.description(), l.kind().name(), l.amount().centsAsString(),
+                            l.itemId() == null ? null : l.itemId().toString(), l.annex(), l.annexSource())).toList(),
                     d.links().stream().map(l -> {
                         DocumentRepository.TitleRef t = s.titles().get(l.titleId());
                         return new LinkDto(l.id().toString(), l.titleId().toString(), t == null ? null : t.code(), t == null ? null : t.label(),
@@ -64,7 +66,8 @@ class DocumentController {
                     }).toList(),
                     d.notes(), d.operationNature() == null ? null : d.operationNature().name(),
                     d.projectId() == null ? null : d.projectId().toString(), s.projectCode(), d.classificationRev(), d.status().name(),
-                    d.cancelReason(), Long.toString(d.version()), d.createdAt(), d.createdBy(), d.updatedAt(), d.updatedBy());
+                    d.cancelReason(), Long.toString(d.version()), d.createdAt(), d.createdBy(), d.updatedAt(), d.updatedBy(),
+                    s.authorization(), s.authorizationProtocol());
         }
     }
 
@@ -176,6 +179,16 @@ class DocumentController {
     ResponseEntity<DocumentDto> classify(@PathVariable UUID id, @RequestHeader(value = "If-Match", required = false) String ifMatch,
                                          @RequestBody(required = false) DocumentService.ClassifyRequest body) {
         return respond(HttpStatus.OK, service.classify(id, Versions.required(ifMatch), body));
+    }
+
+    record AuthorizationRequest(String status, String protocol) { }
+
+    /** Situação de autorização da nota (Sprint 12): AUTORIZADA (com o protocolo) ou PENDENTE. */
+    @PutMapping("/documents/{id}/authorization")
+    ResponseEntity<DocumentDto> authorize(@PathVariable UUID id, @RequestHeader(value = "If-Match", required = false) String ifMatch,
+                                          @RequestBody(required = false) AuthorizationRequest body) {
+        return respond(HttpStatus.OK, service.authorize(id, Versions.required(ifMatch), body == null ? null : body.status(),
+                body == null ? null : body.protocol()));
     }
 
     @GetMapping("/documents/{id}/history")

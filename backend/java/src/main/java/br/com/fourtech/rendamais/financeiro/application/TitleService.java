@@ -201,6 +201,12 @@ public class TitleService implements TitleIssuanceApi, TitleQueryApi {
         return repository.findById(id).orElseThrow(() -> new NotFoundException("Título não encontrado."));
     }
 
+    @Override
+    @Transactional(propagation = Propagation.SUPPORTS)
+    public java.util.Map<UUID, LocalDate> lastSettlementDates(List<UUID> ids) {
+        return repository.lastSettlementDates(ids);
+    }
+
     static TitleView view(FinancialTitle t) {
         return new TitleView(t.id(), t.code(), t.originId(), t.originLabel(), t.dueDate(), t.competence().toString(),
                 t.original().cents(), t.received().cents(), t.balance().cents(), t.status().name(), t.direction().name(),

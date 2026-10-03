@@ -7,6 +7,7 @@ import br.com.fourtech.rendamais.auditoria.api.AuditEntry;
 import br.com.fourtech.rendamais.auditoria.api.AuditQuery;
 import br.com.fourtech.rendamais.auditoria.api.AuditTrail;
 import br.com.fourtech.rendamais.comercial.api.SalesOrderQueryApi;
+import br.com.fourtech.rendamais.documentos.api.AnnexResolver;
 import br.com.fourtech.rendamais.documentos.api.CompetenceLockGuard;
 import br.com.fourtech.rendamais.documentos.domain.BusinessDocument;
 import br.com.fourtech.rendamais.documentos.domain.InvoiceProposal;
@@ -67,10 +68,12 @@ public class DocumentService {
     private final Clock clock;
     /** Trava de competência fechada, implementada pelo fiscal (vazia se o módulo não estiver presente). */
     private final List<CompetenceLockGuard> competenceLocks;
+    /** Anexo do Simples de cada linha, implementado pelo fiscal (vazio: equipamento e material no II, serviço no III). */
+    private final List<AnnexResolver> annexResolvers;
 
     public DocumentService(DocumentRepository repository, TitleQueryApi titles, SalesOrderQueryApi orders, AuditTrail audit,
                            AuditQuery auditQuery, Outbox outbox, CommandReceipts receipts, Clock clock,
-                           List<CompetenceLockGuard> competenceLocks) {
+                           List<CompetenceLockGuard> competenceLocks, List<AnnexResolver> annexResolvers) {
         this.repository = repository;
         this.titles = titles;
         this.orders = orders;
@@ -80,6 +83,17 @@ public class DocumentService {
         this.receipts = receipts;
         this.clock = clock;
         this.competenceLocks = List.copyOf(competenceLocks);
+        this.annexResolvers = List.copyOf(annexResolvers);
+    }
+
+    /** Linhas com o anexo do Simples (Sprint 12), pelo fiscal; sem ele, o padrão pelo tipo da linha do pedido. */
+    private List<BusinessDocument.Line> withAnnexes(List<BusinessDocument.Line> lines) {
+        return lines.stream().map(l -> {
+            AnnexResolver.Resolved r = annexResolvers.isEmpty()
+                    ? new AnnexResolver.Resolved("SERVICO".equals(l.orderLineKind()) ? "III" : "II", "PADRAO")
+                    : annexResolvers.getFirst().resolve(l.orderLineKind(), l.itemId());
+            return l.withAnnex(r.annex(), r.source());
+        }).toList();
     }
 
     /**
@@ -234,7 +248,7 @@ public class DocumentService {
     /** Linhas do pedido do tipo da nota: a nota de produto só leva produto, e a de serviço só serviço. */
     private static List<InvoiceProposal.OrderLine> lines(SalesOrderQueryApi.OrderRef o, BusinessDocument.LineKind kind) {
         return o.lines().stream().filter(l -> InvoiceProposal.kindOf(l.kind()) == kind)
-                .map(l -> new InvoiceProposal.OrderLine(l.kind(), l.description(), l.totalCents())).toList();
+                .map(l -> new InvoiceProposal.OrderLine(l.kind(), l.itemId(), l.description(), l.totalCents())).toList();
     }
 
     /** Tipo pedido para a nota; o pedido precisa ter linha desse tipo. */
@@ -322,7 +336,8 @@ public class DocumentService {
         InvoiceProposal.Result proposal = orderInvoicing(order, locked, invoiced, byKind, kind, amount).proposal();
         Instant at = clock.instant();
         BusinessDocument d = BusinessDocument.register(repository.nextCode(), BusinessDocument.Direction.SAIDA, order.customerId(),
-                order.id(), p.series(), p.number(), p.issueDate(), p.competence(), proposal.lines(), p.notes(), at, user.username());
+                order.id(), p.series(), p.number(), p.issueDate(), p.competence(), withAnnexes(proposal.lines()), p.notes(), at,
+                user.username());
         try {
             repository.insert(d);
         } catch (DuplicateKeyException e) {
@@ -352,7 +367,7 @@ public class DocumentService {
         payload.put("totalCents", d.total().centsAsString());
         payload.put("kind", d.kind());
         payload.put("lines", d.lines().stream().map(l -> Map.of("description", l.description(), "kind", l.kind().name(),
-                "amountCents", l.amount().centsAsString())).toList());
+                "annex", l.annex(), "amountCents", l.amount().centsAsString())).toList());
         outbox.append("DocumentRegistered", ENTITY, d.id().toString(), payload, user.username());
         link(user, d, proposal.links());
         receipts.complete(user.username(), key, d.id().toString());
@@ -676,6 +691,41 @@ public class DocumentService {
 
     private static String brl(long cents) {
         return Money.ofCents(cents, Currency.BRL).toBrl();
+    }
+
+    /**
+     * Situação de autorização da nota (Sprint 12): o Renda+ não emite a nota, então quem a acompanha marca se ela já foi
+     * autorizada pela Sefaz ou pelo emissor de NFS-e. Nota pendente continua na receita e aparece como pendência no
+     * fechamento da competência. Só nota de saída ativa.
+     */
+    @Transactional
+    public DocumentRepository.Summary authorize(UUID id, long expectedVersion, String status, String protocol) {
+        CurrentUser user = CurrentUserHolder.require(Permissions.DOCUMENT_CLASSIFY);
+        String st = status == null ? "" : status.strip();
+        String prot = protocol == null || protocol.isBlank() ? null : protocol.strip();
+        List<FieldIssue> issues = new ArrayList<>();
+        if (!st.equals("AUTORIZADA") && !st.equals("PENDENTE")) issues.add(new FieldIssue("status", "Use AUTORIZADA ou PENDENTE."));
+        if (prot != null && prot.length() > 60) issues.add(new FieldIssue("protocol", "Máximo de 60 caracteres."));
+        if (!issues.isEmpty()) throw new RuleViolationException("DOCUMENT_INVALID", "Corrija os campos indicados.", issues);
+        BusinessDocument d = repository.findForUpdate(id).orElseThrow(() -> new NotFoundException("Documento não encontrado."));
+        if (d.version() != expectedVersion) throw new VersionConflictException(ENTITY, expectedVersion, d.version());
+        if (d.status() != BusinessDocument.Status.ATIVO || d.direction() != BusinessDocument.Direction.SAIDA) {
+            throw new InvalidStateException("Só a nota de saída ativa tem situação de autorização.");
+        }
+        DocumentRepository.Summary before = view(id);
+        Instant at = clock.instant();
+        repository.updateAuthorization(id, st, "AUTORIZADA".equals(st) ? prot : null, d.version() + 1, expectedVersion, at, user.username());
+        Map<String, AuditEntry.Change> changes = new LinkedHashMap<>();
+        changes.put("authorization", new AuditEntry.Change(before.authorization(), st));
+        if (prot != null) changes.put("authorizationProtocol", new AuditEntry.Change(before.authorizationProtocol(), prot));
+        audit.record(new AuditEntry(user.username(), "DOCUMENT_AUTHORIZATION_RECORDED", ENTITY, id.toString(), d.version() + 1, null,
+                changes, CorrelationId.current()));
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("documentId", id.toString());
+        payload.put("competence", d.competence().toString());
+        payload.put("authorization", st);
+        outbox.append("DocumentAuthorizationRecorded", ENTITY, id.toString(), payload, user.username());
+        return view(id);
     }
 
     private DocumentRepository.Summary view(UUID id) {

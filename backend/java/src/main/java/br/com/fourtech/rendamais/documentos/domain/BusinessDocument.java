@@ -34,11 +34,21 @@ public final class BusinessDocument {
     /** Natureza da operação (classificação manual; lista inicial a confirmar com o contador). */
     public enum OperationNature { VENDA_PRODUCAO, VENDA_MERCADORIA, PRESTACAO_SERVICO, REMESSA }
 
-    public record Line(int seq, String description, LineKind kind, Money amount) {
+    /**
+     * Linha da nota. {@code orderLineKind} (EQUIPAMENTO, MATERIAL ou SERVICO) e {@code itemId} vêm da linha do pedido;
+     * {@code annex} (I a V) é o anexo do Simples no momento do registro (Sprint 12), com a origem: CLASSIFICACAO (do
+     * item), EQUIPAMENTO (fabricação própria), PADRAO (item sem classificação) ou MIGRACAO (notas anteriores).
+     */
+    public record Line(int seq, String description, LineKind kind, Money amount, String orderLineKind, UUID itemId, String annex,
+                       String annexSource) {
         public Line {
             Objects.requireNonNull(description);
             Objects.requireNonNull(kind);
             Objects.requireNonNull(amount);
+        }
+
+        public Line withAnnex(String annex, String source) {
+            return new Line(seq, description, kind, amount, orderLineKind, itemId, annex, source);
         }
     }
 

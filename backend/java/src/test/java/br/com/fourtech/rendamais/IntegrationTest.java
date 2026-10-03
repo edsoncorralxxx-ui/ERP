@@ -52,12 +52,30 @@ public abstract class IntegrationTest {
      * equipamentos e títulos (Sprint 4), que referenciam parceiros e itens.
      */
     protected void limpaDocumentos() {
-        // Fiscal (Sprint 7): competências, simulações, conferências, fechamentos e revisões criadas nos testes.
+        // Fiscal (Sprints 7 e 12): competências, cálculos, guias, PGDAS-D, etapas, fechamentos, revisões, histórico,
+        // obrigações e opções criados nos testes; os dados semeados voltam ao estado original.
         jdbc.sql("delete from tax_period_closure").update();
-        jdbc.sql("delete from accountant_confirmation").update();
+        jdbc.sql("delete from tax_das_guide").update();
+        jdbc.sql("delete from tax_pgdas_declaration").update();
+        jdbc.sql("delete from tax_closing_step").update();
         jdbc.sql("delete from tax_simulation").update();
         jdbc.sql("delete from tax_period").update();
-        jdbc.sql("delete from tax_parameter_revision where revision > 1").update();
+        jdbc.sql("delete from tax_parameter_revision where revision > 2").update();
+        jdbc.sql("delete from tax_revenue_history").update();
+        jdbc.sql("delete from tax_revenue_import").update();
+        jdbc.sql("delete from tax_ibs_cbs_option").update();
+        jdbc.sql("delete from tax_obligation where created_by <> 'sistema' or template_id is not null").update();
+        jdbc.sql("""
+                update tax_obligation set status = 'DECISAO_PENDENTE', delivered_on = null, receipt_number = null, notes = null,
+                       version = 1, updated_at = null, updated_by = null
+                """).update();
+        jdbc.sql("delete from item_fiscal_profile").update();
+        jdbc.sql("delete from tax_activity where created_by <> 'sistema'").update();
+        jdbc.sql("update tax_activity set status = 'ATIVO', version = 1, updated_at = null, updated_by = null").update();
+        jdbc.sql("""
+                update tax_company_profile set opted_since = null, revenue_recognition = 'COMPETENCIA', annual_limit_cents = 480000000,
+                       sublimit_cents = 360000000, tolerance = 0.2, alert_threshold = 0.9, version = 1
+                """).update();
         jdbc.sql("delete from document_title_invoicing").update();
         jdbc.sql("delete from document_title_link").update();
         jdbc.sql("delete from document_line").update();

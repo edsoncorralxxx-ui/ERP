@@ -139,8 +139,8 @@
     {
       "id": "fiscal",
       "nome": "Fiscal gerencial",
-      "responsabilidade": "Competências, receita classificada, parâmetros com vigência, histórico importado, simulação, confirmação do contador, fechamento",
-      "dependsOn": ["kernel", "acesso", "auditoria", "plataforma", "documentos", "financeiro"]
+      "responsabilidade": "Competências, receita por anexo, parâmetros com vigência e repartição, histórico de receita, cálculo do DAS, PGDAS-D, guia DAS, fechamento por etapas, obrigações, classificação fiscal dos itens",
+      "dependsOn": ["kernel", "acesso", "auditoria", "plataforma", "cadastros", "documentos", "financeiro"]
     },
     {
       "id": "analitico",

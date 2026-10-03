@@ -65,11 +65,12 @@ class JdbcDocumentRepository implements DocumentRepository {
                 .update();
         for (BusinessDocument.Line l : d.lines()) {
             jdbc.sql("""
-                    insert into document_line (document_id, seq, description, kind, amount_cents)
-                    values (:d, :seq, :description, :kind, :cents)
+                    insert into document_line (document_id, seq, description, kind, amount_cents, item_id, annex, annex_source)
+                    values (:d, :seq, :description, :kind, :cents, :item, :annex, :source)
                     """)
                     .param("d", d.id()).param("seq", l.seq()).param("description", l.description()).param("kind", l.kind().name())
-                    .param("cents", l.amount().cents()).update();
+                    .param("cents", l.amount().cents()).param("item", l.itemId()).param("annex", l.annex())
+                    .param("source", l.annexSource()).update();
         }
         d.links().forEach(l -> insertLink(d.id(), l));
     }
@@ -116,6 +117,18 @@ class JdbcDocumentRepository implements DocumentRepository {
                 .param("id", l.id()).param("d", documentId).param("t", l.titleId()).param("cents", l.amount().cents())
                 .param("status", l.status().name()).param("reason", l.removedReason()).param("removedAt", ts(l.removedAt()))
                 .param("removedBy", l.removedBy()).param("at", ts(l.createdAt())).param("by", l.createdBy()).update();
+    }
+
+    @Override
+    public void updateAuthorization(UUID id, String status, String protocol, long version, long expectedVersion, Instant at, String by) {
+        int n = jdbc.sql("""
+                update business_document set authorization_status = :status, authorization_protocol = :protocol, version = :version,
+                       updated_at = :at, updated_by = :by
+                 where id = :id and version = :expected
+                """)
+                .param("status", status).param("protocol", protocol).param("version", version).param("at", ts(at)).param("by", by)
+                .param("id", id).param("expected", expectedVersion).update();
+        if (n != 1) throw new VersionConflictException("business_document", expectedVersion, version - 1);
     }
 
     @Override
@@ -240,7 +253,8 @@ class JdbcDocumentRepository implements DocumentRepository {
                         lines.computeIfAbsent(rs.getObject("document_id", UUID.class), k -> new ArrayList<>())
                                 .add(new BusinessDocument.Line(rs.getInt("seq"), rs.getString("description"),
                                         BusinessDocument.LineKind.valueOf(rs.getString("kind")),
-                                        Money.ofCents(rs.getLong("amount_cents"), Currency.BRL)));
+                                        Money.ofCents(rs.getLong("amount_cents"), Currency.BRL), null,
+                                        rs.getObject("item_id", UUID.class), rs.getString("annex"), rs.getString("annex_source")));
                     });
         }
         Map<UUID, List<BusinessDocument.Link>> links = new HashMap<>();
@@ -270,7 +284,8 @@ class JdbcDocumentRepository implements DocumentRepository {
                     h.createdBy(), h.updatedAt(), h.updatedBy());
             Map<UUID, TitleRef> mine = new LinkedHashMap<>();
             d.links().forEach(l -> mine.put(l.titleId(), titles.get(l.titleId())));
-            out.add(new Summary(d, r.partnerCode(), r.partnerName(), r.projectCode(), r.orderCode(), mine));
+            out.add(new Summary(d, r.partnerCode(), r.partnerName(), r.projectCode(), r.orderCode(), mine, r.authorization(),
+                    r.authorizationProtocol()));
         }
         return out;
     }
@@ -281,7 +296,8 @@ class JdbcDocumentRepository implements DocumentRepository {
                           BusinessDocument.OperationNature nature, UUID projectId, int rev, BusinessDocument.Status status,
                           String cancelReason, long version, Instant createdAt, String createdBy, Instant updatedAt, String updatedBy) { }
 
-    private record Row(Header header, String partnerCode, String partnerName, String projectCode, String orderCode) {
+    private record Row(Header header, String partnerCode, String partnerName, String projectCode, String orderCode, String authorization,
+                       String authorizationProtocol) {
         UUID id() {
             return header.id();
         }
@@ -297,7 +313,8 @@ class JdbcDocumentRepository implements DocumentRepository {
                 rs.getObject("project_id", UUID.class), rs.getInt("classification_rev"),
                 BusinessDocument.Status.valueOf(rs.getString("status")), rs.getString("cancel_reason"), rs.getLong("version"),
                 instant(rs, "created_at"), rs.getString("created_by"), instant(rs, "updated_at"), rs.getString("updated_by"));
-        return new Row(h, rs.getString("partner_code"), rs.getString("partner_name"), rs.getString("project_code"), rs.getString("order_code"));
+        return new Row(h, rs.getString("partner_code"), rs.getString("partner_name"), rs.getString("project_code"), rs.getString("order_code"),
+                rs.getString("authorization_status"), rs.getString("authorization_protocol"));
     }
 
     private static Instant instant(ResultSet rs, String col) throws SQLException {
