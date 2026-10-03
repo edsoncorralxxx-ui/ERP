@@ -1,4 +1,4 @@
-import type { OrderStatus, ProjectStage, ProposalStatus, TitleStatus } from '../../api/types';
+import type { LeadStage, OpportunityStatus, OrderStatus, ProjectStage, ProposalStatus, TitleStatus } from '../../api/types';
 
 /** Selos de situação (componente Selo de status): sempre com a palavra, nunca só a cor. */
 const selo = (classe: string, texto: string) => <span className={`rp-badge${classe ? ` rp-badge--${classe}` : ''}`}>{texto}</span>;
@@ -25,3 +25,10 @@ export const TITULO: Record<TitleStatus, string> = { OPEN: 'Em aberto', PARTIAL:
 export const seloTitulo = (s: TitleStatus) => selo(s === 'OPEN' ? 'aberto' : s === 'PARTIAL' ? 'pendente' : s === 'SETTLED' ? 'aprovado' : s === 'CANCELLED' ? 'cancelado' : 'fechado', TITULO[s]);
 
 export const seloEquipamento = (s: 'ATIVO' | 'CANCELADO') => selo(s === 'ATIVO' ? 'aprovado' : 'cancelado', s === 'ATIVO' ? 'Ativo' : 'Cancelado');
+
+export const ETAPA_PROSPECCAO: Record<LeadStage, string> = { IDENTIFICADO: 'Identificado', CONTATADO: 'Contatado', INTERESSADO: 'Interessado', DESCARTADO: 'Descartado' };
+export const seloProspeccao = (s: LeadStage) =>
+  selo(s === 'IDENTIFICADO' ? '' : s === 'CONTATADO' ? 'aberto' : s === 'INTERESSADO' ? 'pendente' : 'cancelado', ETAPA_PROSPECCAO[s]);
+
+export const OPORTUNIDADE: Record<OpportunityStatus, string> = { ABERTA: 'Aberta', GANHA: 'Ganha', PERDIDA: 'Perdida' };
+export const seloOportunidade = (s: OpportunityStatus) => selo(s === 'ABERTA' ? 'aberto' : s === 'GANHA' ? 'aprovado' : 'cancelado', OPORTUNIDADE[s]);

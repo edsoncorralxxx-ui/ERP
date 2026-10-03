@@ -39,10 +39,12 @@ public class ProposalService {
     private final AuditQuery auditQuery;
     private final Outbox outbox;
     private final CommandReceipts receipts;
+    private final OpportunityService opportunities;
     private final Clock clock;
 
     public ProposalService(ProposalRepository repository, CommercialLookups lookups, AuditTrail audit, AuditQuery auditQuery,
-                           Outbox outbox, CommandReceipts receipts, Clock clock) {
+                           Outbox outbox, CommandReceipts receipts, OpportunityService opportunities, Clock clock) {
+        this.opportunities = opportunities;
         this.repository = repository;
         this.lookups = lookups;
         this.audit = audit;
@@ -77,9 +79,16 @@ public class ProposalService {
         String key = CommandReceipts.requireKey(idempotencyKey);
         var done = receipts.claim(user.username(), key, "DraftProposal", data);
         if (done.isPresent()) return repository.findById(UUID.fromString(done.get())).orElseThrow();
-        Proposal.Customer customer = lookups.customer("PROPOSAL_INVALID", data.customerId(), data.unitId(), false, null);
+        String unit = data.unitId() == null || data.unitId().isBlank() ? opportunities.unitOf(data.opportunityId()) : data.unitId();
+        Proposal.Customer customer = lookups.customer("PROPOSAL_INVALID", data.customerId(), unit, false, null);
         Instant now = clock.instant();
-        Proposal p = Proposal.draft(repository.nextCode(), customer, data, lookups.items(), now, user.username());
+        Proposal checked = Proposal.draft(repository.nextCode(), UUID.randomUUID(), customer, data, lookups.items(), now,
+                user.username());
+        UUID opportunityId = opportunities.forNewProposal(user, data.opportunityId(), customer, checked.title(),
+                checked.current().totalCents(), checked.current().validUntil());
+        Proposal p = new Proposal(checked.id(), checked.code(), opportunityId, checked.customerId(), checked.unitId(),
+                checked.unitName(), checked.title(), checked.status(), checked.outcomeReason(), checked.revisions(),
+                checked.version(), checked.createdAt(), checked.createdBy(), checked.updatedAt(), checked.updatedBy());
         repository.insert(p);
         Map<String, AuditEntry.Change> changes = new LinkedHashMap<>();
         changes.put("code", new AuditEntry.Change(null, p.code()));
@@ -114,6 +123,7 @@ public class ProposalService {
                     payload.put("estimatedCostCents", null);
                     payload.put("validUntil", p.current().validUntil().toString());
                     outbox.append("ProposalRevisionIssued", ENTITY, id.toString(), payload, user.username());
+                    opportunities.proposalIssued(user, p.opportunityId());
                 });
     }
 
@@ -126,14 +136,27 @@ public class ProposalService {
                         Map.of("proposalId", id.toString(), "revision", p.current().number()), user.username()));
     }
 
-    /** RecordProposalOutcome (perda), com motivo. */
+    /**
+     * RecordProposalOutcome (perda), com motivo. {@code lossReason}: o motivo da lista do CRM, usado quando a oportunidade
+     * também é perdida (sem ele, "Outro" com o texto da proposta).
+     */
     @Transactional
-    public ProposalRepository.Summary lose(UUID id, long expectedVersion, String reason) {
+    public ProposalRepository.Summary lose(UUID id, long expectedVersion, String reason, String lossReason) {
         CurrentUser user = CurrentUserHolder.require(Permissions.PROPOSAL_UPDATE);
         return change(user, id, expectedVersion, "PROPOSAL_LOST", reason == null ? null : reason.strip(),
                 p -> p.lose(reason, clock.instant(), user.username()),
                 p -> outbox.append("ProposalOutcomeRecorded", ENTITY, id.toString(), Map.of("proposalId", id.toString(),
-                        "revision", p.current().number(), "outcome", "PERDIDA", "reason", p.outcomeReason()), user.username()));
+                        "revision", p.current().number(), "outcome", "PERDIDA", "reason", p.outcomeReason()), user.username()),
+                p -> opportunities.proposalLost(user, p.opportunityId(), p.id(),
+                        lossReason == null || lossReason.isBlank() ? "OUTRO" : lossReason, p.outcomeReason()));
+    }
+
+    private ProposalRepository.Summary change(CurrentUser user, UUID id, long expectedVersion, String action, String reason,
+                                              UnaryOperator<Proposal> op, java.util.function.Consumer<Proposal> event,
+                                              java.util.function.Consumer<Proposal> after) {
+        ProposalRepository.Summary s = change(user, id, expectedVersion, action, reason, op, event);
+        after.accept(s.proposal());
+        return s;
     }
 
     private ProposalRepository.Summary change(CurrentUser user, UUID id, long expectedVersion, String action, String reason,

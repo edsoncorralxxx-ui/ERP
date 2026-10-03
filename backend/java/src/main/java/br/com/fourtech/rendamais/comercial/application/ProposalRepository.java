@@ -9,7 +9,7 @@ import java.util.UUID;
 /** Porta de persistência das propostas com as suas revisões e linhas. */
 public interface ProposalRepository {
 
-    record Summary(Proposal proposal, String customerCode, String customerName) { }
+    record Summary(Proposal proposal, String customerCode, String customerName, String opportunityCode) { }
 
     /** Próximo número de proposta: PR00001. */
     String nextCode();
@@ -22,6 +22,8 @@ public interface ProposalRepository {
     Optional<Summary> findById(UUID id);
 
     Optional<Proposal> findByIdForUpdate(UUID id);
+
+    List<Summary> listByOpportunity(UUID opportunityId);
 
     List<Summary> list(String search, Proposal.Status status, int limit);
 }

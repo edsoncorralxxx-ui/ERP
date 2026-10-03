@@ -19,7 +19,7 @@ const carregar = async (busca: string, situacao: Situacao) => {
   return (await api.get<ProposalSummary[]>(`/api/v1/proposals?${q.toString()}`)).data;
 };
 
-/** Janela de lista "Oportunidades e propostas": a revisão vigente de cada proposta, com total e validade. */
+/** Janela de lista "Propostas": a revisão vigente de cada proposta, com total e validade. */
 export function ProposalsWindow() {
   const win = useWindow();
   const { can } = useSession();
@@ -29,7 +29,7 @@ export function ProposalsWindow() {
   return (
     <JanelaLista<ProposalSummary>
       nome={['proposta', 'propostas']}
-      rotulo="Oportunidades e propostas"
+      rotulo="Propostas"
       placeholder="Número, título ou cliente"
       carregar={carregar}
       evento={PROPOSTAS_ALTERADAS}

@@ -34,7 +34,11 @@
       "nome": "CRM",
       "icone": "crm",
       "itens": [
-        {"rotulo": "Prospecção", "tela": "prospeccao", "fase": "Sprint 4 · B05"},
+        {"rotulo": "Prospecção", "tela": "prospeccao", "fase": "Sprint 11 · B05", "implementado": true},
+        {"rotulo": "Oportunidades", "tela": "prospeccao", "secao": "OPORTUNIDADES", "fase": "Sprint 11 · B05", "implementado": true},
+        {"rotulo": "Funil de vendas", "tela": "prospeccao", "secao": "FUNIL", "fase": "Sprint 11 · B05", "implementado": true},
+        {"rotulo": "Agenda do CRM", "tela": "prospeccao", "secao": "AGENDA", "fase": "Sprint 11 · B05", "implementado": true},
+        {"rotulo": "Etapas do funil", "tela": "prospeccao", "secao": "ETAPAS", "fase": "Sprint 11 · B05", "implementado": true},
         {"rotulo": "Campanhas e canais", "recurso": "AN-006", "fase": "B14"},
         {"rotulo": "Planejamento de marketing", "recurso": "AN-007", "fase": "B14/B15"},
         {"rotulo": "Satisfação e relacionamento", "recurso": "AN-009", "fase": "B11/B14"}
@@ -44,7 +48,7 @@
       "nome": "Vendas",
       "icone": "vendas",
       "itens": [
-        {"rotulo": "Oportunidades e propostas", "tela": "propostas", "fase": "Sprint 4 · B05", "implementado": true},
+        {"rotulo": "Propostas", "tela": "propostas", "fase": "Sprint 4 · B05", "implementado": true},
         {"rotulo": "Pedidos e contratos", "tela": "pedidos", "fase": "Sprint 4 · B05", "implementado": true},
         {"rotulo": "Previsão de demanda", "recurso": "AN-005", "fase": "B14/B15"}
       ]

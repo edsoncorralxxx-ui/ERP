@@ -22,7 +22,7 @@
       "type": "LeadInteractionRecorded",
       "produtor": "comercial",
       "conceito": "LEAD",
-      "payload": ["leadId", "interactionType", "nextActionDate"],
+      "payload": ["leadId", "opportunityId", "interactionType", "nextActionDate"],
       "consumidores": []
     },
     {
@@ -687,6 +687,22 @@
       "produtor": "comercial",
       "conceito": "PEDIDO",
       "payload": ["orderId", "changedFields"],
+      "consumidores": []
+    },
+    {"type": "LeadUpdated", "produtor": "comercial", "conceito": "LEAD", "payload": ["leadId", "changedFields"], "consumidores": []},
+    {"type": "LeadsImported", "produtor": "comercial", "conceito": "LEAD", "payload": ["importId", "leads", "blocked"], "consumidores": []},
+    {
+      "type": "OpportunityUpdated",
+      "produtor": "comercial",
+      "conceito": "OPORTUNIDADE",
+      "payload": ["opportunityId", "changedFields"],
+      "consumidores": []
+    },
+    {
+      "type": "OpportunityStageConfigured",
+      "produtor": "comercial",
+      "conceito": "OPORTUNIDADE",
+      "payload": ["stage", "closePercent"],
       "consumidores": []
     }
   ]

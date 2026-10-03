@@ -110,7 +110,7 @@ describe('Proposta', () => {
 
   it('revisão emitida fica só leitura; converter em pedido abre o pedido e registra o ganho', async () => {
     const emitida: Proposal = {
-      id: 'p-1', code: 'PR00001', customerId: 'c-1', customerCode: 'C00001', customerName: 'Fecularia Vale Ltda.', unitId: 'un-1', unitName: 'Matriz',
+      id: 'p-1', code: 'PR00001', opportunityId: 'o-1', opportunityCode: 'OP00001', customerId: 'c-1', customerCode: 'C00001', customerName: 'Fecularia Vale Ltda.', unitId: 'un-1', unitName: 'Matriz',
       title: 'Linha de dosagem', status: 'ABERTA', outcomeReason: null, currentRevision: 1,
       revisions: [{ id: 'r-1', revision: 1, status: 'EMITIDA', validUntil: '2026-11-30', paymentTerms: '30/40/30', totalCents: '30000000', issuedAt: '2026-09-27T12:00:00Z', issuedBy: 'ana', lines: [linha] }],
       version: '2', createdAt: '2026-09-27T12:00:00Z', createdBy: 'ana', updatedAt: null, updatedBy: null,

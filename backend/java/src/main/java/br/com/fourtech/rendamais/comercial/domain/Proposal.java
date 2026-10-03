@@ -23,7 +23,7 @@ import java.util.function.Function;
  * e qualquer mudança cria a próxima revisão, preservando as anteriores. A proposta termina ganha (convertida em pedido)
  * ou perdida (com motivo).
  */
-public record Proposal(UUID id, String code, UUID customerId, UUID unitId, String unitName, String title, Status status,
+public record Proposal(UUID id, String code, UUID opportunityId, UUID customerId, UUID unitId, String unitName, String title, Status status,
                        String outcomeReason, List<Revision> revisions, long version, Instant createdAt, String createdBy,
                        Instant updatedAt, String updatedBy) {
 
@@ -38,8 +38,11 @@ public record Proposal(UUID id, String code, UUID customerId, UUID unitId, Strin
         }
     }
 
-    /** Dados informados para a revisão em rascunho. Datas no formato AAAA-MM-DD. */
-    public record Data(String customerId, String unitId, String title, String validUntil, String paymentTerms,
+    /**
+     * Dados informados para a revisão em rascunho. Datas no formato AAAA-MM-DD. {@code opportunityId}: a oportunidade da
+     * proposta (Sprint 11); só vale no cadastro.
+     */
+    public record Data(String opportunityId, String customerId, String unitId, String title, String validUntil, String paymentTerms,
                        List<SalesLine.Data> lines) { }
 
     /** Cliente e unidade já conferidos pelo caso de uso (cliente ativo, unidade dele). */
@@ -52,12 +55,12 @@ public record Proposal(UUID id, String code, UUID customerId, UUID unitId, Strin
         revisions = List.copyOf(revisions);
     }
 
-    public static Proposal draft(String code, Customer customer, Data data, Function<UUID, Optional<SalesLine.ItemInfo>> items,
-                                 Instant now, String actor) {
+    public static Proposal draft(String code, UUID opportunityId, Customer customer, Data data,
+                                 Function<UUID, Optional<SalesLine.ItemInfo>> items, Instant now, String actor) {
         Valid v = validate(data, items, Set.of(), Set.of());
         Revision r = new Revision(UUID.randomUUID(), 1, RevisionStatus.RASCUNHO, v.validUntil, v.paymentTerms, v.lines,
                 SalesLine.total(v.lines), null, null);
-        return new Proposal(UUID.randomUUID(), code, customer.id(), customer.unitId(), customer.unitName(), v.title, Status.ABERTA,
+        return new Proposal(UUID.randomUUID(), code, opportunityId, customer.id(), customer.unitId(), customer.unitName(), v.title, Status.ABERTA,
                 null, List.of(r), 1, now, actor, now, actor);
     }
 
@@ -181,7 +184,7 @@ public record Proposal(UUID id, String code, UUID customerId, UUID unitId, Strin
     }
 
     private Proposal with(Customer c, String newTitle, Status newStatus, String reason, List<Revision> revs, Instant now, String actor) {
-        return new Proposal(id, code, c.id(), c.unitId(), c.unitName(), newTitle, newStatus, reason, revs, version + 1, createdAt,
+        return new Proposal(id, code, opportunityId, c.id(), c.unitId(), c.unitName(), newTitle, newStatus, reason, revs, version + 1, createdAt,
                 createdBy, now, actor);
     }
 

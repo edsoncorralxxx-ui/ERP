@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { api, type ApiError } from '../api/client';
-import type { HistoryEntry, Proposal, SalesOrder } from '../api/types';
+import type { HistoryEntry, Opportunity, Proposal, SalesOrder } from '../api/types';
 import { dataDaApi, dataHora, dataParaApi, hojeIso, reais } from '../format';
 import { Dialog } from '../shell/Dialog';
 import { useSession } from '../shell/SessionContext';
 import { useWindow } from '../windows/WindowContext';
 import { novaChave, useClientes, useItens, useUnidades } from './comum/Cadastros';
 import { CampoData } from './comum/CampoData';
-import { DialogoConflito, DialogoMotivo } from './comum/Dialogos';
+import { DialogoPerda, OPORTUNIDADES_ALTERADAS } from './comum/Crm';
+import { DialogoConflito } from './comum/Dialogos';
 import { tratarFalha } from './comum/Falhas';
 import { GradeHistorico } from './comum/GradeHistorico';
 import { GradeLinhas, linhaDaApi, linhaParaApi, TotaisDocumento, type LinhaForm } from './comum/GradeLinhas';
@@ -33,7 +34,8 @@ function toForm(p: Proposal, revisao: number): Form {
   };
 }
 
-const toRequest = (f: Form) => ({
+const toRequest = (f: Form, opportunityId: string | null) => ({
+  opportunityId,
   customerId: f.customerId || null,
   unitId: f.unitId || null,
   title: f.title.trim() || null,
@@ -54,6 +56,9 @@ export function ProposalWindow({ recordKey }: { recordKey: string }) {
   const { can } = useSession();
   const [id, setId] = useState<string | null>(recordKey.startsWith('novo-') ? null : recordKey);
   const [proposta, setProposta] = useState<Proposal | null>(null);
+  // `novo-N:opp:{id}`: proposta nova feita pela oportunidade, com o cliente, a unidade e o nome dela.
+  const oportunidadeDaChave = /^novo-\d+:opp:(.+)$/.exec(recordKey)?.[1] ?? null;
+  const [oportunidade, setOportunidade] = useState<Opportunity | null>(null);
   const [etag, setEtag] = useState('');
   const [revisao, setRevisao] = useState(1);
   const [form, setForm] = useState<Form>(() => ({ ...VAZIO, validUntil: dataDaApi(hojeIso()) }));
@@ -115,6 +120,14 @@ export function ProposalWindow({ recordKey }: { recordKey: string }) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (!oportunidadeDaChave || id) return;
+    api.get<Opportunity>(`/api/v1/opportunities/${oportunidadeDaChave}`).then((r) => {
+      setOportunidade(r.data);
+      setForm((f) => ({ ...f, customerId: r.data.customerId ?? '', unitId: r.data.unitId ?? '', title: f.title || r.data.name }));
+    }).catch((e: ApiError) => winRef.current.notify({ tone: 'erro', text: `${e.message} (${e.code})` }));
+  }, [oportunidadeDaChave, id]);
+
+  useEffect(() => {
     if (tab !== 'historico' || !id || historico !== null) return;
     api
       .get<HistoryEntry[]>(`/api/v1/proposals/${id}/history`)
@@ -133,7 +146,7 @@ export function ProposalWindow({ recordKey }: { recordKey: string }) {
   const gravar = useCallback(async (): Promise<boolean> => {
     setGravando(true);
     try {
-      const body = toRequest(formRef.current);
+      const body = toRequest(formRef.current, proposta ? null : oportunidadeDaChave);
       const r = proposta
         ? await api.put<Proposal>(`/api/v1/proposals/${proposta.id}`, body, etag)
         : await api.post<Proposal>('/api/v1/proposals', body, { 'Idempotency-Key': chave.current });
@@ -141,6 +154,7 @@ export function ProposalWindow({ recordKey }: { recordKey: string }) {
       chave.current = novaChave();
       winRef.current.notify({ tone: 'sucesso', text: `Proposta ${r.data.code} ${proposta ? 'atualizada' : 'adicionada'} com sucesso` });
       window.dispatchEvent(new Event(PROPOSTAS_ALTERADAS));
+      window.dispatchEvent(new Event(OPORTUNIDADES_ALTERADAS));
       return true;
     } catch (e) {
       falha(e);
@@ -158,6 +172,7 @@ export function ProposalWindow({ recordKey }: { recordKey: string }) {
       aplicar(r.data, r.etag);
       winRef.current.notify({ tone: 'sucesso', text: sucesso(r.data) });
       window.dispatchEvent(new Event(PROPOSTAS_ALTERADAS));
+      window.dispatchEvent(new Event(OPORTUNIDADES_ALTERADAS));
     } catch (e) {
       falha(e);
     }
@@ -236,9 +251,20 @@ export function ProposalWindow({ recordKey }: { recordKey: string }) {
                 <span className="rp-label">Nº</span>
                 <span />
                 <input className="rp-field rp-field--readonly" readOnly value={proposta?.code ?? 'Gerado ao adicionar'} aria-label="Número" />
+                <span className="rp-label">Oportunidade</span>
+                <span />
+                <span className="rp-ficha__ref">
+                  {(proposta?.opportunityId ?? oportunidade?.id) && (
+                    <span className="rp-link" role="link" tabIndex={0} aria-label="Abrir oportunidade" title="Abrir oportunidade"
+                      onClick={() => win.open('opportunity', (proposta?.opportunityId ?? oportunidade?.id)!)}
+                      onKeyDown={(e) => e.key === 'Enter' && win.open('opportunity', (proposta?.opportunityId ?? oportunidade?.id)!)} />
+                  )}
+                  <input className="rp-field rp-field--readonly" readOnly aria-label="Oportunidade"
+                    value={proposta ? proposta.opportunityCode : oportunidade ? `${oportunidade.code} — ${oportunidade.name}` : 'Criada ao adicionar, na etapa Proposta'} />
+                </span>
                 <label className="rp-label" htmlFor={fid('cliente')}>Cliente</label>
                 <span className="rp-req" aria-hidden="true">*</span>
-                <Selecao id={fid('cliente')} className={classeCampo} valor={form.customerId} disabled={somenteLeitura || clienteFixo} aria-invalid={!!erros.customerId}
+                <Selecao id={fid('cliente')} className={classeCampo} valor={form.customerId} disabled={somenteLeitura || clienteFixo || !!oportunidade} aria-invalid={!!erros.customerId}
                   onChange={(v) => set({ customerId: v, unitId: '' })} opcoes={[{ valor: '', rotulo: 'Escolha o cliente' }, ...opcoesClientes]} />
                 {erroDe('customerId')}
                 <label className="rp-label" htmlFor={fid('unidade')}>Unidade</label>
@@ -394,11 +420,11 @@ export function ProposalWindow({ recordKey }: { recordKey: string }) {
       </div>
 
       {perda && proposta && (
-        <DialogoMotivo rotulo="Registrar perda" texto={`A proposta ${proposta.code} fica perdida e não muda mais; as revisões são preservadas.`} idCampo={fid('motivo')}
-          botao="Registrar perda" falta="Informe o motivo da perda." onCancelar={() => setPerda(false)}
-          onConfirmar={(m) => {
+        <DialogoPerda texto={`A proposta ${proposta.code} fica perdida e não muda mais; as revisões são preservadas. Sem outra proposta aberta, a oportunidade ${proposta.opportunityCode} também é perdida, com este motivo.`}
+          idBase={fid('perda')} comTexto onCancelar={() => setPerda(false)}
+          onConfirmar={(motivo, detalhe) => {
             setPerda(false);
-            void comando('outcome', { outcome: 'PERDIDA', reason: m }, (p) => `Perda da proposta ${p.code} registrada com sucesso`);
+            void comando('outcome', { outcome: 'PERDIDA', reason: detalhe, lossReason: motivo }, (p) => `Perda da proposta ${p.code} registrada com sucesso`);
           }} />
       )}
 

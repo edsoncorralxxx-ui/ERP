@@ -64,12 +64,14 @@ public class SalesOrderService {
     private final AuditQuery auditQuery;
     private final Outbox outbox;
     private final CommandReceipts receipts;
+    private final OpportunityService opportunities;
     private final Clock clock;
 
     public SalesOrderService(SalesOrderRepository repository, ProposalRepository proposals, CommercialLookups lookups,
                              ProjectProvisioningApi provisioning, ProjectQueryApi projects, TitleIssuanceApi titles,
                              TitleQueryApi titleQuery, AuditTrail audit, AuditQuery auditQuery, Outbox outbox,
-                             CommandReceipts receipts, Clock clock) {
+                             CommandReceipts receipts, OpportunityService opportunities, Clock clock) {
+        this.opportunities = opportunities;
         this.repository = repository;
         this.proposals = proposals;
         this.lookups = lookups;
@@ -152,6 +154,7 @@ public class SalesOrderService {
         SalesOrder o = SalesOrder.fromProposal(repository.nextCode(), won, customer, contract, now, user.username());
         repository.insert(o);
         proposals.update(won, proposal.version());
+        opportunities.proposalWon(user, won.opportunityId(), o.code());
         audit.record(new AuditEntry(user.username(), "PROPOSAL_WON", ProposalService.ENTITY, proposalId.toString(), won.version(), null,
                 Map.of("status", new AuditEntry.Change(proposal.status().name(), won.status().name()),
                         "order", new AuditEntry.Change(null, o.code())), CorrelationId.current()));

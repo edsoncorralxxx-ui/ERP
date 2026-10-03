@@ -1,0 +1,16 @@
+{
+  "origem": "Lista de prospecção — exemplo da Sprint 11 (empresas fictícias)",
+  "observacao": "Arquivo de teste com os casos difíceis da Lista de Fecularias real: mesma empresa duas vezes na mesma cidade, mesmo nome em cidades diferentes, nome com grafia diferente, estrela vazia e estrela inválida. A lista real entra quando o PO mandar.",
+  "prospeccoes": [
+    {"empresa": "Fecularia Exemplo Alfa Ltda.", "cidade": "Paranavaí", "uf": "PR", "possuiRendaMais": "NÃO", "estrelas": 5, "contato": "Comprador Alfa", "telefone": "(44) 3000-0001"},
+    {"empresa": "Amidonaria Exemplo Beta", "cidade": "Nova Londrina", "uf": "PR", "possuiRendaMais": "SIM", "estrelas": 4},
+    {"empresa": "Amidonaria Exemplo Beta", "cidade": "Nova Londrina", "uf": "PR", "possuiRendaMais": "SIM", "estrelas": 4, "observacao": "Segunda unidade na mesma cidade?"},
+    {"empresa": "Fécula Exemplo Gama", "cidade": "Paranavaí", "uf": "PR", "possuiRendaMais": "NÃO", "estrelas": 3},
+    {"empresa": "FECULA EXEMPLO GAMA LTDA", "cidade": "Mandaguaçu", "uf": "PR", "possuiRendaMais": "NÃO", "estrelas": null},
+    {"empresa": "Polvilho Exemplo Delta", "cidade": "Cândido Mota", "uf": "SP", "possuiRendaMais": "", "estrelas": ""},
+    {"empresa": "Mandioca Exemplo Épsilon", "cidade": "Naviraí", "uf": "MS", "possuiRendaMais": "NÃO", "estrelas": 7},
+    {"empresa": "Amidos Exemplo Zeta", "cidade": "Ivinhema", "uf": "MS", "possuiRendaMais": "NÃO", "estrelas": 2, "contato": "Gerente Zeta", "email": "gerente@zeta.exemplo"},
+    {"empresa": "", "cidade": "Umuarama", "uf": "PR", "possuiRendaMais": "NÃO", "estrelas": 1},
+    {"empresa": "Fecularia Exemplo Eta", "cidade": "Assis", "uf": "XX", "possuiRendaMais": "NÃO", "estrelas": 3}
+  ]
+}

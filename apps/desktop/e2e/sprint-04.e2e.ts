@@ -46,11 +46,11 @@ test('proposta vira pedido confirmado com projeto, equipamentos e parcelas uma �
   await page.getByRole('button', { name: 'OK', exact: true }).click();
   await expect(page.getByRole('menubar', { name: 'Menu principal' })).toBeVisible();
 
-  // Proposta pela gaveta: Vendas → Oportunidades e propostas → Novo.
+  // Proposta pela gaveta: Vendas → Propostas → Novo.
   const gaveta = page.getByRole('complementary', { name: 'Módulos' });
   await gaveta.getByRole('button', { name: 'Vendas', exact: true }).click();
-  await gaveta.getByRole('button', { name: /Oportunidades e propostas/ }).click();
-  const lista = page.getByRole('dialog', { name: 'Oportunidades e propostas', exact: true });
+  await gaveta.getByRole('button', { name: 'Propostas', exact: true }).click();
+  const lista = page.getByRole('dialog', { name: 'Propostas', exact: true });
   await lista.getByRole('button', { name: 'Novo', exact: true }).click();
   const proposta = page.getByRole('dialog', { name: 'Proposta', exact: true });
   await escolher(page, proposta.getByRole('combobox', { name: 'Cliente', exact: true }), new RegExp(`Fecularia E2E ${SUFIXO}`));

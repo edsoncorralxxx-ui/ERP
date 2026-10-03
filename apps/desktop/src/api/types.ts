@@ -249,6 +249,8 @@ export type ProposalRevision = {
 export type Proposal = {
   id: string;
   code: string;
+  opportunityId: string;
+  opportunityCode: string;
   customerId: string;
   customerCode: string;
   customerName: string;
@@ -269,6 +271,7 @@ export type Proposal = {
 export type ProposalSummary = {
   id: string;
   code: string;
+  opportunityCode: string;
   customerCode: string;
   customerName: string;
   unitName: string | null;
@@ -1023,4 +1026,186 @@ export type PlannedCost = {
     pending: number;
     adjusted: boolean;
   }[];
+};
+
+// ───────────── CRM (Sprint 11) ─────────────
+
+export type LeadStage = 'IDENTIFICADO' | 'CONTATADO' | 'INTERESSADO' | 'DESCARTADO';
+export type HasRenda = 'SIM' | 'NAO' | 'DESCONHECIDO';
+export type CrmSource = 'INDICACAO' | 'FEIRA' | 'SITE' | 'LISTA' | 'PROSPECCAO_ATIVA' | 'CLIENTE_ATUAL' | 'OUTRO';
+
+export type Lead = {
+  id: string;
+  code: string;
+  companyName: string;
+  tradeName: string | null;
+  city: string | null;
+  state: string | null;
+  hasRenda: HasRenda;
+  rating: number | null;
+  stage: LeadStage;
+  discardReason: string | null;
+  owner: string;
+  source: CrmSource;
+  contactName: string | null;
+  contactPhone: string | null;
+  contactEmail: string | null;
+  notes: string | null;
+  customerId: string | null;
+  customerCode: string | null;
+  customerName: string | null;
+  nextActionDate: string | null;
+  nextActionNote: string | null;
+  lastInteraction: string | null;
+  openOpportunities: number;
+  imported: boolean;
+  version: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export type InteractionKind = 'LIGACAO' | 'EMAIL' | 'WHATSAPP' | 'VISITA' | 'REUNIAO' | 'NOTA';
+
+export type Interaction = {
+  id: string;
+  leadId: string | null;
+  opportunityId: string | null;
+  kind: InteractionKind;
+  occurredOn: string;
+  contactName: string | null;
+  summary: string;
+  nextActionDate: string | null;
+  nextActionNote: string | null;
+  createdAt: string;
+  createdBy: string;
+};
+
+export type OpportunityStatus = 'ABERTA' | 'GANHA' | 'PERDIDA';
+export type LossReason = 'PRECO' | 'PRAZO' | 'CONCORRENTE' | 'SEM_ORCAMENTO' | 'DESISTIU' | 'OUTRO';
+export type Competitor = { name: string; threat: 'BAIXA' | 'MEDIA' | 'ALTA'; notes: string | null };
+
+export type Opportunity = {
+  id: string;
+  code: string;
+  name: string;
+  leadId: string | null;
+  leadCode: string | null;
+  leadName: string | null;
+  customerId: string | null;
+  customerCode: string | null;
+  customerName: string | null;
+  unitId: string | null;
+  unitName: string | null;
+  owner: string;
+  source: CrmSource;
+  interest: 'BAIXO' | 'MEDIO' | 'ALTO';
+  potentialCents: string;
+  weightedCents: string;
+  closePercent: string;
+  expectedClose: string | null;
+  stage: string;
+  stageName: string;
+  status: OpportunityStatus;
+  lossReason: LossReason | null;
+  lossNote: string | null;
+  closedAt: string | null;
+  wonOrderCode: string | null;
+  nextActionDate: string | null;
+  nextActionNote: string | null;
+  lastInteraction: string | null;
+  notes: string | null;
+  competitors: Competitor[];
+  version: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export type OpportunityStage = {
+  code: string;
+  name: string;
+  position: number;
+  closePercent: string;
+  version: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export type OpportunityStageChange = {
+  id: string;
+  fromStage: string | null;
+  toStage: string;
+  toStageName: string;
+  status: OpportunityStatus;
+  closePercent: string;
+  potentialCents: string;
+  weightedCents: string;
+  changedAt: string;
+  changedBy: string;
+};
+
+export type AgendaItem = {
+  bucket: 'SEM_ACAO' | 'VENCIDA' | 'HOJE' | 'SEMANA' | 'DEPOIS';
+  kind: 'PROSPECCAO' | 'OPORTUNIDADE';
+  id: string;
+  code: string;
+  name: string;
+  party: string | null;
+  owner: string;
+  stage: string;
+  nextActionDate: string | null;
+  nextActionNote: string | null;
+};
+
+export type FunnelClosed = { count: number; potentialCents: string };
+
+export type Funnel = {
+  from: string;
+  to: string;
+  stages: { code: string; name: string; closePercent: string; count: number; potentialCents: string; weightedCents: string }[];
+  openCount: number;
+  openPotentialCents: string;
+  openWeightedCents: string;
+  won: FunnelClosed;
+  lost: FunnelClosed;
+  lostByReason: Partial<Record<LossReason, FunnelClosed>>;
+  conversion: { code: string; name: string; entered: number; advanced: number; rate: string | null }[];
+};
+
+export type CrmOwner = { username: string; displayName: string };
+
+export type LeadImportLine = {
+  line: number;
+  companyName: string | null;
+  tradeName: string | null;
+  city: string | null;
+  state: string | null;
+  hasRenda: HasRenda | null;
+  rating: number | null;
+  contactName: string | null;
+  contactPhone: string | null;
+  contactEmail: string | null;
+  notes: string | null;
+  blocked: boolean;
+};
+
+export type LeadImport = {
+  id: string;
+  fileName: string;
+  status: 'PREVIA' | 'CONFIRMADA';
+  source: string | null;
+  lineCount: number;
+  toLoad: number;
+  blocked: number;
+  warnings: number;
+  lines: LeadImportLine[];
+  problems: { severity: 'ERRO' | 'AVISO'; line: number; message: string }[];
+  createdCodes: string[];
+  createdAt: string;
+  createdBy: string;
+  confirmedAt: string | null;
+  confirmedBy: string | null;
 };

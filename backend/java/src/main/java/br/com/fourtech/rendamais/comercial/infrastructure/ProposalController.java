@@ -42,10 +42,10 @@ class ProposalController {
         this.orders = orders;
     }
 
-    record ProposalRequest(String customerId, String unitId, String title, String validUntil, String paymentTerms,
+    record ProposalRequest(String opportunityId, String customerId, String unitId, String title, String validUntil, String paymentTerms,
                            List<CommercialDtos.LineDto> lines) {
         Proposal.Data toData() {
-            return new Proposal.Data(customerId, unitId, title, validUntil, paymentTerms, CommercialDtos.data(lines));
+            return new Proposal.Data(opportunityId, customerId, unitId, title, validUntil, paymentTerms, CommercialDtos.data(lines));
         }
     }
 
@@ -57,32 +57,33 @@ class ProposalController {
         }
     }
 
-    record ProposalDto(String id, String code, String customerId, String customerCode, String customerName, String unitId,
+    record ProposalDto(String id, String code, String opportunityId, String opportunityCode, String customerId, String customerCode, String customerName, String unitId,
                        String unitName, String title, String status, String outcomeReason, int currentRevision,
                        List<RevisionDto> revisions, String version, Instant createdAt, String createdBy, Instant updatedAt,
                        String updatedBy) {
         static ProposalDto of(ProposalRepository.Summary s) {
             Proposal p = s.proposal();
-            return new ProposalDto(p.id().toString(), p.code(), p.customerId().toString(), s.customerCode(), s.customerName(),
+            return new ProposalDto(p.id().toString(), p.code(), p.opportunityId().toString(), s.opportunityCode(), p.customerId().toString(), s.customerCode(), s.customerName(),
                     p.unitId() == null ? null : p.unitId().toString(), p.unitName(), p.title(), p.status().name(), p.outcomeReason(),
                     p.current().number(), p.revisions().stream().map(RevisionDto::of).toList(), Long.toString(p.version()),
                     p.createdAt(), p.createdBy(), p.updatedAt(), p.updatedBy());
         }
     }
 
-    record ProposalSummary(String id, String code, String customerCode, String customerName, String unitName, String title,
+    record ProposalSummary(String id, String code, String opportunityCode, String customerCode, String customerName, String unitName, String title,
                            String status, int revision, String revisionStatus, LocalDate validUntil, String totalCents,
                            String version) {
         static ProposalSummary of(ProposalRepository.Summary s) {
             Proposal p = s.proposal();
             Proposal.Revision r = p.current();
-            return new ProposalSummary(p.id().toString(), p.code(), s.customerCode(), s.customerName(), p.unitName(), p.title(),
+            return new ProposalSummary(p.id().toString(), p.code(), s.opportunityCode(), s.customerCode(), s.customerName(), p.unitName(), p.title(),
                     p.status().name(), r.number(), r.status().name(), r.validUntil(), Long.toString(r.totalCents()),
                     Long.toString(p.version()));
         }
     }
 
-    record OutcomeRequest(String outcome, String reason) { }
+    /** {@code lossReason}: motivo da lista do CRM (PRECO, PRAZO, CONCORRENTE, SEM_ORCAMENTO, DESISTIU, OUTRO). */
+    record OutcomeRequest(String outcome, String reason, String lossReason) { }
 
     record ConvertRequest(String unitId, String contractDate) { }
 
@@ -132,7 +133,7 @@ class ProposalController {
                     "Registre aqui só a perda; o ganho é registrado ao converter a proposta em pedido.",
                     List.of(new FieldIssue("outcome", "Use PERDIDA.")));
         }
-        return respond(HttpStatus.OK, service.lose(id, version, body.reason()));
+        return respond(HttpStatus.OK, service.lose(id, version, body.reason(), body.lossReason()));
     }
 
     @PostMapping("/{id}/orders")

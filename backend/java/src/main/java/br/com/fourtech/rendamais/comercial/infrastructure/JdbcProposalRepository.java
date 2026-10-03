@@ -17,8 +17,8 @@ import static br.com.fourtech.rendamais.comercial.infrastructure.SalesLinesSql.*
 class JdbcProposalRepository implements ProposalRepository {
 
     private static final String SELECT = """
-            select pp.*, p.code as partner_code, p.legal_name as partner_name
-              from proposal pp join partner p on p.id = pp.customer_id
+            select pp.*, p.code as partner_code, p.legal_name as partner_name, o.code as opportunity_code
+              from proposal pp join partner p on p.id = pp.customer_id join opportunity o on o.id = pp.opportunity_id
             """;
 
     private final JdbcClient jdbc;
@@ -35,12 +35,12 @@ class JdbcProposalRepository implements ProposalRepository {
     @Override
     public void insert(Proposal p) {
         jdbc.sql("""
-                insert into proposal (id, code, customer_id, unit_id, unit_name, title, status, outcome_reason, current_revision,
+                insert into proposal (id, code, opportunity_id, customer_id, unit_id, unit_name, title, status, outcome_reason, current_revision,
                        version, created_at, created_by, updated_at, updated_by)
-                values (:id, :code, :customer, :unit, :unitName, :title, :status, :reason, :rev, :version, :createdAt, :createdBy,
+                values (:id, :code, :opportunity, :customer, :unit, :unitName, :title, :status, :reason, :rev, :version, :createdAt, :createdBy,
                         :updatedAt, :updatedBy)
                 """)
-                .param("id", p.id()).param("code", p.code()).param("customer", p.customerId()).param("unit", p.unitId())
+                .param("id", p.id()).param("code", p.code()).param("opportunity", p.opportunityId()).param("customer", p.customerId()).param("unit", p.unitId())
                 .param("unitName", p.unitName()).param("title", p.title()).param("status", p.status().name())
                 .param("reason", p.outcomeReason()).param("rev", p.current().number()).param("version", p.version())
                 .param("createdAt", ts(p.createdAt())).param("createdBy", p.createdBy())
@@ -94,6 +94,11 @@ class JdbcProposalRepository implements ProposalRepository {
     }
 
     @Override
+    public List<Summary> listByOpportunity(UUID opportunityId) {
+        return jdbc.sql(SELECT + " where pp.opportunity_id = :o order by pp.code").param("o", opportunityId).query(this::summary).list();
+    }
+
+    @Override
     public List<Summary> list(String search, Proposal.Status status, int limit) {
         return jdbc.sql(SELECT + """
                  where (cast(:status as varchar) is null or pp.status = cast(:status as varchar))
@@ -109,7 +114,7 @@ class JdbcProposalRepository implements ProposalRepository {
     }
 
     private Summary summary(ResultSet rs, int n) throws SQLException {
-        return new Summary(proposal(rs, n), rs.getString("partner_code"), rs.getString("partner_name"));
+        return new Summary(proposal(rs, n), rs.getString("partner_code"), rs.getString("partner_name"), rs.getString("opportunity_code"));
     }
 
     private Proposal proposal(ResultSet rs, int n) throws SQLException {
@@ -122,7 +127,7 @@ class JdbcProposalRepository implements ProposalRepository {
                             SalesLinesSql.load(jdbc, "proposal_line", "revision_id", rid), r.getLong("total_cents"),
                             instant(r, "issued_at"), r.getString("issued_by"));
                 }).list();
-        return new Proposal(id, rs.getString("code"), rs.getObject("customer_id", UUID.class), rs.getObject("unit_id", UUID.class),
+        return new Proposal(id, rs.getString("code"), rs.getObject("opportunity_id", UUID.class), rs.getObject("customer_id", UUID.class), rs.getObject("unit_id", UUID.class),
                 rs.getString("unit_name"), rs.getString("title"), Proposal.Status.valueOf(rs.getString("status")),
                 rs.getString("outcome_reason"), revisions, rs.getLong("version"), instant(rs, "created_at"),
                 rs.getString("created_by"), instant(rs, "updated_at"), rs.getString("updated_by"));

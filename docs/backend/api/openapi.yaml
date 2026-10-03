@@ -46,6 +46,12 @@ info:
       mostra a prévia antes de gravar e não repete o mesmo arquivo. A BOM do equipamento é cópia congelada da revisão aplicada,
       com ajustes só dele (com motivo); o custo planejado do projeto soma as BOMs e a margem só sai com todos os equipamentos com
       BOM. Quantidades e custos unitários trafegam como texto decimal com ponto, até 6 casas.
+    - CRM (Sprint 11, desenho do SAP Business One): prospecção (PS00001) com estrelas de 1 a 5 ou vazio (desconhecido, nunca
+      zero), interações (ligação, e-mail, WhatsApp, visita, reunião, nota) com a próxima ação, oportunidade (OP00001) pelas etapas do
+      funil com percentual de fechamento configurável e valor ponderado = potencial × percentual, arredondado nos centavos uma vez.
+      Oportunidade aberta sempre tem próxima ação. Toda proposta pertence a uma oportunidade: emitir leva à etapa Proposta,
+      converter em pedido a marca como ganha e a perda da última proposta aberta a marca como perdida, com o motivo da lista.
+      A carga da lista de prospecção mostra a prévia (ERRO não entra; AVISO de nome repetido entra separado) e não repete o arquivo.
     - Erros sempre no formato `ApiError`, em português, com `correlationId` (cabeçalho `X-Correlation-Id` é aceito e devolvido).
 servers:
   - url: http://localhost:8080
@@ -59,6 +65,7 @@ tags:
   - name: Fornecedores
   - name: Produtos e serviços
   - name: Unidades e categorias
+  - name: CRM
   - name: Propostas
   - name: Pedidos
   - name: Projetos e equipamentos
@@ -1655,6 +1662,331 @@ paths:
         '200': { description: Custo planejado, content: { application/json: { schema: { $ref: '#/components/schemas/PlannedCost' } } } }
         '404': { $ref: '#/components/responses/Erro' }
 
+  # ───────────── CRM (Sprint 11) ─────────────
+
+  /api/v1/leads:
+    get:
+      tags: [CRM]
+      summary: Prospecções (lead.read), da mais nova para a mais antiga
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Código, empresa, cidade ou contato' }
+        - { name: stage, in: query, required: false, schema: { type: string, enum: [IDENTIFICADO, CONTATADO, INTERESSADO, DESCARTADO, TODAS] } }
+      responses:
+        '200': { description: Prospecções, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Lead' } } } } }
+    post:
+      tags: [CRM]
+      summary: Cadastra a prospecção — RegisterLead (lead.create), idempotente; código PS00001; responsável vazio = quem cadastra
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/LeadRequest' } } }
+      responses:
+        '201': { description: Cadastrada, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Lead' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/leads/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [CRM]
+      summary: Prospecção (lead.read)
+      responses:
+        '200': { description: Prospecção, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Lead' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [CRM]
+      summary: Altera a prospecção (lead.update); descartada volta a ficar aberta quando recebe uma etapa aberta
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/LeadRequest' } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Lead' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/leads/{id}/discard:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [CRM]
+      summary: Descarta a prospecção com motivo (lead.update); a próxima ação deixa de valer
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { description: Descartada, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Lead' } } } }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/leads/{id}/customer:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [CRM]
+      summary: >-
+        Converte em cliente (lead.update e partner.create): sem customerId cadastra o cliente com a empresa, a cidade (unidade) e o
+        contato, uma única vez; com customerId liga a um cliente que já existe. As oportunidades sem cliente passam a tê-lo
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: false
+        content: { application/json: { schema: { type: object, properties: { customerId: { type: [string, 'null'], format: uuid } } } } }
+      responses:
+        '200': { description: Prospecção com o cliente, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Lead' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/leads/{id}/interactions:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [CRM]
+      summary: Interações da prospecção e das oportunidades dela, da mais recente (lead.read)
+      responses:
+        '200': { description: Interações, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Interaction' } } } } }
+    post:
+      tags: [CRM]
+      summary: >-
+        Registra a interação — RecordInteraction (lead.update), idempotente; a próxima ação passa para a prospecção e Identificado
+        vira Contatado
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/InteractionRequest' } } }
+      responses:
+        '201': { description: Registrada, content: { application/json: { schema: { $ref: '#/components/schemas/Interaction' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/leads/{id}/opportunities:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [CRM]
+      summary: Oportunidades abertas a partir da prospecção (lead.read e opportunity.read)
+      responses:
+        '200': { description: Oportunidades, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Opportunity' } } } } }
+
+  /api/v1/leads/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [CRM]
+      summary: Histórico da prospecção (lead.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/lead-imports:
+    post:
+      tags: [CRM]
+      summary: >-
+        Envia a lista de prospecção em JSON e devolve a prévia (lead.create); nada é cadastrado. O mesmo arquivo (hash) devolve a
+        mesma carga. Linha com ERRO não entra; AVISO (nome repetido ou parecido) entra separada
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ImportRequest' } } }
+      responses:
+        '201': { description: Prévia, content: { application/json: { schema: { $ref: '#/components/schemas/LeadImport' } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/lead-imports/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [CRM]
+      summary: Carga e a prévia (lead.read)
+      responses:
+        '200': { description: Carga, content: { application/json: { schema: { $ref: '#/components/schemas/LeadImport' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/lead-imports/{id}/confirmation:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [CRM]
+      summary: Cadastra as linhas sem erro (lead.create), idempotente; confirmar de novo devolve a mesma carga
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      responses:
+        '200': { description: Carga confirmada, content: { application/json: { schema: { $ref: '#/components/schemas/LeadImport' } } } }
+
+  /api/v1/opportunities:
+    get:
+      tags: [CRM]
+      summary: Oportunidades (opportunity.read), com o valor ponderado
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string }, description: 'Código, nome, prospecção ou cliente' }
+        - { name: status, in: query, required: false, schema: { type: string, enum: [ABERTA, GANHA, PERDIDA, TODAS] } }
+        - { name: stage, in: query, required: false, schema: { type: string } }
+        - { name: leadId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: customerId, in: query, required: false, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Oportunidades, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Opportunity' } } } } }
+    post:
+      tags: [CRM]
+      summary: >-
+        Abre a oportunidade — OpenOpportunity (opportunity.create), idempotente; código OP00001; da prospecção ou do cliente, na
+        primeira etapa, com a próxima ação obrigatória
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/OpportunityRequest' } } }
+      responses:
+        '201': { description: Aberta, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Opportunity' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/opportunities/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [CRM]
+      summary: Oportunidade (opportunity.read)
+      responses:
+        '200': { description: Oportunidade, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Opportunity' } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [CRM]
+      summary: Altera a oportunidade aberta, sem mudar a etapa (opportunity.update); continua exigindo a próxima ação
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/OpportunityRequest' } } }
+      responses:
+        '200': { description: Nova versão, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Opportunity' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/opportunities/{id}/stage:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [CRM]
+      summary: Muda de etapa (avança ou volta) com a nova próxima ação (opportunity.update); evento OpportunityStageChanged
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/StageChangeRequest' } } }
+      responses:
+        '200': { description: Nova etapa, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Opportunity' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/opportunities/{id}/loss:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [CRM]
+      summary: >-
+        Marca como perdida com o motivo da lista (opportunity.update); "OUTRO" exige o texto. Com proposta aberta, a perda é
+        registrada na proposta (409)
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/LossRequest' } } }
+      responses:
+        '200': { description: Perdida, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Opportunity' } } } }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/opportunities/{id}/interactions:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [CRM]
+      summary: Interações da oportunidade (opportunity.read)
+      responses:
+        '200': { description: Interações, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Interaction' } } } } }
+    post:
+      tags: [CRM]
+      summary: Registra a interação — RecordInteraction (opportunity.update), idempotente; aberta, exige a próxima ação
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/InteractionRequest' } } }
+      responses:
+        '201': { description: Registrada, content: { application/json: { schema: { $ref: '#/components/schemas/Interaction' } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/opportunities/{id}/stages:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [CRM]
+      summary: Aba Etapas — cada passagem com o percentual, o potencial e o ponderado da data (opportunity.read)
+      responses:
+        '200': { description: Etapas, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/OpportunityStageChange' } } } } }
+
+  /api/v1/opportunities/{id}/proposals:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [CRM]
+      summary: Propostas da oportunidade (opportunity.read e proposal.read)
+      responses:
+        '200': { description: Propostas, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ProposalSummary' } } } } }
+
+  /api/v1/opportunities/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [CRM]
+      summary: Histórico da oportunidade (opportunity.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/opportunity-stages:
+    get:
+      tags: [CRM]
+      summary: Etapas do funil com o percentual de fechamento (opportunity.read)
+      responses:
+        '200': { description: Etapas, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/OpportunityStage' } } } } }
+
+  /api/v1/opportunity-stages/{code}:
+    parameters: [{ name: code, in: path, required: true, schema: { type: string, enum: [QUALIFICACAO, VISITA_TECNICA, PROPOSTA, NEGOCIACAO] } }]
+    put:
+      tags: [CRM]
+      summary: Altera o nome e o percentual de fechamento da etapa (crm_stage.admin); a ordem é fixa
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [name, closePercent], properties: { name: { type: string, maxLength: 60 }, closePercent: { type: string, example: '25.00' } } } } }
+      responses:
+        '200': { description: Etapa, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/OpportunityStage' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/opportunity-stages/{code}/history:
+    parameters: [{ name: code, in: path, required: true, schema: { type: string } }]
+    get:
+      tags: [CRM]
+      summary: Histórico da etapa (opportunity.read)
+      responses:
+        '200': { description: Histórico, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HistoryEntry' } } } } }
+
+  /api/v1/crm/agenda:
+    get:
+      tags: [CRM]
+      summary: >-
+        Próximas ações das prospecções e oportunidades abertas (lead.read e opportunity.read): SEM_ACAO (oportunidade aberta sem
+        próxima ação), VENCIDA, HOJE, SEMANA (próximos 7 dias) e DEPOIS
+      parameters:
+        - { name: owner, in: query, required: false, schema: { type: string }, description: 'Responsável (usuário)' }
+      responses:
+        '200': { description: Agenda, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/AgendaItem' } } } } }
+
+  /api/v1/crm/funnel:
+    get:
+      tags: [CRM]
+      summary: >-
+        Funil de vendas (opportunity.read): abertas por etapa com potencial e ponderado, ganhas e perdidas no período com os
+        motivos e a conversão por etapa (IND-016; rate nulo = não calculável). Período padrão: do começo do ano até hoje
+      parameters:
+        - { name: from, in: query, required: false, schema: { type: string, format: date } }
+        - { name: to, in: query, required: false, schema: { type: string, format: date } }
+        - { name: owner, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: Funil, content: { application/json: { schema: { $ref: '#/components/schemas/Funnel' } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/crm/owners:
+    get:
+      tags: [CRM]
+      summary: Usuários ativos, para escolher o responsável (opportunity.read)
+      responses:
+        '200': { description: Usuários, content: { application/json: { schema: { type: array, items: { type: object, properties: { username: { type: string }, displayName: { type: string } } } } } } }
+
 components:
   securitySchemes:
     sessao:
@@ -1983,10 +2315,236 @@ components:
         discountCents: { $ref: '#/components/schemas/Cents' }
         grossCents: { $ref: '#/components/schemas/Cents' }
         totalCents: { $ref: '#/components/schemas/Cents', description: 'round(quantidade × preço) − desconto, meio-par por linha (PD-002)' }
+    LeadRequest:
+      type: object
+      required: [companyName]
+      properties:
+        companyName: { type: string, maxLength: 200 }
+        tradeName: { type: [string, 'null'], maxLength: 200 }
+        city: { type: [string, 'null'], maxLength: 120 }
+        state: { type: [string, 'null'], description: UF }
+        hasRenda: { type: [string, 'null'], enum: [SIM, NAO, DESCONHECIDO, null] }
+        rating: { type: [integer, 'null'], minimum: 1, maximum: 5, description: 'Vazio é desconhecido, nunca zero' }
+        stage: { type: [string, 'null'], enum: [IDENTIFICADO, CONTATADO, INTERESSADO, DESCARTADO, null] }
+        owner: { type: [string, 'null'], description: 'Usuário responsável; vazio = quem cadastra' }
+        source: { $ref: '#/components/schemas/CrmSource' }
+        contactName: { type: [string, 'null'], maxLength: 120 }
+        contactPhone: { type: [string, 'null'], maxLength: 40 }
+        contactEmail: { type: [string, 'null'], maxLength: 200 }
+        notes: { type: [string, 'null'], maxLength: 2000 }
+        nextActionDate: { type: [string, 'null'], format: date }
+        nextActionNote: { type: [string, 'null'], maxLength: 300 }
+    CrmSource:
+      type: [string, 'null']
+      enum: [INDICACAO, FEIRA, SITE, LISTA, PROSPECCAO_ATIVA, CLIENTE_ATUAL, OUTRO, null]
+    Lead:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: PS00001 }
+        companyName: { type: string }
+        tradeName: { type: [string, 'null'] }
+        city: { type: [string, 'null'] }
+        state: { type: [string, 'null'] }
+        hasRenda: { type: string, enum: [SIM, NAO, DESCONHECIDO] }
+        rating: { type: [integer, 'null'] }
+        stage: { type: string, enum: [IDENTIFICADO, CONTATADO, INTERESSADO, DESCARTADO] }
+        discardReason: { type: [string, 'null'] }
+        owner: { type: string }
+        source: { type: string }
+        contactName: { type: [string, 'null'] }
+        contactPhone: { type: [string, 'null'] }
+        contactEmail: { type: [string, 'null'] }
+        notes: { type: [string, 'null'] }
+        customerId: { type: [string, 'null'], format: uuid }
+        customerCode: { type: [string, 'null'] }
+        customerName: { type: [string, 'null'] }
+        nextActionDate: { type: [string, 'null'], format: date }
+        nextActionNote: { type: [string, 'null'] }
+        lastInteraction: { type: [string, 'null'], format: date }
+        openOpportunities: { type: integer }
+        imported: { type: boolean }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    InteractionRequest:
+      type: object
+      required: [kind, summary]
+      properties:
+        kind: { type: string, enum: [LIGACAO, EMAIL, WHATSAPP, VISITA, REUNIAO, NOTA] }
+        occurredOn: { type: [string, 'null'], format: date, description: 'Hoje quando vazia; nunca futura' }
+        contactName: { type: [string, 'null'], maxLength: 120 }
+        summary: { type: string, maxLength: 2000 }
+        nextActionDate: { type: [string, 'null'], format: date }
+        nextActionNote: { type: [string, 'null'], maxLength: 300 }
+    Interaction:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        leadId: { type: [string, 'null'], format: uuid }
+        opportunityId: { type: [string, 'null'], format: uuid }
+        kind: { type: string }
+        occurredOn: { type: string, format: date }
+        contactName: { type: [string, 'null'] }
+        summary: { type: string }
+        nextActionDate: { type: [string, 'null'], format: date }
+        nextActionNote: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+    LeadImport:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        fileName: { type: string }
+        status: { type: string, enum: [PREVIA, CONFIRMADA] }
+        source: { type: [string, 'null'] }
+        lineCount: { type: integer }
+        toLoad: { type: integer }
+        blocked: { type: integer }
+        warnings: { type: integer }
+        lines: { type: array, items: { type: object } }
+        problems: { type: array, items: { type: object, properties: { severity: { type: string, enum: [ERRO, AVISO] }, line: { type: integer }, message: { type: string } } } }
+        createdCodes: { type: array, items: { type: string } }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        confirmedAt: { type: [string, 'null'], format: date-time }
+        confirmedBy: { type: [string, 'null'] }
+    Competitor:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 120 }
+        threat: { type: string, enum: [BAIXA, MEDIA, ALTA] }
+        notes: { type: [string, 'null'], maxLength: 300 }
+    OpportunityRequest:
+      type: object
+      required: [name, nextActionDate, nextActionNote]
+      properties:
+        name: { type: string, maxLength: 200 }
+        leadId: { type: [string, 'null'], format: uuid }
+        customerId: { type: [string, 'null'], format: uuid }
+        unitId: { type: [string, 'null'], format: uuid }
+        owner: { type: [string, 'null'] }
+        source: { $ref: '#/components/schemas/CrmSource' }
+        interest: { type: [string, 'null'], enum: [BAIXO, MEDIO, ALTO, null] }
+        potentialCents: { type: [string, 'null'], pattern: '^[0-9]+$' }
+        expectedClose: { type: [string, 'null'], format: date }
+        notes: { type: [string, 'null'], maxLength: 2000 }
+        nextActionDate: { type: string, format: date }
+        nextActionNote: { type: string, maxLength: 300 }
+        competitors: { type: array, items: { $ref: '#/components/schemas/Competitor' } }
+    Opportunity:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: OP00001 }
+        name: { type: string }
+        leadId: { type: [string, 'null'], format: uuid }
+        leadCode: { type: [string, 'null'] }
+        leadName: { type: [string, 'null'] }
+        customerId: { type: [string, 'null'], format: uuid }
+        customerCode: { type: [string, 'null'] }
+        customerName: { type: [string, 'null'] }
+        unitId: { type: [string, 'null'], format: uuid }
+        unitName: { type: [string, 'null'] }
+        owner: { type: string }
+        source: { type: string }
+        interest: { type: string, enum: [BAIXO, MEDIO, ALTO] }
+        potentialCents: { $ref: '#/components/schemas/Cents' }
+        weightedCents: { $ref: '#/components/schemas/Cents' }
+        closePercent: { type: string, example: '25.00', description: 'Da etapa; 100 ganha, 0 perdida' }
+        expectedClose: { type: [string, 'null'], format: date }
+        stage: { type: string }
+        stageName: { type: string }
+        status: { type: string, enum: [ABERTA, GANHA, PERDIDA] }
+        lossReason: { type: [string, 'null'], enum: [PRECO, PRAZO, CONCORRENTE, SEM_ORCAMENTO, DESISTIU, OUTRO, null] }
+        lossNote: { type: [string, 'null'] }
+        closedAt: { type: [string, 'null'], format: date-time }
+        wonOrderCode: { type: [string, 'null'] }
+        nextActionDate: { type: [string, 'null'], format: date }
+        nextActionNote: { type: [string, 'null'] }
+        lastInteraction: { type: [string, 'null'], format: date }
+        notes: { type: [string, 'null'] }
+        competitors: { type: array, items: { $ref: '#/components/schemas/Competitor' } }
+        version: { type: string }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    StageChangeRequest:
+      type: object
+      required: [stage, nextActionDate, nextActionNote]
+      properties:
+        stage: { type: string }
+        nextActionDate: { type: string, format: date }
+        nextActionNote: { type: string, maxLength: 300 }
+    LossRequest:
+      type: object
+      required: [lossReason]
+      properties:
+        lossReason: { type: string, enum: [PRECO, PRAZO, CONCORRENTE, SEM_ORCAMENTO, DESISTIU, OUTRO] }
+        lossNote: { type: [string, 'null'], maxLength: 500, description: 'Obrigatório em OUTRO' }
+    OpportunityStage:
+      type: object
+      properties:
+        code: { type: string }
+        name: { type: string }
+        position: { type: integer }
+        closePercent: { type: string, example: '10.00' }
+        version: { type: string }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        updatedBy: { type: [string, 'null'] }
+    OpportunityStageChange:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        fromStage: { type: [string, 'null'] }
+        toStage: { type: string }
+        toStageName: { type: string }
+        status: { type: string, enum: [ABERTA, GANHA, PERDIDA] }
+        closePercent: { type: string }
+        potentialCents: { $ref: '#/components/schemas/Cents' }
+        weightedCents: { $ref: '#/components/schemas/Cents' }
+        changedAt: { type: string, format: date-time }
+        changedBy: { type: string }
+    AgendaItem:
+      type: object
+      properties:
+        bucket: { type: string, enum: [SEM_ACAO, VENCIDA, HOJE, SEMANA, DEPOIS] }
+        kind: { type: string, enum: [PROSPECCAO, OPORTUNIDADE] }
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        party: { type: [string, 'null'] }
+        owner: { type: string }
+        stage: { type: string }
+        nextActionDate: { type: [string, 'null'], format: date }
+        nextActionNote: { type: [string, 'null'] }
+    FunnelClosed:
+      type: object
+      properties:
+        count: { type: integer }
+        potentialCents: { $ref: '#/components/schemas/Cents' }
+    Funnel:
+      type: object
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        stages: { type: array, items: { type: object, properties: { code: { type: string }, name: { type: string }, closePercent: { type: string }, count: { type: integer }, potentialCents: { $ref: '#/components/schemas/Cents' }, weightedCents: { $ref: '#/components/schemas/Cents' } } } }
+        openCount: { type: integer }
+        openPotentialCents: { $ref: '#/components/schemas/Cents' }
+        openWeightedCents: { $ref: '#/components/schemas/Cents' }
+        won: { $ref: '#/components/schemas/FunnelClosed' }
+        lost: { $ref: '#/components/schemas/FunnelClosed' }
+        lostByReason: { type: object, additionalProperties: { $ref: '#/components/schemas/FunnelClosed' } }
+        conversion: { type: array, items: { type: object, properties: { code: { type: string }, name: { type: string }, entered: { type: integer }, advanced: { type: integer }, rate: { type: [string, 'null'], description: 'Percentual; nulo = não calculável' } } } }
     ProposalRequest:
       type: object
       required: [customerId, title, validUntil, lines]
       properties:
+        opportunityId: { type: [string, 'null'], format: uuid, description: 'Oportunidade aberta do mesmo cliente; vazia cria uma na etapa Proposta (só no cadastro)' }
         customerId: { type: string, format: uuid }
         unitId: { type: [string, 'null'], format: uuid }
         title: { type: string, maxLength: 200 }
@@ -2010,6 +2568,8 @@ components:
       properties:
         id: { type: string, format: uuid }
         code: { type: string, example: PR00001 }
+        opportunityId: { type: string, format: uuid }
+        opportunityCode: { type: string, example: OP00001 }
         customerId: { type: string, format: uuid }
         customerCode: { type: string }
         customerName: { type: string }
@@ -2030,6 +2590,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         code: { type: string }
+        opportunityCode: { type: string }
         customerCode: { type: string }
         customerName: { type: string }
         unitName: { type: [string, 'null'] }
@@ -2046,6 +2607,7 @@ components:
       properties:
         outcome: { type: string, enum: [PERDIDA] }
         reason: { type: string, maxLength: 500 }
+        lossReason: { type: [string, 'null'], enum: [PRECO, PRAZO, CONCORRENTE, SEM_ORCAMENTO, DESISTIU, OUTRO, null], description: 'Motivo da lista do CRM, usado quando a oportunidade também é perdida (sem outra proposta aberta); vazio = OUTRO com o texto' }
     ConvertRequest:
       type: object
       properties:

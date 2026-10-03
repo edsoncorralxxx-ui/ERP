@@ -16,6 +16,11 @@ const ROTULO: Record<string, string> = {
   receivedCents: 'Recebido', balanceCents: 'Saldo', settlement: 'Recebimento', account: 'Conta', effectiveDate: 'Data', reversalDate: 'Data do estorno',
   number: 'Nota', customer: 'Cliente', issueDate: 'Emissão', competence: 'Competência', linkedCents: 'Vinculado', links: 'Vínculos',
   operationNature: 'Natureza da operação', classificationRevision: 'Revisão da classificação', document: 'Documento', invoiced: 'Faturado',
+  companyName: 'Empresa', city: 'Cidade', state: 'UF', hasRenda: 'Possui Renda+', rating: 'Estrelas', discardReason: 'Motivo do descarte',
+  owner: 'Responsável', source: 'Origem', contactName: 'Contato', contactPhone: 'Telefone', contactEmail: 'E-mail',
+  nextActionDate: 'Próxima ação em', nextActionNote: 'Próxima ação', lead: 'Prospecção', interest: 'Interesse',
+  potentialCents: 'Potencial', expectedClose: 'Previsão de fechamento', lossReason: 'Motivo da perda', lossNote: 'Detalhe da perda',
+  wonOrder: 'Pedido ganho', competitors: 'Concorrentes', closePercent: 'Fechamento (%)', file: 'Arquivo', leads: 'Prospecções',
 };
 const ACAO: Record<string, string> = {
   PARTNER_REGISTERED: 'Cadastro', PARTNER_UPDATED: 'Alteração', PARTNER_DEACTIVATED: 'Inativação', PARTNER_ROLE_ENABLED: 'Novo papel',
@@ -29,11 +34,20 @@ const ACAO: Record<string, string> = {
   FINANCIAL_TITLE_CANCELLED: 'Cancelamento', FINANCIAL_TITLE_DOCUMENT_LINKED: 'Nota vinculada', FINANCIAL_TITLE_DOCUMENT_UNLINKED: 'Vínculo com nota desfeito',
   DOCUMENT_REGISTERED: 'Registro', DOCUMENT_LINKED_TO_TITLES: 'Vínculo com parcelas', DOCUMENT_LINK_REMOVED: 'Vínculo desfeito',
   DOCUMENT_CANCELLED: 'Cancelamento', DOCUMENT_CLASSIFIED: 'Classificação',
+  LEAD_REGISTERED: 'Cadastro', LEAD_UPDATED: 'Alteração', LEAD_DISCARDED: 'Descarte', LEAD_INTERACTION_RECORDED: 'Interação',
+  LEAD_CONVERTED: 'Convertida em cliente', LEAD_CUSTOMER_LINKED: 'Ligada a cliente', OPPORTUNITY_OPENED: 'Abertura',
+  OPPORTUNITY_UPDATED: 'Alteração', OPPORTUNITY_STAGE_CHANGED: 'Mudança de etapa', OPPORTUNITY_LOST: 'Perda', OPPORTUNITY_WON: 'Ganho',
+  OPPORTUNITY_INTERACTION_RECORDED: 'Interação', OPPORTUNITY_CUSTOMER_LINKED: 'Cliente ligado', OPPORTUNITY_STAGE_CONFIGURED: 'Configuração da etapa',
 };
 const VALOR: Record<string, string> = {
   ATIVO: 'Ativo', INATIVO: 'Inativo', MATERIAL: 'Produto', SERVICO: 'Serviço', ABERTA: 'Aberta', GANHA: 'Ganha', PERDIDA: 'Perdida',
   RASCUNHO: 'Rascunho', EMITIDA: 'Emitida', DRAFT: 'Rascunho', CONFIRMED: 'Confirmado', CANCELLED: 'Cancelado', PLANEJADO: 'Planejado',
   ENCERRADO: 'Encerrado', CANCELADO: 'Cancelado', OPEN: 'Em aberto', PARTIAL: 'Parcial', SETTLED: 'Liquidado', DESFEITO: 'Desfeito',
+  IDENTIFICADO: 'Identificado', CONTATADO: 'Contatado', INTERESSADO: 'Interessado', DESCARTADO: 'Descartado', SIM: 'Sim', NAO: 'Não',
+  DESCONHECIDO: 'Desconhecido', BAIXO: 'Baixo', MEDIO: 'Médio', ALTO: 'Alto', QUALIFICACAO: 'Qualificação', VISITA_TECNICA: 'Visita técnica',
+  PROPOSTA: 'Proposta', NEGOCIACAO: 'Negociação', PRECO: 'Preço', PRAZO: 'Prazo', CONCORRENTE: 'Concorrente', SEM_ORCAMENTO: 'Sem orçamento',
+  DESISTIU: 'Desistiu', OUTRO: 'Outro', INDICACAO: 'Indicação', FEIRA: 'Feira', SITE: 'Site', LISTA: 'Lista de prospecção',
+  PROSPECCAO_ATIVA: 'Prospecção ativa', CLIENTE_ATUAL: 'Cliente atual',
   VENDA_PRODUCAO: 'Venda de produção própria', VENDA_MERCADORIA: 'Venda de mercadoria', PRESTACAO_SERVICO: 'Prestação de serviço', REMESSA: 'Remessa',
 };
 

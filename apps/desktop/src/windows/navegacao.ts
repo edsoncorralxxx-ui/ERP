@@ -21,6 +21,8 @@ export const SEQUENCIA_PADRAO: Partial<Record<WindowKind, (recordKey: string) =>
   customer: () => ids('/api/v1/customers?status=TODOS'),
   supplier: () => ids('/api/v1/suppliers?status=TODOS'),
   item: () => ids('/api/v1/items?status=TODOS'),
+  lead: () => ids('/api/v1/leads?stage=TODAS'),
+  opportunity: () => ids('/api/v1/opportunities?status=TODAS'),
   proposal: () => ids('/api/v1/proposals?status=TODOS'),
   order: () => ids('/api/v1/sales-orders?status=TODOS'),
   project: () => ids('/api/v1/projects?includeClosed=true'),
