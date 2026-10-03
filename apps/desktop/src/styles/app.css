@@ -358,3 +358,11 @@ body { background: var(--ground); }
 .rp-bom-diagrama__meta { color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rp-bom-diagrama__total { display: flex; align-items: center; gap: var(--space-3); font: var(--text-numeric); font-variant-numeric: tabular-nums; }
 .rp-bom-diagrama__pendente { display: inline-flex; align-items: center; gap: var(--space-1); font: var(--text-caption); color: var(--ink); }
+
+/* Funil de vendas (CRM, Sprint 11): quatro indicadores no topo, o funil por etapa com o gráfico à esquerda e a conversão e as perdas à direita. */
+.rp-funil { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: var(--space-4); }
+.rp-funil__kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); }
+.rp-funil__linha { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--space-5); align-items: start; }
+.rp-funil__bloco { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.rp-funil__bloco .rp-grid { width: 100%; }
+.rp-funil__titulo { margin: 0; font: var(--text-section); color: var(--ink-heading); text-decoration: underline; }

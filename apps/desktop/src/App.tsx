@@ -25,6 +25,14 @@ import { TaxPeriodWindow } from './screens/TaxPeriodWindow';
 import { ProjectsWindow } from './screens/ProjectsWindow';
 import { ProjectWindow } from './screens/ProjectWindow';
 import { ProposalsWindow } from './screens/ProposalsWindow';
+import { LeadsWindow } from './screens/LeadsWindow';
+import { LeadWindow } from './screens/LeadWindow';
+import { LeadImportWindow } from './screens/LeadImportWindow';
+import { OpportunitiesWindow } from './screens/OpportunitiesWindow';
+import { OpportunityWindow } from './screens/OpportunityWindow';
+import { FunnelWindow } from './screens/FunnelWindow';
+import { CrmAgendaWindow } from './screens/CrmAgendaWindow';
+import { OpportunityStagesWindow } from './screens/OpportunityStagesWindow';
 import { ProposalWindow } from './screens/ProposalWindow';
 import { ReceivablesWindow } from './screens/ReceivablesWindow';
 import { ReceivableWindow } from './screens/ReceivableWindow';
@@ -64,7 +72,15 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   items: { title: 'Produtos e serviços', size: { w: 1100, h: 620 } },
   item: { title: 'Produto ou serviço', size: { w: 900, h: 600 } },
   catalog: { title: 'Unidades e categorias', size: { w: 920, h: 560 } },
-  proposals: { title: 'Oportunidades e propostas', size: { w: 1100, h: 620 } },
+  leads: { title: 'Prospecção', size: { w: 1180, h: 620 } },
+  lead: { title: 'Prospecção', size: { w: 1080, h: 660 } },
+  'lead-import': { title: 'Importar lista de prospecção', size: { w: 1160, h: 660 } },
+  opportunities: { title: 'Oportunidades', size: { w: 1200, h: 620 } },
+  opportunity: { title: 'Oportunidade de venda', size: { w: 1100, h: 680 } },
+  funnel: { title: 'Funil de vendas', size: { w: 1180, h: 700 } },
+  'crm-agenda': { title: 'Agenda do CRM', size: { w: 1100, h: 600 } },
+  'opportunity-stages': { title: 'Etapas do funil', size: { w: 900, h: 560 } },
+  proposals: { title: 'Propostas', size: { w: 1100, h: 620 } },
   proposal: { title: 'Proposta', size: { w: 1120, h: 680 } },
   orders: { title: 'Pedidos e contratos', size: { w: 1100, h: 620 } },
   order: { title: 'Pedido de venda', size: { w: 1120, h: 700 } },
@@ -419,6 +435,22 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                         <ItemWindow recordKey={w.recordKey} />
                       ) : w.kind === 'catalog' ? (
                         <CatalogWindow />
+                      ) : w.kind === 'leads' ? (
+                        <LeadsWindow />
+                      ) : w.kind === 'lead' ? (
+                        <LeadWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'lead-import' ? (
+                        <LeadImportWindow />
+                      ) : w.kind === 'opportunities' ? (
+                        <OpportunitiesWindow />
+                      ) : w.kind === 'opportunity' ? (
+                        <OpportunityWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'funnel' ? (
+                        <FunnelWindow />
+                      ) : w.kind === 'crm-agenda' ? (
+                        <CrmAgendaWindow />
+                      ) : w.kind === 'opportunity-stages' ? (
+                        <OpportunityStagesWindow />
                       ) : w.kind === 'proposals' ? (
                         <ProposalsWindow />
                       ) : w.kind === 'proposal' ? (

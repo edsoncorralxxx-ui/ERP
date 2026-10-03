@@ -2,7 +2,7 @@ import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type K
 import { createPortal } from 'react-dom';
 import { api } from '../api/client';
 import type {
-  BusinessDocument, CustomerSummary, Equipment, ItemSummary, Payable, Project, ProposalSummary, Receivable, SalesOrderSummary, SupplierSummary,
+  Lead, Opportunity, BusinessDocument, CustomerSummary, Equipment, ItemSummary, Payable, Project, ProposalSummary, Receivable, SalesOrderSummary, SupplierSummary,
 } from '../api/types';
 import type { WindowKind } from '../windows/windowManager';
 import { useSession } from './SessionContext';
@@ -61,6 +61,14 @@ const FONTES: Fonte[] = [
   {
     grupo: 'Dados mestre', permissao: 'equipment.read', caminho: (q) => `/api/v1/equipment?includeCancelled=true&search=${q}`,
     ler: (d: Equipment[]) => d.map((e) => ({ grupo: 'Dados mestre', rotulo: `${e.code} — ${e.model}`, detalhe: `Equipamento · ${e.customerName}`, kind: 'equipment', recordKey: e.id })),
+  },
+  {
+    grupo: 'Dados mestre', permissao: 'lead.read', caminho: (q) => `/api/v1/leads?stage=TODAS&search=${q}`,
+    ler: (d: Lead[]) => d.map((l) => ({ grupo: 'Dados mestre', rotulo: `${l.code} — ${l.companyName}`, detalhe: `Prospecção${l.city ? ` · ${l.city}` : ''}`, kind: 'lead', recordKey: l.id })),
+  },
+  {
+    grupo: 'Documentos', permissao: 'opportunity.read', caminho: (q) => `/api/v1/opportunities?status=TODAS&search=${q}`,
+    ler: (d: Opportunity[]) => d.map((o) => ({ grupo: 'Documentos', rotulo: `${o.code} — ${o.name}`, detalhe: `Oportunidade · ${o.customerName ?? o.leadName ?? ''}`, kind: 'opportunity', recordKey: o.id })),
   },
   {
     grupo: 'Documentos', permissao: 'proposal.read', caminho: (q) => `/api/v1/proposals?status=TODOS&search=${q}`,

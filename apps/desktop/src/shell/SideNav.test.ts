@@ -9,6 +9,7 @@ describe('menu lateral', () => {
   it('todo item marcado como implementado abre uma janela (nenhum clique morto)', () => {
     const implementados = MENU.flatMap((m) => m.itens).filter((i) => i.implementado);
     expect(implementados.map((i) => i.rotulo).sort()).toEqual([
+      'Agenda do CRM',
       'BOM — composição de custos',
       'Carteira de projetos',
       'Categorias financeiras',
@@ -20,14 +21,18 @@ describe('menu lateral', () => {
       'Detalhe do projeto',
       'Documentos e faturamento',
       'Equipamentos',
+      'Etapas do funil',
       'Fluxo de caixa',
       'Fornecedores',
+      'Funil de vendas',
       'Impostos gerenciais',
       'Modelos de equipamento',
       'Notas a emitir',
-      'Oportunidades e propostas',
+      'Oportunidades',
       'Pedidos e contratos',
       'Produtos e serviços',
+      'Propostas',
+      'Prospecção',
       'Status do servidor',
       'Unidades e categorias',
       'Usuários e permissões',
