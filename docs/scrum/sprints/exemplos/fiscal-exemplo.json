@@ -1,0 +1,617 @@
+{
+  "origem": "Dados de exemplo do mock Renda+ ERP MOCK (telas Fiscal), para a Sprint 12. Empresas e números fictícios.",
+  "observacao": "historicoReceita: meses anteriores ao início do Renda+ (09/2026), como no PGDAS-D. A divisão por anexo dos meses sem detalhe no mock segue a regra do mock (anexo I = 3,5% e anexo III = 26% da receita, arredondados a R$ 10; o anexo II fica com o resto). notasSetembro2026 e classificacao servem só aos testes e ao roteiro: na sua base, a receita vem das suas notas e a classificação, dos seus itens.",
+  "empresa": {
+    "regime": "SIMPLES_NACIONAL",
+    "cnaePrincipal": "2829-1/99 — Outras máquinas e equipamentos de uso geral",
+    "cnaeSecundario": "3321-0/00 — Instalação de máquinas e equipamentos industriais",
+    "reconhecimentoReceita": "COMPETENCIA",
+    "emissorNfse": "Padrão nacional",
+    "limiteAnual": "4800000.00",
+    "sublimite": "3600000.00",
+    "excessoTolerado": "0.20",
+    "avisarAoAtingir": "0.90"
+  },
+  "historicoReceita": [
+    {
+      "competencia": "2024-10",
+      "anexoI": "7350.00",
+      "anexoII": "148050.00",
+      "anexoIII": "54600.00",
+      "total": "210000.00"
+    },
+    {
+      "competencia": "2024-11",
+      "anexoI": "8050.00",
+      "anexoII": "162150.00",
+      "anexoIII": "59800.00",
+      "total": "230000.00"
+    },
+    {
+      "competencia": "2024-12",
+      "anexoI": "10500.00",
+      "anexoII": "211500.00",
+      "anexoIII": "78000.00",
+      "total": "300000.00"
+    },
+    {
+      "competencia": "2025-01",
+      "anexoI": "4550.00",
+      "anexoII": "91650.00",
+      "anexoIII": "33800.00",
+      "total": "130000.00"
+    },
+    {
+      "competencia": "2025-02",
+      "anexoI": "4200.00",
+      "anexoII": "84600.00",
+      "anexoIII": "31200.00",
+      "total": "120000.00"
+    },
+    {
+      "competencia": "2025-03",
+      "anexoI": "5950.00",
+      "anexoII": "119850.00",
+      "anexoIII": "44200.00",
+      "total": "170000.00"
+    },
+    {
+      "competencia": "2025-04",
+      "anexoI": "7700.00",
+      "anexoII": "155100.00",
+      "anexoIII": "57200.00",
+      "total": "220000.00"
+    },
+    {
+      "competencia": "2025-05",
+      "anexoI": "10150.00",
+      "anexoII": "204450.00",
+      "anexoIII": "75400.00",
+      "total": "290000.00"
+    },
+    {
+      "competencia": "2025-06",
+      "anexoI": "11900.00",
+      "anexoII": "239700.00",
+      "anexoIII": "88400.00",
+      "total": "340000.00"
+    },
+    {
+      "competencia": "2025-07",
+      "anexoI": "12950.00",
+      "anexoII": "260850.00",
+      "anexoIII": "96200.00",
+      "total": "370000.00"
+    },
+    {
+      "competencia": "2025-08",
+      "anexoI": "11200.00",
+      "anexoII": "225600.00",
+      "anexoIII": "83200.00",
+      "total": "320000.00"
+    },
+    {
+      "competencia": "2025-09",
+      "anexoI": "9800.00",
+      "anexoII": "197400.00",
+      "anexoIII": "72800.00",
+      "total": "280000.00"
+    },
+    {
+      "competencia": "2025-10",
+      "anexoI": "8400.00",
+      "anexoII": "169200.00",
+      "anexoIII": "62400.00",
+      "total": "240000.00"
+    },
+    {
+      "competencia": "2025-11",
+      "anexoI": "9100.00",
+      "anexoII": "183300.00",
+      "anexoIII": "67600.00",
+      "total": "260000.00"
+    },
+    {
+      "competencia": "2025-12",
+      "anexoI": "11550.00",
+      "anexoII": "232650.00",
+      "anexoIII": "85800.00",
+      "total": "330000.00"
+    },
+    {
+      "competencia": "2026-01",
+      "anexoI": "5250.00",
+      "anexoII": "105750.00",
+      "anexoIII": "39000.00",
+      "total": "150000.00"
+    },
+    {
+      "competencia": "2026-02",
+      "anexoI": "4900.00",
+      "anexoII": "98700.00",
+      "anexoIII": "36400.00",
+      "total": "140000.00"
+    },
+    {
+      "competencia": "2026-03",
+      "anexoI": "6650.00",
+      "anexoII": "133950.00",
+      "anexoIII": "49400.00",
+      "total": "190000.00"
+    },
+    {
+      "competencia": "2026-04",
+      "anexoI": "8750.00",
+      "anexoII": "176250.00",
+      "anexoIII": "65000.00",
+      "total": "250000.00"
+    },
+    {
+      "competencia": "2026-05",
+      "anexoI": "11550.00",
+      "anexoII": "232650.00",
+      "anexoIII": "85800.00",
+      "total": "330000.00"
+    },
+    {
+      "competencia": "2026-06",
+      "anexoI": "13650.00",
+      "anexoII": "274950.00",
+      "anexoIII": "101400.00",
+      "total": "390000.00"
+    },
+    {
+      "competencia": "2026-07",
+      "anexoI": "14700.00",
+      "anexoII": "296100.00",
+      "anexoIII": "109200.00",
+      "total": "420000.00"
+    },
+    {
+      "competencia": "2026-08",
+      "anexoI": "12600.00",
+      "anexoII": "262200.00",
+      "anexoIII": "85200.00",
+      "total": "360000.00"
+    }
+  ],
+  "notasSetembro2026": [
+    {
+      "modelo": "NF-e",
+      "numero": "004871",
+      "emissao": "2026-09-03",
+      "cliente": "Polvilho Forte Comércio Ltda.",
+      "descricao": "Coletor automático CA-10",
+      "valor": "38500.00",
+      "anexo": "II",
+      "autorizacao": "AUTORIZADA"
+    },
+    {
+      "modelo": "NF-e",
+      "numero": "004874",
+      "emissao": "2026-09-05",
+      "cliente": "Fecularia Primavera S.A.",
+      "descricao": "Peças de reposição — células de carga",
+      "valor": "11840.00",
+      "anexo": "I",
+      "autorizacao": "AUTORIZADA"
+    },
+    {
+      "modelo": "NF-e",
+      "numero": "004880",
+      "emissao": "2026-09-10",
+      "cliente": "Cooperativa Agroindustrial Noroeste",
+      "descricao": "Balança Renda+ R50 — 50% na entrega",
+      "valor": "99000.00",
+      "anexo": "II",
+      "autorizacao": "AUTORIZADA"
+    },
+    {
+      "modelo": "NFS-e",
+      "numero": "000512",
+      "emissao": "2026-09-16",
+      "cliente": "Fécula Horizonte Ltda.",
+      "descricao": "Contrato de manutenção — setembro",
+      "valor": "4500.00",
+      "anexo": "III",
+      "autorizacao": "AUTORIZADA"
+    },
+    {
+      "modelo": "NF-e",
+      "numero": "004893",
+      "emissao": "2026-09-18",
+      "cliente": "Indústria de Farinha Três Rios Ltda.",
+      "descricao": "Balança Renda+ R50 Compacta",
+      "valor": "128000.00",
+      "anexo": "II",
+      "autorizacao": "AUTORIZADA"
+    },
+    {
+      "modelo": "NFS-e",
+      "numero": "000515",
+      "emissao": "2026-09-23",
+      "cliente": "Farinheira Boa Esperança Ltda.",
+      "descricao": "Aferição com pesos-padrão",
+      "valor": "1800.00",
+      "anexo": "III",
+      "autorizacao": "AUTORIZADA"
+    },
+    {
+      "modelo": "NFS-e",
+      "numero": "000517",
+      "emissao": "2026-09-24",
+      "cliente": "Amidos Ivinhema Indústria S.A.",
+      "descricao": "Instalação e comissionamento",
+      "valor": "22000.00",
+      "anexo": "III",
+      "autorizacao": "AUTORIZADA"
+    },
+    {
+      "modelo": "NFS-e",
+      "numero": "000518",
+      "emissao": "2026-09-24",
+      "cliente": "Farinheira Santa Helena Ltda.",
+      "descricao": "Instalação e treinamento",
+      "valor": "80760.00",
+      "anexo": "III",
+      "autorizacao": "PENDENTE"
+    }
+  ],
+  "obrigacoes": [
+    {
+      "obrigacao": "Opção por IBS e CBS fora do DAS (1º semestre de 2027)",
+      "competencia": "2027",
+      "vencimento": "2026-09-30",
+      "situacao": "DECISAO_PENDENTE",
+      "esfera": "FEDERAL",
+      "detalhe": "Escolha no Portal do Simples Nacional. Sem opção, IBS e CBS seguem dentro do DAS em 2027. A desistência pode ser feita até 30/11/2026.",
+      "responsavel": "Diretoria e contabilidade"
+    },
+    {
+      "obrigacao": "DeSTDA",
+      "competencia": "2026-08",
+      "vencimento": "2026-09-28",
+      "situacao": "A_ENTREGAR",
+      "esfera": "ESTADUAL",
+      "detalhe": "DIFAL das compras interestaduais de uso e consumo em agosto.",
+      "responsavel": "Fiscal"
+    },
+    {
+      "obrigacao": "DCTFWeb",
+      "competencia": "2026-08",
+      "vencimento": "2026-09-30",
+      "situacao": "A_ENTREGAR",
+      "esfera": "FEDERAL",
+      "detalhe": "Confissão das contribuições da folha de agosto, a partir do eSocial e da EFD-Reinf.",
+      "responsavel": "Departamento pessoal"
+    },
+    {
+      "obrigacao": "eSocial — eventos periódicos",
+      "competencia": "2026-09",
+      "vencimento": "2026-10-15",
+      "situacao": "EM_PREPARACAO",
+      "esfera": "FEDERAL",
+      "detalhe": "Folha de setembro de 18 colaboradores.",
+      "responsavel": "Departamento pessoal"
+    },
+    {
+      "obrigacao": "EFD-Reinf",
+      "competencia": "2026-09",
+      "vencimento": "2026-10-15",
+      "situacao": "A_ENTREGAR",
+      "esfera": "FEDERAL",
+      "detalhe": "Retenções sobre serviços tomados: pintura industrial e metrologia.",
+      "responsavel": "Fiscal"
+    },
+    {
+      "obrigacao": "PGDAS-D",
+      "competencia": "2026-09",
+      "vencimento": "2026-10-20",
+      "situacao": "EM_APURACAO",
+      "esfera": "FEDERAL",
+      "detalhe": "Declaração da receita de setembro, segregada por anexo.",
+      "responsavel": "Fiscal"
+    },
+    {
+      "obrigacao": "DAS — Simples Nacional",
+      "competencia": "2026-09",
+      "vencimento": "2026-10-20",
+      "situacao": "ABERTO",
+      "esfera": "FEDERAL",
+      "detalhe": "Guia única gerada a partir do PGDAS-D.",
+      "responsavel": "Financeiro"
+    },
+    {
+      "obrigacao": "FGTS Digital",
+      "competencia": "2026-09",
+      "vencimento": "2026-10-20",
+      "situacao": "ABERTO",
+      "esfera": "FEDERAL",
+      "detalhe": "Guia gerada a partir do eSocial.",
+      "responsavel": "Departamento pessoal"
+    },
+    {
+      "obrigacao": "DeSTDA",
+      "competencia": "2026-09",
+      "vencimento": "2026-10-28",
+      "situacao": "A_ENTREGAR",
+      "esfera": "ESTADUAL",
+      "detalhe": "DIFAL e antecipação de ICMS das compras de setembro.",
+      "responsavel": "Fiscal"
+    },
+    {
+      "obrigacao": "DCTFWeb",
+      "competencia": "2026-09",
+      "vencimento": "2026-10-30",
+      "situacao": "A_ENTREGAR",
+      "esfera": "FEDERAL",
+      "detalhe": "Contribuições da folha de setembro.",
+      "responsavel": "Departamento pessoal"
+    },
+    {
+      "obrigacao": "PGDAS-D",
+      "competencia": "2026-08",
+      "vencimento": "2026-09-20",
+      "situacao": "ENTREGUE",
+      "esfera": "FEDERAL",
+      "detalhe": "Transmitida em 18/09/2026.",
+      "responsavel": "Fiscal"
+    },
+    {
+      "obrigacao": "DAS — Simples Nacional",
+      "competencia": "2026-08",
+      "vencimento": "2026-09-20",
+      "situacao": "PAGO",
+      "esfera": "FEDERAL",
+      "detalhe": "Pago em 18/09/2026.",
+      "responsavel": "Financeiro"
+    },
+    {
+      "obrigacao": "eSocial — eventos periódicos",
+      "competencia": "2026-08",
+      "vencimento": "2026-09-15",
+      "situacao": "ENTREGUE",
+      "esfera": "FEDERAL",
+      "detalhe": "Fechamento da folha de agosto em 14/09/2026.",
+      "responsavel": "Departamento pessoal"
+    },
+    {
+      "obrigacao": "EFD-Reinf",
+      "competencia": "2026-08",
+      "vencimento": "2026-09-15",
+      "situacao": "ENTREGUE",
+      "esfera": "FEDERAL",
+      "detalhe": "Transmitida em 15/09/2026.",
+      "responsavel": "Fiscal"
+    },
+    {
+      "obrigacao": "DEFIS",
+      "competencia": "2026",
+      "vencimento": "2027-03-31",
+      "situacao": "A_ENTREGAR",
+      "esfera": "FEDERAL",
+      "detalhe": "Declaração anual do Simples Nacional, ano-base 2026.",
+      "responsavel": "Contabilidade"
+    }
+  ],
+  "atividades": [
+    {
+      "atividade": "Fabricação de balanças, coletores e painéis",
+      "enquadramento": "CNAE 2829-1/99",
+      "anexo": "II"
+    },
+    {
+      "atividade": "Revenda de peças de reposição e acessórios",
+      "enquadramento": "CNAE 4663-0/00",
+      "anexo": "I"
+    },
+    {
+      "atividade": "Instalação e comissionamento",
+      "enquadramento": "LC 116, item 14.06",
+      "anexo": "III"
+    },
+    {
+      "atividade": "Manutenção, reparo e aferição",
+      "enquadramento": "LC 116, item 14.01",
+      "anexo": "III"
+    },
+    {
+      "atividade": "Treinamento de operadores",
+      "enquadramento": "LC 116, item 8.02",
+      "anexo": "III"
+    }
+  ],
+  "classificacao": {
+    "produtosEMateriais": [
+      {
+        "codigo": "PA-1000",
+        "descricao": "Balança de renda Renda+ R50 — automática, 50 kg",
+        "ncm": "84238200",
+        "cfopInterno": "5101",
+        "cfopInterestadual": "6101",
+        "csosn": "101",
+        "origem": "0",
+        "anexo": "II",
+        "situacao": "CLASSIFICADO",
+        "tipo": "PRODUTO"
+      },
+      {
+        "codigo": "PA-1010",
+        "descricao": "Balança de renda Renda+ R50 Compacta",
+        "ncm": "84238200",
+        "cfopInterno": "5101",
+        "cfopInterestadual": "6101",
+        "csosn": "101",
+        "origem": "0",
+        "anexo": "II",
+        "situacao": "CLASSIFICADO",
+        "tipo": "PRODUTO"
+      },
+      {
+        "codigo": "PA-1100",
+        "descricao": "Coletor automático de amostras CA-10",
+        "ncm": "84798999",
+        "cfopInterno": "5101",
+        "cfopInterestadual": "6101",
+        "csosn": "101",
+        "origem": "0",
+        "anexo": "II",
+        "situacao": "REVISAR",
+        "tipo": "PRODUTO"
+      },
+      {
+        "codigo": "PA-1200",
+        "descricao": "Painel de controle PR-12 com IHM",
+        "ncm": "85371020",
+        "cfopInterno": "5101",
+        "cfopInterestadual": "6101",
+        "csosn": "101",
+        "origem": "0",
+        "anexo": "II",
+        "situacao": "CLASSIFICADO",
+        "tipo": "PRODUTO"
+      },
+      {
+        "codigo": "PA-1300",
+        "descricao": "Kit de pesos-padrão para aferição (5 × 10 kg)",
+        "ncm": null,
+        "cfopInterno": "5102",
+        "cfopInterestadual": "6102",
+        "csosn": "102",
+        "origem": "0",
+        "anexo": "I",
+        "situacao": "SEM_CLASSIFICACAO",
+        "tipo": "PRODUTO"
+      },
+      {
+        "codigo": "PA-1310",
+        "descricao": "Célula de carga 50 kg (reposição)",
+        "ncm": "90318099",
+        "cfopInterno": "5102",
+        "cfopInterestadual": "6102",
+        "csosn": "102",
+        "origem": "0",
+        "anexo": "I",
+        "situacao": "CLASSIFICADO",
+        "tipo": "PRODUTO"
+      },
+      {
+        "codigo": "MP-2001",
+        "descricao": "Chapa de aço inox 304 2 mm",
+        "ncm": "72193300",
+        "cfopInterno": "1101",
+        "cfopInterestadual": "2101",
+        "csosn": null,
+        "origem": "0",
+        "anexo": null,
+        "situacao": "CLASSIFICADO",
+        "tipo": "MATERIAL"
+      },
+      {
+        "codigo": "SN-5001",
+        "descricao": "Célula de carga single point 50 kg IP68",
+        "ncm": "90318099",
+        "cfopInterno": "1101",
+        "cfopInterestadual": "2101",
+        "csosn": null,
+        "origem": "0",
+        "anexo": null,
+        "situacao": "CLASSIFICADO",
+        "tipo": "MATERIAL"
+      },
+      {
+        "codigo": "EL-3001",
+        "descricao": "Controlador lógico programável CLP-16",
+        "ncm": "85371019",
+        "cfopInterno": "1101",
+        "cfopInterestadual": "3101",
+        "csosn": null,
+        "origem": "1",
+        "anexo": null,
+        "situacao": "REVISAR",
+        "tipo": "MATERIAL"
+      },
+      {
+        "codigo": "PN-6002",
+        "descricao": "Válvula solenoide 5/2 vias 24 Vcc",
+        "ncm": "84812090",
+        "cfopInterno": "1101",
+        "cfopInterestadual": "2101",
+        "csosn": null,
+        "origem": "0",
+        "anexo": null,
+        "situacao": "CLASSIFICADO",
+        "tipo": "MATERIAL"
+      }
+    ],
+    "servicos": [
+      {
+        "codigo": "SV-010",
+        "descricao": "Instalação e comissionamento na moega de recebimento",
+        "itemLc116": "14.06",
+        "nbs": null,
+        "anexo": "III",
+        "retencaoIss": "CONFORME_MUNICIPIO",
+        "situacao": "REVISAR"
+      },
+      {
+        "codigo": "SV-020",
+        "descricao": "Aferição com pesos-padrão em campo",
+        "itemLc116": "14.01",
+        "nbs": "1.2001.10.00",
+        "anexo": "III",
+        "retencaoIss": "NAO",
+        "situacao": "CLASSIFICADO"
+      },
+      {
+        "codigo": "SV-030",
+        "descricao": "Visita técnica corretiva",
+        "itemLc116": "14.01",
+        "nbs": null,
+        "anexo": "III",
+        "retencaoIss": "NAO",
+        "situacao": "REVISAR"
+      },
+      {
+        "codigo": "SV-040",
+        "descricao": "Treinamento de operadores do recebimento",
+        "itemLc116": "08.02",
+        "nbs": "1.2205.10.00",
+        "anexo": "III",
+        "retencaoIss": "NAO",
+        "situacao": "CLASSIFICADO"
+      },
+      {
+        "codigo": "SV-050",
+        "descricao": "Contrato de manutenção e aferição trimestral",
+        "itemLc116": "14.01",
+        "nbs": "1.2001.10.00",
+        "anexo": "III",
+        "retencaoIss": "NAO",
+        "situacao": "CLASSIFICADO"
+      },
+      {
+        "codigo": "SV-060",
+        "descricao": "Manutenção preventiva do coletor e da comporta",
+        "itemLc116": "14.01",
+        "nbs": "1.2001.10.00",
+        "anexo": "III",
+        "retencaoIss": "NAO",
+        "situacao": "CLASSIFICADO"
+      }
+    ]
+  },
+  "esperado": {
+    "competencia": "2026-09",
+    "rbt12": "3340000.00",
+    "receita": "386400.00",
+    "dasPorAnexo": {
+      "I": "1383.65",
+      "II": "32232.02",
+      "III": "18800.12"
+    },
+    "das": "52415.79",
+    "issLimitadoA": "5453.00",
+    "acumuladoNoAno": "2616400.00"
+  }
+}
