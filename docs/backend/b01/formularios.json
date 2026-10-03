@@ -215,7 +215,7 @@
       "tipo": "cadastro",
       "modulo": "comercial",
       "conceito": "LEAD",
-      "significado": "Empresas/unidades-alvo e acompanhamento; não representa venda",
+      "significado": "Empresas/unidades-alvo, interações, oportunidades pelas etapas do funil e agenda de próximas ações; prospecção não é venda",
       "campos": [
         {"nome": "codigo", "tipo": "codigo", "obrigatorio": true, "origem": "sistema"},
         {"nome": "empresa", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
@@ -230,22 +230,71 @@
           "obrigatorio": true,
           "origem": "usuario"
         },
-        {"nome": "proximaAcao", "tipo": "data", "obrigatorio": false, "origem": "usuario"}
+        {"nome": "proximaAcao", "tipo": "data", "obrigatorio": false, "origem": "usuario"},
+        {"nome": "responsavel", "tipo": "texto", "obrigatorio": true, "origem": "usuario"},
+        {
+          "nome": "origem",
+          "tipo": "enum",
+          "valores": ["INDICACAO", "FEIRA", "SITE", "LISTA", "PROSPECCAO_ATIVA", "CLIENTE_ATUAL", "OUTRO"],
+          "obrigatorio": true,
+          "origem": "usuario"
+        },
+        {
+          "nome": "interacoes",
+          "tipo": "lista",
+          "itens": "tipo (ligação, e-mail, WhatsApp, visita, reunião, nota), data, contato, resumo, próxima ação",
+          "obrigatorio": false,
+          "origem": "usuario"
+        },
+        {
+          "nome": "oportunidades",
+          "tipo": "lista",
+          "itens": "OPORTUNIDADE: potencial, previsão de fechamento, interesse, etapa com % de fechamento, valor ponderado, concorrentes, motivo de perda",
+          "obrigatorio": false,
+          "origem": "usuario"
+        }
       ],
       "classificacoes": ["UF", "classificacaoEstrelas", "etapa"],
       "validacoes": [
         {"regra": "Classificação vazia permanece desconhecida, não zero estrelas; valor entre 1 e 5 quando informado"},
-        {"regra": "Linhas de prospecção não viram equipamentos vendidos automaticamente"}
+        {"regra": "Linhas de prospecção não viram equipamentos vendidos automaticamente"},
+        {"regra": "Oportunidade aberta sempre tem próxima ação (data e descrição); interação não tem data futura"},
+        {"regra": "Valor ponderado = potencial × % de fechamento da etapa, arredondado nos centavos uma vez (meio para cima)"},
+        {"regra": "Perda com motivo da lista fixa (Preço, Prazo, Concorrente, Sem orçamento, Desistiu, Outro com texto)"},
+        {
+          "regra": "Carga da lista: nomes repetidos ou parecidos viram aviso; nada é unido automaticamente; o mesmo arquivo não carrega duas vezes"
+        }
       ],
       "comandos": [
         {"nome": "RegisterLead", "permissao": "lead.create", "idempotente": true, "eventos": ["LeadRegistered"]},
+        {"nome": "UpdateLead", "permissao": "lead.update", "idempotente": false, "eventos": ["LeadUpdated"]},
         {"nome": "RecordInteraction", "permissao": "lead.update", "idempotente": true, "eventos": ["LeadInteractionRecorded"]},
-        {"nome": "OpenOpportunity", "permissao": "opportunity.create", "idempotente": true, "eventos": ["OpportunityOpened"]}
+        {"nome": "ConvertLeadToCustomer", "permissao": "lead.update", "idempotente": true, "eventos": ["LeadUpdated", "PartnerRegistered"]},
+        {"nome": "ImportLeads", "permissao": "lead.create", "idempotente": true, "eventos": ["LeadsImported", "LeadRegistered"]},
+        {"nome": "OpenOpportunity", "permissao": "opportunity.create", "idempotente": true, "eventos": ["OpportunityOpened"]},
+        {"nome": "UpdateOpportunity", "permissao": "opportunity.update", "idempotente": false, "eventos": ["OpportunityUpdated"]},
+        {"nome": "ChangeOpportunityStage", "permissao": "opportunity.update", "idempotente": true, "eventos": ["OpportunityStageChanged"]},
+        {"nome": "RecordOpportunityLoss", "permissao": "opportunity.update", "idempotente": true, "eventos": ["OpportunityStageChanged"]},
+        {
+          "nome": "ConfigureOpportunityStage",
+          "permissao": "crm_stage.admin",
+          "idempotente": false,
+          "eventos": ["OpportunityStageConfigured"]
+        }
       ],
       "indicadores": ["IND-016"],
       "analises": ["AN-002", "AN-006"],
-      "acoes": ["Registrar contato", "Agendar acompanhamento", "Abrir oportunidade"],
-      "permissoes": ["lead.read", "lead.create", "lead.update", "opportunity.create"]
+      "acoes": [
+        "Registrar contato",
+        "Agendar acompanhamento",
+        "Abrir oportunidade",
+        "Mudar etapa",
+        "Marcar como perdida",
+        "Converter em cliente",
+        "Importar lista",
+        "Ver funil e agenda"
+      ],
+      "permissoes": ["lead.read", "lead.create", "lead.update", "opportunity.read", "opportunity.create", "opportunity.update", "crm_stage.admin"]
     },
     {
       "id": "propostas",
@@ -256,6 +305,7 @@
       "conceito": "PROPOSTA",
       "significado": "Oferta versionada; nova revisão preserva as anteriores",
       "campos": [
+        {"nome": "oportunidade", "tipo": "ref", "conceito": "OPORTUNIDADE", "obrigatorio": true, "origem": "referencia"},
         {"nome": "numero", "tipo": "codigo", "obrigatorio": true, "origem": "sistema"},
         {"nome": "revisao", "tipo": "inteiro", "obrigatorio": true, "origem": "sistema"},
         {"nome": "cliente", "tipo": "ref", "conceito": "CLIENTE", "obrigatorio": true, "origem": "referencia"},
@@ -277,17 +327,30 @@
       "validacoes": [
         {"regra": "Revisão emitida é imutável; alteração cria nova revisão"},
         {"regra": "Total = Σ linhas com arredondamento definido", "pendencia": "PD-002"},
-        {"regra": "Margem com custo ausente é Não calculável"}
+        {"regra": "Margem com custo ausente é Não calculável"},
+        {
+          "regra": "Toda proposta pertence a uma oportunidade; emitir leva à etapa Proposta, converter em pedido ganha a oportunidade e a perda da última proposta aberta a perde"
+        }
       ],
       "comandos": [
-        {"nome": "IssueProposalRevision", "permissao": "proposal.issue", "idempotente": true, "eventos": ["ProposalRevisionIssued"]},
+        {
+          "nome": "IssueProposalRevision",
+          "permissao": "proposal.issue",
+          "idempotente": true,
+          "eventos": ["ProposalRevisionIssued", "OpportunityStageChanged"]
+        },
         {
           "nome": "RecordProposalOutcome",
           "permissao": "proposal.update",
           "idempotente": true,
           "eventos": ["ProposalOutcomeRecorded", "OpportunityStageChanged"]
         },
-        {"nome": "ConvertProposalToOrder", "permissao": "sales_order.create", "idempotente": true, "eventos": ["SalesOrderDrafted"]},
+        {
+          "nome": "ConvertProposalToOrder",
+          "permissao": "sales_order.create",
+          "idempotente": true,
+          "eventos": ["SalesOrderDrafted", "OpportunityStageChanged"]
+        },
         {
           "nome": "ExportProposal",
           "modulo": "plataforma",

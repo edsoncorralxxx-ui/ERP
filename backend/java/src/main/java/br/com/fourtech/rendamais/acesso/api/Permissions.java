@@ -65,6 +65,20 @@ public final class Permissions {
     public static final String BOM_UPDATE = "bom.update";
     /** Aplicar BOM ao equipamento, trocar a revisão e ajustar a BOM do equipamento (ApplyBomToProject). */
     public static final String PROJECT_BOM_APPLY = "project_bom.apply";
+    /** Ver prospecções, interações e a agenda do CRM (Sprint 11). */
+    public static final String LEAD_READ = "lead.read";
+    /** Cadastrar prospecção e carregar a lista de prospecção (RegisterLead). */
+    public static final String LEAD_CREATE = "lead.create";
+    /** Alterar e descartar prospecção, registrar interação (RecordInteraction) e convertê-la em cliente. */
+    public static final String LEAD_UPDATE = "lead.update";
+    /** Ver oportunidades, o histórico de etapas e o funil de vendas. */
+    public static final String OPPORTUNITY_READ = "opportunity.read";
+    /** Abrir oportunidade (OpenOpportunity). */
+    public static final String OPPORTUNITY_CREATE = "opportunity.create";
+    /** Alterar, mudar de etapa, registrar interação e marcar a oportunidade como perdida. */
+    public static final String OPPORTUNITY_UPDATE = "opportunity.update";
+    /** Alterar nome e percentual de fechamento das etapas do funil. */
+    public static final String CRM_STAGE_ADMIN = "crm_stage.admin";
     public static final String USER_ADMIN = "user.admin";
 
     private Permissions() { }
