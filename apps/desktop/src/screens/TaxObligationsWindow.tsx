@@ -45,7 +45,8 @@ export function TaxObligationsWindow({ recordKey }: { recordKey: string }) {
   const [situacao, setSituacao] = useState<FiltroSituacao>('PENDENTES');
   const [esfera, setEsfera] = useState('');
   const [dia, setDia] = useState<string | null>(null);
-  const [sel, setSel] = useState<string | null>(recordKey || null);
+  const inicial = recordKey && recordKey !== 'singleton' ? recordKey : null;
+  const [sel, setSel] = useState<string | null>(inicial);
   const hoje = hojeIso();
   const [mes, setMes] = useState(hoje.slice(0, 7));
   const [edicao, setEdicao] = useState<Edicao | null>(null);
@@ -54,7 +55,7 @@ export function TaxObligationsWindow({ recordKey }: { recordKey: string }) {
   const [ocupado, setOcupado] = useState(false);
   const chave = useRef(novaChave());
 
-  useEffect(() => setSel(recordKey || null), [recordKey]);
+  useEffect(() => setSel(inicial), [inicial]);
 
   const carregar = useCallback(async () => {
     try {

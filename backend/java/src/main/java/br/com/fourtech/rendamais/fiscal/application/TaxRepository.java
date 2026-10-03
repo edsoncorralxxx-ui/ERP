@@ -69,6 +69,9 @@ public interface TaxRepository {
 
     List<Period> findBetween(YearMonth from, YearMonth to);
 
+    /** Competências encerradas. */
+    List<YearMonth> closedCompetences();
+
     /** Competência bloqueada para alteração; criada (em apuração, versão 0) se ainda não existir. */
     Period lockOrCreate(YearMonth competence, Instant at, String actor);
 

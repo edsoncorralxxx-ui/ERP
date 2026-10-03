@@ -11,7 +11,7 @@ import { WindowContext, type WindowApi } from '../windows/WindowContext';
 import { FiscalClassificationWindow } from './FiscalClassificationWindow';
 import { FiscalDashboardWindow } from './FiscalDashboardWindow';
 import { TaxObligationsWindow } from './TaxObligationsWindow';
-import { TaxPeriodWindow } from './TaxPeriodWindow';
+import { TaxPeriodWindow, competenciaPadrao } from './TaxPeriodWindow';
 import { TaxTablesWindow } from './TaxTablesWindow';
 
 const ADMIN: SessionUser = {
@@ -165,6 +165,13 @@ describe('Apuração do Simples Nacional', () => {
     await waitFor(() => expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Cálculo 1 da competência 09/2026 registrado com sucesso: R$ 52.415,79' }));
     const post = chamadas.find((c) => c.method === 'POST' && c.path === '/api/v1/tax-periods/2026-09/simulations')!;
     expect(post.headers?.['Idempotency-Key']).toBeTruthy();
+  });
+
+  it('aberta pelo menu (chave "singleton") usa a competência padrão', async () => {
+    const chamadas = servidor(() => undefined);
+    abrir(<TaxPeriodWindow recordKey="singleton" />);
+    await waitFor(() => expect(chamadas.some((c) => c.path === `/api/v1/tax-periods/${competenciaPadrao()}`)).toBe(true));
+    expect(chamadas.some((c) => c.path.includes('singleton') || c.path.includes('NaN'))).toBe(false);
   });
 
   it('agrupa a receita por anexo e autoriza a nota pendente com a versão lida', async () => {

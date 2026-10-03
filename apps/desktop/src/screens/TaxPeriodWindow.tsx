@@ -46,8 +46,10 @@ export function TaxPeriodWindow({ recordKey }: { recordKey: string }) {
   const winRef = useRef(win);
   winRef.current = win;
   const { can } = useSession();
-  const [comp, setComp] = useState(recordKey || competenciaPadrao());
-  useEffect(() => setComp(recordKey || competenciaPadrao()), [recordKey]);
+  // Aberta pelo menu a chave é "singleton": vale a competência padrão.
+  const inicial = /^\d{4}-\d{2}$/.test(recordKey) ? recordKey : '';
+  const [comp, setComp] = useState(inicial || competenciaPadrao());
+  useEffect(() => setComp(inicial || competenciaPadrao()), [inicial]);
   const [p, setP] = useState<TaxPeriod | null>(null);
   const [etag, setEtag] = useState('"0"');
   const [tab, setTab] = useState<Tab>('calc');

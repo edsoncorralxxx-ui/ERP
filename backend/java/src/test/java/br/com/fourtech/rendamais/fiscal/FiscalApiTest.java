@@ -245,11 +245,17 @@ class FiscalApiTest extends CadastrosApiTest {
                     "{\"done\":true}");
             assertThat(e.statusCode()).as(e.body()).isEqualTo(200);
         }
-        // Autoriza a NFS-e (com protocolo) e classifica o serviço — a nota já registrada guarda o anexo padrão (cópia).
+        // Autoriza a NFS-e (com protocolo) e classifica o serviço: a linha da nota com o anexo padrão passa à classificação.
         assertThat(withVersion("PUT", "/api/v1/documents/" + campo(nfse.body(), "id") + "/authorization", campo(pend.body(), "version"),
                 "{\"status\":\"AUTORIZADA\",\"protocol\":\"NFSE-000518\"}").statusCode()).isEqualTo(200);
         assertThat(get("/api/v1/tax-periods/" + C).body()).contains("{\"code\":\"NOTAS_AUTORIZADAS\",\"name\":\"Autorizar as notas pendentes\",\"responsible\":\"Faturamento\",\"automatic\":true,\"done\":true");
-        jdbc.sql("update document_line set annex_source = 'CLASSIFICACAO' where annex_source = 'PADRAO'").update();
+        assertThat(get("/api/v1/tax-periods/" + C).body()).contains("1 linha de nota com item sem classificação fiscal (anexo padrão).");
+        HttpResponse<String> clsServico = classifica(servico, "0", """
+                {"serviceCode":"14.06","issRetention":"NAO","annex":"III","nbs":"1.2001.10.00"}
+                """);
+        assertThat(clsServico.statusCode()).as(clsServico.body()).isEqualTo(200);
+        assertThat(get("/api/v1/documents/" + campo(nfse.body(), "id")).body()).contains("\"annex\":\"III\",\"annexSource\":\"CLASSIFICACAO\"");
+        assertThat(get("/api/v1/fiscal-classification/" + servico + "/history").body()).contains("1 linha de nota no Anexo III");
         HttpResponse<String> fecha = withVersion("POST", "/api/v1/tax-periods/" + C + "/closures", versao(C.toString()), null);
         assertThat(fecha.statusCode()).as(fecha.body()).isEqualTo(200);
         assertThat(fecha.body()).contains("\"status\":\"ENCERRADA\"", "\"action\":\"FECHAMENTO\",\"reason\":null,\"revenueCents\":\"38640000\"");

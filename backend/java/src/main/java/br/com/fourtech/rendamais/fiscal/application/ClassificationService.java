@@ -8,6 +8,7 @@ import br.com.fourtech.rendamais.auditoria.api.AuditQuery;
 import br.com.fourtech.rendamais.auditoria.api.AuditTrail;
 import br.com.fourtech.rendamais.cadastros.api.ItemFiscalCodesApi;
 import br.com.fourtech.rendamais.documentos.api.AnnexResolver;
+import br.com.fourtech.rendamais.documentos.api.DocumentAnnexApi;
 import br.com.fourtech.rendamais.fiscal.domain.Annex;
 import br.com.fourtech.rendamais.kernel.DomainException.FieldIssue;
 import br.com.fourtech.rendamais.kernel.NotFoundException;
@@ -49,9 +50,13 @@ public class ClassificationService implements AnnexResolver {
     private final AuditQuery auditQuery;
     private final Outbox outbox;
     private final Clock clock;
+    private final DocumentAnnexApi documents;
+    private final TaxRepository periods;
 
     public ClassificationService(ClassificationRepository repository, ItemFiscalCodesApi items, TaxSetupRepository setup, AuditTrail audit,
-                                 AuditQuery auditQuery, Outbox outbox, Clock clock) {
+                                 AuditQuery auditQuery, Outbox outbox, Clock clock, DocumentAnnexApi documents, TaxRepository periods) {
+        this.documents = documents;
+        this.periods = periods;
         this.repository = repository;
         this.items = items;
         this.setup = setup;
@@ -214,12 +219,16 @@ public class ClassificationService implements AnnexResolver {
         diff(changes, "review", current == null ? null : Boolean.toString(current.review()), Boolean.toString(review));
         if (!Objects.equals(item.ncm(), codes.ncm())) diff(changes, "ncm", item.ncm(), codes.ncm());
         if (!Objects.equals(item.serviceCode(), codes.serviceCode())) diff(changes, "serviceCode", item.serviceCode(), codes.serviceCode());
+        // Notas já registradas com o anexo padrão deste item passam ao anexo da classificação (competências em apuração).
+        int reclassified = Annex.parse(annex) == null ? 0 : documents.applyItemAnnex(itemId, annex, periods.closedCompetences());
+        if (reclassified > 0) diff(changes, "documentLines", null, reclassified + (reclassified == 1 ? " linha de nota" : " linhas de nota") + " no Anexo " + annex);
         audit.record(new AuditEntry(user.username(), "ITEM_FISCAL_PROFILE_UPDATED", ENTITY, itemId.toString(), p.version(), note, changes,
                 CorrelationId.current()));
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("itemId", itemId.toString());
         payload.put("annex", annex);
         payload.put("changedFields", List.copyOf(changes.keySet()));
+        payload.put("reclassifiedLines", reclassified);
         outbox.append("ItemFiscalProfileUpdated", ENTITY, itemId.toString(), payload, user.username());
         return get(itemId);
     }

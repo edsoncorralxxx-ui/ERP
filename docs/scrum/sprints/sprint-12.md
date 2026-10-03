@@ -1,6 +1,6 @@
 # Sprint 12 — Fiscal refeito pelo mock: painel, apuração por anexo, obrigações, classificação e tabelas
 
-Situação: **Planning — aguardando aprovação do PO** (03/10/2026). Pedido do PO: "planeje novamente e refatore o módulo fiscal; implemente todas as funcionalidades do mock *Renda+ ERP MOCK*; se for necessário altere o banco, o backend e o front-end; pode usar os dados de exemplo do mock".
+Situação: **Entregue para Review** (03/10/2026). Planning aprovado pelo PO em 03/10/2026 ("pode implementar"), com as propostas das perguntas como escritas. Pedido do PO: "planeje novamente e refatore o módulo fiscal; implemente todas as funcionalidades do mock *Renda+ ERP MOCK*; se for necessário altere o banco, o backend e o front-end; pode usar os dados de exemplo do mock".
 
 Referência: as cinco telas da *Seção Fiscal* do mock (artefato *Renda+ ERP MOCK*): **Painel fiscal**, **Apuração do Simples Nacional**, **Obrigações fiscais e acessórias**, **Classificação fiscal de itens** e **Tabelas e parâmetros do Simples Nacional**. Os dados do mock estão em `exemplos/fiscal-exemplo.json`.
 
@@ -185,3 +185,40 @@ Transmitir o PGDAS-D ou emitir o DAS pela internet (o Renda+ registra o que foi 
 - **Histórico informado errado** muda a faixa: a diferença entre o cálculo e a guia aparece na mesma competência.
 - **Tabelas da LC 123 do mock** podem estar desatualizadas: entram como revisão com fonte e vigência, confirmadas pelo contador (como na Sprint 7).
 - **Volume**: cinco telas novas e três removidas; a ordem acima diz o que sai primeiro.
+
+## Review — evidências
+
+| Item | Resultado | Evidência |
+|---|---|---|
+| S12-01 Migração V18 e módulo | Pronto | `V18__fiscal_refeito_pelo_mock.sql`: situação EM_APURACAO/ENCERRADA, parâmetros por anexo (revisão 1 convertida; revisão 2 da LC 123 com os anexos I a V e a repartição, vigente desde 09/2026), empresa no Simples, atividades, opção IBS/CBS, histórico de receita e cargas, anexo e item na linha da nota, autorização da nota, conferência → guia DAS (mesmo título), declarações, etapas, modelos de obrigação e obrigações, perfil fiscal do item. Conversão conferida num banco com dados das Sprints 7 e 8 (cálculos, conferências com título e fechamentos) |
+| S12-02 Classificação fiscal | Pronto | `FiscalApiTest.classificacaoFiscalComValidacaoESituacao`: CFOP, CSOSN, origem e NBS validados (422 com o campo); Sem classificação → Revisar → Classificado; If-Match; NCM e LC 116 gravados no cadastro do item (trilha `ITEM_UPDATED`); Consulta recebe 403 |
+| S12-03 Anexo nas linhas da nota | Pronto | Nota com equipamento (II, EQUIPAMENTO), peça classificada (I, CLASSIFICACAO) e serviço sem classificação (III, PADRAO); notas antigas com MIGRACAO; `PUT /documents/{id}/authorization` (Pendente/Autorizada com protocolo); a nota mostra o anexo de cada linha e a autorização. Classificar o item passa as linhas com o anexo padrão das competências em apuração para o anexo da classificação (ver "Corrigido junto") |
+| S12-04 Histórico de receita | Pronto | `historicoDeReceitaComPreviaProblemasEDigitado` e o teste da apuração: prévia não grava, confirmação carrega 12 meses, o mesmo arquivo de novo → `alreadyLoaded`; competência a partir de 09/2026 recusada; digitado com If-Match |
+| S12-05 Parâmetros por anexo | Pronto | `parametrosPorAnexoDadosDaEmpresaEAtividades`: faixas crescentes e repartição que soma 100% (422 com o anexo e a faixa); dados da empresa, limites, atividades e opção IBS/CBS com trilha |
+| S12-06 Cálculo do DAS | Pronto | `SimplesCalculationTest`: 09/2026 = **R$ 52.415,79** (I R$ 1.383,65, II R$ 32.232,02, III R$ 18.800,12; ISS limitado a R$ 5.453,00 com o excedente redistribuído), 08/2026 = R$ 47.866,71, 1ª e 6ª faixas, não calculável. Os mesmos números pela API em `apuracaoDoExemploDoMockDoCalculoAoEncerramento` (receita R$ 386.400,00, RBT12 R$ 3.340.000,00 do histórico) |
+| S12-07 PGDAS-D e guia DAS | Pronto | Transmissão com recibo; guia com título a pagar; nova guia substitui a sem pagamento e guia paga é recusada (`TAX_DAS_PAID`); pagamento pela tela usa o pagamento de Contas a pagar; obrigações PGDAS-D Entregue e DAS Pago |
+| S12-08 Fechamento por etapas | Pronto | Etapa automática não se marca à mão; encerrar com etapa pendente → 422; com as 7, Encerrada; nota e cálculo em competência encerrada → `TAX_PERIOD_CLOSED`; reabrir exige motivo |
+| S12-09 Obrigações | Pronto | `obrigacoesRecorrentesEntregaAvulsaEAgenda`: os modelos geram as ocorrências uma vez; obrigação avulsa; entrega com recibo; PGDAS-D e DAS seguem a apuração (`TAX_OBLIGATION_LINKED` ao tentar entregar à mão); `calendar.ics` |
+| S12-10 Painel fiscal | Pronto | `GET /fiscal/dashboard`: DAS R$ 52.415,79, RBT12 R$ 3.340.000,00 (5ª faixa), 7 etapas, ISS R$ 5.453,00, guias e alertas por regra |
+| S12-11 Contratos | Pronto | `openapi.yaml` com as rotas do fiscal e a autorização da nota (`OpenApiContractTest` passa); eventos (`TaxDasGuideIssued` no lugar de `TaxPeriodConfirmed`, `ItemFiscalProfileUpdated` com `reclassifiedLines`), formulários, permissões e `menu.json` com as 5 telas do Fiscal; verificador B01 OK |
+| S12-12 Telas | Pronto | Painel fiscal, Apuração do Simples Nacional (6 abas), Obrigações (lista e calendário), Classificação fiscal e Tabelas e parâmetros; as 3 janelas da Sprint 7 removidas; `Sprint12Windows.test.tsx` (11 testes) |
+| S12-13 Roteiro de ponta a ponta | Pronto | `apps/desktop/e2e/sprint-12.e2e.ts` no Chromium contra o servidor real: histórico do mock → RBT12 R$ 3.340.000,00 no Painel → Apuração pela seta → receita II R$ 12.861,74 e III R$ 7.138,26 → nota com "III (padrão)" → Classificação fiscal do serviço → Calcular (R$ 2.791,95, igual à API) → Transmitir PGDAS-D → Gerar DAS → Registrar pagamento → 7 etapas → Encerrar → nota recusada → Reabrir com motivo → Obrigações (PGDAS-D Entregue, DAS Pago). Passou em três rodadas completas seguidas no mesmo banco. O roteiro da Sprint 8 passou a gerar o DAS pela Guia DAS (nova guia substitui a anterior) |
+
+Testes executados: servidor **121** (PostgreSQL 16 real; eram 117), app **148** (eram 144), typecheck, build, verificador B01, roteiros Playwright das Sprints 5, 6 e 8 a 12 contra o servidor real (três rodadas completas).
+
+**Corrigido junto (achado pelo roteiro de ponta a ponta):**
+- **Nota com anexo padrão travava o fechamento**: a linha de um item sem classificação ficava no anexo padrão para sempre e a etapa "Segregar a receita por anexo" nunca concluía. Agora, ao gravar a classificação do item, as linhas com o anexo padrão das notas ativas em competências **não encerradas** passam ao anexo da classificação (a trilha do item registra quantas linhas mudaram). O teste da API fazia isso com SQL; agora usa a classificação.
+- **Apuração aberta pelo menu**: a tela recebia a chave "singleton" como competência e mostrava "Competência inválida"; agora abre na competência padrão (teste novo). O mesmo na tela de Obrigações.
+
+**Decisões tomadas na execução (para confirmar na Review):**
+- **Pagamento da guia** usa o pagamento de Contas a pagar (`POST /settlements`), em vez de uma rota própria da guia: a saída na conta e o estorno ficam num lugar só.
+- **Imprimir memória** imprime a memória da tela (impressão do sistema), sem rota de servidor.
+- **Alertas** são por regra e aparecem como aviso comum, sem o selo de IA do design system (ADR-014).
+- **Roteiro da Sprint 7** foi retirado: as telas dele não existem mais e o fluxo (competência, RBT12, cálculo, fechamento, trava e reabertura) está no roteiro da Sprint 12. O da Sprint 8 usa agora a competência três meses **antes** da data do servidor, porque a escolha de competência da Apuração lista os últimos 18 meses.
+
+**Não verificado aqui:** o app dentro do Electron no macOS; a migração V18 no seu banco (conferida num banco de teste com dados das Sprints 7 e 8); as tabelas da LC 123 do mock contra a publicação oficial (entram como revisão com fonte e vigência, para o contador confirmar). O roteiro de ponta a ponta usa notas menores que as do mock (o pedido fatura o recebido); os valores exatos do mock (R$ 52.415,79) estão nos testes do servidor.
+
+**Limitações conhecidas:**
+- O roteiro da Sprint 4 continua falhando de vez em quando no mesmo banco (a ficha do equipamento não fecha com Esc depois de gravar); é a tarefa à parte registrada na Sprint 9.
+- Arquivo do recibo das obrigações fica fora (ADR-008): registra-se o número.
+

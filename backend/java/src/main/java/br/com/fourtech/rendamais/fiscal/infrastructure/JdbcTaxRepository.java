@@ -113,6 +113,11 @@ class JdbcTaxRepository implements TaxRepository {
     }
 
     @Override
+    public List<YearMonth> closedCompetences() {
+        return jdbc.sql("select competence from tax_period where status = 'ENCERRADA'").query((rs, n) -> YearMonth.parse(rs.getString(1))).list();
+    }
+
+    @Override
     public Period lockOrCreate(YearMonth competence, Instant at, String actor) {
         jdbc.sql("""
                 insert into tax_period (id, competence, status, version, created_at, created_by)

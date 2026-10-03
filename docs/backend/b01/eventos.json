@@ -699,7 +699,7 @@
       "type": "ItemFiscalProfileUpdated",
       "produtor": "fiscal",
       "conceito": "ITEM",
-      "payload": ["itemId", "annex", "changedFields"],
+      "payload": ["itemId", "annex", "changedFields", "reclassifiedLines"],
       "consumidores": []
     },
     {
