@@ -5,6 +5,8 @@ import br.com.fourtech.rendamais.cadastros.domain.Partner;
 import br.com.fourtech.rendamais.kernel.Cnpj;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -21,32 +23,56 @@ class JdbcPartnerRepository implements PartnerRepository {
 
     private static final String SELECT = """
             select id, code, legal_name, trade_name, cnpj, group_name, supplier_lead_time_days, supplier_payment_terms, version,
-                   created_at, created_by, updated_at, updated_by
+                   created_at, created_by, updated_at, updated_by, profile::text as profile
               from partner
             """;
 
-    private final JdbcClient jdbc;
+    private static final TypeReference<Map<String, Object>> MAP = new TypeReference<>() { };
 
-    JdbcPartnerRepository(JdbcClient jdbc) {
+    private final JdbcClient jdbc;
+    private final JsonMapper json;
+
+    JdbcPartnerRepository(JdbcClient jdbc, JsonMapper json) {
         this.jdbc = jdbc;
+        this.json = json;
+    }
+
+    /** C00001 (cliente), F00001 (fornecedor), T0001 (transportadora); pula os códigos já usados (carga ou código manual). */
+    @Override
+    public String nextCode(Partner.Role role) {
+        String seq = switch (role) {
+            case CLIENTE -> "customer_code_seq";
+            case FORNECEDOR -> "supplier_code_seq";
+            case TRANSPORTADORA -> "carrier_code_seq";
+        };
+        String format = switch (role) {
+            case CLIENTE -> "C%05d";
+            case FORNECEDOR -> "F%05d";
+            case TRANSPORTADORA -> "T%04d";
+        };
+        while (true) {
+            String code = String.format(format, jdbc.sql("select nextval('" + seq + "')").query(Long.class).single());
+            if (!codeExists(code)) return code;
+        }
     }
 
     @Override
-    public String nextCode(Partner.Role role) {
-        boolean customer = role == Partner.Role.CLIENTE;
-        long n = jdbc.sql(customer ? "select nextval('customer_code_seq')" : "select nextval('supplier_code_seq')")
-                .query(Long.class).single();
-        return String.format(customer ? "C%05d" : "F%05d", n);
+    public boolean codeExists(String code) {
+        return jdbc.sql("select count(*) from partner where code = :code").param("code", code).query(Long.class).single() > 0;
+    }
+
+    private String profileJson(Partner p) {
+        return json.writeValueAsString(p.profile());
     }
 
     @Override
     public void insert(Partner p) {
         jdbc.sql("""
                 insert into partner (id, code, legal_name, trade_name, cnpj, group_name, supplier_lead_time_days,
-                                     supplier_payment_terms, status, version, created_at, created_by, updated_at, updated_by)
+                                     supplier_payment_terms, status, version, created_at, created_by, updated_at, updated_by, profile)
                 values (:id, :code, :legalName, :tradeName, :cnpj, :group, :leadTime, :paymentTerms, :status, :version,
-                        :createdAt, :createdBy, :updatedAt, :updatedBy)
-                """)
+                        :createdAt, :createdBy, :updatedAt, :updatedBy, cast(:profile as jsonb))
+                """).param("profile", profileJson(p))
                 .param("id", p.id()).param("code", p.code()).param("legalName", p.legalName()).param("tradeName", p.tradeName())
                 .param("cnpj", p.cnpj() == null ? null : p.cnpj().value()).param("group", p.group())
                 .param("leadTime", p.supplier().leadTimeDays()).param("paymentTerms", p.supplier().paymentTerms())
@@ -62,9 +88,10 @@ class JdbcPartnerRepository implements PartnerRepository {
         int rows = jdbc.sql("""
                 update partner set legal_name = :legalName, trade_name = :tradeName, cnpj = :cnpj, group_name = :group,
                        supplier_lead_time_days = :leadTime, supplier_payment_terms = :paymentTerms,
-                       status = :status, version = :version, updated_at = :updatedAt, updated_by = :updatedBy
+                       status = :status, version = :version, updated_at = :updatedAt, updated_by = :updatedBy,
+                       profile = cast(:profile as jsonb)
                  where id = :id and version = :expected
-                """)
+                """).param("profile", profileJson(p))
                 .param("legalName", p.legalName()).param("tradeName", p.tradeName())
                 .param("cnpj", p.cnpj() == null ? null : p.cnpj().value()).param("group", p.group())
                 .param("leadTime", p.supplier().leadTimeDays()).param("paymentTerms", p.supplier().paymentTerms())
@@ -94,9 +121,10 @@ class JdbcPartnerRepository implements PartnerRepository {
         int i = 0;
         for (Partner.Unit u : p.units()) {
             jdbc.sql("""
-                    insert into partner_unit (id, partner_id, position, name, street, number, district, city, state, postal_code, cnpj)
-                    values (:id, :partner, :pos, :name, :street, :number, :district, :city, :state, :cep, :cnpj)
-                    """)
+                    insert into partner_unit (id, partner_id, position, name, street, number, district, city, state, postal_code, cnpj,
+                                              kind, is_default)
+                    values (:id, :partner, :pos, :name, :street, :number, :district, :city, :state, :cep, :cnpj, :kind, :isDefault)
+                    """).param("kind", u.kind().name()).param("isDefault", u.isDefault())
                     .param("id", u.id()).param("partner", p.id()).param("pos", i++).param("name", u.name())
                     .param("street", u.street()).param("number", u.number()).param("district", u.district())
                     .param("city", u.city()).param("state", u.state()).param("cep", u.postalCode())
@@ -106,9 +134,9 @@ class JdbcPartnerRepository implements PartnerRepository {
         i = 0;
         for (Partner.Contact c : p.contacts()) {
             jdbc.sql("""
-                    insert into partner_contact (id, partner_id, position, name, role, phone, email)
-                    values (:id, :partner, :pos, :name, :role, :phone, :email)
-                    """)
+                    insert into partner_contact (id, partner_id, position, name, role, phone, email, is_primary, receives_invoices)
+                    values (:id, :partner, :pos, :name, :role, :phone, :email, :primary, :invoices)
+                    """).param("primary", c.primary()).param("invoices", c.receivesInvoices())
                     .param("id", c.id()).param("partner", p.id()).param("pos", i++).param("name", c.name())
                     .param("role", c.role()).param("phone", c.phone()).param("email", c.email())
                     .update();
@@ -132,24 +160,27 @@ class JdbcPartnerRepository implements PartnerRepository {
 
     private Optional<Partner> load(String sql, UUID id) {
         record Head(UUID id, String code, String legalName, String tradeName, String cnpj, String group, Integer leadTime,
-                    String paymentTerms, long version, Instant createdAt, String createdBy, Instant updatedAt, String updatedBy) { }
+                    String paymentTerms, long version, Instant createdAt, String createdBy, Instant updatedAt, String updatedBy,
+                    String profile) { }
         Optional<Head> head = jdbc.sql(sql).param("id", id).query((rs, n) -> new Head(rs.getObject("id", UUID.class),
                 rs.getString("code"), rs.getString("legal_name"), rs.getString("trade_name"), rs.getString("cnpj"),
                 rs.getString("group_name"), rs.getObject("supplier_lead_time_days", Integer.class),
                 rs.getString("supplier_payment_terms"), rs.getLong("version"), instant(rs, "created_at"),
-                rs.getString("created_by"), instant(rs, "updated_at"), rs.getString("updated_by"))).optional();
+                rs.getString("created_by"), instant(rs, "updated_at"), rs.getString("updated_by"), rs.getString("profile"))).optional();
         return head.map(h -> {
             List<Partner.Unit> units = jdbc.sql("""
-                    select id, name, street, number, district, city, state, postal_code, cnpj from partner_unit
+                    select id, name, street, number, district, city, state, postal_code, cnpj, kind, is_default from partner_unit
                      where partner_id = :id order by position
                     """).param("id", id).query((rs, n) -> new Partner.Unit(rs.getObject("id", UUID.class), rs.getString("name"),
                     rs.getString("street"), rs.getString("number"), rs.getString("district"), rs.getString("city"),
                     rs.getString("state"), rs.getString("postal_code"),
-                    rs.getString("cnpj") == null ? null : new Cnpj(rs.getString("cnpj")))).list();
+                    rs.getString("cnpj") == null ? null : new Cnpj(rs.getString("cnpj")),
+                    Partner.UnitKind.valueOf(rs.getString("kind")), rs.getBoolean("is_default"))).list();
             List<Partner.Contact> contacts = jdbc.sql("""
-                    select id, name, role, phone, email from partner_contact where partner_id = :id order by position
+                    select id, name, role, phone, email, is_primary, receives_invoices from partner_contact where partner_id = :id order by position
                     """).param("id", id).query((rs, n) -> new Partner.Contact(rs.getObject("id", UUID.class),
-                    rs.getString("name"), rs.getString("role"), rs.getString("phone"), rs.getString("email"))).list();
+                    rs.getString("name"), rs.getString("role"), rs.getString("phone"), rs.getString("email"),
+                    rs.getBoolean("is_primary"), rs.getBoolean("receives_invoices"))).list();
             Map<Partner.Role, Partner.Status> roles = new EnumMap<>(Partner.Role.class);
             jdbc.sql("select role, status from partner_role where partner_id = :id").param("id", id)
                     .query((rs, n) -> Map.entry(Partner.Role.valueOf(rs.getString("role")), Partner.Status.valueOf(rs.getString("status"))))
@@ -161,6 +192,7 @@ class JdbcPartnerRepository implements PartnerRepository {
                     .list();
             return new Partner(h.id(), h.code(), h.legalName(), h.tradeName(), h.cnpj() == null ? null : Cnpj.of(h.cnpj()),
                     h.group(), roles, new Partner.SupplierTerms(h.leadTime(), h.paymentTerms(), categories), units, contacts,
+                    h.profile() == null ? Map.of() : json.readValue(h.profile(), MAP),
                     h.version(), h.createdAt(), h.createdBy(), h.updatedAt(), h.updatedBy());
         });
     }

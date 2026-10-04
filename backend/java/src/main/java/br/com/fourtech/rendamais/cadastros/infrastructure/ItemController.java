@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -41,34 +42,36 @@ class ItemController {
 
     record ConversionDto(String id, String fromUom, String factor) { }
 
-    record ItemRequest(String description, String nature, String uom, String categoryId, Boolean stockControlled,
-                       String referenceCost, String ncm, String serviceCode, List<ConversionDto> conversions) {
+    /** {@code code} só no cadastro (série Manual); {@code type} PRODUTO, MATERIAL ou SERVICO; {@code profile} nulo mantém a ficha. */
+    record ItemRequest(String code, String description, String nature, String type, String uom, String categoryId,
+                       Boolean stockControlled, String referenceCost, String ncm, String serviceCode, List<ConversionDto> conversions,
+                       Map<String, Object> profile) {
         ItemData toData() {
             return new ItemData(description, nature, uom, categoryId, stockControlled, referenceCost, ncm, serviceCode,
                     conversions == null ? List.of() : conversions.stream()
-                            .map(c -> new ItemData.ConversionData(c.id(), c.fromUom(), c.factor())).toList());
+                            .map(c -> new ItemData.ConversionData(c.id(), c.fromUom(), c.factor())).toList(), type, profile);
         }
     }
 
     record CategoryDto(String id, String name) { }
 
-    record ItemResponse(String id, String code, String description, String nature, String uom, CategoryDto category,
+    record ItemResponse(String id, String code, String description, String nature, String type, String uom, CategoryDto category,
                         boolean stockControlled, String referenceCost, String ncm, String serviceCode, String status,
-                        List<ConversionDto> conversions,
+                        List<ConversionDto> conversions, Map<String, Object> profile,
                         String version, Instant createdAt, String createdBy, Instant updatedAt, String updatedBy) {
         static ItemResponse of(Item i) {
-            return new ItemResponse(i.id().toString(), i.code(), i.description(), i.nature().name(), i.uom(),
+            return new ItemResponse(i.id().toString(), i.code(), i.description(), i.nature().name(), i.type().name(), i.uom(),
                     new CategoryDto(i.category().id().toString(), i.category().name()), i.stockControlled(),
                     plain(i.referenceCost()), i.ncm(), i.serviceCode(), i.status().name(),
                     i.conversions().stream().map(c -> new ConversionDto(c.id().toString(), c.fromUom(), plain(c.factor()))).toList(),
-                    Long.toString(i.version()), i.createdAt(), i.createdBy(), i.updatedAt(), i.updatedBy());
+                    i.profile(), Long.toString(i.version()), i.createdAt(), i.createdBy(), i.updatedAt(), i.updatedBy());
         }
     }
 
-    record ItemSummary(String id, String code, String description, String nature, String uom, String category,
+    record ItemSummary(String id, String code, String description, String nature, String type, String uom, String category,
                        boolean stockControlled, String referenceCost, String ncm, String serviceCode, String status, String version) {
         static ItemSummary of(ItemRepository.Summary s) {
-            return new ItemSummary(s.id().toString(), s.code(), s.description(), s.nature().name(), s.uom(), s.category(),
+            return new ItemSummary(s.id().toString(), s.code(), s.description(), s.nature().name(), s.type().name(), s.uom(), s.category(),
                     s.stockControlled(), plain(s.referenceCost()), s.ncm(), s.serviceCode(), s.status().name(),
                     Long.toString(s.version()));
         }
@@ -77,10 +80,12 @@ class ItemController {
     @GetMapping
     List<ItemSummary> list(@RequestParam(value = "search", required = false) String search,
                            @RequestParam(value = "nature", required = false) String nature,
+                           @RequestParam(value = "type", required = false) String type,
                            @RequestParam(value = "categoryId", required = false) UUID categoryId,
                            @RequestParam(value = "status", defaultValue = "ATIVO") String status) {
         Item.Nature n = nature == null || nature.isBlank() ? null : Item.Nature.valueOf(nature.toUpperCase(Locale.ROOT));
-        return service.list(search, n, categoryId, ApiSupport.status(status)).stream().map(ItemSummary::of).toList();
+        Item.Type t = type == null || type.isBlank() ? null : Item.Type.valueOf(type.toUpperCase(Locale.ROOT));
+        return service.list(search, n, t, categoryId, ApiSupport.status(status)).stream().map(ItemSummary::of).toList();
     }
 
     @GetMapping("/{id}")
@@ -91,7 +96,7 @@ class ItemController {
     @PostMapping
     ResponseEntity<ItemResponse> register(@RequestHeader(value = "Idempotency-Key", required = false) String key,
                                           @RequestBody ItemRequest body) {
-        return respond(HttpStatus.CREATED, service.register(key, body.toData()));
+        return respond(HttpStatus.CREATED, service.register(key, body.toData(), body.code()));
     }
 
     @PutMapping("/{id}")
@@ -106,6 +111,11 @@ class ItemController {
                                             @RequestHeader(value = "If-Match", required = false) String ifMatch,
                                             @RequestBody(required = false) ApiSupport.DeactivateRequest body) {
         return respond(HttpStatus.OK, service.deactivate(id, version(ifMatch), body == null ? null : body.reason()));
+    }
+
+    @PostMapping("/{id}/reactivate")
+    ResponseEntity<ItemResponse> reactivate(@PathVariable UUID id, @RequestHeader(value = "If-Match", required = false) String ifMatch) {
+        return respond(HttpStatus.OK, service.reactivate(id, version(ifMatch)));
     }
 
     @GetMapping("/{id}/history")

@@ -16,8 +16,11 @@ public interface PartnerRepository {
     record Summary(UUID id, String code, String legalName, String tradeName, String cnpj, String city, String state,
                    int units, Partner.Status status, long version, String categories, Integer leadTimeDays) { }
 
-    /** Próximo código do parceiro pelo papel com que ele nasce: C00001 (cliente) ou F00001 (fornecedor). */
+    /** Próximo código do parceiro pelo papel com que ele nasce: C00001 (cliente), F00001 (fornecedor) ou T0001 (transportadora). */
     String nextCode(Partner.Role role);
+
+    /** Código já usado por algum parceiro (código manual do cadastro). */
+    boolean codeExists(String code);
 
     void insert(Partner partner);
 

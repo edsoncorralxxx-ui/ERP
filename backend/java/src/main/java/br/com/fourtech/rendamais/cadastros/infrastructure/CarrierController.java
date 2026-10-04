@@ -5,12 +5,12 @@ import br.com.fourtech.rendamais.cadastros.domain.Partner;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** API de fornecedores (S3-02): o mesmo parceiro do cliente, no papel de fornecedor. As rotas estão em {@link PartnerEndpoints}. */
+/** API de transportadoras (Sprint 13): o parceiro no papel de transportadora. As rotas estão em {@link PartnerEndpoints}. */
 @RestController
-@RequestMapping("/api/v1/suppliers")
-class SupplierController extends PartnerEndpoints {
+@RequestMapping("/api/v1/carriers")
+class CarrierController extends PartnerEndpoints {
 
-    SupplierController(PartnerService service) {
-        super(service, Partner.Role.FORNECEDOR);
+    CarrierController(PartnerService service) {
+        super(service, Partner.Role.TRANSPORTADORA);
     }
 }

@@ -29,7 +29,7 @@ public final class Partner {
     public enum Status { ATIVO, INATIVO }
 
     public enum Role {
-        CLIENTE("cliente"), FORNECEDOR("fornecedor");
+        CLIENTE("cliente"), FORNECEDOR("fornecedor"), TRANSPORTADORA("transportadora");
 
         private final String label;
 
@@ -55,9 +55,32 @@ public final class Partner {
         }
     }
 
-    /** Unidade do parceiro; o CNPJ da unidade (filial ou outro estabelecimento) é opcional e nunca inventado. */
+    /** Tipo do endereço (aba Endereços do mock). */
+    public enum UnitKind {
+        COBRANCA("Cobrança"), ENTREGA("Entrega"), UNIDADE("Unidade"), FATURAMENTO("Faturamento");
+
+        private final String label;
+
+        UnitKind(String label) {
+            this.label = label;
+        }
+
+        public String label() {
+            return label;
+        }
+    }
+
+    /**
+     * Unidade (endereço) do parceiro; o CNPJ da unidade (filial ou outro estabelecimento) é opcional e nunca inventado.
+     * {@code isDefault}: o endereço padrão do tipo.
+     */
     public record Unit(UUID id, String name, String street, String number, String district, String city, String state,
-                       String postalCode, Cnpj cnpj) {
+                       String postalCode, Cnpj cnpj, UnitKind kind, boolean isDefault) {
+        public Unit(UUID id, String name, String street, String number, String district, String city, String state,
+                    String postalCode, Cnpj cnpj) {
+            this(id, name, street, number, district, city, state, postalCode, cnpj, UnitKind.UNIDADE, false);
+        }
+
         /** Texto legível com todos os campos preenchidos, usado no histórico. */
         String summary() {
             List<String> parts = new ArrayList<>();
@@ -66,19 +89,75 @@ public final class Partner {
             if (district != null) parts.add(district);
             if (city != null || state != null) parts.add((city == null ? "" : city) + (state == null ? "" : "/" + state));
             if (postalCode != null) parts.add("CEP " + postalCode.substring(0, 5) + "-" + postalCode.substring(5));
+            if (kind != UnitKind.UNIDADE) parts.addFirst(kind.label());
+            if (isDefault) parts.add("padrão");
             return parts.isEmpty() ? name : name + " — " + String.join(", ", parts);
         }
     }
 
-    public record Contact(UUID id, String name, String role, String phone, String email) {
+    /** Contato; {@code primary} é o contato principal (um por parceiro) e {@code receivesInvoices} recebe NF-e e boletos. */
+    public record Contact(UUID id, String name, String role, String phone, String email, boolean primary, boolean receivesInvoices) {
+        public Contact(UUID id, String name, String role, String phone, String email) {
+            this(id, name, role, phone, email, false, false);
+        }
+
         String summary() {
             List<String> parts = new ArrayList<>();
             if (role != null) parts.add(role);
             if (phone != null) parts.add(phone);
             if (email != null) parts.add(email);
+            if (primary) parts.add("principal");
+            if (receivesInvoices) parts.add("recebe NF-e e boletos");
             return parts.isEmpty() ? name : name + " — " + String.join(", ", parts);
         }
     }
+
+    /**
+     * Campos da ficha do mock sem regra própria (cabeçalho, abas Geral, Pagamento e Fiscal), guardados em
+     * {@code partner.profile}. Valores de lista vêm das tabelas auxiliares (condição e forma de pagamento, tabela de
+     * preços: códigos) ou de listas fixas (regime, ICMS, modal).
+     */
+    public static final Ficha PROFILE = new Ficha(
+            Ficha.Campo.texto("stateRegistration", 20),
+            Ficha.Campo.texto("supplierCategory", 100),
+            Ficha.Campo.opcao("modal", "Rodoviário", "Aéreo", "Ferroviário", "Aquaviário", "Multimodal"),
+            Ficha.Campo.texto("phone1", 30),
+            Ficha.Campo.texto("phone2", 30),
+            Ficha.Campo.texto("mobile", 30),
+            Ficha.Campo.email("email"),
+            Ficha.Campo.texto("site", 200),
+            Ficha.Campo.texto("industry", 60),
+            Ficha.Campo.inteiro("dailyCapacityTons", 0, 100000),
+            Ficha.Campo.texto("responsible", 120),
+            Ficha.Campo.texto("defaultCarrier", 200),
+            Ficha.Campo.texto("territory", 100),
+            Ficha.Campo.texto("origin", 60),
+            Ficha.Campo.texto("notes", 2000),
+            Ficha.Campo.booleano("blocked"),
+            Ficha.Campo.data("blockedFrom"),
+            Ficha.Campo.data("blockedTo"),
+            Ficha.Campo.texto("blockedReason", 300),
+            Ficha.Campo.texto("paymentCondition", 20),
+            Ficha.Campo.texto("paymentMethod", 20),
+            Ficha.Campo.texto("priceList", 20),
+            Ficha.Campo.decimal("defaultDiscountPercent", 2, "0", "100"),
+            Ficha.Campo.decimal("lateInterestPercent", 2, "0", "100"),
+            Ficha.Campo.centavos("creditLimitCents"),
+            Ficha.Campo.texto("pixKey", 120),
+            Ficha.Campo.texto("bankAgency", 60),
+            Ficha.Campo.texto("bankAccount", 40),
+            Ficha.Campo.opcao("taxRegime", "Simples Nacional", "Lucro presumido", "Lucro real", "MEI", "Isento"),
+            Ficha.Campo.opcao("icmsTaxpayer", "Contribuinte", "Isento", "Não contribuinte"),
+            Ficha.Campo.texto("municipalRegistration", 30),
+            Ficha.Campo.formato("cnae", 10, "\\d{4}-\\d/\\d{2}", "CNAE no formato 0000-0/00."),
+            Ficha.Campo.texto("cnaeDescription", 200),
+            Ficha.Campo.email("nfeEmail"),
+            Ficha.Campo.booleano("withholdIss"),
+            Ficha.Campo.booleano("withholdIrrf"),
+            Ficha.Campo.booleano("withholdPis"),
+            Ficha.Campo.booleano("withholdCofins"),
+            Ficha.Campo.booleano("withholdCsll"),
+            Ficha.Campo.booleano("withholdInss"));
 
     static final int MAX_ITEMS = 50;
     private static final Set<String> UFS = Set.of("AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS",
@@ -94,6 +173,7 @@ public final class Partner {
     private final SupplierTerms supplier;
     private final List<Unit> units;
     private final List<Contact> contacts;
+    private final Map<String, Object> profile;
     private final long version;
     private final Instant createdAt;
     private final String createdBy;
@@ -103,6 +183,13 @@ public final class Partner {
     public Partner(UUID id, String code, String legalName, String tradeName, Cnpj cnpj, String group, Map<Role, Status> roles,
                    SupplierTerms supplier, List<Unit> units, List<Contact> contacts, long version, Instant createdAt,
                    String createdBy, Instant updatedAt, String updatedBy) {
+        this(id, code, legalName, tradeName, cnpj, group, roles, supplier, units, contacts, Map.of(), version, createdAt, createdBy,
+                updatedAt, updatedBy);
+    }
+
+    public Partner(UUID id, String code, String legalName, String tradeName, Cnpj cnpj, String group, Map<Role, Status> roles,
+                   SupplierTerms supplier, List<Unit> units, List<Contact> contacts, Map<String, Object> profile, long version,
+                   Instant createdAt, String createdBy, Instant updatedAt, String updatedBy) {
         this.id = Objects.requireNonNull(id);
         this.code = Objects.requireNonNull(code);
         this.legalName = Objects.requireNonNull(legalName);
@@ -115,6 +202,7 @@ public final class Partner {
         this.supplier = supplier == null ? SupplierTerms.EMPTY : supplier;
         this.units = List.copyOf(units);
         this.contacts = List.copyOf(contacts);
+        this.profile = profile == null ? Map.of() : Collections.unmodifiableMap(new LinkedHashMap<>(profile));
         this.version = version;
         this.createdAt = createdAt;
         this.createdBy = createdBy;
@@ -124,9 +212,9 @@ public final class Partner {
 
     /** Novo parceiro com um papel ativo, versão 1, com o código dado pelo sistema. */
     public static Partner register(String code, Role role, PartnerData data, Instant now, String actor) {
-        Valid v = validate(data, SupplierTerms.EMPTY, List.of(), List.of());
+        Valid v = validate(data, SupplierTerms.EMPTY, List.of(), List.of(), Map.of());
         return new Partner(UUID.randomUUID(), code, v.legalName, v.tradeName, v.cnpj, v.group, Map.of(role, Status.ATIVO),
-                v.supplier, v.units, v.contacts, 1, now, actor, now, actor);
+                v.supplier, v.units, v.contacts, v.profile, 1, now, actor, now, actor);
     }
 
     /**
@@ -134,8 +222,8 @@ public final class Partner {
      * veio nos dados (lista nula, dados de fornecedor nulos) continua como está.
      */
     public Partner update(PartnerData data, Instant now, String actor) {
-        Valid v = validate(data, supplier, units, contacts);
-        return new Partner(id, code, v.legalName, v.tradeName, v.cnpj, v.group, roles, v.supplier, v.units, v.contacts,
+        Valid v = validate(data, supplier, units, contacts, profile);
+        return new Partner(id, code, v.legalName, v.tradeName, v.cnpj, v.group, roles, v.supplier, v.units, v.contacts, v.profile,
                 version + 1, createdAt, createdBy, now, actor);
     }
 
@@ -153,7 +241,7 @@ public final class Partner {
         EnumMap<Role, Status> r = new EnumMap<>(Role.class);
         r.putAll(roles);
         r.put(role, status);
-        return new Partner(id, code, legalName, tradeName, cnpj, group, r, supplier, units, contacts, version + 1,
+        return new Partner(id, code, legalName, tradeName, cnpj, group, r, supplier, units, contacts, profile, version + 1,
                 createdAt, createdBy, now, actor);
     }
 
@@ -192,20 +280,31 @@ public final class Partner {
         m.put("group", group);
         m.put("customerStatus", roles.containsKey(Role.CLIENTE) ? roles.get(Role.CLIENTE).name() : null);
         m.put("supplierStatus", roles.containsKey(Role.FORNECEDOR) ? roles.get(Role.FORNECEDOR).name() : null);
+        m.put("carrierStatus", roles.containsKey(Role.TRANSPORTADORA) ? roles.get(Role.TRANSPORTADORA).name() : null);
         m.put("units", units.isEmpty() ? null : units.stream().map(Unit::summary).collect(Collectors.joining("; ")));
         m.put("contacts", contacts.isEmpty() ? null : contacts.stream().map(Contact::summary).collect(Collectors.joining("; ")));
         m.put("leadTimeDays", supplier.leadTimeDays() == null ? null : supplier.leadTimeDays().toString());
         m.put("paymentTerms", supplier.paymentTerms());
         m.put("suppliedCategories", supplier.categories().isEmpty() ? null
                 : supplier.categories().stream().map(Category::name).collect(Collectors.joining("; ")));
+        m.putAll(PROFILE.plano(profile));
         return m;
     }
 
     private record Valid(String legalName, String tradeName, Cnpj cnpj, String group, SupplierTerms supplier, List<Unit> units,
-                         List<Contact> contacts) { }
+                         List<Contact> contacts, Map<String, Object> profile) { }
 
-    private static Valid validate(PartnerData data, SupplierTerms knownSupplier, List<Unit> knownUnits, List<Contact> knownContacts) {
+    private static Valid validate(PartnerData data, SupplierTerms knownSupplier, List<Unit> knownUnits, List<Contact> knownContacts,
+                                  Map<String, Object> knownProfile) {
         List<FieldIssue> issues = new ArrayList<>();
+        Map<String, Object> profile = data.profile() == null ? knownProfile : PROFILE.validar(data.profile(), "profile.", issues);
+        if (Boolean.TRUE.equals(profile.get("blocked")) && profile.get("blockedReason") == null) {
+            issues.add(new FieldIssue("profile.blockedReason", "Informe o motivo do bloqueio."));
+        }
+        if (profile.get("blockedFrom") != null && profile.get("blockedTo") != null
+                && profile.get("blockedFrom").toString().compareTo(profile.get("blockedTo").toString()) > 0) {
+            issues.add(new FieldIssue("profile.blockedTo", "O fim do bloqueio é antes do início."));
+        }
         String legal = text(data.legalName());
         if (legal == null) {
             issues.add(new FieldIssue("legalName", "Informe a razão social."));
@@ -241,11 +340,12 @@ public final class Partner {
         List<PartnerData.ContactData> contactData = data.contacts() == null ? null : data.contacts();
         if (unitData == null) {
             unitData = knownUnits.stream().map(u -> new PartnerData.UnitData(u.id().toString(), u.name(), u.street(), u.number(),
-                    u.district(), u.city(), u.state(), u.postalCode(), u.cnpj() == null ? null : u.cnpj().value())).toList();
+                    u.district(), u.city(), u.state(), u.postalCode(), u.cnpj() == null ? null : u.cnpj().value(), u.kind().name(),
+                    u.isDefault())).toList();
         }
         if (contactData == null) {
             contactData = knownContacts.stream().map(c -> new PartnerData.ContactData(c.id().toString(), c.name(), c.role(),
-                    c.phone(), c.email())).toList();
+                    c.phone(), c.email(), c.primary(), c.receivesInvoices())).toList();
         }
         if (unitData.size() > MAX_ITEMS) issues.add(new FieldIssue("units", "Máximo de " + MAX_ITEMS + " unidades."));
         if (contactData.size() > MAX_ITEMS) issues.add(new FieldIssue("contacts", "Máximo de " + MAX_ITEMS + " contatos."));
@@ -256,8 +356,17 @@ public final class Partner {
         for (int i = 0; i < unitData.size(); i++) {
             PartnerData.UnitData u = unitData.get(i);
             String f = "units[" + i + "].";
+            UnitKind kind = UnitKind.UNIDADE;
+            if (u.kind() != null && !u.kind().isBlank()) {
+                try {
+                    kind = UnitKind.valueOf(u.kind().strip().toUpperCase(Locale.ROOT));
+                } catch (IllegalArgumentException e) {
+                    issues.add(new FieldIssue(f + "kind", "Tipo de endereço inválido."));
+                }
+            }
             String name = text(u.name());
-            if (name == null) issues.add(new FieldIssue(f + "name", "Informe o nome da unidade."));
+            if (name == null && u.kind() == null) issues.add(new FieldIssue(f + "name", "Informe o nome da unidade."));
+            if (name == null) name = kind.label() + (text(u.city()) == null ? "" : " — " + text(u.city()));
             limit(name, 120, f + "name", issues);
             String state = text(u.state());
             if (state != null) {
@@ -283,7 +392,7 @@ public final class Partner {
             }
             units.add(new Unit(keep(u.id(), unitIds), name, limit(text(u.street()), 200, f + "street", issues),
                     limit(text(u.number()), 20, f + "number", issues), limit(text(u.district()), 100, f + "district", issues),
-                    limit(text(u.city()), 100, f + "city", issues), state, cep, unitCnpj));
+                    limit(text(u.city()), 100, f + "city", issues), state, cep, unitCnpj, kind, Boolean.TRUE.equals(u.isDefault())));
         }
 
         Set<UUID> contactIds = knownContacts.stream().map(Contact::id).collect(Collectors.toSet());
@@ -299,12 +408,16 @@ public final class Partner {
                 issues.add(new FieldIssue(f + "email", "E-mail inválido."));
             }
             contacts.add(new Contact(keep(c.id(), contactIds), name, limit(text(c.role()), 100, f + "role", issues),
-                    limit(text(c.phone()), 30, f + "phone", issues), mail));
+                    limit(text(c.phone()), 30, f + "phone", issues), mail, Boolean.TRUE.equals(c.primary()),
+                    Boolean.TRUE.equals(c.receivesInvoices())));
+        }
+        if (contacts.stream().filter(Contact::primary).count() > 1) {
+            issues.add(new FieldIssue("contacts", "Marque só um contato principal."));
         }
         if (!issues.isEmpty()) {
             throw new RuleViolationException("PARTNER_INVALID", "Corrija os campos indicados.", issues);
         }
-        return new Valid(legal, trade, cnpj, group, supplier, units, contacts);
+        return new Valid(legal, trade, cnpj, group, supplier, units, contacts, profile);
     }
 
     /** Mantém o id só se ele pertence a este cliente; qualquer outro valor vira um item novo. */
@@ -341,6 +454,7 @@ public final class Partner {
     public SupplierTerms supplier() { return supplier; }
     public List<Unit> units() { return units; }
     public List<Contact> contacts() { return contacts; }
+    public Map<String, Object> profile() { return profile; }
     public long version() { return version; }
     public Instant createdAt() { return createdAt; }
     public String createdBy() { return createdBy; }

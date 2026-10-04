@@ -59,7 +59,7 @@ public class PartnerService {
     public record SupplierInput(Integer leadTimeDays, String paymentTerms, List<String> categoryIds) { }
 
     /** Conteúdo do comando guardado no recibo: a mesma chave com outro papel ou outros dados é recusada. */
-    record RegisterRequest(Partner.Role role, PartnerData data, SupplierInput supplier) { }
+    record RegisterRequest(Partner.Role role, PartnerData data, SupplierInput supplier, String code) { }
 
     @Transactional(readOnly = true)
     public List<PartnerRepository.Summary> list(Partner.Role role, String search, Partner.Status status) {
@@ -88,15 +88,25 @@ public class PartnerService {
      */
     @Transactional
     public Partner register(Partner.Role role, String idempotencyKey, PartnerData data, SupplierInput supplier) {
+        return register(role, idempotencyKey, data, supplier, null);
+    }
+
+    /**
+     * Com {@code manualCode} (série Manual da ficha), o código informado é usado se estiver livre; sem ele, a série
+     * automática do papel.
+     */
+    @Transactional
+    public Partner register(Partner.Role role, String idempotencyKey, PartnerData data, SupplierInput supplier, String manualCode) {
         CurrentUser user = CurrentUserHolder.require(Permissions.PARTNER_CREATE);
         String key = CommandReceipts.requireKey(idempotencyKey);
-        var done = receipts.claim(user.username(), key, "RegisterPartner", new RegisterRequest(role, data, supplier));
+        var done = receipts.claim(user.username(), key, "RegisterPartner", new RegisterRequest(role, data, supplier, manualCode));
         if (done.isPresent()) {
             return find(role, UUID.fromString(done.get()));
         }
         Instant now = clock.instant();
         PartnerData full = withSupplier(data, supplier, List.of());
-        Partner partner = Partner.register(repository.nextCode(role), role, full, now, user.username());
+        String code = manualCode == null || manualCode.isBlank() ? repository.nextCode(role) : manualCode(manualCode);
+        Partner partner = Partner.register(code, role, full, now, user.username());
         checkUniqueCnpj(partner, role);
         try {
             repository.insert(partner);
@@ -190,11 +200,24 @@ public class PartnerService {
         return enabled;
     }
 
+    private String manualCode(String raw) {
+        String code = raw.strip().toUpperCase(java.util.Locale.ROOT);
+        if (!code.matches("[A-Z0-9][A-Z0-9-]{0,19}")) {
+            throw new RuleViolationException("PARTNER_INVALID", "Corrija os campos indicados.",
+                    List.of(new FieldIssue("code", "Código com letras, números e hífen, até 20 caracteres.")));
+        }
+        if (repository.codeExists(code)) {
+            throw new RuleViolationException("PARTNER_CODE_DUPLICATE", "Já existe um parceiro com o código " + code + ".",
+                    List.of(new FieldIssue("code", "Código já usado.")));
+        }
+        return code;
+    }
+
     private PartnerData withSupplier(PartnerData data, SupplierInput supplier, List<Partner.Category> current) {
         if (supplier == null) return data;
         List<Partner.Category> categories = catalog.resolveCategories(supplier.categoryIds(), current, "suppliedCategories");
         return new PartnerData(data.legalName(), data.tradeName(), data.cnpj(), data.group(), data.units(), data.contacts(),
-                new PartnerData.SupplierData(supplier.leadTimeDays(), supplier.paymentTerms(), categories));
+                new PartnerData.SupplierData(supplier.leadTimeDays(), supplier.paymentTerms(), categories), data.profile());
     }
 
     private Partner find(Partner.Role role, UUID id) {
@@ -255,7 +278,11 @@ public class PartnerService {
     }
 
     private static String statusField(Partner.Role role) {
-        return role == Partner.Role.CLIENTE ? "customerStatus" : "supplierStatus";
+        return switch (role) {
+            case CLIENTE -> "customerStatus";
+            case FORNECEDOR -> "supplierStatus";
+            case TRANSPORTADORA -> "carrierStatus";
+        };
     }
 
     private void record(CurrentUser user, String action, Partner p, String reason, Map<String, AuditEntry.Change> changes) {
@@ -270,6 +297,10 @@ public class PartnerService {
     }
 
     private static NotFoundException notFound(Partner.Role role) {
-        return new NotFoundException(role == Partner.Role.CLIENTE ? "Cliente não encontrado." : "Fornecedor não encontrado.");
+        return new NotFoundException(switch (role) {
+            case CLIENTE -> "Cliente não encontrado.";
+            case FORNECEDOR -> "Fornecedor não encontrado.";
+            case TRANSPORTADORA -> "Transportadora não encontrada.";
+        });
     }
 }

@@ -67,7 +67,7 @@
       "id": "estoque",
       "nome": "Estoque",
       "responsabilidade": "Locais, posições por item/local/propriedade, reservas, movimentos, custo médio, inventário, remessa/retorno de terceiros",
-      "dependsOn": ["kernel", "plataforma", "cadastros", "projetos"]
+      "dependsOn": ["kernel", "acesso", "auditoria", "plataforma", "cadastros", "projetos"]
     },
     {
       "id": "suprimentos",

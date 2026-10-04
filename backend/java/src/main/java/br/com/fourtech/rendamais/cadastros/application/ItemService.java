@@ -58,8 +58,13 @@ public class ItemService {
 
     @Transactional(readOnly = true)
     public List<ItemRepository.Summary> list(String search, Item.Nature nature, UUID categoryId, Partner.Status status) {
+        return list(search, nature, null, categoryId, status);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ItemRepository.Summary> list(String search, Item.Nature nature, Item.Type type, UUID categoryId, Partner.Status status) {
         CurrentUserHolder.require(Permissions.ITEM_READ);
-        return repository.list(search == null ? null : search.strip(), nature, categoryId, status, 500);
+        return repository.list(search == null ? null : search.strip(), nature, type, categoryId, status, 500);
     }
 
     @Transactional(readOnly = true)
@@ -78,15 +83,37 @@ public class ItemService {
     /** RegisterItem: repetir com a mesma chave devolve o mesmo item (US-205). */
     @Transactional
     public Item register(String idempotencyKey, ItemData data) {
+        return register(idempotencyKey, data, null);
+    }
+
+    record RegisterRequest(ItemData data, String code) { }
+
+    /** Com {@code manualCode} (série Manual da ficha), usa o código informado se estiver livre. */
+    @Transactional
+    public Item register(String idempotencyKey, ItemData data, String manualCode) {
         CurrentUser user = CurrentUserHolder.require(Permissions.ITEM_CREATE);
         String key = CommandReceipts.requireKey(idempotencyKey);
-        var done = receipts.claim(user.username(), key, "RegisterItem", data);
+        var done = receipts.claim(user.username(), key, "RegisterItem", manualCode == null ? data : new RegisterRequest(data, manualCode));
         if (done.isPresent()) {
             return find(UUID.fromString(done.get()));
         }
         Item.Nature nature = Item.natureOf(data);
         Instant now = clock.instant();
-        Item item = Item.register(repository.nextCode(nature), data, lookups(null), now, user.username());
+        String code;
+        if (manualCode == null || manualCode.isBlank()) {
+            code = repository.nextCode(nature);
+        } else {
+            code = manualCode.strip().toUpperCase(java.util.Locale.ROOT);
+            if (!code.matches("[A-Z0-9][A-Z0-9-]{0,19}")) {
+                throw new RuleViolationException("ITEM_INVALID", "Corrija os campos indicados.",
+                        List.of(new FieldIssue("code", "Código com letras, números e hífen, até 20 caracteres.")));
+            }
+            if (repository.codeExists(code)) {
+                throw new RuleViolationException("ITEM_CODE_DUPLICATE", "Já existe um item com o código " + code + ".",
+                        List.of(new FieldIssue("code", "Código já usado.")));
+            }
+        }
+        Item item = Item.register(code, data, lookups(null), now, user.username());
         repository.insert(item);
         Map<String, AuditEntry.Change> changes = new LinkedHashMap<>();
         changes.put("code", new AuditEntry.Change(null, item.code()));
@@ -140,6 +167,22 @@ public class ItemService {
                 Map.of("status", new AuditEntry.Change(Partner.Status.ATIVO.name(), Partner.Status.INATIVO.name())));
         outbox.append("ItemDeactivated", ENTITY, id.toString(), Map.of("itemId", id.toString(), "reason", why), user.username());
         return inactive;
+    }
+
+    /** Reativa o item inativo (situação Ativo da ficha); idempotente. */
+    @Transactional
+    public Item reactivate(UUID id, long expectedVersion) {
+        CurrentUser user = CurrentUserHolder.require(Permissions.ITEM_UPDATE);
+        Item current = repository.findByIdForUpdate(id).orElseThrow(ItemService::notFound);
+        if (current.status() == Partner.Status.ATIVO) return current;
+        if (current.version() != expectedVersion) throw new VersionConflictException(ENTITY, expectedVersion, current.version());
+        Item active = current.withStatus(Partner.Status.ATIVO, clock.instant(), user.username());
+        repository.update(active, expectedVersion);
+        record(user, "ITEM_REACTIVATED", active, null,
+                Map.of("status", new AuditEntry.Change(Partner.Status.INATIVO.name(), Partner.Status.ATIVO.name())));
+        outbox.append("ItemUpdated", ENTITY, id.toString(), Map.of("itemId", id.toString(), "changedFields", List.of("status")),
+                user.username());
+        return active;
     }
 
     /** Unidade e categoria usáveis: ativas, ou as que o item já usa (para a edição não obrigar a trocá-las). */

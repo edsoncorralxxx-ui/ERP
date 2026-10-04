@@ -5,6 +5,8 @@ import br.com.fourtech.rendamais.cadastros.domain.Item;
 import br.com.fourtech.rendamais.cadastros.domain.Partner;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
@@ -12,6 +14,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,32 +23,46 @@ class JdbcItemRepository implements ItemRepository {
 
     private static final String SELECT = """
             select i.id, i.code, i.description, i.nature, i.uom_code, i.category_id, c.name as category_name, i.stock_controlled,
-                   i.reference_cost, i.ncm, i.service_code, i.status, i.version, i.created_at, i.created_by, i.updated_at, i.updated_by
+                   i.reference_cost, i.ncm, i.service_code, i.status, i.version, i.created_at, i.created_by, i.updated_at, i.updated_by,
+                   i.item_type, i.profile::text as profile
               from item i join item_category c on c.id = i.category_id
             """;
 
-    private final JdbcClient jdbc;
+    private static final TypeReference<Map<String, Object>> MAP = new TypeReference<>() { };
 
-    JdbcItemRepository(JdbcClient jdbc) {
+    private final JdbcClient jdbc;
+    private final JsonMapper json;
+
+    JdbcItemRepository(JdbcClient jdbc, JsonMapper json) {
         this.jdbc = jdbc;
+        this.json = json;
     }
 
+    /** P00001 (produto ou material) ou S00001 (serviço); pula códigos já usados (carga ou código manual). */
     @Override
     public String nextCode(Item.Nature nature) {
         boolean material = nature == Item.Nature.MATERIAL;
-        long n = jdbc.sql(material ? "select nextval('material_code_seq')" : "select nextval('service_code_seq')")
-                .query(Long.class).single();
-        return String.format(material ? "P%05d" : "S%05d", n);
+        while (true) {
+            long n = jdbc.sql(material ? "select nextval('material_code_seq')" : "select nextval('service_code_seq')")
+                    .query(Long.class).single();
+            String code = String.format(material ? "P%05d" : "S%05d", n);
+            if (!codeExists(code)) return code;
+        }
+    }
+
+    @Override
+    public boolean codeExists(String code) {
+        return jdbc.sql("select count(*) from item where code = :code").param("code", code).query(Long.class).single() > 0;
     }
 
     @Override
     public void insert(Item i) {
         jdbc.sql("""
                 insert into item (id, code, description, nature, uom_code, category_id, stock_controlled, reference_cost, ncm,
-                                  service_code, status, version, created_at, created_by, updated_at, updated_by)
+                                  service_code, status, version, created_at, created_by, updated_at, updated_by, item_type, profile)
                 values (:id, :code, :description, :nature, :uom, :category, :stock, :cost, :ncm, :serviceCode, :status, :version,
-                        :createdAt, :createdBy, :updatedAt, :updatedBy)
-                """)
+                        :createdAt, :createdBy, :updatedAt, :updatedBy, :type, cast(:profile as jsonb))
+                """).param("type", i.type().name()).param("profile", json.writeValueAsString(i.profile()))
                 .param("id", i.id()).param("code", i.code()).param("description", i.description())
                 .param("nature", i.nature().name()).param("uom", i.uom()).param("category", i.category().id())
                 .param("stock", i.stockControlled()).param("cost", i.referenceCost()).param("ncm", i.ncm())
@@ -60,9 +77,10 @@ class JdbcItemRepository implements ItemRepository {
     public boolean update(Item i, long expectedVersion) {
         int rows = jdbc.sql("""
                 update item set description = :description, uom_code = :uom, category_id = :category, stock_controlled = :stock,
-                       reference_cost = :cost, ncm = :ncm, service_code = :serviceCode, status = :status, version = :version, updated_at = :updatedAt, updated_by = :updatedBy
+                       reference_cost = :cost, ncm = :ncm, service_code = :serviceCode, status = :status, version = :version, updated_at = :updatedAt, updated_by = :updatedBy,
+                       item_type = :type, profile = cast(:profile as jsonb)
                  where id = :id and version = :expected
-                """)
+                """).param("type", i.type().name()).param("profile", json.writeValueAsString(i.profile()))
                 .param("description", i.description()).param("uom", i.uom()).param("category", i.category().id())
                 .param("stock", i.stockControlled()).param("cost", i.referenceCost()).param("ncm", i.ncm())
                 .param("serviceCode", i.serviceCode()).param("status", i.status().name())
@@ -101,7 +119,8 @@ class JdbcItemRepository implements ItemRepository {
                     """).param("id", id).query((r, k) -> new Item.Conversion(r.getObject("id", UUID.class), r.getString("from_uom"),
                     r.getBigDecimal("factor"))).list();
             return new Item(rs.getObject("id", UUID.class), rs.getString("code"), rs.getString("description"),
-                    Item.Nature.valueOf(rs.getString("nature")), rs.getString("uom_code"),
+                    Item.Nature.valueOf(rs.getString("nature")), Item.Type.valueOf(rs.getString("item_type")),
+                    json.readValue(rs.getString("profile"), MAP), rs.getString("uom_code"),
                     new Partner.Category(rs.getObject("category_id", UUID.class), rs.getString("category_name")),
                     rs.getBoolean("stock_controlled"), rs.getBigDecimal("reference_cost"), rs.getString("ncm"),
                     rs.getString("service_code"), Partner.Status.valueOf(rs.getString("status")), conversions, rs.getLong("version"), instant(rs, "created_at"),
@@ -111,10 +130,16 @@ class JdbcItemRepository implements ItemRepository {
 
     @Override
     public List<Summary> list(String search, Item.Nature nature, UUID categoryId, Partner.Status status, int limit) {
+        return list(search, nature, null, categoryId, status, limit);
+    }
+
+    @Override
+    public List<Summary> list(String search, Item.Nature nature, Item.Type type, UUID categoryId, Partner.Status status, int limit) {
         String term = search == null || search.isEmpty() ? null : search;
         return jdbc.sql(SELECT + """
                  where (cast(:status as varchar) is null or i.status = cast(:status as varchar))
                    and (cast(:nature as varchar) is null or i.nature = cast(:nature as varchar))
+                   and (cast(:type as varchar) is null or i.item_type = cast(:type as varchar))
                    and (cast(:category as uuid) is null or i.category_id = cast(:category as uuid))
                    and (cast(:term as varchar) is null
                         or i.code ilike '%' || cast(:term as varchar) || '%'
@@ -124,6 +149,7 @@ class JdbcItemRepository implements ItemRepository {
                  order by i.code limit :limit
                 """)
                 .param("status", status == null ? null : status.name()).param("nature", nature == null ? null : nature.name())
+                .param("type", type == null ? null : type.name())
                 .param("category", categoryId).param("term", term).param("limit", limit)
                 .query(JdbcItemRepository::summary).list();
     }
@@ -133,7 +159,7 @@ class JdbcItemRepository implements ItemRepository {
         return new Summary(rs.getObject("id", UUID.class), rs.getString("code"), rs.getString("description"),
                 Item.Nature.valueOf(rs.getString("nature")), rs.getString("uom_code"), rs.getString("category_name"),
                 rs.getBoolean("stock_controlled"), cost, rs.getString("ncm"), rs.getString("service_code"),
-                Partner.Status.valueOf(rs.getString("status")), rs.getLong("version"));
+                Partner.Status.valueOf(rs.getString("status")), rs.getLong("version"), Item.Type.valueOf(rs.getString("item_type")));
     }
 
     private static Instant instant(ResultSet rs, String col) throws SQLException {

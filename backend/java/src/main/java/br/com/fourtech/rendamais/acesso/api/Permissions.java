@@ -90,6 +90,28 @@ public final class Permissions {
     /** Alterar nome e percentual de fechamento das etapas do funil. */
     public static final String CRM_STAGE_ADMIN = "crm_stage.admin";
     public static final String USER_ADMIN = "user.admin";
+    /** Ver as tabelas auxiliares dos cadastros (marcas, bancos, condições e formas de pagamento, moedas, tipos de documento). */
+    public static final String CATALOG_READ = "catalog.read";
+    /** Ver colaboradores (Sprint 13). */
+    public static final String EMPLOYEE_READ = "employee.read";
+    /** Cadastrar, alterar e inativar colaboradores. */
+    public static final String EMPLOYEE_ADMIN = "employee.admin";
+    /** Ver depósitos, localizações e saldos de estoque (Sprint 13). */
+    public static final String STOCK_READ = "stock.read";
+    /** Manter depósitos, localizações e os saldos informados. */
+    public static final String STOCK_ADMIN = "stock.admin";
+    /** Ver calendários e feriados (Sprint 13). */
+    public static final String CALENDAR_READ = "calendar.read";
+    /** Manter calendários, feriados e jornada. */
+    public static final String CALENDAR_ADMIN = "calendar.admin";
+    /** Ver as tabelas de preço (Sprint 13). */
+    public static final String PRICE_LIST_READ = "price_list.read";
+    /** Manter tabelas de preço e os preços dos itens. */
+    public static final String PRICE_LIST_ADMIN = "price_list.admin";
+    /** Ver e baixar anexos (aba Documentos, Sprint 13). */
+    public static final String ATTACHMENT_READ = "attachment.read";
+    /** Anexar e remover arquivos. */
+    public static final String ATTACHMENT_UPDATE = "attachment.update";
 
     private Permissions() { }
 }
