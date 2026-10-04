@@ -1,7 +1,9 @@
 import { Fragment, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { api, setUnauthorizedHandler } from './api/client';
 import type { CompanyProfile, SessionUser } from './api/types';
+import { CADASTROS, CadastroListaWindow } from './screens/CadastroListaWindow';
 import { CatalogWindow } from './screens/CatalogWindow';
+import { PartnerWindow, tituloParceiro } from './screens/PartnerWindow';
 import { ChangePasswordWindow } from './screens/ChangePasswordWindow';
 import { CockpitWindow } from './screens/CockpitWindow';
 import { CompanyProfileWindow } from './screens/CompanyProfileWindow';
@@ -111,7 +113,20 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   'equipment-models': { title: 'Modelos de equipamento', size: { w: 900, h: 560 } },
   users: { title: 'Usuários e permissões', size: { w: 980, h: 560 } },
   password: { title: 'Alteração de senha', size: { w: 520, h: 330 } },
+  'cadastro-lista': { title: 'Lista de cadastro', size: { w: 1180, h: 700 } },
+  'cadastro-tabela': { title: 'Tabela de cadastro', size: { w: 1000, h: 640 } },
+  partner: { title: 'Dados mestre do parceiro', size: { w: 1180, h: 800 } },
+  employee: { title: 'Colaborador', size: { w: 980, h: 640 } },
+  locations: { title: 'Depósitos e localizações', size: { w: 1180, h: 720 } },
+  calendars: { title: 'Calendários de trabalho', size: { w: 1180, h: 720 } },
 };
+
+/** Título de abertura: as janelas genéricas (lista e tabela de cadastro, parceiro) dependem do registro. */
+function tituloDe(kind: WindowKind, recordKey: string): string {
+  if (kind === 'cadastro-lista') return CADASTROS[recordKey]?.titulo ?? KINDS[kind].title;
+  if (kind === 'partner') return tituloParceiro(recordKey);
+  return KINDS[kind].title;
+}
 
 type Lock = 'BLOQUEIO' | 'EXPIRADA';
 
@@ -219,7 +234,7 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
   const open = useCallback(
     (kind: WindowKind, recordKey = 'singleton', sequence?: string[]) => {
       dispatch({
-        type: 'open', kind, recordKey, title: KINDS[kind].title, size: KINDS[kind].size, bounds: bounds(), maximized: kind === 'cockpit', sequence,
+        type: 'open', kind, recordKey, title: tituloDe(kind, recordKey), size: KINDS[kind].size, bounds: bounds(), maximized: kind === 'cockpit', sequence,
       });
     },
     [bounds],
@@ -243,6 +258,8 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
   const active = state.windows.find((w) => w.id === state.activeId) ?? null;
   const activeSave = active ? commands[active.id]?.save : undefined;
   const activeNew = active ? commands[active.id]?.novo : undefined;
+  const activeEdit = active ? commands[active.id]?.editar : undefined;
+  const activeDelete = active ? commands[active.id]?.excluir : undefined;
   const saveActive = useCallback(() => {
     if (activeSave) void activeSave();
   }, [activeSave]);
@@ -341,7 +358,11 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
         windowId: w.id,
         setDirty: (dirty) => dispatch({ type: 'setDirty', id: w.id, dirty }),
         registerCommands: (c) =>
-          setCommands((prev) => (prev[w.id]?.save === c.save && prev[w.id]?.novo === c.novo ? prev : { ...prev, [w.id]: c })),
+          setCommands((prev) => {
+            const a = prev[w.id];
+            return a?.save === c.save && a?.novo === c.novo && a?.editar === c.editar && a?.excluir === c.excluir ? prev : { ...prev, [w.id]: c };
+          }),
+        setTitle: (title) => dispatch({ type: 'setTitle', id: w.id, title }),
         notify,
         requestClose: () => requestClose(w.id),
         open: openKind,
@@ -381,6 +402,8 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
           actions={{
             bloquear: lock,
             novo: activeNew,
+            editar: activeEdit,
+            excluir: activeDelete,
             ...navegacao,
             ajuda: () => open('server-status'),
             consulta: openCockpit,
@@ -513,6 +536,10 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                         <UsersWindow />
                       ) : w.kind === 'password' ? (
                         <ChangePasswordWindow />
+                      ) : w.kind === 'cadastro-lista' ? (
+                        <CadastroListaWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'partner' ? (
+                        <PartnerWindow recordKey={w.recordKey} />
                       ) : (
                         <ServerStatusWindow connection={connection} />
                       ))}

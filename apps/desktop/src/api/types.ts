@@ -1425,3 +1425,68 @@ export type LeadImport = {
   confirmedAt: string | null;
   confirmedBy: string | null;
 };
+
+// ───────────── Sprint 13: cadastros pelo mock ─────────────
+
+export type PapelParceiro = 'CLIENTE' | 'FORNECEDOR' | 'TRANSPORTADORA';
+export type TipoEndereco = 'COBRANCA' | 'ENTREGA' | 'UNIDADE' | 'FATURAMENTO';
+export type PerfilValor = string | number | boolean;
+
+export type PartnerUnit = CustomerUnit & { kind: TipoEndereco; isDefault: boolean };
+export type PartnerContact = CustomerContact & { primary: boolean; receivesInvoices: boolean };
+
+/** Parceiro como a rota do papel devolve (clientes, fornecedores ou transportadoras): `status` é o do papel da rota. */
+export type Partner = {
+  id: string;
+  code: string;
+  legalName: string;
+  tradeName: string | null;
+  cnpj: string | null;
+  cnpjFormatted: string | null;
+  group: string | null;
+  status: Situacao;
+  customer: boolean;
+  supplier: boolean;
+  carrier: boolean;
+  leadTimeDays: number | null;
+  paymentTerms: string | null;
+  suppliedCategories: CategoryRef[];
+  units: PartnerUnit[];
+  contacts: PartnerContact[];
+  profile: Record<string, PerfilValor>;
+  version: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+/** Indicadores da ficha do parceiro (GET /cadastros/partners/{id}/summary); nulo = módulo ainda sem dados. */
+export type PartnerFichaSummary = {
+  openReceivableCents: number;
+  openPayableCents: number;
+  openOrdersCents: number;
+  equipmentCount: number;
+  openOpportunities: number;
+  creditUsedCents: number;
+  purchaseOrdersCents: number | null;
+  pendingReceiptsCents: number | null;
+  openQuotations: number | null;
+  freightsYear: number | null;
+  inTransit: number | null;
+  occurrences: number | null;
+};
+
+export type Employee = {
+  id: string;
+  code: string;
+  name: string;
+  department: string | null;
+  jobTitle: string | null;
+  costCenter: string | null;
+  admissionDate: string | null;
+  email: string | null;
+  phone: string | null;
+  status: Situacao;
+  version: string;
+};

@@ -63,7 +63,8 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
   const [id, setId] = useState<string | null>(recordKey.startsWith('novo-') ? null : recordKey);
   const [pedido, setPedido] = useState<SalesOrder | null>(null);
   const [etag, setEtag] = useState('');
-  const [form, setForm] = useState<Form>(vazio);
+  // "novo-N@<cliente>": pedido novo já com o cliente (botão Criar pedido de venda da ficha do cliente).
+  const [form, setForm] = useState<Form>(() => ({ ...vazio(), customerId: recordKey.split('@')[1] ?? vazio().customerId }));
   const [tab, setTab] = useState<Tab>('linhas');
   const [carregando, setCarregando] = useState(id !== null);
   const [erroCarga, setErroCarga] = useState<string | null>(null);

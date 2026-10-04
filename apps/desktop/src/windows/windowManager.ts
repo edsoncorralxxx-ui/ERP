@@ -52,6 +52,12 @@ export const WINDOW_KINDS = [
   'equipment-models',
   'users',
   'password',
+  'cadastro-lista',
+  'cadastro-tabela',
+  'partner',
+  'employee',
+  'locations',
+  'calendars',
 ] as const;
 export type WindowKind = (typeof WINDOW_KINDS)[number];
 export type WindowMode = 'normal' | 'minimized' | 'maximized';
@@ -102,6 +108,7 @@ export type WindowAction =
   | { type: 'toggleMaximize'; id: string }
   | { type: 'close'; id: string }
   | { type: 'setDirty'; id: string; dirty: boolean }
+  | { type: 'setTitle'; id: string; title: string }
   | { type: 'cascade'; bounds: Bounds }
   | { type: 'tile'; bounds: Bounds }
   | { type: 'fit'; bounds: Bounds };
@@ -211,6 +218,9 @@ export function windowReducer(state: WindowState, action: WindowAction): WindowS
       // Sem mudança, devolve o mesmo estado para não provocar nova renderização em cadeia.
       if (!state.windows.some((w) => w.id === action.id && w.dirty !== action.dirty)) return state;
       return { ...state, windows: state.windows.map((w) => (w.id === action.id ? { ...w, dirty: action.dirty } : w)) };
+    case 'setTitle':
+      if (!state.windows.some((w) => w.id === action.id && w.title !== action.title)) return state;
+      return { ...state, windows: state.windows.map((w) => (w.id === action.id ? { ...w, title: action.title } : w)) };
     case 'cascade': {
       let z = state.nextZ;
       const windows = [...state.windows]

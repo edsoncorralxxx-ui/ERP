@@ -14,6 +14,8 @@ type Props = {
   'aria-label'?: string;
   'aria-labelledby'?: string;
   'aria-invalid'?: boolean;
+  /** Largura da seleção (o campo ocupa toda ela), como os campos do mock: "120px", "100%". */
+  largura?: string;
 };
 
 /**
@@ -22,7 +24,7 @@ type Props = {
  * nativa do sistema operacional. Teclado: setas, Home/End, Enter ou espaço escolhem, Esc fecha, letras saltam.
  * A lista abre por cima das janelas (portal na página), para não ser cortada por grades e painéis que rolam.
  */
-export function Selecao({ valor, opcoes, onChange, id, className, disabled, title, ...aria }: Props) {
+export function Selecao({ valor, opcoes, onChange, id, className, disabled, title, largura, ...aria }: Props) {
   const [aberta, setAberta] = useState(false);
   const [ativa, setAtiva] = useState(-1);
   const [pos, setPos] = useState<{ left: number; top: number; width: number; maxHeight: number } | null>(null);
@@ -134,7 +136,7 @@ export function Selecao({ valor, opcoes, onChange, id, className, disabled, titl
   };
 
   return (
-    <div className="rp-select">
+    <div className="rp-select" style={largura ? { width: largura } : undefined}>
       <button
         ref={campo}
         type="button"
@@ -150,6 +152,7 @@ export function Selecao({ valor, opcoes, onChange, id, className, disabled, titl
         aria-invalid={aria['aria-invalid']}
         disabled={disabled}
         title={title}
+        style={largura ? { width: '100%' } : undefined}
         data-valor={valor}
         onClick={() => (aberta ? fechar() : abrir())}
         onKeyDown={teclas}

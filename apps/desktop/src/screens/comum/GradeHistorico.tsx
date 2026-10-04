@@ -2,7 +2,7 @@ import type { HistoryEntry } from '../../api/types';
 import { competenciaDaApi, dataDaApi, dataHora, reais } from '../../format';
 import { LinhaResto } from './LinhaResto';
 
-const ROTULO: Record<string, string> = {
+export const ROTULO_HISTORICO: Record<string, string> = {
   code: 'Código', legalName: 'Razão social', tradeName: 'Nome fantasia', cnpj: 'CNPJ', group: 'Grupo', status: 'Situação',
   customerStatus: 'Situação como cliente', supplierStatus: 'Situação como fornecedor', units: 'Unidades', contacts: 'Contatos',
   leadTimeDays: 'Prazo de referência (dias)', paymentTerms: 'Condições de pagamento', suppliedCategories: 'Categorias fornecidas',
@@ -30,7 +30,7 @@ const ROTULO: Record<string, string> = {
   issRetention: 'Retenção de ISS', review: 'Revisar', receiptNumber: 'Recibo', deliveredOn: 'Entregue em', responsible: 'Responsável',
   detail: 'Detalhe', authorization: 'Autorização', authorizationProtocol: 'Protocolo', months: 'Meses',
 };
-const ACAO: Record<string, string> = {
+export const ACAO_HISTORICO: Record<string, string> = {
   PARTNER_REGISTERED: 'Cadastro', PARTNER_UPDATED: 'Alteração', PARTNER_DEACTIVATED: 'Inativação', PARTNER_ROLE_ENABLED: 'Novo papel',
   ITEM_REGISTERED: 'Cadastro', ITEM_UPDATED: 'Alteração', ITEM_DEACTIVATED: 'Inativação',
   PROPOSAL_DRAFTED: 'Cadastro', PROPOSAL_UPDATED: 'Alteração', PROPOSAL_REVISION_ISSUED: 'Revisão emitida',
@@ -68,6 +68,9 @@ const VALOR: Record<string, string> = {
   VENDA_PRODUCAO: 'Venda de produção própria', VENDA_MERCADORIA: 'Venda de mercadoria', PRESTACAO_SERVICO: 'Prestação de serviço', REMESSA: 'Remessa',
 };
 
+/** Valor de código da auditoria por extenso (ATIVO → Ativo); texto livre volta como veio. */
+export const valorHistorico = (v: string, _campo = ''): string => VALOR[v] ?? v;
+
 /** Valores em centavos (campos terminados em Cents) aparecem em reais; datas AAAA-MM-DD em DD/MM/AAAA; competência em MM/AAAA. */
 const texto = (v: string | null, campo = '') => {
   if (v === null) return '';
@@ -99,13 +102,13 @@ export function GradeHistorico({ historico, rotulo }: { historico: HistoryEntry[
           <tbody>
             {historico.flatMap((h, i) => {
               const mudancas = Object.entries(h.changes);
-              const linhas: [string, string, string][] = mudancas.length ? mudancas.map(([k, v]) => [ROTULO[k] ?? k, texto(v.before, k), texto(v.after, k)]) : [['', '', '']];
+              const linhas: [string, string, string][] = mudancas.length ? mudancas.map(([k, v]) => [ROTULO_HISTORICO[k] ?? k, texto(v.before, k), texto(v.after, k)]) : [['', '', '']];
               if (h.reason) linhas.push(['Motivo', '', h.reason]);
               return linhas.map(([campo, antes, depois], j) => (
                 <tr key={`${i}-${j}`}>
                   <td>{j === 0 ? dataHora(h.occurredAt) : ''}</td>
                   <td>{j === 0 ? h.actor : ''}</td>
-                  <td>{j === 0 ? ACAO[h.action] ?? h.action : ''}</td>
+                  <td>{j === 0 ? ACAO_HISTORICO[h.action] ?? h.action : ''}</td>
                   <td className="num">{j === 0 ? h.version : ''}</td>
                   <td>{campo}</td>
                   <td className="rp-ficha__antes">{antes}</td>

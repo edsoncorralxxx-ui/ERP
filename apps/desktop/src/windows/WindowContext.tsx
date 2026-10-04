@@ -7,6 +7,10 @@ export type WindowCommands = {
   save?: () => Promise<boolean>;
   /** Ferramenta "Novo" da barra superior, quando a janela ativa sabe criar um registro. */
   novo?: () => void;
+  /** Ferramenta "Editar": liga e desliga o modo de edição da ficha (no mock, a ficha abre em consulta). */
+  editar?: () => void;
+  /** Ferramenta "Excluir" da ficha ativa (pede confirmação). */
+  excluir?: () => void;
 };
 
 export type WindowApi = {
