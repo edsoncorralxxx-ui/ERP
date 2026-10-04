@@ -87,6 +87,15 @@
   --chart-wall: #d3dfed;
   --chart-floor: #adbbcf;
   --chart-axis: #8495b0;
+  --arte-fundo: #e4eef7;
+  --arte-pele: #e8b996;
+  --arte-pele-sombra: #d9a47f;
+  --arte-cabelo: #5a3d25;
+  --arte-boca: #8a4b35;
+  --arte-roupa: #9db8db;
+  --arte-roupa-dobra: #7f9fca;
+  --arte-cadeira: #4867b1;
+  --arte-cadeira-luz: #6998dc;
 
   /* Tipografia */
   --font-ui: Tahoma, "Segoe UI", "Helvetica Neue", Arial, sans-serif;

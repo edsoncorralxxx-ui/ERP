@@ -30,11 +30,10 @@ ORIGENS = {"usuario", "sistema", "derivado", "importacao", "referencia"}
 TIPOS_FORM = {"cadastro", "documento", "consulta", "painel"}
 PERMISSAO = re.compile(r"^[a-z][a-z_]*\.[a-z][a-z_]*$")
 COMANDO = re.compile(r"^[A-Z][A-Za-z]+$")
-# Ordem dos 30 módulos da Barra lateral do design system (design-system/components/BarraLateral/README.md).
-MODULOS_MENU = ["Cockpit", "Dashboard", "Cadastros", "CRM", "Vendas", "Engenharia", "Compras", "Estoque", "MRP", "Produção",
-                "Projetos", "Instalações", "Equipamentos", "Renda+", "Qualidade", "Manutenção", "Pós-venda", "Financeiro",
-                "Faturamento", "Fiscal", "Custos", "Contabilidade / Controladoria", "Tarefas", "BI & Relatórios", "Documentos",
-                "Integrações", "Recursos Humanos", "Patrimônio", "Administração", "Configurações"]
+# Ordem dos 25 módulos do menu lateral do mock Renda+ ERP MOCK (Sprint 13; design-system/components/BarraLateral/README.md).
+MODULOS_MENU = ["Cadastros", "CRM", "Vendas", "Engenharia", "Compras", "Estoque", "MRP", "Produção", "Projetos", "Instalações",
+                "Equipamentos", "Renda+", "Qualidade", "Manutenção", "Pós-venda", "Financeiro", "Faturamento", "Fiscal", "Custos",
+                "Contabilidade / Controladoria", "Tarefas", "BI & Relatórios", "Documentos", "Administração", "Configurações"]
 
 
 def carregar(nome, pasta=B01):
@@ -285,29 +284,39 @@ def _verificar_menu(self):
     menu = self.c["menu"]["modulos"]
     nomes = [m["nome"] for m in menu]
     if nomes != MODULOS_MENU:
-        self.erro("menu: módulos diferentes da Barra lateral do design system (nomes ou ordem)")
+        self.erro("menu: módulos diferentes do menu lateral do mock (nomes ou ordem)")
     forms = {f["id"]: f for f in self.c["formularios"]["formularios"]}
     telas_no_menu, recursos_no_menu = set(), set()
     for m in menu:
         if not m["itens"]:
             self.erro(f"menu: módulo {m['nome']} sem itens")
+        rotulos = [it.get("rotulo") for it in m["itens"]]
+        if len(set(rotulos)) != len(rotulos):
+            self.erro(f"menu: rótulo repetido em {m['nome']}")
         for it in m["itens"]:
-            destino = [k for k in ("tela", "recurso", "acao", "nota") if it.get(k)]
-            if len(destino) != 1:
-                self.erro(f"menu: item {it.get('rotulo')} precisa de exatamente um destino (tela, recurso, acao ou nota)")
-                continue
             if not it.get("rotulo") or not it.get("fase"):
                 self.erro(f"menu: item em {m['nome']} sem rótulo ou fase")
+            vinculo = [k for k in ("tela", "recurso") if it.get(k)]
+            if len(vinculo) > 1:
+                self.erro(f"menu: item {it.get('rotulo')} com mais de um vínculo (tela ou recurso)")
             if it.get("tela"):
-                if it["tela"] not in forms:
+                if it["tela"] not in self.telas:
                     self.erro(f"menu: tela inexistente {it['tela']}")
                 else:
                     telas_no_menu.add(it["tela"])
-                    recursos_no_menu.update(forms[it["tela"]]["analises"])
+                    recursos_no_menu.update(forms.get(it["tela"], {}).get("analises", []))
             if it.get("recurso"):
                 if it["recurso"] not in self.recursos_an:
                     self.erro(f"menu: recurso inexistente {it['recurso']}")
                 recursos_no_menu.add(it["recurso"])
+    for s in self.c["menu"].get("semMenu", []):
+        if s.get("tela") not in self.telas or not s.get("motivo"):
+            self.erro(f"menu: semMenu com tela inexistente ou sem motivo: {s}")
+        elif s["tela"] in telas_no_menu:
+            self.erro(f"menu: tela {s['tela']} está no menu e em semMenu")
+        else:
+            telas_no_menu.add(s["tela"])
+            recursos_no_menu.update(forms.get(s["tela"], {}).get("analises", []))
     for t in sorted(set(self.telas) - telas_no_menu):
         self.erro(f"menu: tela sem lugar no menu lateral: {t}")
     for a in sorted(self.recursos_an - recursos_no_menu):

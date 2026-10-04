@@ -384,6 +384,12 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
             ...navegacao,
             ajuda: () => open('server-status'),
             consulta: openCockpit,
+            visualizar: () => window.print(),
+            imprimir: () => window.print(),
+            email: () => notify({ tone: 'info', text: 'Envio de e-mail ainda não configurado: o servidor de e-mail entra com as notificações' }),
+            telefone: () => notify({ tone: 'info', text: 'Telefonia ainda não integrada' }),
+            python: () => notify({ tone: 'info', text: 'O console Python entra com o worker de processamento (sprint de importação)' }),
+            'banco-dados': () => open('server-status'),
           }}
         />
       </div>
@@ -400,12 +406,6 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
               <BuscaGlobal onOpen={openKind} />
             </div>
             <main className="rp-aplicativo__area" ref={workspace} aria-label="Área de trabalho">
-              <div className="rp-watermark" aria-hidden="true">
-                <span>
-                  Renda<b>+</b>
-                  <i>ERP</i>
-                </span>
-              </div>
               {state.windows.map((w) => (
                 <WindowContext.Provider key={w.id} value={apis[w.id] ?? null}>
                   <WindowFrame

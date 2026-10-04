@@ -1,51 +1,34 @@
 import { MENU, windowFor } from './SideNav';
 
 describe('menu lateral', () => {
-  it('tem os 30 módulos do design system, cada um com itens', () => {
-    expect(MENU).toHaveLength(30);
+  it('tem os 25 módulos do mock, na ordem dele, cada um com itens', () => {
+    expect(MENU.map((m) => m.nome)).toEqual([
+      'Cadastros', 'CRM', 'Vendas', 'Engenharia', 'Compras', 'Estoque', 'MRP', 'Produção', 'Projetos', 'Instalações', 'Equipamentos',
+      'Renda+', 'Qualidade', 'Manutenção', 'Pós-venda', 'Financeiro', 'Faturamento', 'Fiscal', 'Custos', 'Contabilidade / Controladoria',
+      'Tarefas', 'BI & Relatórios', 'Documentos', 'Administração', 'Configurações',
+    ]);
     expect(MENU.every((m) => m.itens.length > 0)).toBe(true);
   });
 
-  it('todo item marcado como implementado abre uma janela (nenhum clique morto)', () => {
-    const implementados = MENU.flatMap((m) => m.itens).filter((i) => i.implementado);
-    expect(implementados.map((i) => i.rotulo).sort()).toEqual([
-      'Agenda do CRM',
-      'Apuração do Simples',
-      'BOM — composição de custos',
-      'Carteira de projetos',
-      'Categorias financeiras',
-      'Classificação fiscal',
-      'Clientes e unidades',
-      'Contas a pagar',
-      'Contas a receber',
-      'Contas financeiras',
-      'Dados da empresa',
-      'Detalhe do projeto',
-      'Documentos e faturamento',
-      'Equipamentos',
-      'Etapas do funil',
-      'Fluxo de caixa',
-      'Fornecedores',
-      'Funil de vendas',
-      'Modelos de equipamento',
-      'Notas a emitir',
-      'Obrigações',
-      'Oportunidades',
-      'Painel fiscal',
-      'Pedidos e contratos',
-      'Produtos e serviços',
-      'Propostas',
-      'Prospecção',
-      'Status do servidor',
-      'Tabelas e parâmetros',
-      'Unidades e categorias',
-      'Usuários e permissões',
+  it('Cadastros tem os 21 itens do mock', () => {
+    expect(MENU[0].itens.map((i) => i.rotulo)).toEqual([
+      'Clientes', 'Fornecedores', 'Contatos', 'Produtos', 'Serviços', 'Materiais e Componentes', 'Unidades de Medida', 'Categorias', 'Marcas',
+      'Transportadoras', 'Bancos', 'Centros de Custo', 'Planos de Contas', 'Condições de Pagamento', 'Formas de Pagamento', 'Depósitos',
+      'Localizações de Estoque', 'Moedas', 'Colaboradores', 'Tipos de Documento', 'Calendários e Feriados',
     ]);
-    expect(implementados.every((i) => windowFor(i) !== undefined)).toBe(true);
   });
 
-  it('itens previstos não têm ação e informam a fase', () => {
-    const previstos = MENU.flatMap((m) => m.itens).filter((i) => !i.implementado);
+  it('todo item com janela abre uma janela que o app tem (nenhum clique morto)', () => {
+    const comJanela = MENU.flatMap((m) => m.itens).filter((i) => i.janela);
+    expect(comJanela.filter((i) => windowFor(i) === undefined).map((i) => i.janela)).toEqual([]);
+  });
+
+  it('itens sem janela ficam esmaecidos e informam a fase', () => {
+    const previstos = MENU.flatMap((m) => m.itens).filter((i) => !i.janela);
     expect(previstos.every((i) => windowFor(i) === undefined && i.fase.length > 0)).toBe(true);
+  });
+
+  it('a chave da janela vem depois da barra', () => {
+    expect(windowFor({ rotulo: 'Clientes', fase: 'x', janela: 'company-profile' })).toEqual({ kind: 'company-profile', recordKey: 'singleton' });
   });
 });

@@ -92,10 +92,10 @@ class TestVerificador(unittest.TestCase):
             m["itens"] = [i for i in m["itens"] if i.get("recurso") != "AN-033"]
         self.assertTrue(any("recurso analítico sem lugar no menu lateral: AN-033" in e for e in self.erros()))
 
-    def test_detecta_modulo_fora_da_ordem_do_design_system(self):
+    def test_detecta_modulo_fora_da_ordem_do_mock(self):
         mods = self.c["menu"]["modulos"]
         mods[0], mods[1] = mods[1], mods[0]
-        self.assertTrue(any("Barra lateral do design system" in e for e in self.erros()))
+        self.assertTrue(any("menu lateral do mock" in e for e in self.erros()))
 
     def test_encontrar_ciclo_simples(self):
         self.assertIsNone(v.encontrar_ciclo({"a": ["b"], "b": []}))

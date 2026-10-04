@@ -18,16 +18,17 @@ const semAcento = (s: string): string => [...s].map((c) => c.normalize('NFD').re
 export const buscarOperacoes = (termo: string, can: (p: string) => boolean): ResultadoBusca[] => {
   const t = semAcento(termo.trim());
   if (!t) return [];
-  const vistos = new Set<WindowKind>();
+  const vistos = new Set<string>();
   const achados: ResultadoBusca[] = [];
   for (const m of MENU) {
     for (const it of m.itens) {
-      const kind = windowFor(it);
-      const need = kind && NEEDS[kind];
-      if (!kind || vistos.has(kind) || (need && !can(need))) continue;
+      const dest = windowFor(it);
+      const need = dest && NEEDS[dest.kind];
+      const chave = dest && `${dest.kind}/${dest.recordKey}`;
+      if (!dest || !chave || vistos.has(chave) || (need && !can(need))) continue;
       if (!semAcento(it.rotulo).includes(t) && !semAcento(m.nome).includes(t)) continue;
-      vistos.add(kind);
-      achados.push({ grupo: 'Operações', rotulo: it.rotulo, detalhe: m.nome, kind });
+      vistos.add(chave);
+      achados.push({ grupo: 'Operações', rotulo: it.rotulo, detalhe: m.nome, kind: dest.kind, recordKey: dest.recordKey });
     }
   }
   return achados;

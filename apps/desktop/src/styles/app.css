@@ -22,8 +22,8 @@ body { background: var(--ground); }
    rodapé; a boas-vindas e as janelas ficam ao lado dela, sem sobreposição. Desliza na largura em 0,25 s. A aparência
    (moldura, sulcos, degradês) vem do design system, seção "Barra lateral fiel à referência". */
 .rp-appbody > .rp-drawer { position: relative; z-index: 1; align-self: stretch; margin-top: var(--space-3); transition: width .25s ease; }
-.rp-appbody > .rp-drawer[data-open=true] { width: 330px; }
-.rp-appbody > .rp-drawer .rp-drawer-inner { width: 330px; height: 100%; display: flex; flex-direction: column; }
+.rp-appbody > .rp-drawer[data-open=true] { width: 300px; }
+.rp-appbody > .rp-drawer .rp-drawer-inner { width: 300px; height: 100%; display: flex; flex-direction: column; }
 .rp-appbody > .rp-drawer .rp-drawer-head { flex: none; }
 .rp-appbody > .rp-drawer .rp-drawer-view[data-active=true] { flex: 1; min-height: 0; height: auto; }
 .rp-gaveta .rp-nav-item { width: 100%; text-align: left; border-left: 0; border-right: 0; cursor: pointer; }
@@ -119,37 +119,53 @@ body { background: var(--ground); }
 .rp-login__corpo { display: flex; min-height: 300px; }
 .rp-login__ilustracao { width: 232px; flex: none; display: flex; background: var(--surface-panel); border-right: 1px solid var(--tab-border); }
 .rp-login__arte { display: block; width: 100%; height: 100%; }
-.rp-login__form { flex: 1; display: flex; flex-direction: column; gap: var(--space-6); padding: var(--space-6) var(--space-6) var(--space-5); background: var(--field); }
+.rp-login__form { flex: 1; display: flex; flex-direction: column; gap: calc(var(--space-6) + var(--space-2)); padding: calc(var(--space-6) + var(--space-3)) calc(var(--space-6) + var(--space-4)) var(--space-6); background: var(--field); }
 .rp-login__marca { font-size: 40px; line-height: 44px; font-weight: 700; letter-spacing: -1px; }
-.rp-login__campos { grid-template-columns: 96px 16px 260px; }
-.rp-login__campos .rp-label, .rp-login__campos .rp-req { border-bottom: 1px solid var(--grid-row-alt); }
+.rp-login__campos { grid-template-columns: 96px 16px 260px; row-gap: var(--space-3); }
+/* Como no mock: cada linha com o fio claro embaixo, de ponta a ponta, e o campo de 24px. */
+.rp-login__campos > * { padding-bottom: var(--space-2); border-bottom: 1px solid var(--form-rule); align-self: stretch; display: flex; align-items: center; }
+.rp-login__campos > .rp-field { height: calc(var(--control-h) + 1px); box-sizing: content-box; padding-bottom: 0; margin-bottom: var(--space-2); }
+.rp-login__campos > .rp-choice, .rp-login__campos > span:empty { border-bottom: 0; }
+.rp-login .rp-titlebar { min-height: calc(var(--titlebar-h) + var(--space-3)); padding: 0 var(--space-5); }
+.rp-login .rp-window-foot { padding: var(--space-4) var(--space-5); background: var(--surface-form); border-top: 1px solid var(--grid-rule); }
 .rp-login__nota { display: flex; align-items: center; gap: var(--space-2); margin: 0; font: var(--text-caption); color: var(--ink-muted); }
 .rp-login .rp-window-foot { justify-content: space-between; align-items: center; }
 .rp-login__obrigatorio { font: var(--text-caption); color: var(--ink-muted); }
-.rp-login__arte .a-fundo { fill: var(--surface-panel); }
-.rp-login__arte .a-janela { fill: var(--field); stroke: var(--grid-rule); }
-.rp-login__arte .a-caixilho { stroke: var(--grid-row-alt); stroke-width: 3; fill: none; }
+.rp-login__arte .a-fundo { fill: var(--arte-fundo); }
+.rp-login__arte .a-janela { fill: var(--chrome); stroke: var(--grid-rule); }
+.rp-login__arte .a-caixilho { stroke: var(--chart-wall); stroke-width: 3; fill: none; }
+.rp-login__arte .a-cadeira { fill: var(--arte-cadeira); }
+.rp-login__arte .a-cadeira-luz { fill: var(--arte-cadeira-luz); }
+.rp-login__arte .a-cabelo { fill: var(--arte-cabelo); }
+.rp-login__arte .a-pescoco { fill: var(--arte-pele-sombra); }
+.rp-login__arte .a-pele { fill: var(--arte-pele); }
+.rp-login__arte .a-roupa { fill: var(--arte-roupa); }
+.rp-login__arte .a-gola { fill: var(--on-dark); }
+.rp-login__arte .a-dobra { stroke: var(--arte-roupa-dobra); stroke-width: 1; fill: none; }
+.rp-login__arte .a-olho { fill: var(--ink); }
+.rp-login__arte .a-sobrancelha { stroke: var(--arte-cabelo); stroke-width: 1.2; fill: none; stroke-linecap: round; }
+.rp-login__arte .a-boca { stroke: var(--arte-boca); stroke-width: 1.6; fill: none; stroke-linecap: round; }
+.rp-login__arte .a-arco { stroke: var(--nav-divider); stroke-width: 3; fill: none; }
+.rp-login__arte .a-fone { fill: var(--nav-divider); }
+.rp-login__arte .a-haste { stroke: var(--nav-divider); stroke-width: 2; fill: none; stroke-linecap: round; }
+.rp-login__arte .a-microfone { fill: var(--gold); }
 .rp-login__arte .a-mesa { fill: var(--grid-rule); }
-.rp-login__arte .a-tampo { fill: var(--surface-form); stroke: var(--field-border); }
+.rp-login__arte .a-tampo { fill: var(--surface-form); }
+.rp-login__arte .a-borda-mesa { stroke: var(--chart-axis); }
+.rp-login__arte .a-teclado { fill: var(--field); stroke: var(--chart-axis); }
 .rp-login__arte .a-moldura { fill: var(--window-border); }
 .rp-login__arte .a-tela { fill: var(--surface-form); }
 .rp-login__arte .a-titulo { fill: var(--titlebar); }
 .rp-login__arte .a-faixa { fill: var(--gold-light); }
-.rp-login__arte .a-menu { fill: var(--nav); }
-.rp-login__arte .a-menu-linhas { stroke: var(--nav-deep); fill: none; }
 .rp-login__arte .a-rotulo { fill: var(--ink-muted); }
 .rp-login__arte .a-campo-ativo { fill: var(--field-active); stroke: var(--field-border); stroke-width: .5; }
 .rp-login__arte .a-campo { fill: var(--field); stroke: var(--field-border); stroke-width: .5; }
-.rp-login__arte .a-grade { fill: var(--grid-row); stroke: var(--grid-rule); stroke-width: .5; }
-.rp-login__arte .a-grade-linhas { stroke: var(--grid-rule); stroke-width: .5; fill: none; }
-.rp-login__arte .a-botao { fill: var(--button); stroke: var(--button-border); stroke-width: .5; }
-.rp-login__arte .a-pe { fill: var(--field-border); }
+.rp-login__arte .a-linha1 { fill: var(--arte-fundo); stroke: var(--grid-rule); stroke-width: .5; }
+.rp-login__arte .a-linha2 { fill: var(--surface-form); stroke: var(--grid-rule); stroke-width: .5; }
+.rp-login__arte .a-pe { fill: var(--chart-axis); }
 .rp-login__arte .a-base { fill: var(--window-border); }
-.rp-login__arte .a-teclado { fill: var(--field); stroke: var(--field-border); }
 .rp-login__arte .a-caneca { fill: var(--gold); }
 .rp-login__arte .a-alca { stroke: var(--gold); stroke-width: 2.5; fill: none; }
-.rp-login__arte .a-vaso { fill: var(--nav-selected); }
-.rp-login__arte .a-folhas { fill: var(--status-success); }
 
 /* Meu cockpit (componente Dashboard 3D) dentro da janela. */
 .rp-cockpit { align-content: start; } /* o .rp-dash do design system dá a grade, o espaçamento e o fundo */

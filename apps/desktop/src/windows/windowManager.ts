@@ -3,54 +3,57 @@
  * Funções puras para facilitar teste; o React só despacha ações.
  */
 
-export type WindowKind =
-  | 'company-profile'
-  | 'server-status'
-  | 'cockpit'
-  | 'customers'
-  | 'customer'
-  | 'suppliers'
-  | 'supplier'
-  | 'items'
-  | 'item'
-  | 'catalog'
-  | 'leads'
-  | 'lead'
-  | 'lead-import'
-  | 'opportunities'
-  | 'opportunity'
-  | 'funnel'
-  | 'crm-agenda'
-  | 'opportunity-stages'
-  | 'proposals'
-  | 'proposal'
-  | 'orders'
-  | 'order'
-  | 'projects'
-  | 'project'
-  | 'equipments'
-  | 'equipment'
-  | 'receivables'
-  | 'receivable'
-  | 'payables'
-  | 'payable'
-  | 'financial-categories'
-  | 'cash-flow'
-  | 'bank-accounts'
-  | 'documents'
-  | 'document'
-  | 'to-issue'
-  | 'fiscal-dashboard'
-  | 'tax-period'
-  | 'tax-obligations'
-  | 'fiscal-classification'
-  | 'tax-tables'
-  | 'boms'
-  | 'bom'
-  | 'bom-import'
-  | 'equipment-models'
-  | 'users'
-  | 'password';
+/** Tipos de janela que o app sabe abrir; o menu lateral só liga os itens cuja janela está aqui. */
+export const WINDOW_KINDS = [
+  'company-profile',
+  'server-status',
+  'cockpit',
+  'customers',
+  'customer',
+  'suppliers',
+  'supplier',
+  'items',
+  'item',
+  'catalog',
+  'leads',
+  'lead',
+  'lead-import',
+  'opportunities',
+  'opportunity',
+  'funnel',
+  'crm-agenda',
+  'opportunity-stages',
+  'proposals',
+  'proposal',
+  'orders',
+  'order',
+  'projects',
+  'project',
+  'equipments',
+  'equipment',
+  'receivables',
+  'receivable',
+  'payables',
+  'payable',
+  'financial-categories',
+  'cash-flow',
+  'bank-accounts',
+  'documents',
+  'document',
+  'to-issue',
+  'fiscal-dashboard',
+  'tax-period',
+  'tax-obligations',
+  'fiscal-classification',
+  'tax-tables',
+  'boms',
+  'bom',
+  'bom-import',
+  'equipment-models',
+  'users',
+  'password',
+] as const;
+export type WindowKind = (typeof WINDOW_KINDS)[number];
 export type WindowMode = 'normal' | 'minimized' | 'maximized';
 
 export type Rect = { x: number; y: number; w: number; h: number };

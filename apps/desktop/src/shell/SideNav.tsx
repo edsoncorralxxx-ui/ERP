@@ -1,6 +1,6 @@
 import { useState, type KeyboardEvent } from 'react';
 import menu from '../../../../docs/backend/b01/menu.json';
-import type { WindowKind } from '../windows/windowManager';
+import { WINDOW_KINDS, type WindowKind } from '../windows/windowManager';
 import { subIcon } from './modules';
 import { useSession } from './SessionContext';
 
@@ -51,55 +51,27 @@ export function Rail({ view, open, cockpitOpen, onSelect, onCockpit }: RailProps
 export type MenuItem = {
   rotulo: string;
   fase: string;
+  /** Janela que o app abre: tipo ou tipo/chave (ex.: cadastro-lista/clientes). */
+  janela?: string;
   tela?: string;
-  secao?: string;
-  visao?: string;
   recurso?: string;
-  acao?: string;
-  nota?: boolean;
-  implementado?: boolean;
 };
 export type MenuModule = { nome: string; icone: string; itens: MenuItem[] };
 
-/** Catálogo do menu lateral: fonte única em docs/backend/b01/menu.json, conferida pelo verificador do B01. */
+/** Catálogo do menu lateral: fonte única em docs/backend/b01/menu.json (igual ao mock), conferida pelo verificador do B01. */
 export const MENU: MenuModule[] = (menu as { modulos: MenuModule[] }).modulos;
 
-/** Chave que liga um item implementado à janela que o app abre. */
-export const itemKey = (it: MenuItem) => it.acao ?? `${it.tela ?? ''}:${it.secao ?? ''}`;
+/** Destino de um item: a janela e a chave do registro (singleton quando a janela não tem chave). */
+export type Destino = { kind: WindowKind; recordKey: string };
 
-const WINDOWS: Record<string, WindowKind> = {
-  'status-servidor': 'server-status',
-  'configuracoes:EMPRESA': 'company-profile',
-  'configuracoes:ACESSO': 'users',
-  'clientes:': 'customers',
-  'fornecedores:': 'suppliers',
-  'materiais:': 'items',
-  'materiais:CATALOGO': 'catalog',
-  'prospeccao:': 'leads',
-  'prospeccao:OPORTUNIDADES': 'opportunities',
-  'prospeccao:FUNIL': 'funnel',
-  'prospeccao:AGENDA': 'crm-agenda',
-  'prospeccao:ETAPAS': 'opportunity-stages',
-  'propostas:': 'proposals',
-  'pedidos:': 'orders',
-  'carteira:': 'projects',
-  'projeto:': 'projects',
-  'equipamentos:': 'equipments',
-  'receber:': 'receivables',
-  'pagar:': 'payables',
-  'pagar:CATEGORIAS': 'financial-categories',
-  'caixa:': 'cash-flow',
-  'conciliacao:CONTAS': 'bank-accounts',
-  'documentos:': 'documents',
-  'documentos:A_EMITIR': 'to-issue',
-  'impostos:PAINEL': 'fiscal-dashboard',
-  'impostos:': 'tax-period',
-  'impostos:OBRIGACOES': 'tax-obligations',
-  'impostos:CLASSIFICACAO': 'fiscal-classification',
-  'impostos:TABELAS': 'tax-tables',
-  'bom:': 'boms',
-  'bom:MODELOS': 'equipment-models',
-};
+const KINDS_SET = new Set<string>(WINDOW_KINDS);
+
+/** Janela aberta pelo item; item sem janela, ou com janela que o app ainda não tem, fica esmaecido. */
+export function windowFor(it: MenuItem): Destino | undefined {
+  if (!it.janela) return undefined;
+  const [kind, recordKey] = it.janela.split('/');
+  return KINDS_SET.has(kind) ? { kind: kind as WindowKind, recordKey: recordKey ?? 'singleton' } : undefined;
+}
 
 /** Permissão de leitura que cada janela exige; sem ela o item aparece, mas não abre. */
 export const NEEDS: Partial<Record<WindowKind, string>> = {
@@ -139,12 +111,7 @@ export const NEEDS: Partial<Record<WindowKind, string>> = {
   'equipment-models': 'bom.read',
 };
 
-/** Janela aberta pelo item; só itens marcados como implementados têm destino. */
-export function windowFor(it: MenuItem): WindowKind | undefined {
-  return it.implementado ? WINDOWS[itemKey(it)] : undefined;
-}
-
-type DrawerProps = { open: boolean; view: RailView; onClose: () => void; onOpen: (kind: WindowKind) => void };
+type DrawerProps = { open: boolean; view: RailView; onClose: () => void; onOpen: (kind: WindowKind, recordKey?: string) => void };
 
 /**
  * Gaveta do menu lateral com o Painel de módulos (30 módulos, na ordem do design system), no visual do protótipo:
@@ -174,28 +141,24 @@ export function Drawer({ open, view, onClose, onOpen }: DrawerProps) {
                   <div className="rp-nav-subs">
                     {m.itens.map((it) => {
                       const target = windowFor(it);
-                      const need = target && NEEDS[target];
+                      const need = target && NEEDS[target.kind];
                       const blocked = !!need && !can(need);
-                      const kind = blocked ? undefined : target;
-                      const title = blocked
-                        ? `${it.rotulo} — seu perfil não permite`
-                        : kind || it.nota
-                          ? it.rotulo
-                          : `${it.rotulo} — previsto: ${it.fase}`;
+                      const dest = blocked ? undefined : target;
+                      const abrir = () => dest && onOpen(dest.kind, dest.recordKey);
+                      const title = blocked ? `${it.rotulo} — seu perfil não permite` : dest ? `Abrir ${it.rotulo}` : `${it.rotulo} — ainda não disponível`;
                       return (
                         <div
-                          key={`${it.rotulo}-${itemKey(it)}-${it.visao ?? ''}-${it.recurso ?? ''}`}
-                          className={`rp-nav-sub${kind ? '' : ' rp-nav-sub--indisponivel'}`}
+                          key={it.rotulo}
+                          className={`rp-nav-sub${dest ? '' : ' rp-nav-sub--indisponivel'}`}
                           role="button"
                           tabIndex={open && isOpen ? 0 : -1}
-                          aria-disabled={!kind || undefined}
+                          aria-disabled={!dest || undefined}
                           title={title}
-                          onClick={() => kind && onOpen(kind)}
-                          onKeyDown={(e) => kind && (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen(kind))}
+                          onClick={abrir}
+                          onKeyDown={(e) => dest && (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), abrir())}
                         >
                           <i className={`rp-ico rp-ico-w-${subIcon(it.rotulo, m.icone)}`} aria-hidden="true" />
                           <span className="rp-nav-sub__rotulo">{it.rotulo}</span>
-                          {!kind && !it.nota && !blocked && <span className="rp-nav-sub__fase">{it.fase}</span>}
                         </div>
                       );
                     })}
