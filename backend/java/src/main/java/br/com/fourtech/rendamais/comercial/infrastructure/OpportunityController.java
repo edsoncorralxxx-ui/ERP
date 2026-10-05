@@ -50,7 +50,7 @@ class OpportunityController {
         }
     }
 
-    record StageRequest(String stage, String nextActionDate, String nextActionNote) { }
+    record StageRequest(String stage, String nextActionDate, String nextActionNote, String note) { }
 
     record LossRequest(String lossReason, String lossNote) { }
 
@@ -89,7 +89,7 @@ class OpportunityController {
                                          @RequestHeader(value = "If-Match", required = false) String ifMatch,
                                          @RequestBody StageRequest body) {
         return respond(HttpStatus.OK, service.changeStage(id, Versions.required(ifMatch), body.stage(), body.nextActionDate(),
-                body.nextActionNote()));
+                body.nextActionNote(), body.note()));
     }
 
     @PostMapping("/{id}/loss")

@@ -570,6 +570,192 @@ def calendarios():
     ins("price_list_entry", precos)
 
 
+# CRM ---------------------------------------------------------------------------------------------------------------
+
+HOJE = date(2026, 9, 24)  # o "hoje" do mock (RENDA_DEMO_DATE=2026-09-24T09:31)
+ETAPA = {"Prospecção": "PROSPECCAO", "Qualificação": "QUALIFICACAO", "Visita técnica": "VISITA_TECNICA", "Proposta": "PROPOSTA",
+         "Negociação": "NEGOCIACAO"}
+PCT = {"PROSPECCAO": 10, "QUALIFICACAO": 25, "VISITA_TECNICA": 40, "PROPOSTA": 60, "NEGOCIACAO": 80}
+ORDEM = ["PROSPECCAO", "QUALIFICACAO", "VISITA_TECNICA", "PROPOSTA", "NEGOCIACAO"]
+ORIGEM = {"Site": "SITE", "Feira do setor de mandioca": "FEIRA", "Indicação": "INDICACAO", "Prospecção ativa": "PROSPECCAO_ATIVA",
+          "Cliente da base": "CLIENTE_ATUAL"}
+SITUACAO_LEAD = {"Novo": "IDENTIFICADO", "Em contato": "CONTATADO", "Qualificado": "INTERESSADO", "Descartado": "DESCARTADO"}
+
+# nº, cliente, título, valor, etapa, previsão, responsável, dias sem atividade, origem, contato
+OPORTUNIDADES = [
+    ("OP-000231", "C00012", "2 balanças Renda+ R50 para as moegas de recebimento", 483140, "Negociação", "2026-09-30", "Patrícia Gomes", 2, "Feira do setor de mandioca", "Mariana Rocha"),
+    ("OP-000226", "C00021", "Balança Renda+ R50 Compacta — 1 moega", 150000, "Negociação", "2026-09-28", "Rafael Lima", 4, "Indicação", "João Batista"),
+    ("OP-000228", "C00018", "Ampliação — 2ª linha de recebimento", 236500, "Proposta", "2026-10-10", "Carlos Eduardo Pereira", 6, "Cliente da base", "Sérgio Almeida"),
+    ("OP-000219", "C00024", "Contrato de manutenção e aferição — 3 balanças", 64800, "Proposta", "2026-10-15", "Carlos Eduardo Pereira", 21, "Cliente da base", "Helena Prado"),
+    ("OP-000224", "C00015", "Balança Renda+ R50 para a unidade de Paranavaí", 248000, "Visita técnica", "2026-10-31", "Rafael Lima", 3, "Prospecção ativa", "Otávio Nunes"),
+    ("OP-000221", "C00042", "Trocar a balança hidrostática manual — 2 moegas", 412000, "Visita técnica", "2026-11-14", "Carlos Eduardo Pereira", 9, "Indicação", "Renata Lopes"),
+    ("OP-000235", "C00027", "Balança Renda+ R50 Compacta", 136000, "Qualificação", "2026-11-20", "Rafael Lima", 1, "Feira do setor de mandioca", "Antônio Ferraz"),
+    ("OP-000237", "C00033", "Renda+ para a fecularia nova de Nova Andradina", 452000, "Qualificação", "2026-11-30", "Patrícia Gomes", 5, "Site", "Luciana Motta"),
+    ("OP-000236", "C00036", "Balança Renda+ R50 Compacta — Recôncavo", 128000, "Prospecção", "2026-12-15", "Carlos Eduardo Pereira", 12, "Prospecção ativa", "Fábio Reis"),
+    ("OP-000239", "C00045", "Balança Renda+ R50 Compacta para uso da associação", 128000, "Prospecção", "2026-12-20", "Patrícia Gomes", 0, "Site", "Paulo Vieira"),
+    ("OP-000217", "C00030", "Coletor automático adicional CA-10", 38500, "Ganha", "2026-09-12", "Patrícia Gomes", 12, "Cliente da base", "Marcos Teles"),
+    ("OP-000214", "C00039", "Balança Renda+ R50 Compacta", 128000, "Perdida", "2026-09-05", "Rafael Lima", 19, "Indicação", "Célia Ramos"),
+]
+
+# nº, nome, empresa, cidade, UF, origem, interesse, pontuação, situação, responsável, dias sem contato, telefone, e-mail, moagem
+LEADS = [
+    ("L-0412", "Luciana Motta", "Amido Pantanal Participações S.A.", "Nova Andradina", "MS", "Site", "Balança Renda+ R50", 86, "Qualificado", "Patrícia Gomes", 1, "(67) 90000-0101", "luciana@exemplo.com.br", 800),
+    ("L-0418", "Diego Carvalho", "Farinheira Três Irmãos", "Cianorte", "PR", "Feira do setor de mandioca", "Balança Renda+ R50 Compacta", 72, "Em contato", "Rafael Lima", 3, "(44) 90000-0102", "diego@exemplo.com.br", 120),
+    ("L-0421", "Tereza Albuquerque", "Fecularia Pantanal", "Glória de Dourados", "MS", "Indicação", "Balança Renda+ R50", 81, "Em contato", "Carlos Eduardo Pereira", 2, "(67) 90000-0103", "tereza@exemplo.com.br", 550),
+    ("L-0423", "Ricardo Menezes", "Polvilharia Boa Nata", "Pouso Alegre", "MG", "Site", "Coletor automático CA-10", 58, "Novo", "Patrícia Gomes", 0, "(35) 90000-0104", "ricardo@exemplo.com.br", 90),
+    ("L-0424", "Vanessa Queiroz", "Farinheira Terra Roxa", "Tapejara", "PR", "Feira do setor de mandioca", "Balança Renda+ R50 Compacta", 64, "Novo", "Rafael Lima", 0, "(44) 90000-0105", "vanessa@exemplo.com.br", 150),
+    ("L-0409", "André Siqueira", "Fecularia Vista Alegre", "Assis", "SP", "Prospecção ativa", "Contrato de manutenção e aferição", 41, "Em contato", "Patrícia Gomes", 11, "(18) 90000-0106", "andre@exemplo.com.br", 300),
+    ("L-0402", "Marta Figueiredo", "Casa de Farinha Recanto", "Vitória da Conquista", "BA", "Site", "Balança Renda+ R50 Compacta", 22, "Descartado", "Carlos Eduardo Pereira", 26, "(77) 90000-0107", "marta@exemplo.com.br", 15),
+    ("L-0425", "Henrique Bastos", "Cooperativa Mandioca Sul", "Santa Rosa do Sul", "SC", "Indicação", "Balança Renda+ R50", 77, "Novo", "Carlos Eduardo Pereira", 0, "(48) 90000-0108", "henrique@exemplo.com.br", 400),
+]
+
+# tipo, assunto, dia, início, duração (min), oportunidade, responsável, situação, anotações
+TIPO_ATIV = {"Visita técnica": "VISITA_TECNICA", "Reunião": "REUNIAO", "Ligação": "LIGACAO", "E-mail": "EMAIL", "Tarefa": "TAREFA"}
+ATIVIDADES = [
+    ("Ligação", "Primeiro contato após a feira", "2026-08-14", "10:00", 30, "OP-000231", "Patrícia Gomes", "CONCLUIDA", None),
+    ("Visita técnica", "Levantamento da moega de recebimento", "2026-09-02", "08:00", 180, "OP-000231", "Patrícia Gomes", "CONCLUIDA", None),
+    ("Visita técnica", "Levantamento da moega de recebimento", "2026-09-21", "08:00", 180, "OP-000224", "Rafael Lima", "CONCLUIDA", None),
+    ("Ligação", "Retorno sobre a proposta da 2ª linha", "2026-09-21", "14:00", 30, "OP-000228", "Carlos Eduardo Pereira", "CONCLUIDA", None),
+    ("Reunião", "Apresentação do retorno para a diretoria", "2026-09-22", "10:00", 90, "OP-000231", "Patrícia Gomes", "CONCLUIDA", None),
+    ("E-mail", "Enviar layout de instalação nas 2 moegas", "2026-09-22", "15:00", 30, "OP-000221", "Carlos Eduardo Pereira", "CONCLUIDA", None),
+    ("Tarefa", "Revisar valores do contrato de aferição", "2026-09-23", "09:00", 60, "OP-000219", "Carlos Eduardo Pereira", "PLANEJADA", None),
+    ("Ligação", "Qualificar lead da feira", "2026-09-23", "11:00", 30, "OP-000235", "Rafael Lima", "CONCLUIDA", None),
+    ("Reunião", "Negociação de prazo e forma de pagamento", "2026-09-24", "09:00", 90, "OP-000231", "Patrícia Gomes", "PLANEJADA",
+     "Levar a planilha de retorno com prazo de 24 meses. Diretoria pediu 5% de desconto à vista."),
+    ("Ligação", "Confirmar visita técnica", "2026-09-24", "11:00", 30, "OP-000221", "Carlos Eduardo Pereira", "PLANEJADA", None),
+    ("Visita técnica", "Demonstração da balança em funcionamento", "2026-09-24", "14:00", 150, "OP-000226", "Rafael Lima", "PLANEJADA", None),
+    ("E-mail", "Enviar catálogo da Renda+ Compacta", "2026-09-24", "16:30", 30, "OP-000236", "Carlos Eduardo Pereira", "PLANEJADA", None),
+    ("Reunião", "Definir local da balança na unidade", "2026-09-25", "09:00", 120, "OP-000224", "Rafael Lima", "PLANEJADA", None),
+    ("Ligação", "Primeiro contato", "2026-09-25", "14:00", 30, "OP-000239", "Patrícia Gomes", "PLANEJADA", None),
+    ("Tarefa", "Preparar minuta do contrato", "2026-09-25", "15:00", 90, "OP-000231", "Patrícia Gomes", "PLANEJADA", None),
+]
+
+# Histórico de etapas da OP-000231 (aba do mock): quando, de, para, observação.
+ETAPAS_231 = [("2026-08-04 14:22", None, "PROSPECCAO", "Criada a partir do lead"), ("2026-08-10 11:30", "PROSPECCAO", "QUALIFICACAO", None),
+              ("2026-08-18 09:05", "QUALIFICACAO", "VISITA_TECNICA", None),
+              ("2026-09-02 16:40", "VISITA_TECNICA", "PROPOSTA", "Levantamento da moega concluído"),
+              ("2026-09-19 10:12", "PROPOSTA", "NEGOCIACAO", "Cliente pediu revisão de prazo")]
+
+
+# Oportunidades fechadas nos últimos 24 meses (taxa de conversão e séries do painel): mês de fechamento, ganha?, valor.
+FECHADAS = [("2024-10", False, 128000), ("2024-11", True, 236000), ("2024-12", False, 98000), ("2025-01", False, 150000),
+            ("2025-02", True, 412000), ("2025-03", False, 64000), ("2025-04", False, 128000), ("2025-05", True, 198000),
+            ("2025-06", False, 136000), ("2025-08", False, 248000), ("2025-09", False, 120000),
+            ("2025-10", False, 128000), ("2025-11", True, 236500), ("2025-12", False, 150000), ("2026-01", False, 98000),
+            ("2026-02", True, 198000), ("2026-03", False, 412000), ("2026-04", False, 64800), ("2026-05", True, 248000),
+            ("2026-06", False, 136000), ("2026-07", False, 128000), ("2026-07", False, 98000), ("2026-08", True, 150000), ("2026-08", False, 452000),
+            ("2026-08", False, 88000)]
+MOTIVOS = ["PRECO", "PRAZO", "CONCORRENTE", "SEM_ORCAMENTO", "DESISTIU"]
+
+
+def historico(opps, mudancas):
+    clientes = [c[0] for c in CLIENTES]
+    donos = ["Patrícia Gomes", "Rafael Lima", "Carlos Eduardo Pereira"]
+    for n, (mes, ganha, valor) in enumerate(FECHADAS):
+        cod = f"OP-{150 + n:06d}"
+        fim = date(int(mes[:4]), int(mes[5:]), 10 + n % 15)
+        criada = fim - timedelta(days=75)
+        st = "NEGOCIACAO" if ganha else ORDEM[1 + n % 4]
+        status = "GANHA" if ganha else "PERDIDA"
+        motivo = None if ganha else MOTIVOS[n % len(MOTIVOS)]
+        opps.append(dict(id=uid("opp", cod), code=cod, name="Balança Renda+ R50" + (" Compacta" if valor < 200000 else ""), lead_id=None,
+                         customer_id=uid("partner", clientes[n % len(clientes)]), unit_id=None, unit_name=None, owner=donos[n % 3],
+                         source=list(ORIGEM.values())[n % 5], interest="MEDIO", potential_cents=cents(valor), expected_close=str(fim),
+                         stage=st, status=status, loss_reason=motivo, loss_note=None, closed_at=ts(str(fim), "17:00"), won_order_code=None,
+                         next_action_date=None, next_action_note=None, last_interaction=str(fim), notes=None, version=1,
+                         created_at=ts(str(criada)), created_by=QUEM, updated_at=ts(str(fim)), updated_by=QUEM, contact_name=None, need={}))
+        de = None
+        for k in range(ORDEM.index(st) + 1):
+            dia = criada + timedelta(days=12 * k)
+            mudancas.append(dict(id=uid("stage", cod, k), opportunity_id=uid("opp", cod), from_stage=de, to_stage=ORDEM[k], status="ABERTA",
+                                 close_percent=PCT[ORDEM[k]], potential_cents=cents(valor), weighted_cents=round(cents(valor) * PCT[ORDEM[k]] / 100),
+                                 changed_at=ts(str(dia)), changed_by=donos[n % 3], note=None))
+            de = ORDEM[k]
+        mudancas.append(dict(id=uid("stage", cod, "fim"), opportunity_id=uid("opp", cod), from_stage=st, to_stage=st, status=status,
+                             close_percent=100 if ganha else 0, potential_cents=cents(valor), weighted_cents=cents(valor) if ganha else 0,
+                             changed_at=ts(str(fim), "17:00"), changed_by=donos[n % 3], note=None))
+
+
+def crm():
+    sec("CRM: leads, oportunidades, etapas, itens de interesse, atividades e meta")
+    leads = []
+    for (cod, nome, emp, cid, uf, orig, inter, score, sit, resp, dias, tel, mail, moagem) in LEADS:
+        ult = HOJE - timedelta(days=dias)
+        leads.append(dict(id=uid("lead", cod), code=cod, company_name=emp, trade_name=None, city=cid, state=uf, has_renda="NAO",
+                          rating=None, stage=SITUACAO_LEAD[sit], discard_reason="Moagem pequena demais para a balança" if sit == "Descartado" else None,
+                          owner=resp, source=ORIGEM[orig], contact_name=nome, contact_phone=tel, contact_email=mail, notes=None,
+                          partner_id=uid("partner", "C00033") if cod == "L-0412" else None, next_action_date=None, next_action_note=None,
+                          last_interaction=str(ult), import_id=None, version=1, created_at=ts(str(ult - timedelta(days=20))), created_by=QUEM,
+                          updated_at=ts(str(ult)), updated_by=QUEM, daily_capacity_tons=moagem, score=score, interest_item=inter))
+    ins("lead", leads)
+    out.append("select setval('lead_code_seq', 425);")
+    out.append("")
+
+    opps, mudancas, itens = [], [], []
+    for (cod, cli, titulo, valor, etapa, prev, resp, dias, orig, contato) in OPORTUNIDADES:
+        ganha, perdida = etapa == "Ganha", etapa == "Perdida"
+        st = "NEGOCIACAO" if ganha else "PROPOSTA" if perdida else ETAPA[etapa]
+        status = "GANHA" if ganha else "PERDIDA" if perdida else "ABERTA"
+        ultima = HOJE - timedelta(days=dias)
+        fechada = ts(prev, "17:00") if status != "ABERTA" else None
+        criada = date(2026, 8, 4) if cod == "OP-000231" else ultima - timedelta(days=30 + 14 * ORDEM.index(st))
+        need = {"industry": "Fecularia", "dailyCapacityTons": 600, "receivingPits": 2, "installationSite": "Moega de recebimento",
+                "power": "380 V trifásica", "desiredStart": "2027-03-01", "mainCompetitor": "[CONCORRENTE A]"} if cod == "OP-000231" else {}
+        opps.append(dict(id=uid("opp", cod), code=cod, name=titulo, lead_id=uid("lead", "L-0412") if cod == "OP-000237" else None,
+                         customer_id=uid("partner", cli), unit_id=None, unit_name=None, owner=resp, source=ORIGEM[orig], interest="ALTO" if valor > 300000 else "MEDIO",
+                         potential_cents=cents(valor), expected_close=prev, stage=st, status=status,
+                         loss_reason="PRECO" if perdida else None, loss_note="Cliente comprou balança mais simples, de outro fornecedor" if perdida else None,
+                         closed_at=fechada, won_order_code=None, next_action_date=None, next_action_note=None, last_interaction=str(ultima),
+                         notes="Pico de safra de maio a agosto: instalação só fora do horário de recebimento." if cod == "OP-000231" else None,
+                         version=1, created_at=ts(str(criada), "14:22"), created_by=QUEM, updated_at=ts(str(ultima)), updated_by=QUEM,
+                         contact_name=contato, need=need))
+        # Histórico de etapas: a OP-000231 como no mock; as demais avançam uma etapa a cada 6 dias até a atual.
+        if cod == "OP-000231":
+            passos = [(quando, de, para, obs) for quando, de, para, obs in ETAPAS_231]
+        else:
+            alvo = ORDEM.index(st)
+            passos, de = [], None
+            for k in range(alvo + 1):
+                dia = criada + timedelta(days=14 * k) if k < alvo else ultima
+                passos.append((f"{dia} 09:{10 + k:02d}", de, ORDEM[k], "Criada pelo responsável" if k == 0 else None))
+                de = ORDEM[k]
+        for k, (quando, de, para, obs) in enumerate(passos):
+            p = PCT[para]
+            mudancas.append(dict(id=uid("stage", cod, k), opportunity_id=uid("opp", cod), from_stage=de, to_stage=para, status="ABERTA",
+                                 close_percent=p, potential_cents=cents(valor), weighted_cents=round(cents(valor) * p / 100),
+                                 changed_at=f"{quando}:00-03", changed_by=resp, note=obs))
+        if status != "ABERTA":
+            mudancas.append(dict(id=uid("stage", cod, "fim"), opportunity_id=uid("opp", cod), from_stage=st, to_stage=st, status=status,
+                                 close_percent=100 if ganha else 0, potential_cents=cents(valor), weighted_cents=cents(valor) if ganha else 0,
+                                 changed_at=fechada, changed_by=resp, note="Pedido confirmado" if ganha else "Perdida por preço"))
+    historico(opps, mudancas)
+    ins("opportunity", opps)
+    ins("opportunity_stage_change", mudancas)
+    out.append("select setval('opportunity_code_seq', 239);")
+    out.append("")
+    for k, (item, desc, uom, qtd, preco) in enumerate([("PA-1000", "Balança de renda Renda+ R50", "UN", "2", "198000"),
+                                                      ("SV-010", "Instalação e comissionamento na moega de recebimento", "SV", "2", "22000"),
+                                                      ("SV-040", "Treinamento de operadores", "H", "16", "290"),
+                                                      ("PA-1100", "Coletor automático de amostras CA-10", "UN", "1", "38500")]):
+        itens.append(dict(opportunity_id=uid("opp", "OP-000231"), position=k, item_id=uid("item", item), item_code=item, description=desc,
+                          uom=uom, quantity=qtd, unit_price=preco))
+    ins("opportunity_item", itens)
+
+    ativ = []
+    cliente = {o[0]: o[1] for o in OPORTUNIDADES}
+    for k, (tipo, assunto, dia, hora, dur, op, resp, sit, notas) in enumerate(ATIVIDADES):
+        ativ.append(dict(id=uid("ativ", k), kind=TIPO_ATIV[tipo], subject=assunto, day=dia, start_time=hora, duration_min=dur,
+                         partner_id=uid("partner", cliente[op]), lead_id=None, opportunity_id=uid("opp", op), owner=resp, status=sit, notes=notas,
+                         completed_at=ts(dia, "18:00") if sit == "CONCLUIDA" else None, version=1, created_at=ts(dia, "07:00"),
+                         created_by=QUEM, updated_at=ts(dia, "07:00"), updated_by=QUEM))
+    ins("crm_activity", ativ)
+
+    metas = []
+    for mes, meta in [("2026-07-01", 400000), ("2026-08-01", 420000), ("2026-09-01", 450000), ("2026-10-01", 480000)]:
+        metas.append(dict(id=uid("meta", mes), month=mes, owner=None, target_cents=cents(meta), updated_at=ts("2026-01-05"), updated_by="Beatriz Costa"))
+    ins("sales_target", metas)
+
+
 def anexos():
     sec("Anexos do C00012 (aba Documentos)")
     pdf = "JVBERi0xLjQKJcOkw7zDtsOfCjEgMCBvYmoKPDwgL1R5cGUgL0NhdGFsb2cgPj4KZW5kb2JqCnRyYWlsZXIKPDwgL1Jvb3QgMSAwIFIgPj4KJSVFT0YK"
@@ -595,6 +781,7 @@ def gerar():
     estoque()
     calendarios()
     anexos()
+    crm()
     return "\n".join(out) + "\n"
 
 

@@ -147,13 +147,13 @@ class JdbcOpportunityRepository implements OpportunityRepository {
     public void insertStageChange(StageChange c) {
         jdbc.sql("""
                 insert into opportunity_stage_change (id, opportunity_id, from_stage, to_stage, status, close_percent,
-                       potential_cents, weighted_cents, changed_at, changed_by)
-                values (:id, :o, :from, :to, :status, :pct, :potential, :weighted, :at, :by)
+                       potential_cents, weighted_cents, changed_at, changed_by, note)
+                values (:id, :o, :from, :to, :status, :pct, :potential, :weighted, :at, :by, :note)
                 """)
                 .param("id", c.id()).param("o", c.opportunityId()).param("from", c.fromStage()).param("to", c.toStage())
                 .param("status", c.status().name()).param("pct", c.closePercent()).param("potential", c.potentialCents())
                 .param("weighted", c.weightedCents()).param("at", ts(c.changedAt())).param("by", c.changedBy())
-                .update();
+                .param("note", c.note()).update();
     }
 
     @Override
@@ -163,7 +163,7 @@ class JdbcOpportunityRepository implements OpportunityRepository {
                 .query((rs, n) -> new StageChange(rs.getObject("id", UUID.class), rs.getObject("opportunity_id", UUID.class),
                         rs.getString("from_stage"), rs.getString("to_stage"), Opportunity.Status.valueOf(rs.getString("status")),
                         rs.getBigDecimal("close_percent"), rs.getLong("potential_cents"), rs.getLong("weighted_cents"),
-                        instant(rs, "changed_at"), rs.getString("changed_by"))).list();
+                        instant(rs, "changed_at"), rs.getString("changed_by"), rs.getString("note"))).list();
     }
 
     @Override

@@ -20,7 +20,8 @@ public interface OpportunityRepository {
 
     /** Linha da aba Etapas: passagem por uma etapa com o percentual e os valores da data. */
     record StageChange(UUID id, UUID opportunityId, String fromStage, String toStage, Opportunity.Status status,
-                       BigDecimal closePercent, long potentialCents, long weightedCents, Instant changedAt, String changedBy) { }
+                       BigDecimal closePercent, long potentialCents, long weightedCents, Instant changedAt, String changedBy,
+                       String note) { }
 
     /** Próximo número: OP00001. */
     String nextCode();

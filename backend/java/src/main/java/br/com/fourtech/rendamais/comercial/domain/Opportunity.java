@@ -16,8 +16,8 @@ import java.util.stream.Collectors;
 
 /**
  * Oportunidade de venda (conceito OPORTUNIDADE do B01), no desenho do SAP Business One: potencial, previsão de fechamento,
- * nível de interesse, etapa do funil com percentual de fechamento, concorrentes e o resumo (ganha ou perdida). Enquanto
- * aberta, sempre tem uma próxima ação (decisão do PO em 03/10/2026). Ganha quando uma proposta dela vira pedido.
+ * nível de interesse, etapa do funil com percentual de fechamento, concorrentes e o resumo (ganha ou perdida). A próxima
+ * ação é opcional (Sprint 13: no mock ela é a próxima atividade da agenda). Ganha quando uma proposta dela vira pedido.
  */
 public record Opportunity(UUID id, String code, String name, UUID leadId, UUID customerId, UUID unitId, String unitName,
                           String owner, Crm.Source source, Interest interest, long potentialCents, LocalDate expectedClose,
@@ -91,7 +91,6 @@ public record Opportunity(UUID id, String code, String name, UUID leadId, UUID c
     /** Muda de etapa (avança ou volta), com a nova próxima ação. */
     public Opportunity changeStage(String newStage, Crm.NextAction next, Instant now, String actor) {
         requireOpen();
-        if (!next.isSet()) throw invalid("nextActionDate", "Informe a próxima ação.");
         return with(newStage, Status.ABERTA, null, null, null, null, next, lastInteraction, now, actor);
     }
 
@@ -189,7 +188,8 @@ public record Opportunity(UUID id, String code, String name, UUID leadId, UUID c
         }
         LocalDate expected = Crm.date(d.expectedClose(), "expectedClose", null, issues);
         String notes = Crm.text(d.notes(), "notes", 2000, null, issues);
-        Crm.NextAction next = Crm.nextAction(d.nextActionDate(), d.nextActionNote(), true, today, issues);
+        // Opcional desde a Sprint 13: a próxima ação do mock é a próxima atividade planejada na agenda.
+        Crm.NextAction next = Crm.nextAction(d.nextActionDate(), d.nextActionNote(), false, today, issues);
         List<Competitor> competitors = new ArrayList<>();
         List<CompetitorData> raw = d.competitors() == null ? List.of() : d.competitors();
         for (int i = 0; i < raw.size(); i++) {

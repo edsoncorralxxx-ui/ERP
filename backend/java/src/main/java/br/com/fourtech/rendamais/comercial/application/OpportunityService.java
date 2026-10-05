@@ -1,5 +1,6 @@
 package br.com.fourtech.rendamais.comercial.application;
 
+import br.com.fourtech.rendamais.cadastros.api.EmployeeDirectory;
 import br.com.fourtech.rendamais.acesso.api.CurrentUser;
 import br.com.fourtech.rendamais.acesso.api.CurrentUserHolder;
 import br.com.fourtech.rendamais.acesso.api.Permissions;
@@ -58,14 +59,15 @@ public class OpportunityService {
     private final UserDirectory users;
     private final AuditTrail audit;
     private final AuditQuery auditQuery;
+    private final EmployeeDirectory employees;
     private final Outbox outbox;
     private final CommandReceipts receipts;
     private final Clock clock;
 
     public OpportunityService(OpportunityRepository repository, LeadRepository leads, InteractionRepository interactions,
                               ProposalRepository proposals, CommercialLookups lookups, LeadService leadService,
-                              UserDirectory users, AuditTrail audit, AuditQuery auditQuery, Outbox outbox,
-                              CommandReceipts receipts, Clock clock) {
+                              UserDirectory users, EmployeeDirectory employees, AuditTrail audit, AuditQuery auditQuery,
+                              Outbox outbox, CommandReceipts receipts, Clock clock) {
         this.repository = repository;
         this.leads = leads;
         this.interactions = interactions;
@@ -73,6 +75,7 @@ public class OpportunityService {
         this.lookups = lookups;
         this.leadService = leadService;
         this.users = users;
+        this.employees = employees;
         this.audit = audit;
         this.auditQuery = auditQuery;
         this.outbox = outbox;
@@ -127,11 +130,14 @@ public class OpportunityService {
         return repository.stages();
     }
 
-    /** Usuários ativos, para escolher o responsável. */
+    /** Responsáveis possíveis: colaboradores ativos (pelo nome) e usuários ativos (pelo login). */
     @Transactional(readOnly = true)
     public List<UserDirectory.UserRef> owners() {
         CurrentUserHolder.require(Permissions.OPPORTUNITY_READ);
-        return users.activeUsers();
+        List<UserDirectory.UserRef> all = new ArrayList<>();
+        employees.activeNames().forEach(n -> all.add(new UserDirectory.UserRef(n, n)));
+        users.activeUsers().stream().filter(u -> all.stream().noneMatch(x -> x.username().equals(u.username()))).forEach(all::add);
+        return all;
     }
 
     // ───────────── Comandos ─────────────
@@ -210,23 +216,27 @@ public class OpportunityService {
     /** Muda de etapa (avança ou volta), com a nova próxima ação; grava a linha da aba Etapas. */
     @Transactional
     public OpportunityRepository.Summary changeStage(UUID id, long expectedVersion, String stage, String nextActionDate,
-                                                     String nextActionNote) {
+                                                     String nextActionNote, String note) {
         CurrentUser user = CurrentUserHolder.require(Permissions.OPPORTUNITY_UPDATE);
         List<OpportunityRepository.Stage> stages = repository.stages();
         String code = stage == null ? "" : stage.strip();
         if (stages.stream().noneMatch(s -> s.code().equals(code))) throw invalid("stage", "Etapa inválida.");
         List<FieldIssue> issues = new ArrayList<>();
-        Crm.NextAction next = nextAction(nextActionDate, nextActionNote, issues);
+        boolean semProxima = (nextActionDate == null || nextActionDate.isBlank()) && (nextActionNote == null || nextActionNote.isBlank());
+        Crm.NextAction informed = semProxima ? null : nextAction(nextActionDate, nextActionNote, issues);
+        String why = note == null || note.isBlank() ? null : note.strip();
+        if (why != null && why.length() > 300) issues.add(new FieldIssue("note", "Máximo de 300 caracteres."));
         if (!issues.isEmpty()) throw new RuleViolationException("OPPORTUNITY_INVALID", "Corrija os campos indicados.", issues);
         Opportunity current = lock(id, expectedVersion);
+        Crm.NextAction next = informed == null ? current.nextAction() : informed;
         if (current.isOpen() && current.stage().equals(code) && next.equals(current.nextAction())) {
             return repository.findById(id).orElseThrow();
         }
         Instant now = clock.instant();
         Opportunity updated = current.changeStage(code, next, now, user.username());
-        save(user, current, updated, "OPPORTUNITY_STAGE_CHANGED", null);
+        save(user, current, updated, "OPPORTUNITY_STAGE_CHANGED", why);
         if (!current.stage().equals(code)) {
-            stageChange(updated, current.stage(), stages, now, user.username());
+            stageChange(updated, current.stage(), stages, now, user.username(), why);
             stageEvent(user, updated, current.stage());
         }
         return repository.findById(id).orElseThrow();
@@ -423,13 +433,18 @@ public class OpportunityService {
 
     /** Linha da aba Etapas: percentual da etapa (aberta), 100% (ganha) ou 0% (perdida), com o potencial e o ponderado. */
     private void stageChange(Opportunity o, String from, List<OpportunityRepository.Stage> stages, Instant now, String actor) {
+        stageChange(o, from, stages, now, actor, null);
+    }
+
+    private void stageChange(Opportunity o, String from, List<OpportunityRepository.Stage> stages, Instant now, String actor,
+                             String note) {
         BigDecimal pct = switch (o.status()) {
             case GANHA -> BigDecimal.valueOf(100);
             case PERDIDA -> BigDecimal.ZERO;
             case ABERTA -> stages.stream().filter(s -> s.code().equals(o.stage())).findFirst().orElseThrow().closePercent();
         };
         repository.insertStageChange(new OpportunityRepository.StageChange(UUID.randomUUID(), o.id(), from, o.stage(), o.status(),
-                pct, o.potentialCents(), Crm.weighted(o.potentialCents(), pct), now, actor));
+                pct, o.potentialCents(), Crm.weighted(o.potentialCents(), pct), now, actor, note));
     }
 
     private static int position(List<OpportunityRepository.Stage> stages, String code) {
@@ -469,8 +484,8 @@ public class OpportunityService {
 
     private void checkOwner(String owner) {
         if (owner == null || owner.isBlank()) return;
-        if (users.activeUsers().stream().noneMatch(u -> u.username().equals(owner.strip()))) {
-            throw invalid("owner", "Escolha um usuário ativo.");
+        if (users.activeUsers().stream().noneMatch(u -> u.username().equals(owner.strip())) && !employees.isActive(owner.strip())) {
+            throw invalid("owner", "Escolha um usuário ou colaborador ativo.");
         }
     }
 
