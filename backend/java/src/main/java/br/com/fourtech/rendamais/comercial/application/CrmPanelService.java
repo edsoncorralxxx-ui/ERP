@@ -217,7 +217,9 @@ public class CrmPanelService {
                 .sorted((a, b) -> a.expectedClose().compareTo(b.expectedClose())).toList();
 
         List<Alert> alerts = new ArrayList<>();
-        open.stream().filter(o -> o.daysWithoutActivity() != null && o.daysWithoutActivity() >= 14 && o.nextActivity() == null)
+        // Parada: 14 dias ou mais sem atividade e sem próxima atividade em dia (nenhuma, ou só uma já vencida).
+        open.stream().filter(o -> o.daysWithoutActivity() != null && o.daysWithoutActivity() >= 14
+                        && (o.nextActivity() == null || LocalDate.parse(o.nextActivity()).isBefore(today)))
                 .sorted((a, b) -> b.daysWithoutActivity() - a.daysWithoutActivity()).limit(3)
                 .forEach(o -> alerts.add(new Alert("PARADA", "Oportunidade parada", o.code() + " (" + nome(o) + ") está há "
                         + o.daysWithoutActivity() + " dias sem atividade na etapa " + o.stageName() + ".", o.id())));

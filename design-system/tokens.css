@@ -96,6 +96,24 @@
   --arte-roupa-dobra: #7f9fca;
   --arte-cadeira: #4867b1;
   --arte-cadeira-luz: #6998dc;
+  --funil-prospeccao: #9fb6d8;
+  --funil-qualificacao: #7aa0d8;
+  --funil-visita: #4c7bc6;
+  --funil-proposta: #d49a16;
+  --funil-negociacao: #ee7a12;
+  --funil-ganha: #2f8a3b;
+  --funil-perdida: #b0453a;
+  --atividade-visita: #dcecc8;
+  --atividade-visita-borda: #7fa35a;
+  --atividade-ligacao: #dbe7f4;
+  --atividade-ligacao-borda: #4c7bc6;
+  --atividade-reuniao: #e9e1f2;
+  --atividade-reuniao-borda: #8a70b0;
+  --atividade-email: #f3eadb;
+  --atividade-email-borda: #b58a4a;
+  --atividade-tarefa: #fbf8cd;
+  --atividade-tarefa-borda: #c9ae5c;
+  --agenda-hoje: #fdfcf1;
 
   /* Tipografia */
   --font-ui: Tahoma, "Segoe UI", "Helvetica Neue", Arial, sans-serif;

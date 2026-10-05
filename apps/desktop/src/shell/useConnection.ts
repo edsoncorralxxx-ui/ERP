@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import type { ServerStatus } from '../api/types';
-import { definirHojeDoServidor } from '../format';
+import { definirHojeDoServidor, definirRelogioDoServidor } from '../format';
 
 /** Uma verificação do servidor: quando, se respondeu e em quanto tempo. */
 export type Check = { at: Date; ok: boolean; ms: number };
@@ -26,6 +26,8 @@ export function useConnection(intervalMs = 10_000): Connection {
         const at = new Date();
         const ms = Math.round(performance.now() - start);
         definirHojeDoServidor(data.businessDate);
+        // Só desloca o relógio quando o desvio passa de um minuto (relógio da demonstração), não por diferenças de rede.
+        definirRelogioDoServidor(Math.abs(Date.parse(String(data.serverTime)) - Date.now()) > 60_000 ? String(data.serverTime) : null);
         if (alive) setConn((c) => ({ state: 'online', status: data, checkedAt: at, history: [...c.history, { at, ok: true, ms }].slice(-MAX_HISTORY) }));
       } catch {
         const at = new Date();

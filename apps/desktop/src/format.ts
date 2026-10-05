@@ -120,6 +120,15 @@ const hojeDoComputador = (): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
+/** Diferença entre o relógio do servidor e o do computador (o servidor pode estar no relógio da demonstração). */
+let desvioMs = 0;
+export const definirRelogioDoServidor = (instante: string | null | undefined): void => {
+  const t = instante ? Date.parse(instante) : NaN;
+  desvioMs = Number.isNaN(t) ? 0 : t - Date.now();
+};
+/** Agora pelo relógio do servidor (data e hora do rodapé). */
+export const agora = (): Date => new Date(Date.now() + desvioMs);
+
 /** Guarda o dia de negócio devolvido por `/api/v1/status` (ou esquece, com nulo). */
 export const definirHojeDoServidor = (iso: string | null | undefined): void => {
   doServidor = iso && /^\d{4}-\d{2}-\d{2}$/.test(iso) ? { data: iso, lidoEm: hojeDoComputador() } : null;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { data, hora } from '../format';
+import { agora, data, hora } from '../format';
 import type { Connection } from './useConnection';
 
 export type StatusMessage = { tone: 'erro' | 'aviso' | 'sucesso' | 'info'; text: string };
@@ -24,11 +24,11 @@ const ICON: Record<StatusMessage['tone'], string> = { erro: 'status-erro', aviso
  * Clicar na aba abre o log acima dela; o botão de maximizar o faz crescer e o fechar o recolhe.
  */
 export function StatusBar({ connection, user, activeTitle, company, message, log, onDismiss }: Props) {
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useState(() => agora());
   const [logMode, setLogMode] = useState<'fechado' | 'aberto' | 'max'>('fechado');
   const [limite, setLimite] = useState<number | null>(null);
   useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 30_000);
+    const t = setInterval(() => setNow(agora()), 30_000);
     return () => clearInterval(t);
   }, []);
 

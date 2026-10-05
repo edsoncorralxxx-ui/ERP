@@ -4,6 +4,7 @@ import type { CompanyProfile, SessionUser } from './api/types';
 import { CADASTROS, CadastroListaWindow } from './screens/CadastroListaWindow';
 import { CatalogWindow } from './screens/CatalogWindow';
 import { LocationsWindow } from './screens/LocationsWindow';
+import { CrmDashboardWindow } from './screens/CrmDashboardWindow';
 import { EmployeeWindow } from './screens/EmployeeWindow';
 import { CalendarsWindow } from './screens/CalendarsWindow';
 import { CadastroTabelaWindow, TABELAS } from './screens/CadastroTabelaWindow';
@@ -80,13 +81,13 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   items: { title: 'Produtos e serviços', size: { w: 1100, h: 620 } },
   item: { title: 'Dados mestre do item', size: { w: 1180, h: 820 } },
   catalog: { title: 'Unidades e categorias', size: { w: 920, h: 560 } },
-  leads: { title: 'Prospecção', size: { w: 1180, h: 620 } },
+  leads: { title: 'Leads', size: { w: 1130, h: 650 } },
   lead: { title: 'Prospecção', size: { w: 1080, h: 660 } },
   'lead-import': { title: 'Importar lista de prospecção', size: { w: 1160, h: 660 } },
-  opportunities: { title: 'Oportunidades', size: { w: 1200, h: 620 } },
-  opportunity: { title: 'Oportunidade de venda', size: { w: 1100, h: 680 } },
+  opportunities: { title: 'Oportunidades de venda', size: { w: 1130, h: 670 } },
+  opportunity: { title: 'Oportunidade de venda', size: { w: 1130, h: 700 } },
   funnel: { title: 'Funil de vendas', size: { w: 1180, h: 700 } },
-  'crm-agenda': { title: 'Agenda do CRM', size: { w: 1100, h: 600 } },
+  'crm-agenda': { title: 'Atividades e agenda', size: { w: 1130, h: 680 } },
   'opportunity-stages': { title: 'Etapas do funil', size: { w: 900, h: 560 } },
   proposals: { title: 'Propostas', size: { w: 1100, h: 620 } },
   proposal: { title: 'Proposta', size: { w: 1120, h: 680 } },
@@ -123,6 +124,8 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   employee: { title: 'Colaborador', size: { w: 980, h: 640 } },
   locations: { title: 'Localizações de estoque', size: { w: 1120, h: 700 } },
   calendars: { title: 'Calendários e feriados', size: { w: 1180, h: 780 } },
+  'crm-dashboard': { title: 'Painel comercial', size: { w: 1160, h: 720 } },
+  kanban: { title: 'Kanban de vendas', size: { w: 1160, h: 720 } },
 };
 
 /** Título de abertura: as janelas genéricas (lista e tabela de cadastro, parceiro) dependem do registro. */
@@ -548,6 +551,8 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                         <CadastroTabelaWindow recordKey={w.recordKey} />
                       ) : w.kind === 'employee' ? (
                         <EmployeeWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'crm-dashboard' ? (
+                        <CrmDashboardWindow />
                       ) : w.kind === 'calendars' ? (
                         <CalendarsWindow />
                       ) : w.kind === 'locations' ? (

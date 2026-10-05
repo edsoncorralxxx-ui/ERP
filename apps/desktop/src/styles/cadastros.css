@@ -186,3 +186,29 @@
 .rp-calend__lado { width: 400px; flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-3); overflow: auto; }
 .rp-calend__feriados { height: 300px; display: flex; flex-direction: column; }
 .rp-calend__semana { display: flex; gap: var(--space-4); flex-wrap: wrap; }
+
+/* Painel comercial (CRM-Painel). */
+.rp-crmpainel { display: flex; flex-direction: column; gap: var(--space-4); }
+.rp-crmpainel__dash { padding: 0; background: transparent; gap: var(--space-4); }
+.rp-crmpainel__kpi { min-width: 0; cursor: pointer; transition: box-shadow .15s ease, border-color .15s ease; }
+.rp-crmpainel__kpi:hover { background: var(--field-active); border-color: var(--gold-light); }
+.rp-crmpainel__linha { grid-template-columns: 1.45fr 1fr; }
+.rp-crmpainel__prev { max-height: 250px; border: 0; }
+.rp-crmpainel__tabela { width: 100%; table-layout: fixed; }
+.rp-crmpainel__tabela td, .rp-crmpainel__tabela th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-crmpainel__tabela tr.grupo { cursor: pointer; }
+.rp-crmpainel__alertas { min-width: 0; }
+
+/* Leads (CRM-Leads): filtros, grade à esquerda e a ficha do lead (330px) à direita. */
+.rp-crmleads { display: flex; flex-direction: column; gap: var(--space-4); overflow: hidden; }
+.rp-crmleads__busca { width: 200px; }
+.rp-crmleads__corpo { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 14px; }
+.rp-crmleads__grade { min-height: 0; max-height: none; }
+.rp-crmleads__tabela { width: 100%; table-layout: fixed; }
+.rp-crmleads__tabela td, .rp-crmleads__tabela th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-crmleads__lado { min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 10px; }
+.rp-crmleads__lado .rp-grupo { margin: 0; min-width: 0; }
+.rp-crmleads__ficha { grid-template-columns: 110px minmax(0, 1fr); }
+.rp-crmleads__selo { justify-self: start; }
+.rp-crmleads__pontos { grid-template-columns: 110px 1fr 48px; }
+.rp-crmleads__rec { border-bottom: 0; }
