@@ -53,6 +53,12 @@ export type Atividade = {
 export const etapaVisivel = (o: Pick<OportunidadeLinha, 'status' | 'stageName'>) => (o.status === 'GANHA' ? 'Ganha' : o.status === 'PERDIDA' ? 'Perdida' : o.stageName);
 export const nomeCliente = (o: Pick<OportunidadeLinha, 'customerName' | 'leadName'>) => o.customerName ?? o.leadName ?? '';
 
+/** Fechada há mais de 30 dias: sai da lista e do kanban (continua no histórico, nos filtros Ganha/Perdida e no painel). */
+export const fechadaAntiga = (o: Pick<OportunidadeLinha, 'status' | 'closedAt'>, hoje: string) => {
+  if (o.status === 'ABERTA' || !o.closedAt) return false;
+  return (Date.parse(hoje) - Date.parse(o.closedAt)) / 86400000 > 30;
+};
+
 /** "R$ 128 mil" do kanban. */
 export const mil = (cents: number) => `${(cents / 100000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil`;
 /** "R$ 2.438.440" dos indicadores (sem centavos). */

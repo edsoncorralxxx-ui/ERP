@@ -5,6 +5,7 @@ import { CADASTROS, CadastroListaWindow } from './screens/CadastroListaWindow';
 import { CatalogWindow } from './screens/CatalogWindow';
 import { LocationsWindow } from './screens/LocationsWindow';
 import { CrmDashboardWindow } from './screens/CrmDashboardWindow';
+import { KanbanWindow } from './screens/KanbanWindow';
 import { EmployeeWindow } from './screens/EmployeeWindow';
 import { CalendarsWindow } from './screens/CalendarsWindow';
 import { CadastroTabelaWindow, TABELAS } from './screens/CadastroTabelaWindow';
@@ -551,6 +552,8 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                         <CadastroTabelaWindow recordKey={w.recordKey} />
                       ) : w.kind === 'employee' ? (
                         <EmployeeWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'kanban' ? (
+                        <KanbanWindow />
                       ) : w.kind === 'crm-dashboard' ? (
                         <CrmDashboardWindow />
                       ) : w.kind === 'calendars' ? (
