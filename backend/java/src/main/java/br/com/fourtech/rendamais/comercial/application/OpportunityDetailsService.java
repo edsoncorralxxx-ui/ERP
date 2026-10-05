@@ -63,8 +63,12 @@ public class OpportunityDetailsService {
 
     public record Document(String kind, UUID id, String code, String date, Integer revision, long totalCents, String status) { }
 
+    /**
+     * {@code historicalWinPercent}: das oportunidades já fechadas que passaram pela etapa atual desta, quantas % foram ganhas
+     * (nulo com menos de 5 fechadas). É o histórico real do funil, no lugar da "estimativa de IA" do mock.
+     */
     public record Details(UUID opportunityId, String contactName, Map<String, Object> need, List<Item> items, long itemsTotalCents,
-                          List<Document> documents, long version) { }
+                          List<Document> documents, Integer historicalWinPercent, int historicalSample, long version) { }
 
     public record Data(String contactName, Map<String, Object> need, List<ItemData> items) { }
 
@@ -205,8 +209,8 @@ public class OpportunityDetailsService {
 
     @SuppressWarnings("unchecked")
     private Details load(UUID id) {
-        var head = jdbc.sql("select contact_name, need::text, version from opportunity where id = :id").param("id", id)
-                .query((rs, n) -> new Object[] {rs.getString(1), rs.getString(2), rs.getLong(3)}).optional()
+        var head = jdbc.sql("select contact_name, need::text, version, stage from opportunity where id = :id").param("id", id)
+                .query((rs, n) -> new Object[] {rs.getString(1), rs.getString(2), rs.getLong(3), rs.getString(4)}).optional()
                 .orElseThrow(() -> new NotFoundException("Oportunidade não encontrada."));
         Map<String, Object> need = json.readValue((String) head[1], LinkedHashMap.class);
         List<Item> items = jdbc.sql("""
@@ -237,6 +241,13 @@ public class OpportunityDetailsService {
                 """).param("id", id).query((rs, n) -> new Document("PEDIDO", rs.getObject("id", UUID.class), rs.getString("code"),
                 rs.getDate("contract_date") == null ? null : rs.getDate("contract_date").toLocalDate().toString(), null,
                 rs.getLong("total_cents"), rs.getString("status"))).list());
-        return new Details(id, (String) head[0], need, items, items.stream().mapToLong(Item::totalCents).sum(), docs, (Long) head[2]);
+        long[] hist = jdbc.sql("""
+                select count(*) filter (where o.status = 'GANHA'), count(*) from opportunity o
+                 where o.status in ('GANHA', 'PERDIDA')
+                   and exists (select 1 from opportunity_stage_change c where c.opportunity_id = o.id and c.to_stage = :stage)
+                """).param("stage", head[3]).query((rs, n) -> new long[] {rs.getLong(1), rs.getLong(2)}).single();
+        Integer win = hist[1] < 5 ? null : (int) Math.round(hist[0] * 100.0 / hist[1]);
+        return new Details(id, (String) head[0], need, items, items.stream().mapToLong(Item::totalCents).sum(), docs, win, (int) hist[1],
+                (Long) head[2]);
     }
 }

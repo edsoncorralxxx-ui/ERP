@@ -12,6 +12,7 @@ import {
   Linha, Marca, Observacoes, Secao, Seta, useApi, useReferencia, type Aba, type Indicador,
 } from './comum/Ficha';
 import { Selecao } from './comum/Selecao';
+import { classeSelo, ICONE_ATIVIDADE, SITUACAO_ATIVIDADE, TIPO_ATIVIDADE, type Atividade } from './comum/CrmMock';
 
 const ROTA: Record<PapelParceiro, string> = { CLIENTE: 'customers', FORNECEDOR: 'suppliers', TRANSPORTADORA: 'carriers' };
 const NOME: Record<PapelParceiro, { titulo: string; tipo: string; lista: string; artigo: string }> = {
@@ -141,7 +142,6 @@ const mascaraCnpj = (v: string) => {
   return d.length < 14 ? v : `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
 };
 
-type Atividade = { id: string; date: string; kind: string; kindLabel: string; icon: string; subject: string; opportunityId: string | null; opportunityCode: string | null; owner: string | null; statusLabel: string; badge: string };
 
 /**
  * Ficha do parceiro do mock (Cadastros-Parceiro): uma janela para cliente, fornecedor e transportadora. Cabeçalho com
@@ -681,16 +681,16 @@ export function PartnerWindow({ recordKey }: { recordKey: string }) {
               <p>Histórico de contatos: atividades do CRM ligadas a este parceiro. As concluídas ficam aqui como registro.</p>
               <GradeSimples rotulo="Atividades" linhas={atividades} chave={(a) => a.id} vazio="Nenhuma atividade registrada para este parceiro."
                 colunas={[
-                  { rotulo: 'Data', largura: '90px', valor: (a) => dataDaApi(a.date) },
-                  { rotulo: 'Tipo', largura: '130px', valor: (a) => <><i className={`rp-ico ${a.icon}`} aria-hidden="true" />{a.kindLabel}</> },
+                  { rotulo: 'Data', largura: '124px', valor: (a) => `${dataDaApi(a.day)} ${a.startTime.slice(0, 5)}` },
+                  { rotulo: 'Tipo', largura: '130px', valor: (a) => <><i className={`rp-ico ${ICONE_ATIVIDADE[a.kind]}`} aria-hidden="true" />{TIPO_ATIVIDADE[a.kind]}</> },
                   { rotulo: 'Assunto', largura: 'minmax(0,2fr)', valor: (a) => a.subject, titulo: (a) => a.subject },
                   { rotulo: 'Oportunidade', largura: '130px', valor: (a) => (a.opportunityId
                     ? <><Seta titulo="Abrir oportunidade" abrir={() => win.open('opportunity', a.opportunityId!)} />{a.opportunityCode}</> : '—') },
-                  { rotulo: 'Responsável', largura: 'minmax(0,1fr)', valor: (a) => a.owner ?? '—' },
-                  { rotulo: 'Situação', largura: '100px', valor: (a) => <span className={`rp-badge ${a.badge}`}>{a.statusLabel}</span> },
+                  { rotulo: 'Responsável', largura: 'minmax(0,1fr)', valor: (a) => a.owner || '—' },
+                  { rotulo: 'Situação', largura: '100px', valor: (a) => <span className={classeSelo(SITUACAO_ATIVIDADE[a.situation])}>{SITUACAO_ATIVIDADE[a.situation]}</span> },
                 ]} />
               <div className="rp-ficha__botoes">
-                <button type="button" className="rp-btn" onClick={() => win.open('crm-agenda')}>Registrar atividade</button>
+                <button type="button" className="rp-btn" onClick={() => win.open('crm-agenda')}>Agenda de atividades</button>
                 {papel === 'CLIENTE' && <button type="button" className="rp-btn" onClick={() => win.open('opportunities')}>Oportunidades do cliente</button>}
               </div>
             </div>

@@ -262,3 +262,76 @@
 .rp-kanban__mov button[disabled] { opacity: .35; cursor: default; }
 .rp-kanban__vazio { font: var(--text-caption); color: var(--ink-muted); text-align: center; padding: 10px var(--space-2); border: 1px dashed var(--panel-border); border-radius: var(--radius-sm); }
 .rp-kanban__resumo { color: var(--ink-muted); }
+
+/* Oportunidade de venda (CRM-Oportunidade). */
+.rp-crmop { display: flex; flex-direction: column; gap: var(--space-4); }
+.rp-crmop__cab { flex-shrink: 0; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 32px; }
+.rp-crmop__esq { grid-template-columns: 130px minmax(0, 1fr); }
+.rp-crmop__dir { grid-template-columns: 170px minmax(0, 1fr); }
+.rp-crmop__cliente { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: var(--space-2); }
+.rp-crmop__busca { position: relative; }
+.rp-crmop__lista { position: absolute; left: 0; top: 100%; z-index: 30; min-width: 320px; max-height: 220px; overflow-y: auto; box-shadow: var(--shadow-window); }
+.rp-crmop__lista [role=option] { cursor: pointer; white-space: nowrap; padding: var(--space-1) var(--space-2); }
+.rp-crmop__lista [role=option]:hover { background: var(--field-active); }
+.rp-crmop__linha { display: flex; gap: var(--space-3); align-items: center; }
+.rp-crmop__num { width: 110px; }
+.rp-crmop__pct { width: 70px; }
+.rp-crmop__avanco { flex-shrink: 0; grid-template-columns: 130px 1fr 190px; }
+.rp-crmop > .rp-ficha-abas { padding: 0; margin-bottom: calc(-1 * var(--space-4)); }
+.rp-crmop__painel { flex: 1; min-height: 0; }
+.rp-crmop__geral { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: var(--space-5); align-items: start; }
+.rp-crmop__itens { width: 100%; }
+.rp-crmop__itens td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-crmop__need { margin: 0; min-width: 0; }
+.rp-crmop__needform { grid-template-columns: 160px minmax(0, 1fr); }
+.rp-crmop__aba { display: flex; flex-direction: column; gap: var(--space-3); }
+.rp-crmop__grade { height: 260px; min-height: 0; max-height: none; }
+.rp-crmop__obs { grid-template-columns: 130px minmax(0, 1fr); }
+.rp-crmop__obs textarea { height: 120px; resize: none; }
+
+/* Atividades e agenda (CRM-Atividades): semana de segunda a sexta, 8h às 17h (46px por hora). */
+.rp-agenda { padding: 0; display: flex; flex-direction: column; overflow: hidden; }
+.rp-agenda__topo { flex-shrink: 0; padding: var(--space-4) var(--space-5) 10px; display: flex; align-items: center; gap: var(--space-5); }
+.rp-agenda__semana { display: flex; align-items: center; gap: var(--space-2); }
+.rp-agenda__semana > span { min-width: 150px; text-align: center; font: var(--text-label-strong); font-size: 14px; }
+.rp-agenda__hoje { height: 24px; min-width: 0; padding: 0 var(--space-4); }
+.rp-agenda__par { display: flex; align-items: center; gap: var(--space-3); }
+.rp-agenda__modos { margin-left: auto; display: flex; gap: var(--space-1); }
+.rp-agenda__modos > .rp-agenda__modo { min-width: 140px; justify-content: center; }
+.rp-window .rp-agenda__modo { height: 24px; min-width: 0; padding: 0 var(--space-4); display: flex; align-items: center; gap: 6px; border: 1px solid var(--tab-border); border-radius: var(--radius-sm); cursor: pointer; background: linear-gradient(var(--field), var(--tab)); }
+.rp-window .rp-agenda__modo[aria-pressed=true] { background: linear-gradient(var(--tab), var(--tab-active) 60%); }
+.rp-agenda__corpo { flex: 1; min-height: 0; padding: 0 var(--space-5) var(--space-4); display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; }
+.rp-agenda__grade { min-width: 0; min-height: 0; display: flex; flex-direction: column; border: 1px solid var(--tab-border); background: var(--field); }
+.rp-agenda__cab { flex-shrink: 0; display: grid; grid-template-columns: 52px repeat(5, minmax(0, 1fr)); background: linear-gradient(var(--grid-header-top), var(--grid-header) 85%); border-bottom: 1px solid var(--grid-rule); }
+.rp-agenda__cab > div { height: 28px; display: flex; align-items: center; justify-content: center; border-left: 1px solid var(--grid-rule); }
+.rp-agenda__cab > div:first-child { border-left: 0; }
+.rp-agenda__cab > .rp-agenda__dia--hoje { font-weight: 600; color: var(--on-dark); background: linear-gradient(var(--nav-selected-top), var(--nav-selected) 60%); }
+.rp-agenda__rolagem { flex: 1; min-height: 0; overflow-y: auto; }
+.rp-agenda__horas { display: grid; grid-template-columns: 52px repeat(5, minmax(0, 1fr)); }
+.rp-agenda__hora { height: 46px; box-sizing: border-box; padding: var(--space-1) 6px 0 0; text-align: right; font: var(--text-caption); color: var(--ink-muted); border-top: 1px solid var(--grid-rule); }
+.rp-agenda__col { position: relative; border-left: 1px solid var(--grid-rule); }
+.rp-agenda__col--hoje { background: var(--agenda-hoje); }
+.rp-agenda__faixa { height: 46px; box-sizing: border-box; border-top: 1px solid var(--grid-row-alt); }
+.rp-agenda__evento { position: absolute; left: 3px; right: 3px; box-sizing: border-box; padding: 3px 6px; display: flex; flex-direction: column; gap: 1px; overflow: hidden; font: var(--text-body); line-height: 15px; color: var(--ink); text-align: left; border: 1px solid; border-radius: var(--radius-sm); cursor: pointer; transition: filter .15s ease; }
+.rp-agenda__evento:hover { filter: brightness(.96) saturate(1.2); }
+.rp-agenda__evento[aria-pressed=true] { border-color: var(--nav-divider); box-shadow: var(--shadow-window); }
+.rp-agenda__evento > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-agenda__evento-hora { display: flex; align-items: center; gap: var(--space-2); font-weight: 600; }
+.rp-agenda__evento-hora .rp-ico { width: 14px; height: 14px; }
+.rp-agenda__evento-cli { color: var(--ink-muted); }
+.rp-agenda__feita { font-weight: 400; color: var(--ink-success); }
+.rp-agenda__evento--visita { background: var(--atividade-visita); border-color: var(--atividade-visita-borda); }
+.rp-agenda__evento--reuniao { background: var(--atividade-reuniao); border-color: var(--atividade-reuniao-borda); }
+.rp-agenda__evento--ligacao { background: var(--atividade-ligacao); border-color: var(--atividade-ligacao-borda); }
+.rp-agenda__evento--email { background: var(--atividade-email); border-color: var(--atividade-email-borda); }
+.rp-agenda__evento--tarefa { background: var(--atividade-tarefa); border-color: var(--atividade-tarefa-borda); }
+.rp-agenda__lista { min-height: 0; max-height: none; }
+.rp-agenda__lado { min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 10px; }
+.rp-agenda__ficha { margin: 0; min-width: 0; }
+.rp-agenda__form { grid-template-columns: 100px minmax(0, 1fr); }
+.rp-agenda__notas { height: 90px; resize: none; }
+.rp-agenda__nota { white-space: normal; }
+.rp-agenda__legenda { display: flex; gap: var(--space-4); align-items: center; }
+.rp-agenda__legenda > span { display: flex; align-items: center; gap: 5px; }
+.rp-agenda__amostra { display: inline-block; box-sizing: border-box; width: 12px; height: 12px; border-width: 1px; border-style: solid; border-radius: 2px; }
+.rp-agenda__nova { grid-template-columns: 110px 260px; }

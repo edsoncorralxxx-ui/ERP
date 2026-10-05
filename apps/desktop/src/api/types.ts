@@ -1366,6 +1366,9 @@ export type OpportunityStageChange = {
   weightedCents: string;
   changedAt: string;
   changedBy: string;
+  fromStageName?: string | null;
+  /** Observação da passagem (Sprint 13). */
+  note?: string | null;
 };
 
 export type AgendaItem = {

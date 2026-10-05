@@ -485,7 +485,7 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                       ) : w.kind === 'funnel' ? (
                         <FunnelWindow />
                       ) : w.kind === 'crm-agenda' ? (
-                        <CrmAgendaWindow />
+                        <CrmAgendaWindow recordKey={w.recordKey} />
                       ) : w.kind === 'opportunity-stages' ? (
                         <OpportunityStagesWindow />
                       ) : w.kind === 'proposals' ? (

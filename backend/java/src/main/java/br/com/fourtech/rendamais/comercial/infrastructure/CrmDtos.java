@@ -88,13 +88,16 @@ final class CrmDtos {
     }
 
     record StageChangeDto(String id, String fromStage, String toStage, String toStageName, String status, String closePercent,
-                          String potentialCents, String weightedCents, Instant changedAt, String changedBy) {
+                          String potentialCents, String weightedCents, Instant changedAt, String changedBy, String fromStageName,
+                          String note) {
         static StageChangeDto of(OpportunityRepository.StageChange c, List<OpportunityRepository.Stage> stages) {
             String name = stages.stream().filter(s -> s.code().equals(c.toStage())).map(OpportunityRepository.Stage::name)
                     .findFirst().orElse(c.toStage());
             return new StageChangeDto(c.id().toString(), c.fromStage(), c.toStage(), name, c.status().name(),
                     c.closePercent().setScale(2).toPlainString(), Long.toString(c.potentialCents()),
-                    Long.toString(c.weightedCents()), c.changedAt(), c.changedBy());
+                    Long.toString(c.weightedCents()), c.changedAt(), c.changedBy(),
+                    c.fromStage() == null ? null : stages.stream().filter(s -> s.code().equals(c.fromStage())).map(OpportunityRepository.Stage::name)
+                            .findFirst().orElse(c.fromStage()), c.note());
         }
     }
 
