@@ -4,6 +4,7 @@ import type { CompanyProfile, SessionUser } from './api/types';
 import { CADASTROS, CadastroListaWindow } from './screens/CadastroListaWindow';
 import { CatalogWindow } from './screens/CatalogWindow';
 import { LocationsWindow } from './screens/LocationsWindow';
+import { EmployeeWindow } from './screens/EmployeeWindow';
 import { CalendarsWindow } from './screens/CalendarsWindow';
 import { CadastroTabelaWindow, TABELAS } from './screens/CadastroTabelaWindow';
 import { PartnerWindow, tituloParceiro } from './screens/PartnerWindow';
@@ -545,6 +546,8 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                         <CadastroListaWindow recordKey={w.recordKey} />
                       ) : w.kind === 'cadastro-tabela' ? (
                         <CadastroTabelaWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'employee' ? (
+                        <EmployeeWindow recordKey={w.recordKey} />
                       ) : w.kind === 'calendars' ? (
                         <CalendarsWindow />
                       ) : w.kind === 'locations' ? (
