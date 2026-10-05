@@ -128,5 +128,5 @@ export const api = {
   get: <T>(path: string) => send<T>('GET', path),
   put: <T>(path: string, body: unknown, ifMatch: string) => send<T>('PUT', path, body, { 'If-Match': ifMatch }),
   post: <T>(path: string, body: unknown, headers: Record<string, string> = {}) => send<T>('POST', path, body, headers),
-  del: <T>(path: string) => send<T>('DELETE', path),
+  del: <T>(path: string, headers: Record<string, string> = {}) => send<T>('DELETE', path, undefined, headers),
 };

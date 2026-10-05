@@ -121,3 +121,38 @@
 .rp-ficha-contatos__lista [role=option] span + span { color: var(--ink-muted); font-weight: 400; }
 .rp-ficha-contatos__marcas { display: flex; gap: var(--space-6); padding: var(--space-3) 0; }
 .rp-ficha [data-consulta] { caret-color: transparent; }
+
+/* Ficha do item: dados à esquerda, a foto e os indicadores à direita; as quatro marcas embaixo do cabeçalho. */
+.rp-ficha__cab--item { grid-template-columns: minmax(0, 1fr) 150px minmax(0, 0.75fr); column-gap: var(--space-5); }
+.rp-ficha-item__marcas { display: flex; gap: var(--space-5); padding-top: var(--space-3); flex-wrap: wrap; }
+.rp-ficha-item__foto { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+.rp-ficha-item__moldura { width: 132px; height: 108px; box-sizing: border-box; display: grid; place-content: center; border: 1px dashed var(--chart-axis); color: var(--ink-muted); background: var(--field); overflow: hidden; }
+.rp-ficha-item__moldura img { max-width: 130px; max-height: 106px; object-fit: contain; }
+
+/* Tabela de cadastro (Cadastros-Tabela): instrução no topo, a tabela editável ocupando a janela, contagem no pé. */
+.rp-cadtab { padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); overflow: hidden; }
+.rp-cadtab__instrucao { flex-shrink: 0; color: var(--ink-muted); }
+.rp-cadtab__tabela { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.rp-cadtab__tabela .rp-tabela-acoes { flex-shrink: 0; }
+.rp-cadtab__rolagem { flex: 1; min-height: 0; max-height: none; border-width: 0; }
+.rp-cadtab__grade { width: 100%; table-layout: fixed; }
+.rp-cadtab__grade td, .rp-cadtab__grade th { overflow: hidden; text-overflow: ellipsis; }
+.rp-cadtab__grade td.rownum { cursor: pointer; }
+.rp-cadtab__caixa { text-align: center; }
+.rp-cadtab__caixa input { display: block; margin: 0 auto; width: 13px; height: 13px; accent-color: var(--nav); }
+.rp-cadtab__grade .rp-select { width: 100%; }
+.rp-cadtab__grade .rp-select .rp-field { border: 0; box-shadow: none; background: transparent; }
+.rp-cadtab__erros { flex-shrink: 0; margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); }
+.rp-cadtab__resumo { margin-right: var(--space-5); color: var(--ink-muted); }
+
+/* Localizações de estoque: árvore de 360px à esquerda, dados do nó e itens guardados à direita. */
+.rp-locais { padding: var(--space-5); display: flex; gap: var(--space-5); overflow: hidden; }
+.rp-locais__esq { width: 360px; flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.rp-locais__painel { flex: 1; min-height: 0; }
+.rp-locais__seta { width: 12px; flex: none; display: inline-flex; justify-content: center; cursor: pointer; }
+.rp-locais__dir { flex: 1; min-width: 0; overflow: auto; display: flex; flex-direction: column; gap: var(--space-4); }
+.rp-locais__caminho { color: var(--ink-muted); }
+.rp-locais__barra { flex-grow: 1; height: 14px; background: var(--field); border: 1px solid var(--panel-border); box-shadow: var(--shadow-inset-field); }
+.rp-locais__barra > div { height: 100%; background: var(--rail-selected); }
+.rp-locais__marcas { display: flex; flex-direction: column; gap: 6px; padding-top: var(--space-3); }
+.rp-locais__grade { height: 190px; display: flex; flex-direction: column; }

@@ -698,6 +698,9 @@
 .rp-ico-w-administracao{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Crect x='2.5' y='1.5' width='11' height='13' rx='1' fill='none' stroke='%23ffffff' stroke-width='1.1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M5 5h6M5 8h6M5 11h4' fill='none' stroke='%23ffffff' stroke-width='1.2' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E")}
 .rp-ico-financas{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cellipse cx='8' cy='11.5' rx='5.5' ry='2.3' fill='%23efb43e' stroke='%232b4587' stroke-width='1.1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cellipse cx='8' cy='8.5' rx='5.5' ry='2.3' fill='%23efb43e' stroke='%232b4587' stroke-width='1.1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cellipse cx='8' cy='5.5' rx='5.5' ry='2.3' fill='%23fceeb0' stroke='%232b4587' stroke-width='1.1' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E")}
 .rp-ico-w-financas{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Crect x='1.5' y='4' width='13' height='8' rx='1' fill='none' stroke='%23ffffff' stroke-width='1.1'/%3E%3Cpath d='M1.5 6.2a2.2 2.2 0 0 0 2.2-2.2M12.3 4a2.2 2.2 0 0 0 2.2 2.2M14.5 9.8a2.2 2.2 0 0 0-2.2 2.2M3.7 12a2.2 2.2 0 0 0-2.2-2.2' fill='none' stroke='%23ffffff' stroke-width='.9'/%3E%3Ccircle cx='8' cy='8' r='2.3' fill='none' stroke='%23ffffff' stroke-width='1.1'/%3E%3Cpath d='M8 6.9v2.2' stroke='%23ffffff' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E")}
+.rp-ico-telefone{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23ffffff'/%3E%3Cstop offset='1' stop-color='%23c3d0e3'/%3E%3C/linearGradient%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23fbe089'/%3E%3Cstop offset='1' stop-color='%23d49a16'/%3E%3C/linearGradient%3E%3ClinearGradient id='u' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%238db6ea'/%3E%3Cstop offset='1' stop-color='%232e62b5'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M3.2 1.8l2.3-.3 1.4 3.2-1.5 1.1c.8 1.7 2 2.9 3.7 3.7l1.1-1.5 3.2 1.4-.3 2.3c-.1.8-.8 1.4-1.6 1.3C6.4 12.6 3.4 9.6 2.3 4.4c-.2-.8.2-2.4.9-2.6z' fill='url(%23u)' stroke='%233b4d70' stroke-width='1' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E")}
+.rp-ico-banco-dados{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23ffffff'/%3E%3Cstop offset='1' stop-color='%23c3d0e3'/%3E%3C/linearGradient%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23fbe089'/%3E%3Cstop offset='1' stop-color='%23d49a16'/%3E%3C/linearGradient%3E%3ClinearGradient id='u' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%238db6ea'/%3E%3Cstop offset='1' stop-color='%232e62b5'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M2.5 3.5v9c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2v-9' fill='url(%23b)' stroke='%233b4d70' stroke-width='1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cellipse cx='8' cy='3.5' rx='5.5' ry='2' fill='url(%23g)' stroke='%233b4d70' stroke-width='1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M2.5 6.6c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2M2.5 9.6c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2' fill='none' stroke='%233b4d70' stroke-width='1' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E")}
+.rp-ico-python{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23ffffff'/%3E%3Cstop offset='1' stop-color='%23c3d0e3'/%3E%3C/linearGradient%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23fbe089'/%3E%3Cstop offset='1' stop-color='%23d49a16'/%3E%3C/linearGradient%3E%3ClinearGradient id='u' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%238db6ea'/%3E%3Cstop offset='1' stop-color='%232e62b5'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='1.5' y='2.5' width='13' height='11' rx='1' fill='url(%23b)' stroke='%233b4d70' stroke-width='1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M1.5 5h13' stroke='%233b4d70' stroke-width='1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Crect x='2' y='3' width='12' height='1.5' fill='url(%23u)'/%3E%3Cpath d='M3.8 7.2l2 1.6-2 1.6' fill='none' stroke='%233b4d70' stroke-width='1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M7 11h3.2' stroke='%233b4d70' stroke-width='1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='12.3' cy='11.3' r='1.7' fill='url(%23g)' stroke='%238a5a00' stroke-width='.8'/%3E%3C/svg%3E")}
 .rp-ico-oportunidades{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6.3' fill='%23ffffff' stroke='%232b4587' stroke-width='1.1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='8' cy='8' r='3.8' fill='%23e0e7f2' stroke='%232b4587' stroke-width='1.1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='8' cy='8' r='1.4' fill='%23efb43e' stroke='%232b4587' stroke-width='.8'/%3E%3C/svg%3E")}
 .rp-ico-w-oportunidades{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6.3' fill='none' stroke='%23ffffff' stroke-width='1.1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='8' cy='8' r='3.8' fill='none' stroke='%23ffffff' stroke-width='1.1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='8' cy='8' r='1.4' fill='%23ffffff' stroke='%23ffffff' stroke-width='.8'/%3E%3C/svg%3E")}
 .rp-ico-vendas{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 8.2V1.5h6.7l6.3 6.3-6.7 6.7z' fill='%23fceeb0' stroke='%232b4587' stroke-width='1.1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='4.8' cy='4.8' r='1.2' fill='%23ffffff' stroke='%232b4587' stroke-width='1.1' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E")}
@@ -1067,7 +1070,82 @@
 .rp-jlista .rp-grid tr.rp-grid-resto td:not(.rownum) { background: linear-gradient(transparent calc(var(--row-grid) - 1px), var(--grid-rule-readonly) 0) 0 -0.5px / 100% var(--row-grid) var(--field-readonly); }
 .rp-jlista .rp-grid tr.rp-grid-resto td.rownum { background: linear-gradient(transparent calc(var(--row-grid) - 1px), var(--grid-rule-readonly) 0) 0 -0.5px / 100% var(--row-grid) var(--grid-rownum); }
 
-/* Ferramentas do mock (04/10/2026): telefonar, banco de dados e console Python. */
-.rp-ico-telefone{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23ffffff'/%3E%3Cstop offset='1' stop-color='%23c3d0e3'/%3E%3C/linearGradient%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23fbe089'/%3E%3Cstop offset='1' stop-color='%23d49a16'/%3E%3C/linearGradient%3E%3ClinearGradient id='u' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%238db6ea'/%3E%3Cstop offset='1' stop-color='%232e62b5'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M3.2 1.8l2.3-.3 1.4 3.2-1.5 1.1c.8 1.7 2 2.9 3.7 3.7l1.1-1.5 3.2 1.4-.3 2.3c-.1.8-.8 1.4-1.6 1.3C6.4 12.6 3.4 9.6 2.3 4.4c-.2-.8.2-2.4.9-2.6z' fill='url(%23u)' stroke='%233b4d70' stroke-width='1' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E")}
-.rp-ico-banco-dados{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23ffffff'/%3E%3Cstop offset='1' stop-color='%23c3d0e3'/%3E%3C/linearGradient%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23fbe089'/%3E%3Cstop offset='1' stop-color='%23d49a16'/%3E%3C/linearGradient%3E%3ClinearGradient id='u' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%238db6ea'/%3E%3Cstop offset='1' stop-color='%232e62b5'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M2.5 3.5v9c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2v-9' fill='url(%23b)' stroke='%233b4d70' stroke-width='1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cellipse cx='8' cy='3.5' rx='5.5' ry='2' fill='url(%23g)' stroke='%233b4d70' stroke-width='1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M2.5 6.6c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2M2.5 9.6c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2' fill='none' stroke='%233b4d70' stroke-width='1' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E")}
-.rp-ico-python{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23ffffff'/%3E%3Cstop offset='1' stop-color='%23c3d0e3'/%3E%3C/linearGradient%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23fbe089'/%3E%3Cstop offset='1' stop-color='%23d49a16'/%3E%3C/linearGradient%3E%3ClinearGradient id='u' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%238db6ea'/%3E%3Cstop offset='1' stop-color='%232e62b5'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='1.5' y='2.5' width='13' height='11' rx='1' fill='url(%23b)' stroke='%233b4d70' stroke-width='1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M1.5 5h13' stroke='%233b4d70' stroke-width='1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Crect x='2' y='3' width='12' height='1.5' fill='url(%23u)'/%3E%3Cpath d='M3.8 7.2l2 1.6-2 1.6' fill='none' stroke='%233b4d70' stroke-width='1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M7 11h3.2' stroke='%233b4d70' stroke-width='1' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='12.3' cy='11.3' r='1.7' fill='url(%23g)' stroke='%238a5a00' stroke-width='.8'/%3E%3C/svg%3E")}
+/* ───────────── Estilos do aplicativo incorporados ao design system (03/10/2026) ─────────────
+   Regras que o aplicativo criou nas Sprints 3 a 11 e que valem para toda tela: o hover amarelo de ação, o campo
+   inválido, o fundo modal, as janelas minimizadas, a árvore com painel lateral e o diagrama em árvore. */
+
+/* Hover de ação: amarelo field-active em tudo que age (botões, ferramentas, menus, paginação); as abas ficam no azul
+   tab-active e o menu lateral no azul da navegação (pedido do PO). Transição curta de 0,18 s. */
+.rp-btn, .rp-tool, .rp-campo-btn, .rp-pag button, .rp-tab, .rp-menubar > span, .rp-menubar > div > span, .rp-grid tbody tr td, .rp-cockpit-list div {
+  transition: background-color .18s ease, border-color .18s ease, outline-color .18s ease; }
+.rp-btn:hover:not(:disabled), .rp-campo-btn:hover, .rp-pag button:hover { background: var(--field-active); }
+.rp-tool:hover:not([disabled]) { background: var(--field-active); border-color: var(--gold-light); }
+.rp-menubar > span:hover, .rp-menubar > span[aria-expanded=true],
+.rp-menubar > div > span:hover, .rp-menubar > div > span[aria-expanded=true] { background: var(--field-active); outline: 1px solid var(--gold-light); }
+.rp-tab:not([aria-selected=true]):not([aria-disabled=true]):hover { background: var(--tab-active); }
+.rp-tab[aria-disabled=true] { cursor: default; }
+.rp-rolagem::-webkit-scrollbar-thumb:hover { background: linear-gradient(90deg, var(--field-note), var(--gold-light)); }
+@media (prefers-reduced-motion: reduce) {
+  .rp-btn, .rp-tool, .rp-campo-btn, .rp-pag button, .rp-tab, .rp-menubar > span, .rp-menubar > div > span, .rp-grid tbody tr td,
+  .rp-nav-item, .rp-rail-tab, .rp-nav-sub, .rp-nav-sub .rp-ico, .rp-drawer { transition: none; }
+}
+
+/* Campo inválido: contorno status-error e a mensagem logo abaixo, com o ícone de erro de 14px. Na tabela de edição o
+   erro é um traço vermelho de 2px no pé da célula, que continua branca (amarela com o foco). */
+.rp-field[aria-invalid=true] { border-color: var(--status-error); }
+.rp-campo-erro { display: flex; gap: var(--space-2); align-items: center; color: var(--ink-danger); font: var(--text-caption); }
+.rp-campo-erro .rp-ico { width: 14px; height: 14px; }
+.rp-grid--edicao .rp-field[aria-invalid=true] { background: var(--field); box-shadow: inset 0 -2px 0 var(--status-error); }
+.rp-grid--edicao .rp-field[aria-invalid=true]:focus { background: var(--field-active); }
+
+/* Fundo modal da Caixa de mensagem: bloqueia o clique sem escurecer a tela; campo dentro da caixa (motivo, senha). */
+.rp-modal { position: fixed; inset: 0; z-index: 50; display: grid; place-content: center; }
+.rp-modal .rp-msgbox { width: 460px; max-width: calc(100vw - 32px); box-shadow: var(--shadow-window); }
+.rp-msgbox__form { grid-template-columns: auto 260px; column-gap: var(--space-3); margin-top: var(--space-3); }
+
+/* Janelas minimizadas: botões com a barra de título, embaixo à esquerda da área de trabalho, atrás das janelas abertas. */
+.rp-minimizadas { position: absolute; left: var(--space-3); bottom: var(--space-2); z-index: 0; display: flex; gap: var(--space-1); }
+.rp-minimizada { height: 26px; min-width: 160px; max-width: 220px; padding: 0 var(--space-3); font: var(--text-caption); text-align: left;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; color: var(--on-dark);
+  background: linear-gradient(var(--titlebar), var(--titlebar-bottom)); border: 1px solid var(--window-border); border-radius: var(--radius-sm); }
+.rp-minimizada:hover { background: linear-gradient(var(--nav-selected-top), var(--nav-selected)); }
+
+/* Árvore em painel lateral: cabeçalho panel-head com o total, nós de row-grid com pasta ou formulário, recuo de space-5
+   por nível e total à direita; seleção amarela e mouse em grid-row-alt. */
+.rp-arvore-painel { display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--tab-border); background: var(--surface-panel); }
+.rp-arvore-painel__tit { display: flex; justify-content: space-between; padding: var(--space-2) var(--space-3); background: var(--panel-head);
+  border-bottom: 1px solid var(--tab-border); font: var(--text-label-strong); color: var(--ink-heading); }
+.rp-arvore-painel__total { font-variant-numeric: tabular-nums; }
+.rp-arvore-painel__nota { margin: 0; padding: var(--space-3); border-top: 1px solid var(--tab-border); font: var(--text-caption); color: var(--ink-muted); }
+.rp-arvore { flex: 1; list-style: none; margin: 0; padding: var(--space-2) 0; overflow: auto; outline: none; }
+.rp-arvore:focus-visible .rp-arvore__no[aria-selected="true"] { outline: 1px dotted var(--ink); outline-offset: -1px; }
+.rp-arvore__no { display: flex; align-items: center; gap: var(--space-2); height: var(--row-grid); padding-right: var(--space-3); cursor: pointer;
+  font: var(--text-body); color: var(--ink); white-space: nowrap; }
+.rp-arvore__no:hover { background: var(--grid-row-alt); }
+.rp-arvore__no[aria-selected="true"] { background: var(--grid-row-selected); }
+.rp-arvore__nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.rp-arvore__total { font: var(--text-numeric); font-variant-numeric: tabular-nums; color: var(--ink-muted); }
+
+/* Diagrama em árvore: caixas surface-panel com contorno window-border e sombra de janela, ligadas por linhas em cotovelo
+   de 1,5px; a raiz em panel-head com contorno de 2px, a selecionada amarela, a pendente com contorno status-warning. */
+.rp-diagrama { overflow: auto; max-height: 420px; background: var(--field); border: 1px solid var(--field-border); box-shadow: var(--shadow-inset-field); }
+.rp-diagrama__tela { position: relative; }
+.rp-diagrama__ligacoes { position: absolute; inset: 0; }
+.rp-diagrama__ligacoes path { fill: none; stroke: var(--window-border); stroke-width: 1.5; }
+.rp-diagrama__caixas { list-style: none; margin: 0; padding: 0; }
+.rp-diagrama__no { position: absolute; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: var(--space-1);
+  padding: var(--space-2) var(--space-3); background: var(--surface-panel); border: 1px solid var(--window-border); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-window); cursor: pointer; font: var(--text-caption); color: var(--ink); outline: none; }
+.rp-diagrama__no:hover { background: var(--grid-row-alt); }
+.rp-diagrama__no:focus-visible { outline: 1px dotted var(--ink); outline-offset: 2px; }
+.rp-diagrama__no--raiz { background: var(--panel-head); border-width: 2px; }
+.rp-diagrama__no--sel { background: var(--grid-row-selected); }
+.rp-diagrama__no--pendente { border-color: var(--status-warning); }
+.rp-diagrama__nome { display: flex; align-items: center; gap: var(--space-2); font: var(--text-label-strong); color: var(--ink-heading);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp-diagrama__meta { color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp-diagrama__total { display: flex; align-items: center; gap: var(--space-3); font: var(--text-numeric); font-variant-numeric: tabular-nums; }
+.rp-diagrama__pendente { display: inline-flex; align-items: center; gap: var(--space-1); font: var(--text-caption); color: var(--ink); }
+
+/* Título de seção dentro do corpo da janela (painéis do funil, BOM): texto section em ink-heading, sublinhado. */
+.rp-secao-tit { margin: 0; font: var(--text-section); color: var(--ink-heading); text-decoration: underline; }

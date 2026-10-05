@@ -158,6 +158,7 @@ export type SupplierSummary = {
 };
 
 export type Natureza = 'MATERIAL' | 'SERVICO';
+export type TipoItem = 'PRODUTO' | 'MATERIAL' | 'SERVICO';
 
 /** MATERIAL é o produto (na tela: Produto); SERVICO, o serviço. */
 /** Decimais trafegam como texto com ponto ("184.500000"), sem ponto flutuante (ADR-006). */
@@ -177,6 +178,10 @@ export type Item = {
   /** Código do serviço na lista da LC 116 ("14.01"), o COD_LST do SPED. */
   serviceCode: string | null;
   status: Situacao;
+  /** Produto (vendável), material (componente) ou serviço; produto e material têm a natureza MATERIAL. */
+  type?: TipoItem;
+  /** Dados das abas da ficha sem regra própria (cadastros.domain.Item.PROFILE). */
+  profile?: Record<string, PerfilValor>;
   conversions: ItemConversion[];
   version: string;
   createdAt: string;

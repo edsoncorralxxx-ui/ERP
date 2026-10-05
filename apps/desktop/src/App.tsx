@@ -3,6 +3,8 @@ import { api, setUnauthorizedHandler } from './api/client';
 import type { CompanyProfile, SessionUser } from './api/types';
 import { CADASTROS, CadastroListaWindow } from './screens/CadastroListaWindow';
 import { CatalogWindow } from './screens/CatalogWindow';
+import { LocationsWindow } from './screens/LocationsWindow';
+import { CadastroTabelaWindow, TABELAS } from './screens/CadastroTabelaWindow';
 import { PartnerWindow, tituloParceiro } from './screens/PartnerWindow';
 import { ChangePasswordWindow } from './screens/ChangePasswordWindow';
 import { CockpitWindow } from './screens/CockpitWindow';
@@ -12,7 +14,7 @@ import { CustomersWindow } from './screens/CustomersWindow';
 import { EquipmentsWindow } from './screens/EquipmentsWindow';
 import { EquipmentWindow } from './screens/EquipmentWindow';
 import { ItemsWindow } from './screens/ItemsWindow';
-import { ItemWindow } from './screens/ItemWindow';
+import { ItemWindow, tituloItem } from './screens/ItemWindow';
 import { BankAccountsWindow } from './screens/BankAccountsWindow';
 import { BomImportWindow } from './screens/BomImportWindow';
 import { BomWindow } from './screens/BomWindow';
@@ -74,7 +76,7 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   suppliers: { title: 'Fornecedores', size: { w: 1100, h: 620 } },
   supplier: { title: 'Fornecedor', size: { w: 980, h: 660 } },
   items: { title: 'Produtos e serviços', size: { w: 1100, h: 620 } },
-  item: { title: 'Produto ou serviço', size: { w: 900, h: 600 } },
+  item: { title: 'Dados mestre do item', size: { w: 1180, h: 820 } },
   catalog: { title: 'Unidades e categorias', size: { w: 920, h: 560 } },
   leads: { title: 'Prospecção', size: { w: 1180, h: 620 } },
   lead: { title: 'Prospecção', size: { w: 1080, h: 660 } },
@@ -117,14 +119,16 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   'cadastro-tabela': { title: 'Tabela de cadastro', size: { w: 1000, h: 640 } },
   partner: { title: 'Dados mestre do parceiro', size: { w: 1180, h: 800 } },
   employee: { title: 'Colaborador', size: { w: 980, h: 640 } },
-  locations: { title: 'Depósitos e localizações', size: { w: 1180, h: 720 } },
+  locations: { title: 'Localizações de estoque', size: { w: 1120, h: 700 } },
   calendars: { title: 'Calendários de trabalho', size: { w: 1180, h: 720 } },
 };
 
 /** Título de abertura: as janelas genéricas (lista e tabela de cadastro, parceiro) dependem do registro. */
 function tituloDe(kind: WindowKind, recordKey: string): string {
   if (kind === 'cadastro-lista') return CADASTROS[recordKey]?.titulo ?? KINDS[kind].title;
+  if (kind === 'cadastro-tabela') return TABELAS[recordKey]?.titulo ?? KINDS[kind].title;
   if (kind === 'partner') return tituloParceiro(recordKey);
+  if (kind === 'item') return tituloItem(recordKey);
   return KINDS[kind].title;
 }
 
@@ -538,6 +542,10 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                         <ChangePasswordWindow />
                       ) : w.kind === 'cadastro-lista' ? (
                         <CadastroListaWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'cadastro-tabela' ? (
+                        <CadastroTabelaWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'locations' ? (
+                        <LocationsWindow recordKey={w.recordKey} />
                       ) : w.kind === 'partner' ? (
                         <PartnerWindow recordKey={w.recordKey} />
                       ) : (
