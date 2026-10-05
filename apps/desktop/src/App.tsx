@@ -4,6 +4,7 @@ import type { CompanyProfile, SessionUser } from './api/types';
 import { CADASTROS, CadastroListaWindow } from './screens/CadastroListaWindow';
 import { CatalogWindow } from './screens/CatalogWindow';
 import { LocationsWindow } from './screens/LocationsWindow';
+import { CalendarsWindow } from './screens/CalendarsWindow';
 import { CadastroTabelaWindow, TABELAS } from './screens/CadastroTabelaWindow';
 import { PartnerWindow, tituloParceiro } from './screens/PartnerWindow';
 import { ChangePasswordWindow } from './screens/ChangePasswordWindow';
@@ -120,7 +121,7 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   partner: { title: 'Dados mestre do parceiro', size: { w: 1180, h: 800 } },
   employee: { title: 'Colaborador', size: { w: 980, h: 640 } },
   locations: { title: 'Localizações de estoque', size: { w: 1120, h: 700 } },
-  calendars: { title: 'Calendários de trabalho', size: { w: 1180, h: 720 } },
+  calendars: { title: 'Calendários e feriados', size: { w: 1180, h: 780 } },
 };
 
 /** Título de abertura: as janelas genéricas (lista e tabela de cadastro, parceiro) dependem do registro. */
@@ -544,6 +545,8 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                         <CadastroListaWindow recordKey={w.recordKey} />
                       ) : w.kind === 'cadastro-tabela' ? (
                         <CadastroTabelaWindow recordKey={w.recordKey} />
+                      ) : w.kind === 'calendars' ? (
+                        <CalendarsWindow />
                       ) : w.kind === 'locations' ? (
                         <LocationsWindow recordKey={w.recordKey} />
                       ) : w.kind === 'partner' ? (

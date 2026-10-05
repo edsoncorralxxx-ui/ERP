@@ -156,3 +156,33 @@
 .rp-locais__barra > div { height: 100%; background: var(--rail-selected); }
 .rp-locais__marcas { display: flex; flex-direction: column; gap: 6px; padding-top: var(--space-3); }
 .rp-locais__grade { height: 190px; display: flex; flex-direction: column; }
+
+/* Calendários e feriados: topo com calendário, ano, UF/município e legenda; doze meses em 4 colunas; feriados e jornada à direita. */
+.rp-calend { padding: 0; display: flex; flex-direction: column; overflow: hidden; }
+.rp-calend__topo { flex-shrink: 0; padding: var(--space-4) var(--space-5); display: flex; align-items: center; gap: var(--space-6); flex-wrap: wrap; border-bottom: 1px solid var(--grid-rule); }
+.rp-calend__par { display: flex; align-items: center; gap: var(--space-3); }
+.rp-calend__rot { white-space: nowrap; align-self: stretch; display: flex; align-items: center; border-bottom: 1px solid var(--form-rule); }
+.rp-calend__ano { display: flex; align-items: center; gap: var(--space-2); }
+.rp-calend__ano > span { min-width: 56px; text-align: center; font: var(--text-label-strong); font-size: 15px; }
+.rp-calend__legenda { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.rp-calend__legenda > span { display: flex; align-items: center; gap: 6px; }
+.rp-calend__amostra { width: 14px; height: 14px; box-sizing: border-box; }
+.rp-calend__amostra--feriado { background: var(--gold-light); border: 1px solid var(--seta-borda); }
+.rp-calend__amostra--facultativo { background: var(--field-note); border: 1px dashed var(--seta-borda); }
+.rp-calend__amostra--folga { background: var(--grid-header); border: 1px solid var(--grid-rule); }
+.rp-calend__corpo { flex: 1; min-height: 0; padding: var(--space-5); display: flex; gap: var(--space-5); }
+.rp-calend__meses { flex: 1; min-width: 0; overflow: auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); align-content: start; }
+.rp-calend__mes { background: var(--field); border: 1px solid var(--panel-border); border-radius: var(--radius-sm); overflow: hidden; }
+.rp-calend__mes-cab { height: 24px; display: flex; align-items: center; justify-content: space-between; padding: 0 var(--space-3); background: linear-gradient(var(--grid-header-top), var(--arte-fundo)); border-bottom: 1px solid var(--panel-border); font: var(--text-label-strong); color: var(--ink-heading); }
+.rp-calend__mes-cab span + span { font: var(--text-body); color: var(--ink-muted); }
+.rp-calend__dias { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding: var(--space-2); gap: var(--space-1); text-align: center; }
+.rp-calend__dias [role=columnheader] { color: var(--ink-muted); padding: var(--space-1) 0; }
+.rp-calend__dia { height: 20px; padding: 0; font: var(--text-body); font-variant-numeric: tabular-nums; color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: 2px; cursor: pointer; }
+.rp-calend__dia:hover { background: var(--field-active); }
+.rp-calend__dia--folga { color: var(--ink-muted); background: var(--grid-header); }
+.rp-calend__dia--feriado { font-weight: 600; background: var(--gold-light); }
+.rp-calend__dia--facultativo { font-weight: 600; background: var(--field-note); border: 1px dashed var(--seta-borda); }
+.rp-calend__dia[aria-pressed=true] { outline: 2px solid var(--nav-divider); outline-offset: -1px; }
+.rp-calend__lado { width: 400px; flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-3); overflow: auto; }
+.rp-calend__feriados { height: 300px; display: flex; flex-direction: column; }
+.rp-calend__semana { display: flex; gap: var(--space-4); flex-wrap: wrap; }
