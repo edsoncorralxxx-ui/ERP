@@ -32,7 +32,8 @@ export function StatusBar({ connection, user, activeTitle, company, message, log
     return () => clearInterval(t);
   }, []);
   // A cada verificação do servidor, o relógio do rodapé acompanha o do servidor (relógio da demonstração).
-  useEffect(() => setNow(agora()), [connection.checkedAt]);
+  const verificado = 'checkedAt' in connection ? connection.checkedAt : null;
+  useEffect(() => setNow(agora()), [verificado]);
 
   // Campo com limite de tamanho em foco: o compartimento da esquerda mostra "(250 caracteres)" (componente Barra de status).
   useEffect(() => {
