@@ -30,8 +30,8 @@ class DemoDataLoader implements ApplicationRunner {
 
     /** Tabelas que a carga não apaga. */
     static final Set<String> FICAM = Set.of("flyway_schema_history", "app_user", "user_session", "opportunity_stage", "reference_table",
-            "tax_parameter_revision", "tax_obligation_template", "financial_category", "bank_account", "tax_activity",
-            "tax_company_profile", "company_profile", "equipment_model");
+            "tax_parameter_revision", "tax_obligation_template", "financial_category", "tax_activity",
+            "tax_company_profile", "company_profile");
 
     private final JdbcClient jdbc;
     private final DataSource dataSource;

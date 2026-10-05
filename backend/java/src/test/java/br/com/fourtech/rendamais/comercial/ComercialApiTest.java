@@ -84,7 +84,7 @@ class ComercialApiTest extends CadastrosApiTest {
                 """.formatted(cliente, matriz, linhas()));
         assertThat(r.statusCode()).as(r.body()).isEqualTo(201);
         String id = campo(r.body(), "id");
-        assertThat(campo(r.body(), "code")).matches("PR\\d{5}");
+        assertThat(campo(r.body(), "code")).matches("PRO-\\d{6}");
         assertThat(r.body()).contains("\"status\":\"RASCUNHO\"", "\"totalCents\":\"" + TOTAL + "\"", "\"grossCents\":\"17146\"",
                 "\"uom\":\"M\"", "\"description\":\"Perfil L 40x40\"");
         assertThat(post("/api/v1/proposals", "s4-prop-0001", "{}").statusCode()).isEqualTo(422);
@@ -113,7 +113,7 @@ class ComercialApiTest extends CadastrosApiTest {
         HttpResponse<String> convertido = post("/api/v1/proposals/" + id + "/orders", "s4-conv-0001", "{\"contractDate\":\"2026-10-05\"}");
         assertThat(convertido.statusCode()).as(convertido.body()).isEqualTo(201);
         String pedido = campo(convertido.body(), "id");
-        assertThat(campo(convertido.body(), "code")).matches("PV\\d{5}");
+        assertThat(campo(convertido.body(), "code")).matches("PV-\\d{6}");
         assertThat(convertido.body()).contains("\"status\":\"DRAFT\"", "\"proposalRevision\":2", "\"totalCents\":\"15000000\"",
                 "\"unitName\":\"Matriz\"");
         assertThat(get("/api/v1/proposals/" + id).body()).contains("\"status\":\"GANHA\"");

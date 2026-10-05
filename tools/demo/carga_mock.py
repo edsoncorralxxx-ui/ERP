@@ -5,6 +5,7 @@ Saída: backend/java/src/main/resources/demo/carga-mock.sql, executada pelo serv
 (plataforma.demo.DemoDataLoader), depois de apagar os dados de negócio. Os identificadores são estáveis (uuid5), para
 a mesma carga gerar sempre os mesmos registros. Uso: python3 tools/demo/carga_mock.py [--verificar]
 """
+import hashlib
 import json
 import sys
 import uuid
@@ -408,13 +409,18 @@ MATERIAIS = [
     ("PN-6001", "Cilindro pneumático 63 × 200 mm (comporta do coletor)", "PNE", "MRC3", "UN", "14", "10", "612.00", "84123100"),
     ("PN-6002", "Válvula solenoide 5/2 vias 24 Vcc", "PNE", "MRC3", "UN", "3", "8", "245.00", "84812090"),
     ("FX-4001", "Parafuso sextavado inox M8x25", "FIX", None, "UN", "3400", "1000", "0.86", "73181500"),
-    ("EL-3010", "Inversor de frequência 5 cv", "ELE", "MRC2", "UN", "3", "2", "2890.00", "85044090"),
+    ("EL-3010", "Inversor de frequência 5 cv", "ELE", "MRC2", "UN", "3", "4", "2890.00", "85044090"),
 ]
 PERFIL_EL3001 = dict(complement="16 entradas digitais, 8 saídas a relé", gtin="[GTIN]", manufacturer="[FABRICANTE]",
                      manufacturerPartNumber="CLP16-R8", warrantyMonths=12, traceability="Lote", grossWeightKg="0.650", netWeightKg="0.480",
                      dimensions="0,12 × 0,09 × 0,07 m", notes="Usar somente firmware homologado pela engenharia.", purchaseUom="UN",
                      conversionFactor="1.000000", leadTimeDays=35, minLot="1.000", preferredSupplier="Eletro Componentes Sul Ltda.",
                      supplierItemCode="CLP-16R8", valuationMethod="Custo médio ponderado", defaultWarehouse="01", spedType="01 — Matéria-prima")
+
+
+FORNECEDOR_PREFERIDO = {"CHP": "Aços Inox Paulista Ltda.", "TUB": "Aços Inox Paulista Ltda.", "ELE": "Eletro Componentes Sul Ltda.",
+                        "INS": "Células de Carga Precisão Indústria S.A.", "PNE": "Pneumática Oeste Automação Ltda.",
+                        "FIX": "Parafusos e Fixadores Brasil"}
 
 
 def itens():
@@ -438,7 +444,7 @@ def itens():
                          updated_by=QUEM))
     for c, d, cat, marca, um, est, minimo, custo, ncm in MATERIAIS:
         p = dict(brand=marca, stockItem=True, purchaseItem=True, minStock=f"{float(minimo):.3f}", spedType="01 — Matéria-prima",
-                 defaultWarehouse="01", valuationMethod="Custo médio ponderado")
+                 defaultWarehouse="01", valuationMethod="Custo médio ponderado", preferredSupplier=FORNECEDOR_PREFERIDO.get(cat, "—"))
         if c == "EL-3001":
             p.update(PERFIL_EL3001)
             p["stockItem"] = p["salesItem"] = p["purchaseItem"] = p["manufactured"] = True
@@ -756,6 +762,292 @@ def crm():
     ins("sales_target", metas)
 
 
+# Negócios: faturamento, pedidos, projetos, propostas, contas e títulos -----------------------------------------------
+
+# Notas de saída de out/2025 a ago/2026 pela receita do exemplo fiscal (anexo I revenda, II industrialização, III
+# serviços); setembro/2026 com as notas do mock (Cockpit-Dados e Fiscal). Meta de faturamento do gráfico do cockpit.
+META_FATURAMENTO = {"2025-09": 300, "2025-10": 260, "2025-11": 260, "2025-12": 300, "2026-01": 180, "2026-02": 180, "2026-03": 220,
+                    "2026-04": 280, "2026-05": 340, "2026-06": 380, "2026-07": 400, "2026-08": 380, "2026-09": 370}
+CLIENTES_NOTA = ["C00015", "C00018", "C00021", "C00024", "C00027", "C00030", "C00033", "C00036", "C00042", "C00012", "C00045"]
+COMPACTA_EM = {"2026-04", "2026-06", "2026-07", "2026-08"}
+# Notas ligadas a pedidos da carteira (o saldo do pedido é o total menos o faturado): competência → pedido.
+R50_DO_PEDIDO = {"2026-06": "PV-000118", "2026-07": "PV-000118", "2026-08": "PV-000118"}
+ITEM_NOTA = {"Coletor automático CA-10": "PA-1100", "Peças de reposição — células de carga": "PA-1310",
+             "Balança Renda+ R50 — 50% na entrega": "PA-1000", "Contrato de manutenção — setembro": "SV-050",
+             "Balança Renda+ R50 Compacta": "PA-1010", "Aferição com pesos-padrão": "SV-020", "Instalação e comissionamento": "SV-010",
+             "Instalação e treinamento": "SV-010"}
+NOTA_DO_PEDIDO = {"004880": "PV-000124"}
+
+# Pedidos da carteira (Cockpit-Dados): nº, cliente, confirmação, entrega, etapa do projeto, linhas (tipo, item, descrição, qtd, UM, unitário)
+# e séries dos equipamentos. O saldo do mock é o total menos as notas ligadas.
+PEDIDOS = [
+    ("PV-000118", "C00012", "2026-05-20", "2026-09-29", "PRODUCAO",
+     [("EQUIPAMENTO", "PA-1000", "Balança de renda Renda+ R50", "2", "UN", "181070"), ("SERVICO", "SV-010", "Instalação e comissionamento", "1", "SV", "22000")],
+     ["0231-A", "0231-B"]),
+    ("PV-000121", "C00018", "2026-07-14", "2026-10-15", "PRODUCAO",
+     [("EQUIPAMENTO", "PA-1000", "Balança de renda Renda+ R50 — 2ª linha", "1", "UN", "198000"),
+      ("SERVICO", "SV-010", "Instalação e comissionamento", "1", "SV", "22000"), ("SERVICO", "SV-040", "Treinamento de operadores", "56.896552", "H", "290")],
+     ["0228-A"]),
+    ("PV-000122", "C00021", "2026-08-05", "2026-10-22", "PRODUCAO",
+     [("EQUIPAMENTO", "PA-1010", "Balança de renda Renda+ R50 Compacta", "1", "UN", "128000"),
+      ("SERVICO", "SV-010", "Instalação e comissionamento", "1", "SV", "22000")], ["0226-A"]),
+    ("PV-000124", "C00015", "2026-09-02", "2026-11-10", "PRODUCAO",
+     [("EQUIPAMENTO", "PA-1000", "Balança de renda Renda+ R50 — Paranavaí", "1", "UN", "198000"),
+      ("MATERIAL", "PA-1100", "Coletor automático de amostras CA-10", "1", "UN", "38500"), ("SERVICO", "SV-020", "Aferição com pesos-padrão", "1", "SV", "11500")],
+     ["0236-A"]),
+    ("PV-000125", "C00042", "2026-08-26", "2026-12-12", "ENGENHARIA",
+     [("EQUIPAMENTO", "PA-1000", "Balança de renda Renda+ R50", "2", "UN", "206000")], ["0240-A", "0240-B"]),
+    ("PV-000126", "C00033", "2026-06-30", "2027-01-20", "ENGENHARIA",
+     [("EQUIPAMENTO", "PA-1000", "Balança de renda Renda+ R50 — fecularia nova", "2", "UN", "198000"),
+      ("SERVICO", "SV-010", "Instalação e comissionamento", "2", "SV", "22000"), ("SERVICO", "SV-040", "Treinamento de operadores", "41.37931", "H", "290")],
+     ["0241-A", "0241-B"]),
+    ("PV-000127", "C00024", "2026-09-15", "2026-10-01", "PLANEJADO",
+     [("SERVICO", "SV-050", "Contrato de manutenção e aferição — 36 meses", "36", "MES", "1500")], []),
+    ("PV-000128", "C00027", "2026-09-18", "2026-10-05", "INSTALACAO",
+     [("SERVICO", "SV-010", "Instalação da R50 Compacta", "1", "SV", "22000")], []),
+]
+MODELOS = [("MD00001", "Balança Renda+ R50", "PA-1000"), ("MD00002", "Balança Renda+ R50 Compacta", "PA-1010"),
+           ("MD00003", "Coletor automático CA-10", "PA-1100"), ("MD00004", "Balança hidrostática H5", "PA-0900")]
+
+# Contas (Cockpit-Dados): código, nome, tipo, banco, agência, conta, saldo em 24/09/2026.
+CONTAS = [("CT001", "[BANCO PRINCIPAL] — movimento", "BANCO", "[BANCO PRINCIPAL]", "[0000]", "[00000-0]", 512480.20),
+          ("CT002", "[BANCO 2] — pagamentos", "BANCO", "[BANCO 2]", "[0000]", "[00000-0]", 188230.10),
+          ("CT003", "[BANCO 3] — aplicação", "BANCO", "[BANCO 3]", "[0000]", "[00000-0]", 138400.00),
+          ("CT004", "Caixa da fábrica", "CAIXA", None, None, None, 3199.70)]
+# Fluxo de caixa do mock (mil R$), out/2025 a set/2026: entradas no CT001; saídas pagas pelo CT002, abastecido por
+# transferência do CT001 no mesmo dia. Setembro fecha 4,1% abaixo de agosto, como no indicador do mock.
+MESES_CAIXA = ["2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09"]
+ENTRADAS = [250, 270, 360, 200, 170, 190, 260, 350, 420, 450, 400, 410]
+SAIDAS = [230, 240, 280, 240, 215, 235, 280, 320, 360, 380, 390, 445.99]
+FORNECEDORES_PAGOS = [("F00101", "MATERIAIS", 0.38), ("F00104", "MATERIAIS", 0.27), ("F00107", "MATERIAIS", 0.2), ("F00113", "SERVICOS_TERCEIROS", 0.15)]
+# Títulos em aberto: cliente/fornecedor, valor, emissão, vencimento, descrição.
+A_RECEBER = [("C00012", 48675.39, "2026-09-10", "2026-10-10", "Saldo da 2ª parcela — PV-000118"),
+             ("C00024", 28400.00, "2026-08-04", "2026-09-03", "NF-e 004812 — peças e aferição"),
+             ("C00030", 35800.00, "2026-08-08", "2026-09-07", "NF-e 004826 — painel PR-12"),
+             ("C00021", 80760.00, "2026-09-24", "2026-10-24", "NFS-e 000518 — instalação e treinamento"),
+             ("C00027", 128000.00, "2026-09-18", "2026-10-18", "NF-e 004893 — R50 Compacta")]
+A_PAGAR = [("F00107", "MATERIAIS", 18400.00, "2026-08-28", "2026-09-28", "Células de carga 50 kg — pedido PC-000418"),
+           ("F00101", "MATERIAIS", 12350.00, "2026-09-01", "2026-09-30", "Tubos e chapas inox 304"),
+           ("F00122", "SERVICOS_TERCEIROS", 2800.00, "2026-09-15", "2026-10-15", "Calibração RBC dos pesos-padrão")]
+
+
+def mes_seguinte(m):
+    y, mm = int(m[:4]), int(m[5:])
+    return f"{y + (mm == 12)}-{1 if mm == 12 else mm + 1:02d}"
+
+
+def negocios():
+    sec("Negócios: modelos, pedidos, projetos, equipamentos e propostas")
+    ins("equipment_model", [dict(id=uid("model", c), code=c, name=n, status="ATIVO", version=1, created_at=ts("2025-01-10"), created_by=QUEM)
+                            for c, n, _ in MODELOS])
+    modelo = {it: (uid("model", c), n) for c, n, it in MODELOS}
+    pedidos, linhas, projetos, equips, parcelas = [], [], [], [], []
+    for n, (cod, cli, conf, entrega, etapa, itens_pv, series) in enumerate(PEDIDOS):
+        oid, pid = uid("so", cod), uid("project", cod)
+        total = 0
+        eq_seq = 0
+        for k, (kind, item, desc, qtd, um, unit) in enumerate(itens_pv):
+            lt = int(round(float(qtd) * float(unit) * 100))
+            total += lt
+            lid = uid("sol", cod, k)
+            linhas.append(dict(id=lid, order_id=oid, position=k + 1, kind=kind, item_id=uid("item", item), description=desc, quantity=qtd, uom=um,
+                               unit_price=unit, discount_cents=0, line_total_cents=lt))
+            if kind == "EQUIPAMENTO":
+                for j in range(int(float(qtd))):
+                    serie = series[eq_seq]
+                    eq_seq += 1
+                    equips.append(dict(id=uid("equip", cod, serie), code=f"EQ{len(equips) + 1:05d}", project_id=pid, order_line_id=lid, line_seq=j + 1,
+                                       model=modelo[item][1], model_id=modelo[item][0], item_id=uid("item", item), customer_id=uid("partner", cli),
+                                       unit_id=uid("unit", cli, 0), unit_name=None, serial_number=serie, notes=None, status="ATIVO", accepted_on=None,
+                                       warranty_start=None, version=1, created_at=ts(conf, "10:30"), created_by=QUEM))
+        unit_name = ENDERECOS.get(cli, [("COBRANCA",)])[0]
+        nome_unid = {c[0]: c for c in CLIENTES}[cli][4]
+        un = f"Cobrança — {nome_unid}"
+        for e in equips:
+            if e["unit_name"] is None:
+                e["unit_name"] = un
+        pedidos.append(dict(id=oid, code=cod, customer_id=uid("partner", cli), unit_id=uid("unit", cli, 0), unit_name=un, proposal_id=None,
+                            proposal_revision=None, contract_date=conf, promised_date=entrega, notes=None, status="CONFIRMED", total_cents=total,
+                            confirmed_at=ts(conf, "15:00"), confirmed_by="Beatriz Costa",
+                            snapshot_hash=hashlib.sha256(cod.encode()).hexdigest(), project_id=pid, cancelled_at=None, cancelled_by=None,
+                            cancel_reason=None, version=2, created_at=ts(conf, "11:00"), created_by="Beatriz Costa", updated_at=ts(conf, "15:00"),
+                            updated_by="Beatriz Costa"))
+        parcelas.append(dict(order_id=oid, seq=1, due_date=entrega, amount_cents=total, milestone="Na entrega"))
+        projetos.append(dict(id=pid, code=f"PJ{n + 1:05d}", name=f"{cod} — " + itens_pv[0][2], order_id=oid, order_code=cod,
+                             customer_id=uid("partner", cli), unit_id=uid("unit", cli, 0), unit_name=un, stage=etapa, contract_delivery=entrega,
+                             contract_cents=total, closed_reason=None, version=1, created_at=ts(conf, "15:00"), created_by="Beatriz Costa"))
+    ins("sales_order", pedidos)
+    ins("sales_order_line", linhas)
+    ins("sales_order_installment", parcelas)
+    ins("project", projetos)
+    ins("equipment", equips)
+
+    # Propostas das oportunidades em Proposta e Negociação: revisão 2 (08/09, 4% acima) substituída pela 3 (19/09).
+    props, revs, plinhas = [], [], []
+    for (cod, cli, titulo, valor, etapa, *_r) in OPORTUNIDADES:
+        if etapa not in ("Proposta", "Negociação"):
+            continue
+        pcod = "PRO-000" + str(300 + int(cod[-2:]))
+        prid = uid("proposal", pcod)
+        nome_unid = {c[0]: c for c in CLIENTES}[cli][4]
+        props.append(dict(id=prid, code=pcod, customer_id=uid("partner", cli), unit_id=uid("unit", cli, 0), unit_name=f"Cobrança — {nome_unid}",
+                          title=titulo, status="ABERTA", outcome_reason=None, current_revision=3, version=3, created_at=ts("2026-08-25", "10:00"),
+                          created_by=QUEM, updated_at=ts("2026-09-19", "10:12"), updated_by=QUEM, opportunity_id=uid("opp", cod)))
+        for rev, dia, fator in [(2, "2026-09-08", 1.04), (3, "2026-09-19", 1.0)]:
+            rid = uid("proprev", pcod, rev)
+            tot = int(round(valor * fator * 100))
+            revs.append(dict(id=rid, proposal_id=prid, revision=rev, status="EMITIDA", valid_until="2026-10-31", payment_terms="30% no pedido, 70% na entrega",
+                             total_cents=tot, issued_at=ts(dia, "10:12"), issued_by=QUEM))
+            plinhas.append(dict(id=uid("propline", pcod, rev), revision_id=rid, position=1, kind="EQUIPAMENTO" if valor > 100000 else "SERVICO",
+                                item_id=None, description=titulo[:200], quantity="1", uom="UN" if valor > 100000 else "SV",
+                                unit_price=f"{valor * fator:.2f}", discount_cents=0, line_total_cents=tot))
+    ins("proposal", props)
+    ins("proposal_revision", revs)
+    ins("proposal_line", plinhas)
+
+    sec("Faturamento: notas de saída de setembro/2025 a setembro/2026 e meta mensal")
+    docs, dlinhas = [], []
+    num = {"NF": 4600, "NFS": 380}
+    precos = {"PA-1000": 99000, "PA-1010": 128000}
+
+    def nota(serie, numero, cli, dia, linhas_nota, pedido=None, autorizacao="AUTORIZADA"):
+        did = uid("doc", serie, numero)
+        total = sum(v for _, _, _, v in linhas_nota)
+        docs.append(dict(id=did, code=f"DF{len(docs) + 1:05d}", direction="SAIDA", partner_id=uid("partner", cli), series=serie, number=numero,
+                         issue_date=dia, competence=dia[:7], total_cents=total, linked_cents=0, notes=None,
+                         operation_nature="PRESTACAO_SERVICO" if serie == "NFS" else "VENDA_PRODUCAO", project_id=uid("project", pedido) if pedido else None,
+                         classification_rev=1, status="ATIVO", cancel_reason=None, version=1, created_at=ts(dia, "16:00"), created_by=QUEM,
+                         order_id=uid("so", pedido) if pedido else None, authorization_status=autorizacao,
+                         authorization_protocol=None if autorizacao == "PENDENTE" else f"1352600{numero}"))
+        for k, (desc, item, anexo, v) in enumerate(linhas_nota):
+            dlinhas.append(dict(document_id=did, seq=k + 1, description=desc, kind="SERVICO" if anexo == "III" else "PRODUTO", amount_cents=v,
+                                item_id=uid("item", item) if item else None, annex=anexo, annex_source="CLASSIFICACAO"))
+
+    rot = 0
+    for h in FISCAL["historicoReceita"]:
+        m = h["competencia"]
+        if m < "2025-09":
+            continue
+        a1, a2, a3 = cents(h["anexoI"]), cents(h["anexoII"]), cents(h["anexoIII"])
+        prod = []
+        if m in COMPACTA_EM:
+            prod.append(("Balança Renda+ R50 Compacta", "PA-1010", cents(128000)))
+        livre = a2 - sum(p[2] for p in prod)
+        r50 = min(2, livre // cents(99000))
+        for _ in range(r50):
+            prod.append(("Balança Renda+ R50 — 50% do contrato", "PA-1000", cents(99000)))
+        resto = a2 - sum(p[2] for p in prod)
+        dias = [f"{m}-{d:02d}" for d in (6, 13, 20, 27)]
+        # Uma nota por equipamento; o restante da industrialização em coletores e painéis.
+        for k, (desc, item, v) in enumerate(prod):
+            num["NF"] += 1
+            pedido = R50_DO_PEDIDO.get(m) if item == "PA-1000" and k == len(prod) - 1 else None
+            cli = "C00012" if pedido else CLIENTES_NOTA[rot % len(CLIENTES_NOTA)]
+            rot += 1
+            nota("1", f"{num['NF']:06d}", cli, dias[k % 4], [(desc, item, "II", v)], pedido)
+        if resto > 0:
+            num["NF"] += 1
+            metade = resto // 2
+            nota("1", f"{num['NF']:06d}", CLIENTES_NOTA[rot % len(CLIENTES_NOTA)], dias[1],
+                 [("Coletor automático de amostras CA-10", "PA-1100", "II", metade), ("Painel de controle PR-12 com IHM", "PA-1200", "II", resto - metade),
+                  ("Células de carga e peças de reposição", "PA-1310", "I", a1)])
+            rot += 1
+        contrato = cents(4500)
+        num["NFS"] += 1
+        nota("NFS", f"{num['NFS']:06d}", "C00024", dias[2], [("Contrato de manutenção — " + m, "SV-050", "III", contrato)])
+        num["NFS"] += 1
+        nota("NFS", f"{num['NFS']:06d}", CLIENTES_NOTA[rot % len(CLIENTES_NOTA)], dias[3],
+             [("Instalação e comissionamento", "SV-010", "III", (a3 - contrato) * 7 // 10),
+              ("Aferição e treinamento de operadores", "SV-020", "III", (a3 - contrato) - (a3 - contrato) * 7 // 10)])
+        rot += 1
+    clientes_nome = {c[1]: c[0] for c in CLIENTES}
+    for n in FISCAL["notasSetembro2026"]:
+        serie = "NFS" if n["modelo"] == "NFS-e" else "1"
+        cli = clientes_nome[n["cliente"]]
+        nota(serie, n["numero"], cli, n["emissao"], [(n["descricao"], ITEM_NOTA[n["descricao"]], n["anexo"], cents(n["valor"]))],
+             NOTA_DO_PEDIDO.get(n["numero"]), n["autorizacao"])
+    ins("business_document", docs)
+    ins("document_line", dlinhas)
+    ins("billing_target", [dict(month=f"{m}-01", target_cents=cents(v * 1000), updated_at=ts("2025-08-20"), updated_by="Beatriz Costa")
+                           for m, v in META_FATURAMENTO.items()])
+
+    sec("Financeiro: contas, recebimentos e pagamentos de 12 meses, transferências e títulos em aberto")
+    abertura = {c[0]: cents(c[6]) for c in CONTAS}
+    abertura["CT001"] -= cents(sum(ENTRADAS) * 1000) - cents(sum(SAIDAS) * 1000)
+    ins("bank_account", [dict(id=uid("conta", c), code=c, name=n, kind=k, bank=b, agency=ag, account_number=cc, opening_cents=abertura[c],
+                              opening_on="2025-09-30", status="ATIVO", version=1, created_at=ts("2025-09-30"), created_by=QUEM)
+                         for c, n, k, b, ag, cc, _ in CONTAS])
+    titulos, liq, aloc, movs, transf = [], [], [], [], []
+    seq = {"CR": 0, "CP": 0, "RC": 0, "PG": 0, "TR": 0}
+
+    def titulo(direcao, parte, cat, valor, emissao, venc, rotulo, recebido):
+        pre = "CR" if direcao == "RECEIVABLE" else "CP"
+        seq[pre] += 1
+        tid = uid("titulo", pre, seq[pre])
+        titulos.append(dict(id=tid, code=f"{pre}{seq[pre]:05d}", direction=direcao, counterparty_id=uid("partner", parte), origin_type="MANUAL",
+                            origin_id=f"carga-{pre}-{seq[pre]}", origin_label=rotulo, project_id=None, category=cat, competence=emissao[:7],
+                            issue_date=emissao, due_date=venc, original_cents=valor, lifecycle="ACTIVE", cancel_reason=None, version=1 + (recebido > 0),
+                            created_at=ts(emissao), created_by=QUEM, received_cents=recebido, document_number=None, notes=None))
+        return tid
+
+    def liquida(direcao, tid, parte, conta, valor, dia):
+        pre = "RC" if direcao == "RECEIVABLE" else "PG"
+        seq[pre] += 1
+        sid = uid("liq", pre, seq[pre])
+        liq.append(dict(id=sid, code=f"{pre}{seq[pre]:05d}", direction=direcao, account_id=uid("conta", conta), counterparty_id=uid("partner", parte),
+                        effective_date=dia, total_cents=valor, credit_cents=0, notes=None, status="POSTED", version=1, created_at=ts(dia, "11:00"),
+                        created_by=QUEM))
+        aloc.append(dict(settlement_id=sid, title_id=tid, amount_cents=valor))
+        movs.append(dict(id=uid("mov", pre, seq[pre]), account_id=uid("conta", conta), effective_date=dia, amount_cents=valor if direcao == "RECEIVABLE" else -valor,
+                         kind="SETTLEMENT", settlement_id=sid, reverses_id=None, transfer_id=None,
+                         description=("Recebimento " if direcao == "RECEIVABLE" else "Pagamento ") + f"{pre}{seq[pre]:05d}", created_at=ts(dia, "11:00"),
+                         created_by=QUEM))
+
+    for i, m in enumerate(MESES_CAIXA):
+        ent, sai = cents(ENTRADAS[i] * 1000), cents(SAIDAS[i] * 1000)
+        fim = "20" if m == "2026-09" else "25"
+        partes = [ent * 45 // 100, ent * 35 // 100]
+        partes.append(ent - sum(partes))
+        for k, v in enumerate(partes):
+            cli = CLIENTES_NOTA[(i * 3 + k) % len(CLIENTES_NOTA)]
+            dia = f"{m}-{(5, 15, int(fim))[k]:02d}"
+            ant = f"{MESES_CAIXA[i - 1] if i else '2025-09'}-{(5, 15, 25)[k]:02d}"
+            tid = titulo("RECEIVABLE", cli, "RECEITA_VENDA", v, ant, dia, "Parcela de venda — carga de demonstração", v)
+            liquida("RECEIVABLE", tid, cli, "CT001", v, dia)
+        pagos = 0
+        for k, (forn, cat, fr) in enumerate(FORNECEDORES_PAGOS):
+            v = sai - pagos if k == len(FORNECEDORES_PAGOS) - 1 else int(sai * fr)
+            pagos += v
+            dia = f"{m}-{(8, 12, 18, int(fim) - 1)[k]:02d}"
+            tid = titulo("PAYABLE", forn, cat, v, f"{m}-01", dia, "Compra de materiais e serviços — carga de demonstração", v)
+            liquida("PAYABLE", tid, forn, "CT002", v, dia)
+        # O CT001 abastece o CT002 no início do mês com o que será pago.
+        seq["TR"] += 1
+        trid = uid("transf", seq["TR"])
+        dia = f"{m}-02"
+        transf.append(dict(id=trid, code=f"TR{seq['TR']:05d}", from_account_id=uid("conta", "CT001"), to_account_id=uid("conta", "CT002"),
+                           effective_date=dia, amount_cents=sai, notes="Provisão para os pagamentos do mês", status="POSTED", reversal_reason=None,
+                           reversal_date=None, reversed_at=None, reversed_by=None, version=1, created_at=ts(dia, "08:30"), created_by=QUEM))
+        for conta, sinal in (("CT001", -1), ("CT002", 1)):
+            movs.append(dict(id=uid("movtr", seq["TR"], conta), account_id=uid("conta", conta), effective_date=dia, amount_cents=sinal * sai,
+                             kind="TRANSFER", settlement_id=None, reverses_id=None, transfer_id=trid, description=f"Transferência TR{seq['TR']:05d}",
+                             created_at=ts(dia, "08:30"), created_by=QUEM))
+    for cli, v, emi, venc, rotulo in A_RECEBER:
+        titulo("RECEIVABLE", cli, "RECEITA_VENDA", cents(v), emi, venc, rotulo, 0)
+    for forn, cat, v, emi, venc, rotulo in A_PAGAR:
+        titulo("PAYABLE", forn, cat, cents(v), emi, venc, rotulo, 0)
+    ins("financial_title", titulos)
+    ins("settlement", liq)
+    ins("settlement_allocation", aloc)
+    ins("transfer", transf)
+    ins("cash_movement", movs)
+    out.append(f"select setval('sales_order_code_seq', 128), setval('project_code_seq', {len(PEDIDOS)}), setval('equipment_code_seq', {len(equips)}), "
+               f"setval('proposal_code_seq', 339), setval('equipment_model_code_seq', {len(MODELOS)}), setval('business_document_code_seq', {len(docs)}), "
+               f"setval('bank_account_code_seq', {len(CONTAS)}), setval('receivable_code_seq', {seq['CR']}), setval('payable_code_seq', {seq['CP']}), "
+               f"setval('settlement_code_seq', {seq['RC']}), setval('payment_code_seq', {seq['PG']}), setval('transfer_code_seq', {seq['TR']});")
+    out.append("")
+
+
 def anexos():
     sec("Anexos do C00012 (aba Documentos)")
     pdf = "JVBERi0xLjQKJcOkw7zDtsOfCjEgMCBvYmoKPDwgL1R5cGUgL0NhdGFsb2cgPj4KZW5kb2JqCnRyYWlsZXIKPDwgL1Jvb3QgMSAwIFIgPj4KJSVFT0YK"
@@ -782,6 +1074,7 @@ def gerar():
     calendarios()
     anexos()
     crm()
+    negocios()
     return "\n".join(out) + "\n"
 
 

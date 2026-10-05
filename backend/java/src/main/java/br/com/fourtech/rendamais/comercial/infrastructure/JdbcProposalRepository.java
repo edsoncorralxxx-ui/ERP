@@ -29,7 +29,7 @@ class JdbcProposalRepository implements ProposalRepository {
 
     @Override
     public String nextCode() {
-        return String.format("PR%05d", jdbc.sql("select nextval('proposal_code_seq')").query(Long.class).single());
+        return String.format("PRO-%06d", jdbc.sql("select nextval('proposal_code_seq')").query(Long.class).single());
     }
 
     @Override

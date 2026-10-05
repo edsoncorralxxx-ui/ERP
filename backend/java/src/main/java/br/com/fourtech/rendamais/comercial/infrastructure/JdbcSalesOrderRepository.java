@@ -29,7 +29,7 @@ class JdbcSalesOrderRepository implements SalesOrderRepository {
 
     @Override
     public String nextCode() {
-        return String.format("PV%05d", jdbc.sql("select nextval('sales_order_code_seq')").query(Long.class).single());
+        return String.format("PV-%06d", jdbc.sql("select nextval('sales_order_code_seq')").query(Long.class).single());
     }
 
     @Override

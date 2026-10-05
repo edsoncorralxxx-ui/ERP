@@ -22,7 +22,7 @@ const Maiusc = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const ICONE_ALERTA: Record<string, string> = { PARADA: 'rp-ico-ia-risco', PREVISAO: 'rp-ico-ia-previsao', ATRASADA: 'rp-ico-status-aviso' };
 
 /** Linha fina dos indicadores (como no mock): a série dos últimos meses, sem eixo. */
-function Faisca({ valores, ouro }: { valores: number[]; ouro?: boolean }) {
+export function Faisca({ valores, ouro }: { valores: number[]; ouro?: boolean }) {
   const max = Math.max(...valores, 1), min = Math.min(...valores, 0);
   const pts = valores.map((v, i) => `${(i * 176) / Math.max(1, valores.length - 1)},${24 - ((v - min) / (max - min || 1)) * 20}`).join(' ');
   return (

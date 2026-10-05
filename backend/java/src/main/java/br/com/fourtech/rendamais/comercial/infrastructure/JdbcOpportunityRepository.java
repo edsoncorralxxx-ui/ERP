@@ -32,7 +32,7 @@ class JdbcOpportunityRepository implements OpportunityRepository {
 
     @Override
     public String nextCode() {
-        return String.format("OP%05d", jdbc.sql("select nextval('opportunity_code_seq')").query(Long.class).single());
+        return String.format("OP-%06d", jdbc.sql("select nextval('opportunity_code_seq')").query(Long.class).single());
     }
 
     @Override

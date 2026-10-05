@@ -4,6 +4,7 @@ import type { CompanyProfile, SessionUser } from './api/types';
 import { CADASTROS, CadastroListaWindow } from './screens/CadastroListaWindow';
 import { CatalogWindow } from './screens/CatalogWindow';
 import { LocationsWindow } from './screens/LocationsWindow';
+import { CockpitDadosWindow, tituloDados } from './screens/CockpitDadosWindow';
 import { CrmDashboardWindow } from './screens/CrmDashboardWindow';
 import { KanbanWindow } from './screens/KanbanWindow';
 import { EmployeeWindow } from './screens/EmployeeWindow';
@@ -127,6 +128,7 @@ const KINDS: Record<WindowKind, { title: string; size: { w: number; h: number } 
   calendars: { title: 'Calendários e feriados', size: { w: 1180, h: 780 } },
   'crm-dashboard': { title: 'Painel comercial', size: { w: 1160, h: 720 } },
   kanban: { title: 'Kanban de vendas', size: { w: 1160, h: 720 } },
+  'cockpit-dados': { title: 'Dados do indicador', size: { w: 1130, h: 670 } },
 };
 
 /** Título de abertura: as janelas genéricas (lista e tabela de cadastro, parceiro) dependem do registro. */
@@ -135,6 +137,7 @@ function tituloDe(kind: WindowKind, recordKey: string): string {
   if (kind === 'cadastro-tabela') return TABELAS[recordKey]?.titulo ?? KINDS[kind].title;
   if (kind === 'partner') return tituloParceiro(recordKey);
   if (kind === 'item') return tituloItem(recordKey);
+  if (kind === 'cockpit-dados') return tituloDados(recordKey);
   return KINDS[kind].title;
 }
 
@@ -457,7 +460,7 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                       (w.kind === 'company-profile' ? (
                         <CompanyProfileWindow />
                       ) : w.kind === 'cockpit' ? (
-                        <CockpitWindow connection={connection} />
+                        <CockpitWindow />
                       ) : w.kind === 'customers' ? (
                         <CustomersWindow />
                       ) : w.kind === 'customer' ? (
@@ -554,6 +557,8 @@ function Shell({ user, onLock, onSignOut }: { user: SessionUser; onLock: () => v
                         <EmployeeWindow recordKey={w.recordKey} />
                       ) : w.kind === 'kanban' ? (
                         <KanbanWindow />
+                      ) : w.kind === 'cockpit-dados' ? (
+                        <CockpitDadosWindow recordKey={w.recordKey} />
                       ) : w.kind === 'crm-dashboard' ? (
                         <CrmDashboardWindow />
                       ) : w.kind === 'calendars' ? (

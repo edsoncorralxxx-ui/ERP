@@ -60,6 +60,7 @@ export const WINDOW_KINDS = [
   'calendars',
   'crm-dashboard',
   'kanban',
+  'cockpit-dados',
 ] as const;
 export type WindowKind = (typeof WINDOW_KINDS)[number];
 export type WindowMode = 'normal' | 'minimized' | 'maximized';

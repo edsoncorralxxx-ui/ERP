@@ -31,7 +31,7 @@ class JdbcLeadRepository implements LeadRepository {
 
     @Override
     public String nextCode() {
-        return String.format("PS%05d", jdbc.sql("select nextval('lead_code_seq')").query(Long.class).single());
+        return String.format("L-%04d", jdbc.sql("select nextval('lead_code_seq')").query(Long.class).single());
     }
 
     @Override
