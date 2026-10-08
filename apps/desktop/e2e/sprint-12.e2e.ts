@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
+import { abrirMenu } from './menu';
 
 /**
  * Sprint 12 — "Como verificar": o histórico de receita do mock (12 meses antes da primeira competência no Renda+) dá o
@@ -183,8 +184,7 @@ test('painel, apuração por anexo, PGDAS-D, guia DAS paga, fechamento e obriga�
 
   // Fiscal → Painel fiscal: RBT12 do histórico do mock na competência do roteiro.
   const gaveta = page.getByRole('complementary', { name: 'Módulos' });
-  await gaveta.getByRole('button', { name: 'Fiscal', exact: true }).click();
-  await gaveta.getByRole('button', { name: /Painel fiscal/ }).click();
+  await abrirMenu(page, 'Fiscal', 'Painel Fiscal');
   const painel = page.getByRole('dialog', { name: 'Painel fiscal', exact: true });
   if (mes(hoje.slice(0, 7), -1) !== c) await escolher(page, painel.getByRole('combobox', { name: 'Competência' }), rotulo);
   await expect(painel).toContainText(`RBT12 — receita em 12 meses`);
@@ -193,7 +193,7 @@ test('painel, apuração por anexo, PGDAS-D, guia DAS paga, fechamento e obriga�
 
   // A seta do DAS abre a Apuração do Simples na mesma competência.
   await painel.getByRole('link', { name: 'Abrir o cálculo do DAS' }).click();
-  const apuracao = page.getByRole('dialog', { name: 'Apuração do Simples Nacional', exact: true });
+  const apuracao = page.getByRole('dialog', { name: /^Apuração do Simples Nacional/ });
   await expect(apuracao.getByRole('combobox', { name: 'Competência' })).toContainText(rotulo);
   await expect(apuracao.getByRole('textbox', { name: 'RBT12', exact: true })).toHaveValue('R$ 3.340.000,00');
   await expect(apuracao.getByRole('textbox', { name: 'Receita do período' })).toHaveValue('R$ 20.000,00');
@@ -216,7 +216,7 @@ test('painel, apuração por anexo, PGDAS-D, guia DAS paga, fechamento e obriga�
   await foto(page, '03-nota-padrao');
 
   // Classificação fiscal do serviço: a linha da nota em apuração passa ao anexo da classificação.
-  await gaveta.getByRole('button', { name: /Classificação fiscal/ }).click();
+  await abrirMenu(page, 'Fiscal', 'Classificação Fiscal');
   const classificacao = page.getByRole('dialog', { name: 'Classificação fiscal de itens', exact: true });
   await classificacao.getByRole('tab', { name: /Serviços/ }).click();
   await classificacao.getByRole('searchbox').fill(SERVICO);
@@ -300,7 +300,7 @@ test('painel, apuração por anexo, PGDAS-D, guia DAS paga, fechamento e obriga�
   await foto(page, '08-reaberta');
 
   // Obrigações: o PGDAS-D e o DAS da competência, com a situação que vem da apuração.
-  await gaveta.getByRole('button', { name: /^Obrigações/ }).click();
+  await abrirMenu(page, 'Fiscal', 'Obrigações');
   const obrigacoes = page.getByRole('dialog', { name: 'Obrigações fiscais e acessórias', exact: true });
   const grade = obrigacoes.getByRole('table', { name: 'Obrigações fiscais e acessórias' });
   await expect(grade).toContainText('PGDAS-D');

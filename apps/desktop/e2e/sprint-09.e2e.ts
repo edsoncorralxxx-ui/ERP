@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
+import { abrirMenu } from './menu';
 
 /**
  * Sprint 9 — "Como verificar": transferência de R$ 5.000,00 entre duas contas do roteiro pela tela (cada conta muda, o
@@ -94,8 +95,7 @@ test('transferência sem mudar o total, fluxo de caixa com a composição e esto
 
   // Financeiro → Contas financeiras → Transferir R$ 5.000,00 da origem para o destino.
   const gaveta = page.getByRole('complementary', { name: 'Módulos' });
-  await gaveta.getByRole('button', { name: 'Financeiro', exact: true }).click();
-  await gaveta.getByRole('button', { name: /Contas financeiras/ }).click();
+  await abrirMenu(page, 'Financeiro', 'Caixa');
   const contas = page.getByRole('dialog', { name: 'Contas financeiras', exact: true });
   await contas.getByRole('button', { name: 'Transferir' }).click();
   const transferir = page.getByRole('alertdialog', { name: 'Transferir' });
@@ -112,7 +112,7 @@ test('transferência sem mudar o total, fluxo de caixa com a composição e esto
   expect(depois.totalCents).toBe(antes.totalCents);
 
   // Financeiro → Fluxo de caixa, pela categoria do roteiro: R$ 2.335,00 e R$ 1.000,00 previstos, saldos encadeados.
-  await gaveta.getByRole('button', { name: /Fluxo de caixa/ }).click();
+  await abrirMenu(page, 'Financeiro', 'Fluxo de Caixa');
   const fluxo = page.getByRole('dialog', { name: 'Fluxo de caixa', exact: true });
   await escolher(page, fluxo.getByRole('combobox', { name: 'Categoria' }), CATEGORIA);
   await fluxo.getByLabel('De', { exact: true }).fill(mmaaaa(m));
@@ -138,7 +138,7 @@ test('transferência sem mudar o total, fluxo de caixa com a composição e esto
   expect(doDestino.months[0]).toMatchObject({ openingCents: '1000000', realizedInCents: '500000' });
 
   // Estorno pelo extrato: os dois saldos voltam.
-  await gaveta.getByRole('button', { name: /Contas financeiras/ }).click();
+  await abrirMenu(page, 'Financeiro', 'Caixa');
   await contas.getByRole('tab', { name: 'Extrato' }).click();
   await escolher(page, contas.getByRole('combobox', { name: 'Conta' }), `${origem.code} — ${ORIGEM}`);
   const extrato = contas.getByRole('table', { name: 'Extrato da conta' });

@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
+import { abrirMenu } from './menu';
 
 /**
  * Sprint 6 — "Como verificar", no regime de caixa decidido na Review (PD-023) e com as notas separadas da Sprint 7: o
@@ -98,8 +99,7 @@ test('nota registrada a partir do pedido fatura só o recebido; pedido faturado 
 
   // Faturamento → Notas a emitir: o pedido com R$ 20.000,00 recebidos sem nota, repartidos entre produto e serviço.
   const gaveta = page.getByRole('complementary', { name: 'Módulos' });
-  await gaveta.getByRole('button', { name: 'Faturamento', exact: true }).click();
-  await gaveta.getByRole('button', { name: /Notas a emitir/ }).click();
+  await abrirMenu(page, 'Faturamento', 'Plano de Faturamento');
   const aEmitir = page.getByRole('dialog', { name: 'Notas a emitir', exact: true });
   await aEmitir.getByRole('searchbox').fill(CLIENTE);
   const grade = aEmitir.getByRole('table', { name: 'Notas a emitir' });
@@ -108,7 +108,7 @@ test('nota registrada a partir do pedido fatura só o recebido; pedido faturado 
   await expect(grade).toContainText('R$ 12.861,74');
   await expect(grade).toContainText('R$ 7.138,26');
   await foto(page, '01-notas-a-emitir');
-  await grade.getByRole('link', { name: /Registrar nota do pedido PV\d{5}/ }).click();
+  await grade.getByRole('link', { name: /Registrar nota do pedido PV-\d{6}/ }).click();
 
   // A nota de produto vem montada pelo pedido (só o equipamento): só o número, a série e a emissão são digitados.
   const nota = () => page.getByRole('dialog', { name: 'Documento de faturamento', exact: true }).last();
@@ -137,7 +137,7 @@ test('nota registrada a partir do pedido fatura só o recebido; pedido faturado 
   await nf.getByRole('button', { name: 'OK', exact: true }).click();
 
   // A nota de serviço do mesmo recebimento: só a instalação.
-  await grade.getByRole('link', { name: /Registrar nota do pedido PV\d{5}/ }).click();
+  await grade.getByRole('link', { name: /Registrar nota do pedido PV-\d{6}/ }).click();
   nf = nota();
   await expect(nf.getByLabel('A emitir', { exact: true })).toHaveValue('R$ 7.138,26');
   await escolher(page, nf.getByRole('combobox', { name: 'Tipo da nota' }), 'Serviço (NFS-e)');
@@ -161,7 +161,7 @@ test('nota registrada a partir do pedido fatura só o recebido; pedido faturado 
   await expect(grade).toContainText('R$ 45.500,00');
   await expect(grade).toContainText('R$ 29.260,45');
   await expect(grade).toContainText('R$ 16.239,55');
-  await grade.getByRole('link', { name: /Registrar nota do pedido PV\d{5}/ }).click();
+  await grade.getByRole('link', { name: /Registrar nota do pedido PV-\d{6}/ }).click();
   nf = nota();
   await expect(nf.getByLabel('A emitir', { exact: true })).toHaveValue('R$ 45.500,00');
   await nf.getByLabel('Valor da nota').fill('29.260,46');
@@ -178,7 +178,7 @@ test('nota registrada a partir do pedido fatura só o recebido; pedido faturado 
 
   // Mesmo número para o mesmo cliente e série: recusado apontando a nota existente.
   await aEmitir.locator('.rp-titlebar').click();
-  await grade.getByRole('link', { name: /Registrar nota do pedido PV\d{5}/ }).click();
+  await grade.getByRole('link', { name: /Registrar nota do pedido PV-\d{6}/ }).click();
   const repetida = nota();
   await expect(repetida.getByLabel('A emitir', { exact: true })).toHaveValue('R$ 25.500,00');
   await repetida.getByLabel('Nº da nota').fill('1234');
@@ -190,11 +190,10 @@ test('nota registrada a partir do pedido fatura só o recebido; pedido faturado 
   await aEmitir.getByRole('button', { name: 'Cancelar', exact: true }).click();
 
   // O pedido mostra o faturado e o que falta emitir pelo caixa.
-  await gaveta.getByRole('button', { name: 'Vendas', exact: true }).click();
-  await gaveta.getByRole('button', { name: /Pedidos e contratos/ }).click();
+  await abrirMenu(page, 'Vendas', 'Pedidos de Venda');
   const pedidos = page.getByRole('dialog', { name: 'Pedidos e contratos', exact: true });
   await pedidos.getByRole('searchbox').fill(CLIENTE);
-  await pedidos.getByRole('link', { name: /Abrir pedido PV\d{5}/ }).first().click();
+  await pedidos.getByRole('link', { name: /Abrir pedido PV-\d{6}/ }).first().click();
   const pedido = page.getByRole('dialog', { name: 'Pedido de venda', exact: true });
   await pedido.getByRole('tab', { name: /Projeto e títulos/ }).click();
   await expect(pedido.getByLabel('Faturado do pedido')).toHaveText('R$ 40.000,00');
@@ -225,8 +224,7 @@ test('nota registrada a partir do pedido fatura só o recebido; pedido faturado 
   await nf.getByRole('button', { name: 'OK', exact: true }).click();
 
   // A lista de documentos do cliente fatura só as notas ativas (a de produto e a de serviço do primeiro recebimento).
-  await gaveta.getByRole('button', { name: 'Faturamento', exact: true }).click();
-  await gaveta.getByRole('button', { name: /Documentos e faturamento/ }).click();
+  await abrirMenu(page, 'Faturamento', 'Notas Fiscais');
   const lista = page.getByRole('dialog', { name: 'Documentos e faturamento', exact: true });
   await lista.getByRole('searchbox').fill(CLIENTE);
   await expect(lista.getByRole('table').getByRole('row')).toHaveCount(3);

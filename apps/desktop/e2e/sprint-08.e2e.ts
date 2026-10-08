@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
+import { abrirMenu } from './menu';
 
 /**
  * Sprint 8 — "Como verificar": título a pagar manual de R$ 3.000,00 em 3 parcelas pela tela; pagamento parcial de
@@ -99,8 +100,7 @@ test('título a pagar em parcelas, pagamento parcial, excedente, estorno, cancel
 
   // Financeiro → Contas a pagar → Novo: R$ 3.000,00 em 3 parcelas.
   const gaveta = page.getByRole('complementary', { name: 'Módulos' });
-  await gaveta.getByRole('button', { name: 'Financeiro', exact: true }).click();
-  await gaveta.getByRole('button', { name: /Contas a pagar/ }).click();
+  await abrirMenu(page, 'Financeiro', 'Contas a Pagar');
   const lista = page.getByRole('dialog', { name: 'Contas a pagar', exact: true });
   await lista.getByRole('button', { name: 'Novo' }).click();
   const novo = page.getByRole('dialog', { name: 'Título a pagar', exact: true });
@@ -179,9 +179,8 @@ test('título a pagar em parcelas, pagamento parcial, excedente, estorno, cancel
   await ficha3.getByRole('button', { name: 'OK', exact: true }).click();
 
   // Fiscal → Apuração do Simples → competência D → Guia DAS: nasce o título a pagar, com a seta da guia para ele.
-  await gaveta.getByRole('button', { name: 'Fiscal', exact: true }).click();
-  await gaveta.getByRole('button', { name: /Apuração do Simples/ }).click();
-  const competencia = page.getByRole('dialog', { name: 'Apuração do Simples Nacional', exact: true });
+  await abrirMenu(page, 'Fiscal', 'Apuração do Simples');
+  const competencia = page.getByRole('dialog', { name: /^Apuração do Simples Nacional/ });
   await escolher(page, competencia.getByRole('combobox', { name: 'Competência' }), rotulo);
   await competencia.getByRole('tab', { name: /Guia DAS/ }).click();
   const guia = competencia.getByRole('tabpanel');

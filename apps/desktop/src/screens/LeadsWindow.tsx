@@ -178,6 +178,7 @@ export function LeadsWindow() {
           <button type="button" className="rp-btn rp-btn--default" disabled={!aberto || !can('opportunity.create')} onClick={converter}><span>Converter em <u>o</u>portunidade</span></button>
           <button type="button" className="rp-btn" onClick={() => win.requestClose()}>Cancelar</button>
           <button type="button" className="rp-btn" disabled={!novo} onClick={novo}><span>Novo <u>l</u>ead</span></button>
+          <button type="button" className="rp-btn" disabled={!can('lead.create')} onClick={() => win.open('lead-import')}><span><u>I</u>mportar lista</span></button>
           <button type="button" className="rp-btn" disabled={!atual} onClick={() => atual && win.open('crm-agenda', `lead:${atual.id}`)}><span>Registrar ativi<u>d</u>ade</span></button>
           <button type="button" className="rp-btn" disabled={!aberto || !can('lead.update')} onClick={() => setDescartar(true)}><span>Descar<u>t</u>ar</span></button>
         </div>

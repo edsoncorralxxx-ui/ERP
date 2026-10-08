@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { abrirMenu } from './menu';
 
 /**
  * Sprint 4 — "Como verificar": proposta → revisão emitida → pedido → parcelas → confirmação (projeto, equipamentos e
@@ -48,8 +49,7 @@ test('proposta vira pedido confirmado com projeto, equipamentos e parcelas uma �
 
   // Proposta pela gaveta: Vendas → Propostas → Novo.
   const gaveta = page.getByRole('complementary', { name: 'Módulos' });
-  await gaveta.getByRole('button', { name: 'Vendas', exact: true }).click();
-  await gaveta.getByRole('button', { name: 'Propostas', exact: true }).click();
+  await abrirMenu(page, 'Vendas', 'Orçamentos');
   const lista = page.getByRole('dialog', { name: 'Propostas', exact: true });
   await lista.getByRole('button', { name: 'Novo', exact: true }).click();
   const proposta = page.getByRole('dialog', { name: 'Proposta', exact: true });
@@ -69,7 +69,7 @@ test('proposta vira pedido confirmado com projeto, equipamentos e parcelas uma �
   await expect(proposta.getByLabel('Total', { exact: true })).toHaveValue('R$ 300.171,46');
   await foto(page, '01-proposta-rascunho');
   await proposta.getByRole('button', { name: 'Adicionar', exact: true }).click();
-  await expect(proposta.getByLabel('Número')).toHaveValue(/PR\d{5}/);
+  await expect(proposta.getByLabel('Número')).toHaveValue(/PRO-\d{6}/);
   await proposta.getByRole('button', { name: 'Emitir revisão', exact: true }).click();
   await expect(proposta.getByText(/emitida: para alterar, crie uma nova revisão/)).toBeVisible();
   await proposta.getByRole('button', { name: 'Converter em pedido', exact: true }).click();
@@ -77,7 +77,7 @@ test('proposta vira pedido confirmado com projeto, equipamentos e parcelas uma �
 
   // Pedido em rascunho aberto a partir da proposta: dividir em 3 parcelas e confirmar.
   const pedido = page.getByRole('dialog', { name: 'Pedido de venda', exact: true });
-  await expect(pedido.getByLabel('Número')).toHaveValue(/PV\d{5}/);
+  await expect(pedido.getByLabel('Número')).toHaveValue(/PV-\d{6}/);
   await pedido.getByRole('tab', { name: /Parcelas/ }).click();
   await pedido.getByRole('button', { name: 'Dividir o total', exact: true }).click();
   await page.getByRole('alertdialog', { name: 'Dividir o total' }).getByRole('button', { name: 'Dividir', exact: true }).click();
@@ -85,7 +85,7 @@ test('proposta vira pedido confirmado com projeto, equipamentos e parcelas uma �
   await expect(pedido.getByLabel('Valor da parcela 1')).toHaveValue('100.057,16');
   await foto(page, '02-pedido-parcelas');
   await pedido.getByRole('button', { name: 'Atualizar', exact: true }).click();
-  await expect(page.getByText(/Pedido PV\d{5} atualizado com sucesso/).first()).toBeVisible();
+  await expect(page.getByText(/Pedido PV-\d{6} atualizado com sucesso/).first()).toBeVisible();
   await pedido.getByRole('button', { name: 'Confirmar pedido', exact: true }).click();
   await page.getByRole('alertdialog', { name: 'Confirmar pedido' }).getByRole('button', { name: 'Confirmar', exact: true }).click();
   await expect(pedido.getByRole('table', { name: 'Equipamentos do pedido' }).getByRole('row')).toHaveCount(3);

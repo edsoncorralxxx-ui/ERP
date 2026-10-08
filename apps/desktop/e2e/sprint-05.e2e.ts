@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { abrirMenu } from './menu';
 
 /**
  * Sprint 5 — "Como verificar": título a receber gerado pela confirmação do pedido → recebimento parcial → recebimento
@@ -59,8 +60,7 @@ test('recebimento parcial, total e estornos devolvem o saldo do título e da con
 
   // Financeiro → Contas a receber: os dois títulos do pedido, com saldo.
   const gaveta = page.getByRole('complementary', { name: 'Módulos' });
-  await gaveta.getByRole('button', { name: 'Financeiro', exact: true }).click();
-  await gaveta.getByRole('button', { name: /Contas a receber/ }).click();
+  await abrirMenu(page, 'Financeiro', 'Contas a Receber');
   const lista = page.getByRole('dialog', { name: 'Contas a receber', exact: true });
   await lista.getByRole('searchbox').fill(`Amidos E2E ${SUFIXO}`);
   await expect(lista.getByRole('table')).toContainText('R$ 55.500,00');
@@ -116,8 +116,7 @@ test('recebimento parcial, total e estornos devolvem o saldo do título e da con
 
   // Contas financeiras → Extrato: 2 entradas e 2 saídas; a conta volta ao saldo inicial.
   await page.keyboard.press('Escape');
-  await gaveta.getByRole('button', { name: 'Financeiro', exact: true }).click();
-  await gaveta.getByRole('button', { name: /Contas financeiras/ }).click();
+  await abrirMenu(page, 'Financeiro', 'Caixa');
   const contas = page.getByRole('dialog', { name: 'Contas financeiras', exact: true });
   await expect(contas.getByRole('table', { name: 'Contas financeiras' })).toContainText(CONTA);
   await contas.getByRole('tab', { name: /Extrato/ }).click();

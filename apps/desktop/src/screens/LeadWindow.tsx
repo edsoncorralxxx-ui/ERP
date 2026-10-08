@@ -66,6 +66,8 @@ export function LeadWindow({ recordKey }: { recordKey: string }) {
   const [interacao, setInteracao] = useState(false);
   const [converter, setConverter] = useState(false);
   const [interacoes, setInteracoes] = useState<Interaction[] | null>(null);
+  // Cada recarga da ficha muda a rodada: a aba busca de novo e a resposta de uma rodada antiga é descartada.
+  const [rodada, setRodada] = useState(0);
   const [oportunidades, setOportunidades] = useState<Opportunity[] | null>(null);
   const [historico, setHistorico] = useState<HistoryEntry[] | null>(null);
   const responsaveis = useResponsaveis();
@@ -86,6 +88,7 @@ export function LeadWindow({ recordKey }: { recordKey: string }) {
     setHistorico(null);
     setInteracoes(null);
     setOportunidades(null);
+    setRodada((n) => n + 1);
   }, []);
 
   const carregar = useCallback(async (lid: string) => {
@@ -122,15 +125,20 @@ export function LeadWindow({ recordKey }: { recordKey: string }) {
 
   useEffect(() => {
     if (!id) return;
-    const falhaAba = (e: ApiError) => winRef.current.notify({ tone: 'erro', text: `${e.message} (${e.code})` });
+    let vivo = true;
+    const falhaAba = (e: ApiError) => vivo && winRef.current.notify({ tone: 'erro', text: `${e.message} (${e.code})` });
     if (tab === 'interacoes' && interacoes === null) {
-      api.get<Interaction[]>(`/api/v1/leads/${id}/interactions`).then((r) => setInteracoes(r.data)).catch(falhaAba);
+      api.get<Interaction[]>(`/api/v1/leads/${id}/interactions`).then((r) => vivo && setInteracoes(r.data)).catch(falhaAba);
     } else if (tab === 'oportunidades' && oportunidades === null && can('opportunity.read')) {
-      api.get<Opportunity[]>(`/api/v1/leads/${id}/opportunities`).then((r) => setOportunidades(r.data)).catch(falhaAba);
+      api.get<Opportunity[]>(`/api/v1/leads/${id}/opportunities`).then((r) => vivo && setOportunidades(r.data)).catch(falhaAba);
     } else if (tab === 'historico' && historico === null) {
-      api.get<HistoryEntry[]>(`/api/v1/leads/${id}/history`).then((r) => setHistorico(r.data)).catch(falhaAba);
+      api.get<HistoryEntry[]>(`/api/v1/leads/${id}/history`).then((r) => vivo && setHistorico(r.data)).catch(falhaAba);
     }
-  }, [tab, id, interacoes, oportunidades, historico, can]);
+    return () => {
+      vivo = false;
+    };
+    // `rodada` refaz a busca mesmo quando a aba já estava vazia antes da recarga.
+  }, [tab, id, rodada, interacoes === null, oportunidades === null, historico === null, can]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const formRef = useRef(form);
   formRef.current = form;

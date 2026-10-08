@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+import { abrirMenu } from './menu';
 
 /**
  * Sprint 10 — "Como verificar" (com os ajustes da Review de 02/10/2026: BOM única editável, árvore e diagrama): a BOM real
@@ -78,8 +79,7 @@ test('BOM real importada, editada na árvore, com diagrama, aplicada ao equipame
 
   // Engenharia → BOM — composição de custos → Importar BOM com o arquivo real (só o nome do produto muda por execução).
   const gaveta = page.getByRole('complementary', { name: 'Módulos' });
-  await gaveta.getByRole('button', { name: 'Engenharia', exact: true }).click();
-  await gaveta.getByRole('button', { name: /BOM — composição de custos/ }).click();
+  await abrirMenu(page, 'Engenharia', 'BOM');
   const lista = page.getByRole('dialog', { name: 'BOM — composição de custos', exact: true });
   await lista.getByRole('button', { name: 'Importar BOM' }).click();
   const importar = page.getByRole('dialog', { name: 'Importar BOM', exact: true });
@@ -133,8 +133,7 @@ test('BOM real importada, editada na árvore, com diagrama, aplicada ao equipame
   expect(bomModelo).toMatchObject({ totalCents: '6940795', pending: 0 });
 
   // Equipamentos → o equipamento do pedido → aba BOM → Aplicar BOM.
-  await gaveta.getByRole('button', { name: 'Equipamentos', exact: true }).first().click();
-  await gaveta.getByRole('button', { name: 'Equipamentos', exact: true }).nth(1).click();
+  await abrirMenu(page, 'Equipamentos', 'Equipamentos Vendidos');
   const equipamentos = page.getByRole('dialog', { name: 'Equipamentos', exact: true });
   await equipamentos.getByRole('searchbox').fill(SUFIXO);
   await equipamentos.getByRole('link', { name: `Abrir equipamento ${equipamento.code}` }).click();

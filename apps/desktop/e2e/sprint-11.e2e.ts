@@ -1,14 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+import { abrirMenu } from './menu';
 
 /**
- * Sprint 11 — "Como verificar": a lista de prospecção de exemplo entra pela tela Importar lista (prévia com 10 linhas, 3
- * com erro e 2 avisos de nome repetido); na ficha de uma prospecção, Registrar interação leva a Contatado com a próxima
- * ação; Abrir oportunidade cria a OP na Qualificação (ponderado R$ 15.000,00) e Mudar etapa leva à Visita técnica
- * (R$ 37.500,00); Converter em cliente cadastra o cliente uma vez; a proposta da oportunidade, emitida e convertida em
- * pedido (pela API), deixa a oportunidade Ganha; o funil e a agenda mostram o que aconteceu. As empresas levam um sufixo
- * por execução, para rodar de novo no mesmo banco.
+ * Sprint 11, refeito nas telas do mock (Sprint 13): a lista de prospecção de exemplo entra por CRM → Leads → Importar
+ * lista (prévia com 10 linhas, 3 com erro e 2 avisos de nome repetido); na ficha de um lead, Registrar interação leva a
+ * Contatado com a próxima ação; Abrir oportunidade cria a OP na Prospecção (10%: ponderado R$ 15.000,00) e a etapa
+ * Visita técnica (40%) dá R$ 60.000,00, com a passagem no Histórico de etapas; Converter em cliente cadastra o cliente
+ * uma vez; a proposta da oportunidade, emitida e convertida em pedido (pela API), deixa a oportunidade Ganha, com o
+ * pedido em Propostas e pedidos; o funil (API) e a lista de oportunidades mostram o que aconteceu. As empresas levam um
+ * sufixo por execução, para rodar de novo no mesmo banco.
  */
 const API = process.env.RENDA_E2E_API ?? 'http://localhost:8080';
 const USUARIO = process.env.RENDA_E2E_USER ?? 'admin';
@@ -40,18 +42,16 @@ test.beforeAll(async ({ request }) => {
   auth = { Authorization: `Bearer ${(await login.json()).token}` };
 });
 
-test('lista carregada, interação, oportunidade pelas etapas, cliente, proposta ganha, funil e agenda', async ({ page, request }) => {
+test('lista carregada, interação, oportunidade pelas etapas, cliente, proposta ganha, funil e oportunidades', async ({ page, request }) => {
   await page.goto('/');
   await page.getByLabel('Usuário', { exact: true }).fill(USUARIO);
   await page.getByLabel('Senha', { exact: true }).fill(SENHA);
   await page.getByRole('button', { name: 'OK', exact: true }).click();
   await expect(page.getByRole('menubar', { name: 'Menu principal' })).toBeVisible();
 
-  // CRM → Prospecção → Importar lista com o exemplo (só os nomes das empresas mudam por execução).
-  const gaveta = page.getByRole('complementary', { name: 'Módulos' });
-  await gaveta.getByRole('button', { name: 'CRM', exact: true }).click();
-  await gaveta.getByRole('button', { name: 'Prospecção', exact: true }).click();
-  const lista = page.getByRole('dialog', { name: 'Prospecção', exact: true }).first();
+  // CRM → Leads → Importar lista com o exemplo (só os nomes das empresas mudam por execução).
+  await abrirMenu(page, 'CRM', 'Leads');
+  const lista = page.getByRole('dialog', { name: 'Leads', exact: true });
   await lista.getByRole('button', { name: 'Importar lista' }).click();
   const importar = page.getByRole('dialog', { name: 'Importar lista de prospecção', exact: true });
   const exemplo = JSON.parse(readFileSync(join(__dirname, '../../../docs/scrum/sprints/exemplos/prospeccao-exemplo.json'), 'utf8'));
@@ -75,9 +75,10 @@ test('lista carregada, interação, oportunidade pelas etapas, cliente, proposta
 
   // A prospecção Alfa: Registrar interação → Contatado com a próxima ação.
   const alfa = `Fecularia Exemplo Alfa Ltda. ${SUFIXO}`;
-  await lista.getByRole('searchbox').fill(SUFIXO);
-  await expect(lista.getByRole('table', { name: 'Prospecção' })).toContainText(alfa);
-  await lista.getByRole('cell', { name: alfa, exact: true }).dblclick();
+  await lista.getByLabel('Localizar').fill(SUFIXO);
+  await lista.getByRole('button', { name: 'Aplicar' }).click();
+  await expect(lista).toContainText(alfa);
+  await lista.getByRole('row').filter({ hasText: alfa }).first().dblclick();
   const ficha = page.getByRole('dialog', { name: 'Prospecção', exact: true }).filter({ has: page.getByLabel('Empresa') });
   await expect(ficha.getByLabel('Empresa')).toHaveValue(alfa);
   await expect(ficha.getByLabel('Classificação')).toContainText('5 de 5');
@@ -93,33 +94,28 @@ test('lista carregada, interação, oportunidade pelas etapas, cliente, proposta
   await expect(ficha.getByRole('table', { name: 'Interações da prospecção' })).toContainText('Interesse na balança automática');
   await foto(page, '02-prospeccao');
 
-  // Abrir oportunidade: Qualificação (10%), R$ 150.000,00 → ponderado R$ 15.000,00.
+  // Abrir oportunidade: Prospecção (10%), R$ 150.000,00 → ponderado R$ 15.000,00.
   await ficha.getByRole('button', { name: 'Abrir oportunidade' }).click();
-  const opp = page.getByRole('dialog', { name: 'Oportunidade de venda', exact: true });
-  await expect(opp.getByRole('textbox', { name: 'Prospecção' })).toHaveValue(new RegExp(alfa.replace(/[.]/g, '\\.')));
+  const opp = page.getByRole('dialog', { name: /^Oportunidade de venda/ });
+  await expect(opp.getByLabel('Nome do cliente')).toHaveValue(alfa);
   await opp.getByLabel('Valor potencial').fill('150000');
-  await expect(opp.getByLabel('Valor ponderado')).toHaveValue('R$ 15.000,00 (10,00% de fechamento)');
-  await opp.getByLabel('Próxima ação em').fill('31/12/2026');
-  await opp.getByLabel('Próxima ação', { exact: true }).fill('Agendar visita técnica');
-  await opp.getByRole('button', { name: 'Adicionar' }).click();
-  await expect(opp.getByLabel('Número')).toHaveValue(/^OP\d{5}$/);
+  await expect(opp.getByLabel('Valor ponderado')).toHaveValue('15.000,00');
+  await opp.getByRole('button', { name: 'Adicionar', exact: true }).last().click();
+  await expect(opp.getByLabel('Número')).toHaveValue(/^OP-\d{6}$/);
   const codigo = await opp.getByLabel('Número').inputValue();
 
-  // Mudar etapa → Visita técnica (25%): R$ 37.500,00, e a passagem fica na aba Etapas.
-  await opp.getByRole('button', { name: 'Mudar etapa' }).click();
-  const etapa = page.getByRole('alertdialog', { name: 'Mudar etapa' });
-  await etapa.getByLabel('Próxima ação em').fill('31/12/2026');
-  await etapa.getByLabel('Próxima ação', { exact: true }).fill('Visitar a fábrica');
-  await etapa.getByRole('button', { name: 'Mudar etapa' }).click();
-  await expect(etapa).toBeHidden();
-  await expect(opp.getByLabel('Etapa', { exact: true })).toHaveValue('Visita técnica');
-  await expect(opp.getByLabel('Valor ponderado')).toHaveValue('R$ 37.500,00 (25,00% de fechamento)');
-  await opp.getByRole('tab', { name: 'Etapas' }).click();
-  await expect(opp.getByRole('table', { name: 'Etapas da oportunidade' })).toContainText('Visita técnica');
+  // Etapa Visita técnica (40%): R$ 60.000,00, e a passagem fica no Histórico de etapas.
+  await opp.getByRole('combobox', { name: 'Etapa' }).click();
+  await page.getByRole('listbox').getByRole('option', { name: 'Visita técnica', exact: true }).click();
+  await opp.getByRole('button', { name: 'Atualizar' }).click();
+  await expect(opp.getByLabel('Probabilidade')).toHaveValue('40');
+  await expect(opp.getByLabel('Valor ponderado')).toHaveValue('60.000,00');
+  await opp.getByRole('tab', { name: /Histórico de etapas/ }).click();
+  await expect(opp.getByRole('table', { name: 'Histórico de etapas' })).toContainText('Visita técnica');
   await foto(page, '03-oportunidade');
 
   // Fecha a ficha da oportunidade; ela volta depois pela aba Oportunidades da prospecção, já com o que a proposta fez.
-  await opp.getByLabel('Nome').click();
+  await opp.getByLabel('Título').click();
   await page.keyboard.press('Escape');
   await expect(opp).toBeHidden();
 
@@ -143,25 +139,23 @@ test('lista carregada, interação, oportunidade pelas etapas, cliente, proposta
   const pedido = await apiPost<{ code: string }>(request, `/api/v1/proposals/${proposta.id}/orders`, {}, { 'Idempotency-Key': `e2e11-${SUFIXO}-conv` });
   await ficha.getByRole('tab', { name: /Oportunidades/ }).click();
   await ficha.getByRole('link', { name: `Abrir oportunidade ${codigo}` }).click();
-  const ganha = page.getByRole('dialog', { name: 'Oportunidade de venda', exact: true });
+  const ganha = page.getByRole('dialog', { name: `Oportunidade de venda — ${codigo}` });
   await expect(ganha.getByText('Ganha', { exact: true }).first()).toBeVisible();
-  await ganha.getByRole('tab', { name: 'Resumo' }).click();
-  await expect(ganha.getByLabel('Pedido ganho')).toHaveValue(pedido.code);
+  await ganha.getByRole('tab', { name: /Propostas e pedidos/ }).click();
+  await expect(ganha.getByRole('table', { name: 'Propostas e pedidos' })).toContainText(pedido.code);
   await foto(page, '04-ganha');
 
-  // Funil de vendas: a ganha aparece no período; a conversão da Qualificação tem quem entrou e avançou.
-  await gaveta.getByRole('button', { name: 'Funil de vendas', exact: true }).click();
-  const funil = page.getByRole('dialog', { name: 'Funil de vendas', exact: true });
-  await expect(funil.getByRole('table', { name: 'Conversão por etapa' })).toContainText('Qualificação');
+  // Funil (API): a ganha aparece no período; da Prospecção, quem entrou e avançou.
   const dados = await apiGet<{ won: { count: number }; conversion: { code: string; entered: number; advanced: number }[] }>(request, '/api/v1/crm/funnel');
   expect(dados.won.count).toBeGreaterThanOrEqual(1);
-  const qualificacao = dados.conversion.find((c) => c.code === 'QUALIFICACAO')!;
-  expect(qualificacao.advanced).toBeGreaterThanOrEqual(1);
-  await foto(page, '05-funil');
+  expect(dados.conversion.find((c) => c.code === 'PROSPECCAO')!.advanced).toBeGreaterThanOrEqual(1);
 
-  // Agenda do CRM: a próxima ação da prospecção Alfa (31/12/2026) está lá, e a seta abre a ficha.
-  await gaveta.getByRole('button', { name: 'Agenda do CRM', exact: true }).click();
-  const agenda = page.getByRole('dialog', { name: 'Agenda do CRM', exact: true });
-  await expect(agenda.getByRole('table', { name: 'Agenda do CRM' })).toContainText(alfa);
-  await foto(page, '06-agenda');
+  // CRM → Oportunidades: filtrada pela etapa Ganha, a oportunidade está na lista.
+  await abrirMenu(page, 'CRM', 'Oportunidades');
+  const oportunidadesJanela = page.getByRole('dialog', { name: 'Oportunidades de venda', exact: true });
+  await oportunidadesJanela.getByLabel('Localizar').fill(codigo);
+  await oportunidadesJanela.getByRole('button', { name: 'Aplicar' }).click();
+  await expect(oportunidadesJanela.getByRole('table', { name: 'Oportunidades' })).toContainText(codigo);
+  await expect(oportunidadesJanela.getByRole('table', { name: 'Oportunidades' })).toContainText('Ganha');
+  await foto(page, '05-oportunidades');
 });
