@@ -73,6 +73,16 @@ export function windowFor(it: MenuItem): Destino | undefined {
   return KINDS_SET.has(kind) ? { kind: kind as WindowKind, recordKey: recordKey ?? 'singleton' } : undefined;
 }
 
+/** Permissão de leitura de cada lista de cadastro (a mesma que a lista confere ao abrir). */
+const NEEDS_LISTA: Record<string, string> = {
+  clientes: 'partner.read', fornecedores: 'partner.read', contatos: 'partner.read', transportadoras: 'partner.read', colaboradores: 'employee.read',
+  produtos: 'item.read', servicos: 'item.read', materiais: 'item.read', depositos: 'stock.read',
+};
+
+/** Permissão que o destino exige: a da lista de cadastro, quando é uma, ou a da janela. */
+export const permissaoDe = (d: Destino): string | undefined =>
+  d.kind === 'cadastro-lista' ? NEEDS_LISTA[d.recordKey] : NEEDS[d.kind];
+
 /** Permissão de leitura que cada janela exige; sem ela o item aparece, mas não abre. */
 export const NEEDS: Partial<Record<WindowKind, string>> = {
   users: 'user.admin',
@@ -141,7 +151,7 @@ export function Drawer({ open, view, onClose, onOpen }: DrawerProps) {
                   <div className="rp-nav-subs">
                     {m.itens.map((it) => {
                       const target = windowFor(it);
-                      const need = target && NEEDS[target.kind];
+                      const need = target && permissaoDe(target);
                       const blocked = !!need && !can(need);
                       const dest = blocked ? undefined : target;
                       const abrir = () => dest && onOpen(dest.kind, dest.recordKey);

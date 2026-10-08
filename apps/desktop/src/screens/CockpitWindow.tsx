@@ -67,7 +67,8 @@ export function CockpitWindow() {
   const carregar = useCallback(async () => {
     try {
       const r = await api.get<Cockpit>(`/api/v1/cockpit?${new URLSearchParams({ period: aplicado.periodo, compare: aplicado.compara })}`);
-      setC(r.data);
+      if (typeof r.data?.period !== 'string') throw Object.assign(new Error('Resposta inesperada do servidor.'), { code: 'COCKPIT_RESPOSTA' });
+      setC({ ...r.data, alerts: r.data.alerts ?? [], deliveries: r.data.deliveries ?? [], stockBelowMinNames: r.data.stockBelowMinNames ?? [] });
       setErro(null);
     } catch (e) {
       const x = e as ApiError;

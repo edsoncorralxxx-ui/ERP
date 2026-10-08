@@ -25,10 +25,10 @@ function montar(user: SessionUser = USUARIO) {
 describe('Busca global', () => {
   it('acha operações do menu sem acento e só as que o usuário pode abrir', () => {
     const can = sessionOf(USUARIO).can;
-    const rotulos = buscarOperacoes('clientes', can).map((r) => r.kind);
-    expect(rotulos).toContain('customers');
-    expect(buscarOperacoes('produtos', can).map((r) => r.kind)).not.toContain('items');
-    expect(buscarOperacoes('PROPOSTAS', sessionOf({ ...USUARIO, permissions: ['proposal.read'] }).can).map((r) => r.kind)).toContain('proposals');
+    const chaves = (t: string, c = can) => buscarOperacoes(t, c).map((r) => `${r.kind}/${r.recordKey ?? ''}`);
+    expect(chaves('clientes')).toContain('cadastro-lista/clientes');
+    expect(chaves('produtos')).not.toContain('cadastro-lista/produtos');
+    expect(buscarOperacoes('ORCAMENTOS', sessionOf({ ...USUARIO, permissions: ['proposal.read'] }).can).map((r) => r.kind)).toContain('proposals');
   });
 
   it('procura nos dados mestre e documentos permitidos e abre o escolhido com Enter', async () => {
@@ -69,7 +69,7 @@ describe('Busca global', () => {
     const campo = screen.getByRole('combobox', { name: 'Busca global' });
     await user.type(campo, 'fornecedores');
     await user.click(await screen.findByRole('option', { name: /Fornecedores/ }));
-    expect(onOpen).toHaveBeenCalledWith('suppliers', undefined);
+    expect(onOpen).toHaveBeenCalledWith('cadastro-lista', 'fornecedores');
 
     await user.type(campo, 'zzzz');
     expect(await screen.findByText('Nenhum registro correspondente encontrado')).toBeInTheDocument();

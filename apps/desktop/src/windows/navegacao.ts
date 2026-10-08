@@ -17,7 +17,14 @@ const mesesDoAno = (competencia: string) => {
  * a lista completa do tipo, na ordem em que o servidor a devolve (a mesma das janelas de lista), com os inativos e
  * cancelados.
  */
+const LISTA_DO_PAPEL: Record<string, string> = { CLIENTE: 'clientes', FORNECEDOR: 'fornecedores', TRANSPORTADORA: 'transportadoras' };
+
 export const SEQUENCIA_PADRAO: Partial<Record<WindowKind, (recordKey: string) => Promise<string[]>>> = {
+  partner: async (chave) => {
+    const papel = chave.split(':')[0];
+    return (await ids(`/api/v1/cadastros/${LISTA_DO_PAPEL[papel] ?? 'clientes'}?status=TODOS`)).map((id) => `${papel}:${id}`);
+  },
+  employee: () => ids('/api/v1/cadastros/colaboradores?status=TODOS'),
   customer: () => ids('/api/v1/customers?status=TODOS'),
   supplier: () => ids('/api/v1/suppliers?status=TODOS'),
   item: () => ids('/api/v1/items?status=TODOS'),

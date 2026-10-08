@@ -39,6 +39,7 @@ function servidor(extra: (req: TransportRequest) => TransportResponse | undefine
     }
     if (!logado) return { status: 401, headers: {}, body: JSON.stringify({ code: 'UNAUTHENTICATED', message: 'Sessão expirada', details: [] }) };
     if (req.path === '/api/v1/company-profile') return ok(perfil, { etag: '"1"' });
+    if (req.path.startsWith('/api/v1/cadastros/')) return ok([]);
     if (req.path.startsWith('/api/v1/customers')) return ok([]);
     if (['/api/v1/suppliers', '/api/v1/items', '/api/v1/units-of-measure', '/api/v1/item-categories'].some((p) => req.path.startsWith(p))) return ok([]);
     return ok({});
@@ -82,60 +83,61 @@ describe('moldura do aplicativo', () => {
     expect(JSON.parse(login.body!)).toEqual({ username: 'ana', password: 'senha-correta-1' });
   });
 
-  it('a gaveta lista os 30 módulos e abre Clientes e unidades', async () => {
+  it('a gaveta lista os 25 módulos do mock e abre Clientes e Fornecedores', async () => {
     servidor();
     const user = await entrar();
     const gaveta = screen.getByRole('complementary', { name: 'Módulos' });
-    expect(within(gaveta).getAllByRole('button', { expanded: false }).length + within(gaveta).getAllByRole('button', { expanded: true }).length).toBe(30);
-    await user.click(within(gaveta).getByRole('button', { name: /Clientes e unidades/ }));
-    expect(await screen.findByRole('dialog', { name: 'Clientes e unidades' })).toBeInTheDocument();
-    expect(await screen.findByText('Nenhum cliente cadastrado ainda.')).toBeInTheDocument();
-    const futura = within(gaveta).getByText('Auditoria').closest('[aria-disabled]');
+    expect(within(gaveta).getAllByRole('button', { expanded: false }).length + within(gaveta).getAllByRole('button', { expanded: true }).length).toBe(25);
+    await user.click(within(gaveta).getAllByRole('button', { name: 'Clientes' })[0]);
+    expect(await screen.findByRole('dialog', { name: 'Clientes' })).toBeInTheDocument();
+    expect(await screen.findByText('Nenhum registro atende aos filtros. Limpe a busca ou altere a situação.')).toBeInTheDocument();
+    await user.click(within(gaveta).getByRole('button', { name: 'MRP' }));
+    const futura = within(gaveta).getByText('Executar MRP').closest('[aria-disabled]');
     expect(futura).toHaveAttribute('aria-disabled', 'true');
-    await user.click(within(gaveta).getByRole('button', { name: /^Fornecedores/ }));
+    await user.click(within(gaveta).getByRole('button', { name: 'Cadastros' }));
+    await user.click(within(gaveta).getAllByRole('button', { name: 'Fornecedores' })[0]);
     expect(await screen.findByRole('dialog', { name: 'Fornecedores' })).toBeInTheDocument();
-    expect(await screen.findByText('Nenhum fornecedor cadastrado ainda.')).toBeInTheDocument();
   });
 
   it('Esc fecha a janela ativa; a de trás passa a ser a ativa', async () => {
     servidor();
     const user = await entrar();
     const gaveta = screen.getByRole('complementary', { name: 'Módulos' });
-    await user.click(within(gaveta).getByRole('button', { name: /Clientes e unidades/ }));
-    await user.click(within(gaveta).getByRole('button', { name: /^Fornecedores/ }));
+    await user.click(within(gaveta).getAllByRole('button', { name: 'Clientes' })[0]);
+    await user.click(within(gaveta).getAllByRole('button', { name: 'Fornecedores' })[0]);
     const fornecedores = await screen.findByRole('dialog', { name: 'Fornecedores' });
     await user.click(within(fornecedores).getByRole('searchbox'));
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Fornecedores' })).toBeNull());
-    expect(screen.getByRole('dialog', { name: 'Clientes e unidades' })).toBeInTheDocument();
-    await user.click(within(screen.getByRole('dialog', { name: 'Clientes e unidades' })).getByRole('searchbox'));
+    expect(screen.getByRole('dialog', { name: 'Clientes' })).toBeInTheDocument();
+    await user.click(within(screen.getByRole('dialog', { name: 'Clientes' })).getByRole('searchbox'));
     await user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Clientes e unidades' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Clientes' })).toBeNull());
   });
 
   it('campo com limite em foco mostra o tamanho permitido no rodapé', async () => {
     servidor();
     const user = await entrar();
     const gaveta = screen.getByRole('complementary', { name: 'Módulos' });
-    await user.click(within(gaveta).getByRole('button', { name: /Clientes e unidades/ }));
+    await user.click(within(gaveta).getAllByRole('button', { name: 'Clientes' })[0]);
     const busca = await screen.findByRole('searchbox');
     await user.click(busca);
     expect(screen.getByTitle('Tamanho permitido do campo')).toHaveTextContent('(200 caracteres)');
-    await user.click(await screen.findByText('Nenhum cliente cadastrado ainda.'));
+    await user.click(await screen.findByText('Nenhum registro atende aos filtros. Limpe a busca ou altere a situação.'));
     expect(screen.getByTitle('Usuário')).toHaveTextContent('Ana Souza (Administrador)');
   });
 
-  it('perfil Consulta não abre Usuários e não vê o botão Novo de clientes', async () => {
+  it('perfil Consulta não abre Usuários e não vê o botão Novo de clientes habilitado', async () => {
     servidor();
     const user = await entrar('bia');
     const gaveta = screen.getByRole('complementary', { name: 'Módulos' });
     await user.click(within(gaveta).getByRole('button', { name: 'Administração' }));
-    const usuarios = within(gaveta).getByText('Usuários e permissões').closest('[aria-disabled]');
-    expect(usuarios).toHaveAttribute('title', 'Usuários e permissões — seu perfil não permite');
+    const usuarios = within(gaveta).getByText('Usuários').closest('[aria-disabled]');
+    expect(usuarios).toHaveAttribute('title', 'Usuários — seu perfil não permite');
     await user.click(within(gaveta).getByRole('button', { name: 'Cadastros' }));
-    await user.click(within(gaveta).getByRole('button', { name: /Clientes e unidades/ }));
-    const lista = await screen.findByRole('dialog', { name: 'Clientes e unidades' });
-    expect(within(lista).queryByRole('button', { name: 'Novo' })).not.toBeInTheDocument();
+    await user.click(within(gaveta).getAllByRole('button', { name: 'Clientes' })[0]);
+    const lista = await screen.findByRole('dialog', { name: 'Clientes' });
+    expect(within(lista).getByRole('button', { name: 'Novo' })).toBeDisabled();
   });
 
   it('Meu cockpit no trilho abre o cockpit maximizado; minimizar leva à faixa de janelas minimizadas', async () => {
@@ -171,9 +173,9 @@ describe('moldura do aplicativo', () => {
     const user = await entrar();
     srv.expirar();
     const gaveta = screen.getByRole('complementary', { name: 'Módulos' });
-    await user.click(within(gaveta).getByRole('button', { name: /Clientes e unidades/ }));
+    await user.click(within(gaveta).getAllByRole('button', { name: 'Clientes' })[0]);
     expect(await screen.findByText(/Sua sessão expirou/)).toBeInTheDocument();
-    expect(screen.getByRole('dialog', { name: 'Clientes e unidades' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Clientes' })).toBeInTheDocument();
   });
 
   it('o log de mensagens do sistema abre pela aba e mostra a contagem', async () => {
@@ -193,8 +195,8 @@ describe('moldura do aplicativo', () => {
     const clientes = [cliente('c-1', 'C00001', 'Alfa Ltda.'), cliente('c-2', 'C00002', 'Beta Ltda.'), cliente('c-3', 'C00003', 'Gama Ltda.')];
     servidor((req) => {
       const ok = (body: unknown) => ({ status: 200, headers: { etag: '"1"' }, body: JSON.stringify(body) });
-      if (req.path === '/api/v1/customers?status=ATIVO') {
-        return ok(clientes.map((c) => ({ id: c.id, code: c.code, legalName: c.legalName, tradeName: null, cnpjFormatted: null, city: null, state: null, units: 0, status: 'ATIVO' })));
+      if (req.path === '/api/v1/cadastros/clientes?status=TODOS') {
+        return ok(clientes.map((c) => ({ id: c.id, code: c.code, legalName: c.legalName, tradeName: null, cnpj: null, cityUf: null, group: null, balanceCents: 0, status: 'ATIVO' })));
       }
       const c = clientes.find((x) => req.path === `/api/v1/customers/${x.id}`);
       return c ? ok(c) : undefined;
@@ -203,29 +205,30 @@ describe('moldura do aplicativo', () => {
     // Sem ficha ativa, as ferramentas de navegação ficam indisponíveis.
     expect(screen.getByRole('button', { name: 'Próximo registro' })).toBeDisabled();
     const gaveta = screen.getByRole('complementary', { name: 'Módulos' });
-    await user.click(within(gaveta).getByRole('button', { name: /Clientes e unidades/ }));
+    await user.click(within(gaveta).getAllByRole('button', { name: 'Clientes' })[0]);
     await user.click(await screen.findByRole('link', { name: 'Abrir Beta Ltda.' }));
-    const ficha = await screen.findByRole('dialog', { name: 'Cliente' });
+    const ficha = await screen.findByRole('dialog', { name: /^Dados mestre do cliente/ });
     await waitFor(() => expect(within(ficha).getByLabelText('Código')).toHaveValue('C00002'));
 
     await user.click(screen.getByRole('button', { name: 'Próximo registro' }));
-    await waitFor(() => expect(within(screen.getByRole('dialog', { name: 'Cliente' })).getByLabelText('Código')).toHaveValue('C00003'));
-    expect(screen.getAllByRole('dialog', { name: 'Cliente' })).toHaveLength(1);
+    await waitFor(() => expect(within(screen.getByRole('dialog', { name: /^Dados mestre do cliente/ })).getByLabelText('Código')).toHaveValue('C00003'));
+    expect(screen.getAllByRole('dialog', { name: /^Dados mestre do cliente/ })).toHaveLength(1);
     await user.click(screen.getByRole('button', { name: 'Próximo registro' }));
     expect(await screen.findByText('Você já está no último registro')).toBeInTheDocument();
 
     await user.click(screen.getByRole('menuitem', { name: 'Dados' }));
     await user.click(screen.getByRole('menuitem', { name: /Primeiro registro/ }));
-    await waitFor(() => expect(within(screen.getByRole('dialog', { name: 'Cliente' })).getByLabelText('Código')).toHaveValue('C00001'));
+    await waitFor(() => expect(within(screen.getByRole('dialog', { name: /^Dados mestre do cliente/ })).getByLabelText('Código')).toHaveValue('C00001'));
     // Atalho ⌥⌘→: próximo registro.
     await user.keyboard('{Meta>}{Alt>}{ArrowRight}{/Alt}{/Meta}');
-    await waitFor(() => expect(within(screen.getByRole('dialog', { name: 'Cliente' })).getByLabelText('Código')).toHaveValue('C00002'));
+    await waitFor(() => expect(within(screen.getByRole('dialog', { name: /^Dados mestre do cliente/ })).getByLabelText('Código')).toHaveValue('C00002'));
 
     // Com alterações não gravadas, não sai do registro.
-    const razao = within(screen.getByRole('dialog', { name: 'Cliente' })).getByLabelText('Razão social');
+    await user.click(screen.getByRole('button', { name: 'Editar' }));
+    const razao = within(screen.getByRole('dialog', { name: /^Dados mestre do cliente/ })).getByLabelText('Razão social');
     await user.type(razao, ' S.A.');
     await user.click(screen.getByRole('button', { name: 'Registro anterior' }));
     expect(await screen.findByText('Grave ou descarte as alterações antes de ir para outro registro (NAV-001)')).toBeInTheDocument();
-    expect(within(screen.getByRole('dialog', { name: 'Cliente' })).getByLabelText('Código')).toHaveValue('C00002');
+    expect(within(screen.getByRole('dialog', { name: /^Dados mestre do cliente/ })).getByLabelText('Código')).toHaveValue('C00002');
   });
 });

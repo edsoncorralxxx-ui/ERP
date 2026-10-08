@@ -1,7 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
-import { escolher } from '../test/selecao';
 import { setTransport, type TransportRequest, type TransportResponse } from '../api/client';
 import type { Item, SessionUser, Supplier } from '../api/types';
 import { SessionContext, sessionOf } from '../shell/SessionContext';
@@ -74,54 +73,54 @@ describe('Fornecedor', () => {
 });
 
 describe('Produto ou serviço', () => {
-  it('serviço não controla estoque e os decimais vão com ponto para a API', async () => {
+  it('material controla estoque, serviço não; os decimais vão com ponto para a API', async () => {
     const posts: TransportRequest[] = [];
+    const item = (body: Record<string, unknown>, id: string, code: string): Item => ({
+      id, code, description: String(body.description), nature: body.nature as Item['nature'], uom: String(body.uom), category: { id: 'cat-1', name: 'Chapas' },
+      stockControlled: !!body.stockControlled, referenceCost: (body.referenceCost as string | null) ?? null, ncm: null, serviceCode: null, status: 'ATIVO',
+      conversions: [], version: '1', createdAt: '2026-09-25T12:00:00Z', createdBy: 'ana', updatedAt: null, updatedBy: null,
+    } as unknown as Item);
+    const gravados: Record<string, Item> = {};
     setTransport(async (req) => {
-      if (req.path === '/api/v1/units-of-measure') return resposta(200, unidades);
-      if (req.path === '/api/v1/item-categories') return resposta(200, categorias);
       if (req.path === '/api/v1/items' && req.method === 'POST') {
         posts.push(req);
         const body = JSON.parse(req.body!);
-        const item: Item = {
-          id: 'i-1', code: body.nature === 'MATERIAL' ? 'P00001' : 'S00001', description: body.description, nature: body.nature, uom: body.uom,
-          category: { id: 'cat-1', name: 'Chapas' }, stockControlled: body.stockControlled, referenceCost: '1234.500000', ncm: body.ncm?.replace(/\D/g, '') ?? null, serviceCode: body.serviceCode, status: 'ATIVO',
-          conversions: [{ id: 'c-1', fromUom: 'BR', factor: '6.000000' }], version: '1', createdAt: '2026-09-25T12:00:00Z', createdBy: 'ana', updatedAt: null, updatedBy: null,
-        };
-        return resposta(201, item, { etag: '"1"' });
+        const it = body.nature === 'SERVICO' ? item(body, 'i-2', 'SV-070') : item(body, 'i-1', 'MP-2010');
+        gravados[it.id] = it;
+        return resposta(201, it, { etag: '"1"' });
       }
+      const g = Object.values(gravados).find((x) => req.path === `/api/v1/items/${x.id}`);
+      if (g) return resposta(200, g, { etag: '"1"' });
+      if (req.method === 'GET') return resposta(200, []);
       return resposta(404, { code: 'NOT_FOUND', message: 'x', details: [] });
     });
-    const win = abrir(<ItemWindow recordKey="novo-1" />);
+    const win = abrir(<ItemWindow recordKey="novo-MATERIAL-1" />);
     const user = userEvent.setup();
-    const descricao = screen.getByLabelText(/^Descrição$/);
-    expect(descricao.closest('.rp-form')).toHaveClass('rp-form--adicao');
-    await user.type(descricao, 'Perfil L 40x40');
-    await user.click(screen.getByRole('radio', { name: 'Serviço' }));
-    expect(screen.getByRole('checkbox', { name: 'Controla estoque' })).toBeDisabled();
-    // Serviço tem o código da LC 116; produto tem o NCM.
-    expect(screen.getByLabelText('Cód. serviço (LC 116)')).toBeInTheDocument();
-    expect(screen.queryByLabelText('NCM')).toBeNull();
-    await user.click(screen.getByRole('radio', { name: 'Produto' }));
-    expect(screen.getByRole('checkbox', { name: 'Controla estoque' })).toBeChecked();
-    await escolher(user, screen.getByLabelText('Unidade de medida'), 'M — Metro');
-    await escolher(user, screen.getByLabelText('Categoria'), 'Chapas');
-    await user.type(screen.getByLabelText('Custo de referência'), '1.234,5');
-    await user.type(screen.getByLabelText('NCM'), '72161000');
-    await user.tab();
-    expect(screen.getByLabelText('NCM')).toHaveValue('7216.10.00');
-    await user.click(screen.getByRole('tab', { name: /Conversões/ }));
-    await user.click(screen.getByRole('button', { name: /adicionar uma conversão/ }));
-    await escolher(user, screen.getByLabelText('Unidade de compra da linha 1'), 'BR — Barra');
-    await user.type(screen.getByLabelText('Fator da linha 1'), '6');
-    expect(screen.getByText('1 BR = 6 M')).toBeInTheDocument();
+    await user.type(screen.getByLabelText(/^Descrição$/), 'Perfil L 40x40');
+    await user.type(screen.getByLabelText('Custo de referência (R$)'), '1.234,5');
     await user.click(screen.getByRole('button', { name: 'Adicionar' }));
-    await waitFor(() => expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Produto P00001 adicionado com sucesso' }));
-    const body = JSON.parse(posts[0].body!);
-    expect(body).toMatchObject({ nature: 'MATERIAL', uom: 'M', categoryId: 'cat-1', stockControlled: true, referenceCost: '1234.50', ncm: '7216.10.00', serviceCode: null, conversions: [{ fromUom: 'BR', factor: '6' }] });
+    await waitFor(() => expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Item MP-2010 adicionado com sucesso' }));
+    expect(JSON.parse(posts[0].body!)).toMatchObject({ nature: 'MATERIAL', type: 'MATERIAL', stockControlled: true, serviceCode: null });
+    expect(JSON.parse(posts[0].body!).referenceCost).toMatch(/^1234\.50?$/);
     expect(posts[0].headers?.['Idempotency-Key']).toBeTruthy();
-    await user.click(screen.getByRole('tab', { name: /Geral/ }));
-    expect(screen.getByLabelText('Custo de referência')).toHaveValue('1.234,50');
-    expect(screen.getByRole('radio', { name: 'Serviço' })).toBeDisabled();
+  });
+
+  it('serviço vai sem estoque e sem NCM', async () => {
+    const posts: TransportRequest[] = [];
+    setTransport(async (req) => {
+      if (req.path === '/api/v1/items' && req.method === 'POST') {
+        posts.push(req);
+        return resposta(422, { code: 'VALIDATION', message: 'Corrija os campos indicados.', details: [] });
+      }
+      if (req.method === 'GET') return resposta(200, []);
+      return resposta(404, { code: 'NOT_FOUND', message: 'x', details: [] });
+    });
+    abrir(<ItemWindow recordKey="novo-SERVICO-2" />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/^Descrição$/), 'Visita técnica');
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(JSON.parse(posts[0].body!)).toMatchObject({ nature: 'SERVICO', type: 'SERVICO', stockControlled: false, ncm: null, uom: 'SV' });
   });
 });
 

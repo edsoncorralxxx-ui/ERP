@@ -369,11 +369,12 @@ export function useApi<T>(caminho: string | null, inicial: T): T {
       cache.set(caminho, p);
       p.catch(() => cache.delete(caminho));
     }
-    p.then((d) => vivo && setV(d)).catch(() => undefined);
+    // Lista esperada e resposta em outro formato: fica a inicial, em vez de quebrar quem percorre a lista.
+    p.then((d) => vivo && setV(Array.isArray(inicial) && !Array.isArray(d) ? inicial : d)).catch(() => undefined);
     return () => {
       vivo = false;
     };
-  }, [caminho]);
+  }, [caminho]); // eslint-disable-line react-hooks/exhaustive-deps
   return v;
 }
 export const renovarApi = (prefixo: string) => [...cache.keys()].filter((k) => k.startsWith(prefixo)).forEach((k) => cache.delete(k));

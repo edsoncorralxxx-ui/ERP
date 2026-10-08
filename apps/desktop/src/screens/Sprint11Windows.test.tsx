@@ -141,74 +141,76 @@ describe('Prospecção', () => {
   });
 });
 
+const DETALHES = { contactName: null, need: {}, items: [], documents: [], historicalWinPercent: null, historicalSample: 0, version: 1 };
+
 describe('Oportunidade', () => {
-  it('nova a partir da prospecção exige a próxima ação e mostra o ponderado da primeira etapa', async () => {
+  it('nova a partir do lead traz o nome e grava com Idempotency-Key, sem exigir próxima ação', async () => {
     const posts: TransportRequest[] = [];
+    let criada: Opportunity | null = null;
     setTransport(async (req) => {
+      if (req.path === '/api/v1/opportunity-stages') {
+        return resposta(200, [{ code: 'PROSPECCAO', name: 'Prospecção', position: 0, closePercent: '10.00', version: '1', updatedAt: null, updatedBy: null }, ...ETAPAS]);
+      }
       const c = comuns(req);
       if (c) return c;
-      if (req.path === '/api/v1/leads/l-1') return resposta(200, prospeccao());
+      if (req.path === '/api/v1/leads/l-1') return resposta(200, { ...prospeccao(), partnerId: null });
       if (req.path === '/api/v1/opportunities' && req.method === 'POST') {
         posts.push(req);
-        const body = JSON.parse(req.body!);
-        if (!body.nextActionDate) {
-          return resposta(422, { code: 'OPPORTUNITY_INVALID', message: 'Corrija os campos indicados.', details: [{ field: 'nextActionDate', message: 'Informe a data da próxima ação.' }] });
-        }
-        return resposta(201, oportunidade(), { etag: '"1"' });
+        criada = oportunidade({ potentialCents: JSON.parse(req.body!).potentialCents, stage: 'PROSPECCAO', stageName: 'Prospecção' });
+        return resposta(201, criada, { etag: '"1"' });
       }
+      if (req.path === '/api/v1/opportunities/o-1/details') return resposta(200, DETALHES, { etag: '"1"' });
+      if (req.path === '/api/v1/opportunities/o-1' && criada) return resposta(200, criada, { etag: '"1"' });
       return naoAchou();
     });
-    abrir(<OpportunityWindow recordKey="novo-1:lead:l-1" />);
+    const win = abrir(<OpportunityWindow recordKey="novo-1:lead:l-1" />);
     const user = userEvent.setup();
-    await waitFor(() => expect(screen.getByLabelText('Prospecção')).toHaveValue('PS00001 — Fecularia Noroeste Ltda.'));
-    expect(screen.getByLabelText('Nome')).toHaveValue('Balança — Fecularia Noroeste Ltda.');
+    await waitFor(() => expect(screen.getByLabelText('Título')).toHaveValue('Renda+ para Fecularia Noroeste Ltda.'));
+    expect(screen.getByLabelText('Nome do cliente')).toHaveValue('Fecularia Noroeste Ltda.');
     await user.type(screen.getByLabelText('Valor potencial'), '150000');
-    // Qualificação: 10% de R$ 150.000,00.
-    expect(screen.getByLabelText('Valor ponderado')).toHaveValue('R$ 15.000,00 (10,00% de fechamento)');
+    // Primeira etapa (Prospecção): 10% de R$ 150.000,00.
+    await waitFor(() => expect(screen.getByLabelText('Valor ponderado')).toHaveValue('15.000,00'));
     await user.click(screen.getByRole('button', { name: 'Adicionar' }));
-    expect(await screen.findByText('Informe a data da próxima ação.')).toBeInTheDocument();
-    await user.type(screen.getByLabelText('Próxima ação em'), '31/12/2026');
-    await user.type(screen.getByLabelText('Próxima ação'), 'Ligar para o comprador');
-    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
-    await waitFor(() => expect(posts).toHaveLength(2));
-    expect(JSON.parse(posts[1].body!)).toMatchObject({ leadId: 'l-1', potentialCents: '15000000', nextActionDate: '2026-12-31', nextActionNote: 'Ligar para o comprador' });
+    await waitFor(() => expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Oportunidade OP00001 aberta com sucesso' }));
+    expect(posts).toHaveLength(1);
+    expect(posts[0].headers?.['Idempotency-Key']).toBeTruthy();
+    expect(JSON.parse(posts[0].body!)).toMatchObject({ leadId: 'l-1', potentialCents: '15000000', nextActionDate: null, name: 'Renda+ para Fecularia Noroeste Ltda.' });
   });
 
-  it('muda de etapa com a próxima ação e a versão lida; marcar como perdida pede o motivo da lista', async () => {
+  it('muda de etapa pela ficha com a versão lida; marcar como perdida pede o motivo da lista', async () => {
     const posts: TransportRequest[] = [];
     let opp = oportunidade({ customerId: 'c-1', customerCode: 'C00001', customerName: 'Fecularia Noroeste Ltda.' });
     setTransport(async (req) => {
       const c = comuns(req);
       if (c) return c;
       if (req.path === '/api/v1/opportunities/o-1' && req.method === 'GET') return resposta(200, opp, { etag: `"${opp.version}"` });
+      if (req.path === '/api/v1/opportunities/o-1' && req.method === 'PUT') {
+        opp = { ...opp, version: '2' };
+        return resposta(200, opp, { etag: '"2"' });
+      }
+      if (req.path === '/api/v1/opportunities/o-1/details') return resposta(200, DETALHES, { etag: `"${opp.version}"` });
       if (req.path === '/api/v1/opportunities/o-1/stage') {
         posts.push(req);
-        opp = { ...opp, stage: 'VISITA_TECNICA', stageName: 'Visita técnica', closePercent: '25.00', weightedCents: '3750000', version: '2' };
-        return resposta(200, opp, { etag: '"2"' });
+        opp = { ...opp, stage: 'VISITA_TECNICA', stageName: 'Visita técnica', closePercent: '25.00', weightedCents: '3750000', version: '3' };
+        return resposta(200, opp, { etag: '"3"' });
       }
       if (req.path === '/api/v1/opportunities/o-1/loss') {
         posts.push(req);
-        opp = { ...opp, status: 'PERDIDA', lossReason: 'CONCORRENTE', closePercent: '0.00', weightedCents: '0', version: '3', nextActionDate: null, nextActionNote: null };
-        return resposta(200, opp, { etag: '"3"' });
+        opp = { ...opp, status: 'PERDIDA', lossReason: 'CONCORRENTE', closePercent: '0.00', weightedCents: '0', version: '4' };
+        return resposta(200, opp, { etag: '"4"' });
       }
       return naoAchou();
     });
     const win = abrir(<OpportunityWindow recordKey="o-1" />);
     const user = userEvent.setup();
-    await waitFor(() => expect(screen.getByLabelText('Etapa')).toHaveValue('Qualificação'));
-    await user.click(screen.getByRole('button', { name: 'Mudar etapa' }));
-    const dialogo = screen.getByRole('alertdialog', { name: 'Mudar etapa' });
-    // A próxima etapa vem sugerida.
-    expect(within(dialogo).getByLabelText('Etapa')).toHaveTextContent('Visita técnica (25,00%)');
-    await user.type(within(dialogo).getByLabelText('Próxima ação em'), '31/12/2026');
-    await user.type(within(dialogo).getByLabelText('Próxima ação'), 'Visitar a fábrica');
-    await user.click(within(dialogo).getByRole('button', { name: 'Mudar etapa' }));
+    await waitFor(() => expect(screen.getByLabelText('Número')).toHaveValue('OP00001'));
+    await escolher(user, screen.getByLabelText('Etapa'), 'Visita técnica');
+    expect(screen.getByLabelText('Probabilidade')).toHaveValue('25');
+    await user.click(screen.getByRole('button', { name: 'Atualizar' }));
     await waitFor(() => expect(posts).toHaveLength(1));
-    expect(posts[0].headers?.['If-Match']).toBe('"1"');
-    expect(JSON.parse(posts[0].body!)).toEqual({ stage: 'VISITA_TECNICA', nextActionDate: '2026-12-31', nextActionNote: 'Visitar a fábrica' });
-    await waitFor(() => expect(screen.getByLabelText('Etapa')).toHaveValue('Visita técnica'));
-    expect(screen.getByLabelText('Valor ponderado')).toHaveValue('R$ 37.500,00 (25,00% de fechamento)');
-    expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Oportunidade OP00001 na etapa Visita técnica (25,00%)' });
+    expect(posts[0].headers?.['If-Match']).toBe('"2"');
+    expect(JSON.parse(posts[0].body!)).toMatchObject({ stage: 'VISITA_TECNICA' });
+    await waitFor(() => expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Oportunidade OP00001 atualizada com sucesso' }));
 
     await user.click(screen.getByRole('button', { name: 'Marcar como perdida' }));
     const perda = screen.getByRole('alertdialog', { name: 'Registrar perda' });
@@ -218,8 +220,8 @@ describe('Oportunidade', () => {
     await user.click(within(perda).getByRole('button', { name: 'Registrar perda' }));
     await waitFor(() => expect(posts).toHaveLength(2));
     expect(JSON.parse(posts[1].body!)).toEqual({ lossReason: 'CONCORRENTE', lossNote: null });
-    await waitFor(() => expect(screen.getByText('Perdida', { selector: '.rp-badge' })).toBeInTheDocument());
-    expect(screen.queryByRole('button', { name: 'Mudar etapa' })).not.toBeInTheDocument();
+    expect(posts[1].headers?.['If-Match']).toBe('"3"');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Marcar como perdida' })).toBeDisabled());
   });
 });
 
@@ -256,25 +258,40 @@ describe('Funil, agenda e carga', () => {
     expect(within(screen.getByRole('table', { name: 'Perdas por motivo' })).getByText('Concorrente')).toBeInTheDocument();
   });
 
-  it('agenda agrupa as próximas ações e a seta abre a ficha', async () => {
+  it('agenda mostra a semana, conclui a atividade com as anotações e a lista abre a oportunidade', async () => {
+    const posts: TransportRequest[] = [];
+    const hoje = hojeIso();
+    const ativ = (id: string, assunto: string, hora: string, status: string, situation: string) => ({
+      id, kind: 'REUNIAO', subject: assunto, day: hoje, startTime: `${hora}:00`, endTime: `${String(Number(hora.slice(0, 2)) + 1).padStart(2, '0')}:30:00`, durationMin: 90, partnerId: 'c-1',
+      partnerCode: 'C00001', partnerName: 'Fecularia Noroeste Ltda.', leadId: null, leadCode: null, leadName: null, opportunityId: 'o-1', opportunityCode: 'OP00001',
+      opportunityName: 'Balança', owner: 'ana', status, situation, notes: null, version: 1,
+    });
     setTransport(async (req) => {
       const c = comuns(req);
       if (c) return c;
-      if (req.path.startsWith('/api/v1/crm/agenda')) {
-        return resposta(200, [
-          { bucket: 'VENCIDA', kind: 'PROSPECCAO', id: 'l-1', code: 'PS00001', name: 'Fecularia Noroeste', party: 'Paranavaí / PR', owner: 'ana', stage: 'CONTATADO', nextActionDate: '2026-10-01', nextActionNote: 'Enviar catálogo' },
-          { bucket: 'HOJE', kind: 'OPORTUNIDADE', id: 'o-1', code: 'OP00001', name: 'Balança', party: 'Fecularia Noroeste', owner: 'ana', stage: 'NEGOCIACAO', nextActionDate: '2026-10-03', nextActionNote: 'Negociar' },
-        ]);
+      if (req.path.startsWith('/api/v1/crm/activities?')) return resposta(200, [ativ('a-1', 'Negociar prazo', '09:00', 'PLANEJADA', 'HOJE'), ativ('a-2', 'Ligar ao comprador', '14:00', 'CONCLUIDA', 'CONCLUIDA')]);
+      if (req.path === '/api/v1/crm/activities/a-1/completion') {
+        posts.push(req);
+        return resposta(200, { ...ativ('a-1', 'Negociar prazo', '09:00', 'CONCLUIDA', 'CONCLUIDA'), version: 2 });
       }
+      if (req.path.startsWith('/api/v1/crm/opportunity-board')) return resposta(200, []);
       return naoAchou();
     });
     const win = abrir(<CrmAgendaWindow />);
     const user = userEvent.setup();
-    const agenda = await screen.findByRole('table', { name: 'Agenda do CRM' });
-    await waitFor(() => expect(within(agenda).getByText('Vencidas (1)')).toBeInTheDocument());
-    expect(within(agenda).getByText('Hoje (1)')).toBeInTheDocument();
-    expect(within(agenda).getByText('Negociação')).toBeInTheDocument();
-    await user.click(within(agenda).getByRole('link', { name: 'Abrir OP00001' }));
+    expect(await screen.findByRole('button', { name: /09:00.*Negociar prazo/ })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText('Assunto')).toHaveValue('Negociar prazo'));
+    await user.type(screen.getByLabelText('Anotações'), 'Cliente pediu 24 meses');
+    await user.click(screen.getByRole('button', { name: 'Concluir' }));
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0].headers?.['If-Match']).toBe('"1"');
+    expect(JSON.parse(posts[0].body!)).toEqual({ notes: 'Cliente pediu 24 meses' });
+    expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Atividade concluída: Negociar prazo' });
+
+    await user.click(screen.getByRole('button', { name: 'Lista' }));
+    const lista = screen.getByRole('table', { name: 'Atividades da semana' });
+    expect(within(lista).getByText('2 atividades · 1 concluída · 0 atrasadas')).toBeInTheDocument();
+    await user.click(within(lista).getAllByRole('link', { name: 'Abrir OP00001' })[0]);
     expect(win.open).toHaveBeenCalledWith('opportunity', 'o-1');
   });
 

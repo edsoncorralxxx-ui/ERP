@@ -6,7 +6,7 @@ import type {
 } from '../api/types';
 import type { WindowKind } from '../windows/windowManager';
 import { useSession } from './SessionContext';
-import { MENU, NEEDS, windowFor } from './SideNav';
+import { MENU, permissaoDe, windowFor } from './SideNav';
 
 export type GrupoBusca = 'Operações' | 'Dados mestre' | 'Documentos';
 export type ResultadoBusca = { grupo: GrupoBusca; rotulo: string; detalhe: string; kind: WindowKind; recordKey?: string };
@@ -23,7 +23,7 @@ export const buscarOperacoes = (termo: string, can: (p: string) => boolean): Res
   for (const m of MENU) {
     for (const it of m.itens) {
       const dest = windowFor(it);
-      const need = dest && NEEDS[dest.kind];
+      const need = dest && permissaoDe(dest);
       const chave = dest && `${dest.kind}/${dest.recordKey}`;
       if (!dest || !chave || vistos.has(chave) || (need && !can(need))) continue;
       if (!semAcento(it.rotulo).includes(t) && !semAcento(m.nome).includes(t)) continue;
