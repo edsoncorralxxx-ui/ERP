@@ -112,10 +112,10 @@ public abstract class IntegrationTest {
         jdbc.sql("delete from lead_import").update();
         jdbc.sql("""
                 update opportunity_stage set version = 1, updated_at = null, updated_by = null,
-                       name = case code when 'QUALIFICACAO' then 'Qualificação' when 'VISITA_TECNICA' then 'Visita técnica'
-                                        when 'PROPOSTA' then 'Proposta' else 'Negociação' end,
-                       close_percent = case code when 'QUALIFICACAO' then 10 when 'VISITA_TECNICA' then 25
-                                                 when 'PROPOSTA' then 50 else 75 end
+                       name = case code when 'PROSPECCAO' then 'Prospecção' when 'QUALIFICACAO' then 'Qualificação'
+                                        when 'VISITA_TECNICA' then 'Visita técnica' when 'PROPOSTA' then 'Proposta' else 'Negociação' end,
+                       close_percent = case code when 'PROSPECCAO' then 10 when 'QUALIFICACAO' then 25 when 'VISITA_TECNICA' then 40
+                                                 when 'PROPOSTA' then 60 else 80 end
                 """).update();
     }
 

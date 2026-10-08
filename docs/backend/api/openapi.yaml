@@ -81,6 +81,15 @@ tags:
   - name: Modelos de equipamento
   - name: BOM
   - name: BOM do equipamento
+  - name: Cadastros
+  - name: Transportadoras
+  - name: Colaboradores
+  - name: Estoque
+  - name: Calendários
+  - name: Tabelas de preço
+  - name: Tabelas auxiliares
+  - name: Anexos
+  - name: Cockpit
 
 paths:
   /api/v1/status:
@@ -2311,6 +2320,673 @@ paths:
       summary: Usuários ativos, para escolher o responsável (opportunity.read)
       responses:
         '200': { description: Usuários, content: { application/json: { schema: { type: array, items: { type: object, properties: { username: { type: string }, displayName: { type: string } } } } } } }
+
+  # Sprint 13 — telas do mock (cadastros, CRM, cockpit, estoque, calendários, anexos).
+  /api/v1/attachments:
+    get:
+      tags: [Anexos]
+      summary: "Anexos de um registro: ownerEntity e ownerId (attachment.read)"
+      parameters:
+        - { name: ownerEntity, in: query, required: false, schema: { type: string } }
+        - { name: ownerId, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+    post:
+      tags: [Anexos]
+      summary: "Inclui um anexo em base64 (attachment.update)"
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { type: object } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/attachments/{id}:
+    delete:
+      tags: [Anexos]
+      summary: "Exclui o anexo (attachment.update)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '204': { description: Excluído }
+        '404': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/attachments/{id}/content:
+    get:
+      tags: [Anexos]
+      summary: "Conteúdo do anexo (attachment.read)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/cadastros/items/{id}/summary:
+    get:
+      tags: [Cadastros]
+      summary: "Indicadores do cabeçalho da ficha do item (item.read); número de módulo que ainda não existe vem nulo"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/cadastros/partners/{id}/summary:
+    get:
+      tags: [Cadastros]
+      summary: "Indicadores do cabeçalho da ficha do parceiro pelo papel (partner.read)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { name: role, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/cadastros/{cadastro}:
+    get:
+      tags: [Cadastros]
+      summary: "Lista de cadastro do mock (clientes, fornecedores, contatos, transportadoras, colaboradores, produtos, serviços, materiais, depósitos) com saldos"
+      parameters:
+        - { name: cadastro, in: path, required: true, schema: { type: string } }
+        - { name: search, in: query, required: false, schema: { type: string } }
+        - { name: status, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/calendars:
+    get:
+      tags: [Calendários]
+      summary: "Calendários de trabalho (calendar.read)"
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+    post:
+      tags: [Calendários]
+      summary: "Novo calendário (calendar.admin)"
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { type: object } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/calendars/{id}:
+    put:
+      tags: [Calendários]
+      summary: "Altera o calendário (calendar.admin)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IfMatch' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/calendars/{id}/copy:
+    post:
+      tags: [Calendários]
+      summary: "Copia os dias de um ano para outro (calendar.admin)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IfMatch' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/calendars/{id}/holidays:
+    get:
+      tags: [Calendários]
+      summary: "Feriados e dias especiais do calendário no ano (calendar.read)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { name: year, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/calendars/{id}/holidays/{year}:
+    put:
+      tags: [Calendários]
+      summary: "Grava os dias especiais do ano (calendar.admin)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { name: year, in: path, required: true, schema: { type: string } }
+        - { $ref: '#/components/parameters/IfMatch' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/calendars/{id}/holidays/{year}/national:
+    post:
+      tags: [Calendários]
+      summary: "Inclui os feriados nacionais do ano (calendar.admin)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { name: year, in: path, required: true, schema: { type: string } }
+        - { $ref: '#/components/parameters/IfMatch' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/carriers:
+    get:
+      tags: [Transportadoras]
+      summary: "Transportadoras (partner.read)"
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string } }
+        - { name: status, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+    post:
+      tags: [Transportadoras]
+      summary: "Nova transportadora (partner.create)"
+      parameters:
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { type: object } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/carriers/{id}:
+    get:
+      tags: [Transportadoras]
+      summary: "Transportadora (partner.read)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Transportadoras]
+      summary: "Altera a transportadora (partner.update)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IfMatch' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/carriers/{id}/deactivate:
+    post:
+      tags: [Transportadoras]
+      summary: "Inativa a transportadora (partner.deactivate)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IfMatch' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/carriers/{id}/enable:
+    post:
+      tags: [Transportadoras]
+      summary: "Dá o papel de transportadora a um parceiro existente (partner.update)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IfMatch' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/carriers/{id}/history:
+    get:
+      tags: [Transportadoras]
+      summary: "Histórico da transportadora (partner.read)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/cockpit:
+    get:
+      tags: [Cockpit]
+      summary: "Meu cockpit: indicadores, gráficos, o que precisa de atenção e próximas entregas; period AAAA-MM, AAAA-Tn ou AAAA; compare ANTERIOR, ANO_ANTERIOR ou META. Indicador sem permissão ou sem módulo vem nulo"
+      parameters:
+        - { name: period, in: query, required: false, schema: { type: string } }
+        - { name: compare, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/cockpit/indicators/{key}:
+    get:
+      tags: [Cockpit]
+      summary: "Linhas que formam um indicador do cockpit (faturamento, carteira, caixa, instalacoes, estoque), com a permissão do módulo"
+      parameters:
+        - { name: key, in: path, required: true, schema: { type: string } }
+        - { name: period, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/crm/activities:
+    get:
+      tags: [CRM]
+      summary: "Atividades do CRM por período, responsável, tipo, parceiro, lead ou oportunidade (opportunity.read)"
+      parameters:
+        - { name: from, in: query, required: false, schema: { type: string } }
+        - { name: to, in: query, required: false, schema: { type: string } }
+        - { name: owner, in: query, required: false, schema: { type: string } }
+        - { name: kind, in: query, required: false, schema: { type: string } }
+        - { name: partnerId, in: query, required: false, schema: { type: string } }
+        - { name: leadId, in: query, required: false, schema: { type: string } }
+        - { name: opportunityId, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+    post:
+      tags: [CRM]
+      summary: "Registra uma atividade (opportunity.update)"
+      parameters:
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { type: object } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/crm/activities/{id}:
+    get:
+      tags: [CRM]
+      summary: "Atividade (opportunity.read)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [CRM]
+      summary: "Altera ou reagenda a atividade planejada (opportunity.update)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IfMatch' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/crm/activities/{id}/cancellation:
+    post:
+      tags: [CRM]
+      summary: "Cancela a atividade planejada (opportunity.update)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IfMatch' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/crm/activities/{id}/completion:
+    post:
+      tags: [CRM]
+      summary: "Conclui a atividade com as anotações (opportunity.update)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IfMatch' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/crm/activities/{id}/history:
+    get:
+      tags: [CRM]
+      summary: "Histórico da atividade (opportunity.read)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/crm/dashboard:
+    get:
+      tags: [CRM]
+      summary: "Painel comercial: funil, ponderado, conversão em 12 meses, meta do mês (pedidos confirmados), funil por etapa e origem, previsão e alertas por regra"
+      parameters:
+        - { name: month, in: query, required: false, schema: { type: string } }
+        - { name: owner, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/crm/lead-board:
+    get:
+      tags: [CRM]
+      summary: "Leads com pontuação, moagem e dias sem contato (lead.read)"
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+
+  /api/v1/crm/opportunity-board:
+    get:
+      tags: [CRM]
+      summary: "Oportunidades com cliente, etapa, ponderado e atividades (opportunity.read)"
+      parameters:
+        - { name: owner, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/employees:
+    get:
+      tags: [Colaboradores]
+      summary: "Colaboradores (employee.read)"
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string } }
+        - { name: status, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+    post:
+      tags: [Colaboradores]
+      summary: "Novo colaborador (employee.admin)"
+      parameters:
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { type: object } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/employees/{id}:
+    get:
+      tags: [Colaboradores]
+      summary: "Colaborador (employee.read)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Colaboradores]
+      summary: "Altera o colaborador (employee.admin)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IfMatch' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/employees/{id}/deactivate:
+    post:
+      tags: [Colaboradores]
+      summary: "Inativa o colaborador (employee.admin)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IfMatch' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/employees/{id}/history:
+    get:
+      tags: [Colaboradores]
+      summary: "Histórico do colaborador (employee.read)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/employees/{id}/reactivate:
+    post:
+      tags: [Colaboradores]
+      summary: "Reativa o colaborador (employee.admin)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IfMatch' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/items/{id}/reactivate:
+    post:
+      tags: [Produtos e serviços]
+      summary: "Reativa o item (item.deactivate)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IfMatch' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/leads/{id}/qualification:
+    put:
+      tags: [CRM]
+      summary: "Moagem, pontuação e item de interesse do lead (lead.update)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IfMatch' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/opportunities/{id}/details:
+    get:
+      tags: [CRM]
+      summary: "Contato, necessidade do cliente, itens de interesse, propostas e pedidos e a taxa histórica de fechamento da etapa"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [CRM]
+      summary: "Grava contato, necessidade e itens de interesse (opportunity.update)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IfMatch' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/price-lists:
+    get:
+      tags: [Tabelas de preço]
+      summary: "Tabelas de preço (price_list.read)"
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+    post:
+      tags: [Tabelas de preço]
+      summary: "Nova tabela de preço (price_list.admin)"
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { type: object } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/price-lists/items/{itemId}:
+    get:
+      tags: [Tabelas de preço]
+      summary: "Preços do item por tabela (price_list.read)"
+      parameters:
+        - { name: itemId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Tabelas de preço]
+      summary: "Grava os preços do item nas tabelas (price_list.admin)"
+      parameters:
+        - { name: itemId, in: path, required: true, schema: { type: string } }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/reference-tables/{table}:
+    get:
+      tags: [Tabelas auxiliares]
+      summary: "Tabela auxiliar do cadastro (catalog.read)"
+      parameters:
+        - { name: table, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Tabelas auxiliares]
+      summary: "Grava as linhas da tabela auxiliar (catalog.admin)"
+      parameters:
+        - { name: table, in: path, required: true, schema: { type: string } }
+        - { $ref: '#/components/parameters/IfMatch' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/stock-balances:
+    get:
+      tags: [Estoque]
+      summary: "Saldos por item, depósito, localização e lote (stock.read)"
+      parameters:
+        - { name: itemId, in: query, required: false, schema: { type: string } }
+        - { name: warehouseId, in: query, required: false, schema: { type: string } }
+        - { name: locationId, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/stock-balances/items/{itemId}:
+    put:
+      tags: [Estoque]
+      summary: "Grava os saldos informados do item (stock.admin)"
+      parameters:
+        - { name: itemId, in: path, required: true, schema: { type: string } }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/stock-balances/totals:
+    get:
+      tags: [Estoque]
+      summary: "Totais de estoque por item (stock.read)"
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+
+  /api/v1/stock-locations:
+    get:
+      tags: [Estoque]
+      summary: "Árvore de localizações do depósito (stock.read)"
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+    post:
+      tags: [Estoque]
+      summary: "Nova localização (stock.admin)"
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { type: object } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/stock-locations/{id}:
+    delete:
+      tags: [Estoque]
+      summary: "Exclui a localização sem saldo nem filhas (stock.admin)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IfMatch' }
+      responses:
+        '204': { description: Excluído }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Estoque]
+      summary: "Altera a localização (stock.admin)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IfMatch' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/warehouses:
+    get:
+      tags: [Estoque]
+      summary: "Depósitos (stock.read)"
+      parameters:
+        - { name: status, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+    post:
+      tags: [Estoque]
+      summary: "Novo depósito (stock.admin)"
+      parameters:
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { type: object } } } }
+        '422': { $ref: '#/components/responses/Erro' }
+
+  /api/v1/warehouses/{id}:
+    get:
+      tags: [Estoque]
+      summary: "Depósito (stock.read)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+    put:
+      tags: [Estoque]
+      summary: "Altera o depósito (stock.admin)"
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IfMatch' }
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
 
 components:
   securitySchemes:

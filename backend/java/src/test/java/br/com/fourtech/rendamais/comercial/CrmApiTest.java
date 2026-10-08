@@ -51,7 +51,7 @@ class CrmApiTest extends CadastrosApiTest {
 
         String id = prospeccao("s11-lead-0001", "Fecularia Noroeste Ltda.");
         HttpResponse<String> lida = get("/api/v1/leads/" + id);
-        assertThat(lida.body()).contains("\"code\":\"PS", "\"rating\":null", "\"state\":\"PR\"", "\"stage\":\"IDENTIFICADO\"",
+        assertThat(lida.body()).contains("\"code\":\"L-", "\"rating\":null", "\"state\":\"PR\"", "\"stage\":\"IDENTIFICADO\"",
                 "\"owner\":\"" + ADMIN + "\"", "\"hasRenda\":\"NAO\"");
         // Repetir com a mesma chave devolve a mesma prospecção.
         assertThat(post("/api/v1/leads", "s11-lead-0001", """
@@ -115,29 +115,28 @@ class CrmApiTest extends CadastrosApiTest {
     @Test
     void oportunidadePeloFunilAteOPedido() throws Exception {
         String lead = prospeccao("s11-lead-0010", "Amidonaria Paraíso");
+        // A próxima ação é opcional na oportunidade (Sprint 13): o acompanhamento vem das atividades.
         HttpResponse<String> semAcao = post("/api/v1/opportunities", "s11-opp-0000",
-                "{\"leadId\":\"" + lead + "\",\"name\":\"Balança\",\"potentialCents\":\"15000000\"}");
-        assertThat(semAcao.statusCode()).isEqualTo(422);
-        assertThat(semAcao.body()).contains("\"field\":\"nextActionDate\"", "\"field\":\"nextActionNote\"");
+                "{\"leadId\":\"" + prospeccao("s11-lead-0011", "Amidonaria Sem Ação") + "\",\"name\":\"Balança\",\"potentialCents\":\"15000000\"}");
+        assertThat(semAcao.statusCode()).as(semAcao.body()).isEqualTo(201);
+        assertThat(semAcao.body()).contains("\"nextActionDate\":null");
 
         String opp = oportunidade("s11-opp-0001", lead, "Balança automática", "15000000");
         HttpResponse<String> aberta = get("/api/v1/opportunities/" + opp);
-        // Qualificação: 10% de R$ 150.000,00 = R$ 15.000,00.
-        assertThat(aberta.body()).contains("\"code\":\"OP", "\"stage\":\"QUALIFICACAO\"", "\"stageName\":\"Qualificação\"",
+        // Prospecção: 10% de R$ 150.000,00 = R$ 15.000,00.
+        assertThat(aberta.body()).contains("\"code\":\"OP-", "\"stage\":\"PROSPECCAO\"", "\"stageName\":\"Prospecção\"",
                 "\"closePercent\":\"10.00\"", "\"weightedCents\":\"1500000\"", "\"status\":\"ABERTA\"", "\"customerId\":null",
                 "\"leadName\":\"Amidonaria Paraíso\"");
         assertThat(get("/api/v1/leads/" + lead).body()).contains("\"stage\":\"INTERESSADO\"", "\"openOpportunities\":1");
 
-        assertThat(withVersion("POST", "/api/v1/opportunities/" + opp + "/stage", "1",
-                "{\"stage\":\"VISITA_TECNICA\"}").statusCode()).isEqualTo(422);
         HttpResponse<String> visita = withVersion("POST", "/api/v1/opportunities/" + opp + "/stage", "1", """
                 {"stage":"VISITA_TECNICA","nextActionDate":"%s","nextActionNote":"Visitar a fábrica"}
                 """.formatted(dia(5)));
         assertThat(visita.statusCode()).as(visita.body()).isEqualTo(200);
-        assertThat(visita.body()).contains("\"closePercent\":\"25.00\"", "\"weightedCents\":\"3750000\"",
+        assertThat(visita.body()).contains("\"closePercent\":\"40.00\"", "\"weightedCents\":\"6000000\"",
                 "\"nextActionNote\":\"Visitar a fábrica\"");
         assertThat(get("/api/v1/opportunities/" + opp + "/stages").body())
-                .contains("\"toStage\":\"QUALIFICACAO\"", "\"toStage\":\"VISITA_TECNICA\"", "\"weightedCents\":\"3750000\"");
+                .contains("\"toStage\":\"PROSPECCAO\"", "\"toStage\":\"VISITA_TECNICA\"", "\"weightedCents\":\"6000000\"");
 
         // Interação na oportunidade aberta exige a próxima ação.
         assertThat(post("/api/v1/opportunities/" + opp + "/interactions", "s11-int-0010",
@@ -172,7 +171,7 @@ class CrmApiTest extends CadastrosApiTest {
         String proposta = campo(prop.body(), "id");
         assertThat(prop.body()).contains("\"opportunityId\":\"" + opp + "\"");
         assertThat(withVersion("POST", "/api/v1/proposals/" + proposta + "/issue", "1", null).statusCode()).isEqualTo(200);
-        assertThat(get("/api/v1/opportunities/" + opp).body()).contains("\"stage\":\"PROPOSTA\"", "\"weightedCents\":\"7500000\"");
+        assertThat(get("/api/v1/opportunities/" + opp).body()).contains("\"stage\":\"PROPOSTA\"", "\"weightedCents\":\"9000000\"");
         assertThat(get("/api/v1/opportunities/" + opp + "/proposals").body()).contains(proposta);
         HttpResponse<String> pedido = post("/api/v1/proposals/" + proposta + "/orders", "s11-conv-0001", "{}");
         assertThat(pedido.statusCode()).as(pedido.body()).isEqualTo(201);
@@ -230,14 +229,14 @@ class CrmApiTest extends CadastrosApiTest {
         withVersion("POST", "/api/v1/opportunities/" + c + "/stage", "1", """
                 {"stage":"NEGOCIACAO","nextActionDate":"%s","nextActionNote":"Negociar"}""".formatted(HOJE));
 
-        // Exemplo do planning: R$ 12.000,00 + R$ 37.500,00 + R$ 74.074,07 (74.074,0725) = R$ 123.574,07.
+        // Etapas do mock (V20): R$ 12.000,00 (10%) + R$ 60.000,00 (40%) + R$ 79.012,34 (80% de 98.765,43) = R$ 151.012,34.
         HttpResponse<String> funil = get("/api/v1/crm/funnel");
         assertThat(funil.statusCode()).as(funil.body()).isEqualTo(200);
-        assertThat(funil.body()).contains("\"openCount\":3", "\"openPotentialCents\":\"36876543\"", "\"openWeightedCents\":\"12357407\"",
-                "{\"code\":\"QUALIFICACAO\",\"name\":\"Qualificação\",\"closePercent\":\"10.00\",\"count\":1,\"potentialCents\":\"12000000\",\"weightedCents\":\"1200000\"}",
-                "{\"code\":\"NEGOCIACAO\",\"name\":\"Negociação\",\"closePercent\":\"75.00\",\"count\":1,\"potentialCents\":\"9876543\",\"weightedCents\":\"7407407\"}",
-                // 3 entraram em Qualificação, 2 avançaram; ninguém entrou em Proposta: não calculável.
-                "{\"code\":\"QUALIFICACAO\",\"name\":\"Qualificação\",\"entered\":3,\"advanced\":2,\"rate\":\"66.67\"}",
+        assertThat(funil.body()).contains("\"openCount\":3", "\"openPotentialCents\":\"36876543\"", "\"openWeightedCents\":\"15101234\"",
+                "{\"code\":\"PROSPECCAO\",\"name\":\"Prospecção\",\"closePercent\":\"10.00\",\"count\":1,\"potentialCents\":\"12000000\",\"weightedCents\":\"1200000\"}",
+                "{\"code\":\"NEGOCIACAO\",\"name\":\"Negociação\",\"closePercent\":\"80.00\",\"count\":1,\"potentialCents\":\"9876543\",\"weightedCents\":\"7901234\"}",
+                // 3 entraram em Prospecção, 2 avançaram; ninguém entrou em Proposta: não calculável.
+                "{\"code\":\"PROSPECCAO\",\"name\":\"Prospecção\",\"entered\":3,\"advanced\":2,\"rate\":\"66.67\"}",
                 "{\"code\":\"PROPOSTA\",\"name\":\"Proposta\",\"entered\":0,\"advanced\":0,\"rate\":null}");
 
         // Etapa configurável: Visita técnica a 30% muda o ponderado.
@@ -280,7 +279,7 @@ class CrmApiTest extends CadastrosApiTest {
 
         HttpResponse<String> confirmada = post("/api/v1/lead-imports/" + id + "/confirmation", "s11-imp-0001", null);
         assertThat(confirmada.statusCode()).as(confirmada.body()).isEqualTo(200);
-        assertThat(confirmada.body()).contains("\"status\":\"CONFIRMADA\"", "\"createdCodes\":[\"PS");
+        assertThat(confirmada.body()).contains("\"status\":\"CONFIRMADA\"", "\"createdCodes\":[\"L-");
         assertThat(conta("select count(*) from lead")).isEqualTo(7);
         assertThat(conta("select count(*) from lead where rating is null")).isEqualTo(2);
         assertThat(conta("select count(*) from lead where has_renda = 'DESCONHECIDO'")).isEqualTo(1);
