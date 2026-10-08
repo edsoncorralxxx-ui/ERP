@@ -186,7 +186,7 @@ test('painel, apuração por anexo, PGDAS-D, guia DAS paga, fechamento e obriga�
   const gaveta = page.getByRole('complementary', { name: 'Módulos' });
   await abrirMenu(page, 'Fiscal', 'Painel Fiscal');
   const painel = page.getByRole('dialog', { name: 'Painel fiscal', exact: true });
-  if (mes(hoje.slice(0, 7), -1) !== c) await escolher(page, painel.getByRole('combobox', { name: 'Competência' }), rotulo);
+  if (hoje.slice(0, 7) !== c) await escolher(page, painel.getByRole('combobox', { name: 'Competência' }), rotulo);
   await expect(painel).toContainText(`RBT12 — receita em 12 meses`);
   await expect(painel).toContainText('R$ 3.340.000');
   await foto(page, '01-painel');

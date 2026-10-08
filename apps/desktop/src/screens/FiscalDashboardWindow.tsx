@@ -3,6 +3,7 @@ import { api, type ApiError } from '../api/client';
 import type { FiscalDashboard } from '../api/types';
 import type { ChartSpec } from '../charts/Chart';
 import { dataDaApi, reais, somarMeses } from '../format';
+import { competenciaPadrao } from './TaxPeriodWindow';
 import { useWindow } from '../windows/WindowContext';
 import { DOCUMENTOS_ALTERADOS } from './DocumentsWindow';
 import {
@@ -10,7 +11,6 @@ import {
 } from './comum/Fiscal';
 import { LinhaResto } from './comum/LinhaResto';
 import { Selecao } from './comum/Selecao';
-import { competenciaPadrao } from './TaxPeriodWindow';
 
 const pct2 = (fracao: string) => `${(Number(fracao) * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 const pct1 = (v: number) => `${v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
@@ -207,14 +207,14 @@ export function FiscalDashboardWindow() {
                     <span className="rp-cockpit__acoes">{seta('Abrir as obrigações', () => win.open('tax-obligations'))}</span>
                   </div>
                   <div className="rp-grid-rolagem rp-rolagem rp-fiscal__grade-cartao">
-                    <table className="rp-grid rp-janela-mdi__grade" aria-label="Próximas obrigações">
+                    <table className="rp-grid rp-janela-mdi__grade rp-cockpit__tabela-fixa" aria-label="Próximas obrigações">
                       <thead>
                         <tr>
-                          <th />
-                          <th>Vencimento</th>
+                          <th style={{ width: '22px' }} />
+                          <th style={{ width: '90px' }}>Vencimento</th>
                           <th>Obrigação</th>
-                          <th>Comp.</th>
-                          <th>Situação</th>
+                          <th style={{ width: '64px' }}>Comp.</th>
+                          <th style={{ width: '146px' }}>Situação</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -222,7 +222,7 @@ export function FiscalDashboardWindow() {
                           <tr key={o.id}>
                             <td>{seta(`Abrir ${o.name}`, () => win.open('tax-obligations', o.id))}</td>
                             <td>{dataDaApi(o.dueDate)}</td>
-                            <td>{o.name}</td>
+                            <td title={o.name}>{o.name}</td>
                             <td>{competenciaObrigacao(o.competence)}</td>
                             <td>{seloObrigacao(o)}</td>
                           </tr>

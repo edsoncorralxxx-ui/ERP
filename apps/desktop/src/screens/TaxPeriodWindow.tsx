@@ -23,8 +23,8 @@ type Tab = 'rec' | 'calc' | 'rbt' | 'guia' | 'fech' | 'hist';
 const TRIBUTOS = ['IRPJ', 'CSLL', 'COFINS', 'PIS/Pasep', 'CPP', 'IPI', 'ICMS', 'ISS'];
 const ORIGEM_RBT12 = { CALCULADO: 'histórico e notas', INFORMADO: 'informado' } as const;
 
-/** Competência padrão da apuração: o mês anterior ao corrente (o que está sendo apurado). */
-export const competenciaPadrao = () => somarMeses(`${hojeIso().slice(0, 7)}-01`, -1).slice(0, 7);
+/** Competência padrão das telas fiscais: o mês corrente, como no mock (a apuração acompanha o mês em andamento). */
+export const competenciaPadrao = () => hojeIso().slice(0, 7);
 
 /** Percentual de uma razão em centavos, com uma casa: "72,7%". */
 const razao = (parte: string | null | undefined, todo: string | null | undefined) => {

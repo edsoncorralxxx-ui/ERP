@@ -1048,6 +1048,28 @@ def negocios():
     out.append("")
 
 
+def fiscal():
+    sec("Fiscal: histórico de receita do Simples e obrigações do exemplo")
+    ins("tax_revenue_history", [dict(competence=h["competencia"], annex1_cents=cents(h["anexoI"]), annex2_cents=cents(h["anexoII"]),
+                                     annex3_cents=cents(h["anexoIII"]), annex4_cents=0, annex5_cents=0, source="DIGITADO",
+                                     informed_by="Contabilidade", notes=None, version=1, created_at=ts("2026-09-02"), created_by="Beatriz Costa")
+                                for h in FISCAL["historicoReceita"]])
+    # As obrigações dos modelos ficam ligadas ao modelo (a geração do mês não as repete); a opção por IBS e CBS é avulsa.
+    linhas = []
+    for n, o in enumerate(FISCAL["obrigacoes"], start=1):
+        feita = o["situacao"] in ("ENTREGUE", "PAGO")
+        modelo = f"(select id from tax_obligation_template where name = {q(o['obrigacao'])})"
+        kind = f"coalesce((select kind from tax_obligation_template where name = {q(o['obrigacao'])}), 'DECLARACAO')"
+        linhas.append(f"  ({q(uid('obrig', n))}, {q(f'OB{n:05d}')}, {modelo}, {q(o['obrigacao'])}, {q(o['competencia'])}, {q(o['vencimento'])}, "
+                      f"{q(o['esfera'])}, {kind}, {q(o['responsavel'])}, {q(o.get('detalhe'))}, {q(o['situacao'])}, "
+                      f"{q(o['vencimento'] if feita else None)}, 1, {q(ts('2026-09-01'))}, {q(QUEM)})")
+    out.append("insert into tax_obligation (id, code, template_id, name, competence, due_date, sphere, kind, responsible, detail, status, "
+               "delivered_on, version, created_at, created_by) values")
+    out.append(",\n".join(linhas) + ";")
+    out.append(f"select setval('tax_obligation_code_seq', {len(FISCAL['obrigacoes'])});")
+    out.append("")
+
+
 def anexos():
     sec("Anexos do C00012 (aba Documentos)")
     pdf = "JVBERi0xLjQKJcOkw7zDtsOfCjEgMCBvYmoKPDwgL1R5cGUgL0NhdGFsb2cgPj4KZW5kb2JqCnRyYWlsZXIKPDwgL1Jvb3QgMSAwIFIgPj4KJSVFT0YK"
@@ -1075,6 +1097,7 @@ def gerar():
     anexos()
     crm()
     negocios()
+    fiscal()
     return "\n".join(out) + "\n"
 
 

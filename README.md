@@ -71,6 +71,17 @@ cd ~/Documents/ERP/backend/java
 
 Teste em outro Terminal: `curl http://localhost:8080/api/v1/status`. O servidor cria e atualiza as tabelas sozinho.
 
+#### Dados de demonstração (os mesmos do mock)
+
+Para **apagar todos os dados de negócio** e carregar os do mock (clientes C00012…C00045, itens, CRM, pedidos, notas de 13 meses, contas, títulos, histórico fiscal), inicie o servidor uma vez com `RENDA_DEMO=recarregar`. Usuários, etapas do funil, parâmetros fiscais e dados da empresa ficam. Com `RENDA_DEMO_DATE` o relógio do servidor começa no "hoje" do mock (24/09/2026 às 09:31), para *Hoje*, *Atrasada*, prazos e o mês do cockpit aparecerem iguais:
+
+```bash
+cd ~/Documents/ERP/backend/java
+RENDA_DEMO=recarregar RENDA_DEMO_DATE=2026-09-24T09:31 ./mvnw spring-boot:run
+```
+
+**Atenção:** `RENDA_DEMO=recarregar` apaga os dados a cada início. Depois da carga, pare o servidor e inicie de novo sem `RENDA_DEMO` (mantenha `RENDA_DEMO_DATE` se quiser continuar no dia do mock). A carga vem de `backend/java/src/main/resources/demo/carga-mock.sql`, gerada por `python3 tools/demo/carga_mock.py`.
+
 ### 5. Abrir o app (Terminal 2)
 
 ```bash
@@ -147,6 +158,8 @@ Na primeira vez, o roteiro de ponta a ponta precisa do navegador do Playwright: 
 | `RENDA_SERVER_ADDRESS` | `127.0.0.1` | só a própria máquina; use `0.0.0.0` para outros computadores da rede |
 | `RENDA_SERVER_PORT` | `8080` | porta da API |
 | `RENDA_BOOTSTRAP_ADMIN_USER` / `RENDA_BOOTSTRAP_ADMIN_PASSWORD` | — | primeiro administrador, usado só enquanto não há nenhum usuário |
+| `RENDA_DEMO` | — | `recarregar` apaga os dados de negócio e carrega os dados de demonstração do mock ao iniciar |
+| `RENDA_DEMO_DATE` | — | data e hora de início do relógio do servidor (ex.: `2026-09-24T09:31`); o relógio anda a partir dela |
 | `RENDA_FISCAL_REVENUE_START` | `2026-09` | primeira competência com toda a receita no Renda+; antes dela o RBT12 é o informado pelo contador |
 
 O app procura o servidor em `http://localhost:8080` (pode ser alterado com `RENDA_SERVER_URL`).

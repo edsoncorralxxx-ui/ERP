@@ -1,6 +1,6 @@
 # Sprint 13 — Sistema inteiro pelo mock: cadastros, CRM, cockpit e carga de demonstração
 
-Situação: **Em execução** (04/10/2026). Pedido do PO: "estude detalhadamente o artefato *Renda+ ERP MOCK* e altere o sistema inteiro para implementar todas as telas do mock; se for necessário altere o backend, o frontend e tudo; o sistema deverá ser idêntico às telas do mock". Pedido seguinte, na mesma conversa: "apague todos os dados do banco de dados e adicione os dados de exemplo, os mesmos usados no mock".
+Situação: **Pronta para a Review** (08/10/2026; início em 04/10/2026). Pedido do PO: "estude detalhadamente o artefato *Renda+ ERP MOCK* e altere o sistema inteiro para implementar todas as telas do mock; se for necessário altere o backend, o frontend e tudo; o sistema deverá ser idêntico às telas do mock". Pedido seguinte, na mesma conversa: "apague todos os dados do banco de dados e adicione os dados de exemplo, os mesmos usados no mock".
 
 Referência: as 21 telas do mock (artefato *Renda+ ERP MOCK*, versão de 04/10/2026), capturadas em todos os estados e abas: Login; Cockpit inicial; Meu cockpit; Dados do indicador; Seção Cadastros (lista, parceiro, item, tabela editável, localizações, calendários e feriados); Seção CRM (painel comercial, oportunidades em lista e por etapa, oportunidade de venda, kanban, leads, atividades e agenda); Seção Fiscal (refeita na Sprint 12).
 
@@ -44,7 +44,14 @@ O PO pediu para implementar sem nova rodada de perguntas. As decisões abaixo fo
 | Etapas do funil | As do mock: **Prospecção 10%, Qualificação 25%, Visita técnica 40%, Proposta 60%, Negociação 80%** (a etapa Prospecção é nova; percentuais continuam editáveis em *Etapas do funil*) |
 | Lead | A prospecção da Sprint 11 vira **lead**: contato, empresa, cidade/UF, origem, interesse, moagem (t/dia), pontuação 0–100 e situação **Novo, Em contato, Qualificado, Descartado** (IDENTIFICADO, CONTATADO, INTERESSADO, DESCARTADO). A pontuação é calculada por regra (moagem, interesse, origem, contato recente) e pode ser ajustada |
 | Atividades | As interações da Sprint 11 viram **atividades** com data, hora de início, duração, tipo, assunto, cliente, oportunidade, responsável, anotações e situação (*Planejada* ou *Concluída*; *Hoje* e *Atrasada* são calculadas pela data) |
-| Meta comercial | Tabela nova de meta de vendas por mês (para *Meta de setembro* e *Faturamento × meta*) |
+| Meta comercial | Duas metas mensais: a de **vendas** (`sales_target`, pedidos confirmados no mês — *Meta de setembro* do painel comercial) e a de **faturamento** (`billing_target`, V21 — *Faturamento × meta* do cockpit). No mock as duas têm valores diferentes (R$ 450 mil e R$ 370 mil em setembro) |
+| Próxima ação | Deixa de ser obrigatória na oportunidade e na mudança de etapa: o acompanhamento passa a ser feito pelas **atividades** (agenda). Mudança de etapa sem próxima ação mantém a atual e guarda a anotação da passagem |
+| Responsável do CRM | Pode ser um usuário ou um **colaborador ativo** (os responsáveis do mock — Patrícia Gomes, Rafael Lima, Carlos Eduardo Pereira — são colaboradores) |
+| Códigos | No formato do mock: lead `L-0412`, oportunidade `OP-000231`, proposta `PRO-000331`, pedido `PV-000118` (os já gravados não mudam) |
+| Cockpit | Calculado no servidor (`GET /api/v1/cockpit`, `GET /api/v1/cockpit/indicators/{indicador}`) com o que os módulos gravam: faturamento (notas de saída), carteira (pedidos confirmados menos o faturado), funil ponderado, caixa (contas e movimentos), instalações (entrega contratual dos projetos nos próximos 30 dias) e itens abaixo do estoque mínimo (disponível = em estoque − reservado). **Ordens de produção** e **chamados de pós-venda** não têm módulo: aparecem com "—" e o aviso, sem número inventado. *O que precisa de atenção* e *Leitura dos números* são regras, não IA |
+| Linha de produto | Na *Receita do ano por linha de produto*, cada modelo de balança (categoria Balanças de renda) é uma linha; serviços se dividem em *Contratos de manutenção* e *Instalação e serviços*; os demais produtos são *Peças e acessórios* |
+| Competência das telas fiscais | Painel e apuração abrem no **mês corrente**, como no mock (na Sprint 12 abriam no mês anterior) |
+| Importar lista de leads | O mock não tem o item no menu; a carga da Sprint 11 fica no botão **Importar lista** da tela Leads |
 | Carga de demonstração | Comando no servidor: `RENDA_DEMO=recarregar` apaga **todos os dados de negócio** (mantém usuários e a estrutura) e carrega os dados do mock; `RENDA_DEMO_DATE=2026-09-24T09:31` faz o relógio do servidor começar no "hoje" do mock, para *Hoje*, *Atrasada* e os prazos aparecerem iguais |
 
 ## Itens
@@ -58,3 +65,31 @@ O PO pediu para implementar sem nova rodada de perguntas. As decisões abaixo fo
 | S13-05 | Cockpit | Meu cockpit e dados do indicador com números do servidor |
 | S13-06 | Carga de demonstração | Comando que apaga e carrega os dados do mock; números do mock na tela (ex.: clientes C00012…C00045, funil R$ 2.438.440,00, ponderado R$ 1.123.892,00) |
 | S13-07 | Contratos e testes | OpenAPI, testes do servidor e do app, roteiro de ponta a ponta |
+
+## Review — evidências (08/10/2026)
+
+Todas as telas do mock foram implementadas e conferidas por captura lado a lado com o artefato (lista e fichas de cadastro, tabelas, localizações, calendários, painel comercial, leads, oportunidades em lista e por etapa, oportunidade, kanban, atividades e agenda em semana e lista, Meu cockpit, Dados do indicador e as telas fiscais).
+
+Com a carga de demonstração (`RENDA_DEMO=recarregar RENDA_DEMO_DATE=2026-09-24T09:31`), os números do mock saem do banco:
+
+| Tela | Número do mock | No sistema |
+|---|---|---|
+| Painel comercial | Funil R$ 2.438.440, ponderado R$ 1.123.892, meta 72% (R$ 324.000 de R$ 450.000) | Iguais |
+| Meu cockpit | Faturamento R$ 386.400 (▲ 7,3%), carteira R$ 1.562.640 com 9 balanças, funil ponderado R$ 1.123.892, caixa R$ 842.310 (▼ 4,1%) | Iguais |
+| Dados do indicador | 8 notas de setembro somando R$ 386.400,00; 8 pedidos somando R$ 1.562.640,00 | Iguais |
+| Painel fiscal (09/2026) | DAS R$ 52.415,79, RBT12 R$ 3.340.000, receita do ano R$ 2.616.400 (72,7% do sublimite) | Iguais |
+| Atividades e agenda | Semana de 21 a 25/09, 13 atividades, 5 concluídas, 1 atrasada | Iguais |
+
+Diferenças que ficam, por decisão acima: produção e pós-venda sem números (sem módulo); "Análise com IA" substituída por regras; o selo "Dados fictícios de demonstração" não aparece; instalações nos próximos 30 dias contam os equipamentos dos projetos (4 na carga, o mock mostra 6); itens abaixo do mínimo pela regra do disponível (5 na carga, o mock mostra 4, um deles com estoque acima do mínimo).
+
+Testes ao fechar a sprint:
+
+| Conjunto | Resultado |
+|---|---|
+| App (Vitest) | 151 testes, todos passando |
+| Servidor (`mvn verify`, PostgreSQL 16) | 121 testes, todos passando, incluindo o contrato OpenAPI (62 rotas novas documentadas) e as regras de arquitetura |
+| Ponta a ponta (Playwright, servidor real) | 8 roteiros (Sprints 4 a 12), todos passando, navegando pelo menu do mock |
+| Verificador do B01 e formatação dos JSON | OK |
+| Carga do mock (`carga_mock.py --verificar`) | Em dia |
+
+Defeitos achados e corrigidos na verificação: Anterior/Próximo registro não andava nas fichas novas de parceiro e colaborador; o menu e a busca não conferiam a permissão de cada lista de cadastro; a ficha do lead podia ficar em "Carregando" quando a recarga coincidia com a resposta anterior; a carga de leads ficou sem acesso no menu novo (botão Importar lista).
