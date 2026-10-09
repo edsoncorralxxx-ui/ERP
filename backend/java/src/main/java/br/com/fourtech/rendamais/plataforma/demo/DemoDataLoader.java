@@ -21,7 +21,9 @@ import java.util.stream.Collectors;
  * carrega os dados do mock Renda+ ERP MOCK ({@code demo/carga-mock.sql}, gerado por tools/demo/carga_mock.py). Ficam os
  * usuários e as sessões, o histórico das migrações e as tabelas de referência das migrações (etapas do funil, parâmetros
  * do Simples Nacional, modelos de obrigação, categorias financeiras, contas, atividades e perfil fiscal da empresa).
- * Sem a variável, não faz nada. Tudo numa transação: se a carga falhar, o banco fica como estava.
+ * Com {@code RENDA_DEMO=limpar}, apaga os mesmos dados e não carrega o mock: só repõe os registros de sistema das
+ * migrações ({@code demo/base-sistema.sql}: beneficiário do DAS, conta Caixa e prazo da opção por IBS e CBS), para começar
+ * a cadastrar dados reais. Sem a variável, não faz nada. Tudo numa transação: se falhar, o banco fica como estava.
  */
 @Component
 class DemoDataLoader implements ApplicationRunner {
@@ -48,8 +50,8 @@ class DemoDataLoader implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         if (modo.isEmpty()) return;
-        if (!modo.equals("recarregar")) {
-            log.warn("RENDA_DEMO={} ignorado: o único valor aceito é 'recarregar'", modo);
+        if (!modo.equals("recarregar") && !modo.equals("limpar")) {
+            log.warn("RENDA_DEMO={} ignorado: use 'recarregar' (dados do mock) ou 'limpar' (banco vazio para dados reais)", modo);
             return;
         }
         tx.executeWithoutResult(s -> {
@@ -61,8 +63,13 @@ class DemoDataLoader implements ApplicationRunner {
                     .query(String.class).list()) {
                 jdbc.sql("select setval('\"" + seq + "\"', 1, false)").query(Long.class).single();
             }
-            new ResourceDatabasePopulator(new ClassPathResource("demo/carga-mock.sql")).execute(dataSource);
-            log.info("Carga de demonstração do mock aplicada: {} tabelas apagadas e recarregadas", tabelas.size());
+            if (modo.equals("limpar")) {
+                new ResourceDatabasePopulator(new ClassPathResource("demo/base-sistema.sql")).execute(dataSource);
+                log.info("Banco limpo para dados reais: {} tabelas apagadas; usuários, parâmetros e registros de sistema mantidos", tabelas.size());
+            } else {
+                new ResourceDatabasePopulator(new ClassPathResource("demo/carga-mock.sql")).execute(dataSource);
+                log.info("Carga de demonstração do mock aplicada: {} tabelas apagadas e recarregadas", tabelas.size());
+            }
         });
     }
 }

@@ -191,6 +191,8 @@ insert into partner_supplied_category (partner_id, category_id, position) values
   ('46b94d53-fe0f-5aaf-8b7a-d69fc419ec20', '1102b65d-c7ab-5ebb-baed-5037cd212417', 0),
   ('8d125cad-8972-520d-9ae8-428f97c28dda', '9e10d50b-b52a-58dc-8243-0615c50a9172', 0);
 
+insert into partner (id, code, legal_name, status, version, created_at, created_by) values ('00000000-0000-0000-0000-0000000000da', 'F00001', 'Receita Federal — DAS', 'ATIVO', 1, now(), 'sistema');
+insert into partner_role (partner_id, role, status, since) values ('00000000-0000-0000-0000-0000000000da', 'FORNECEDOR', 'ATIVO', now());
 select setval('customer_code_seq', 45), setval('supplier_code_seq', 122), setval('carrier_code_seq', 13);
 
 insert into audit_event (actor, action, entity_type, entity_id, entity_version, reason, changes, correlation_id, occurred_at) values

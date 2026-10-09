@@ -345,6 +345,10 @@ def parceiros():
     ins("partner_unit", unit)
     ins("partner_contact", contact)
     ins("partner_supplied_category", supplied)
+    # Beneficiário do DAS (registro de sistema da V13, usado pela guia do Simples).
+    out.append("insert into partner (id, code, legal_name, status, version, created_at, created_by) values "
+               "('00000000-0000-0000-0000-0000000000da', 'F00001', 'Receita Federal — DAS', 'ATIVO', 1, now(), 'sistema');")
+    out.append("insert into partner_role (partner_id, role, status, since) values ('00000000-0000-0000-0000-0000000000da', 'FORNECEDOR', 'ATIVO', now());")
     out.append("select setval('customer_code_seq', 45), setval('supplier_code_seq', 122), setval('carrier_code_seq', 13);")
     out.append("")
     # Histórico da ficha do C00012 como no mock (aba Histórico).

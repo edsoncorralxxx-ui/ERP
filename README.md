@@ -80,7 +80,18 @@ cd ~/Documents/ERP/backend/java
 RENDA_DEMO=recarregar RENDA_DEMO_DATE=2026-09-24T09:31 ./mvnw spring-boot:run
 ```
 
-**Atenção:** `RENDA_DEMO=recarregar` apaga os dados a cada início. Depois da carga, pare o servidor e inicie de novo sem `RENDA_DEMO` (mantenha `RENDA_DEMO_DATE` se quiser continuar no dia do mock). A carga vem de `backend/java/src/main/resources/demo/carga-mock.sql`, gerada por `python3 tools/demo/carga_mock.py`.
+#### Banco limpo para começar com dados reais
+
+Para **apagar todos os dados de negócio sem carregar o mock** (clientes, fornecedores, itens, CRM, pedidos, notas, títulos, estoque, histórico fiscal…), inicie o servidor uma vez com `RENDA_DEMO=limpar` e **sem** `RENDA_DEMO_DATE`:
+
+```bash
+cd ~/Documents/ERP/backend/java
+RENDA_DEMO=limpar ./mvnw spring-boot:run
+```
+
+Ficam os usuários e senhas, os dados da empresa, as etapas do funil, as categorias financeiras, os parâmetros e modelos fiscais e as tabelas auxiliares; voltam os registros de sistema (fornecedor *Receita Federal — DAS*, conta *Caixa* e o prazo da opção por IBS e CBS). Os códigos recomeçam (C00001, F00002, PV-000001…). Quando aparecer `Banco limpo para dados reais`, pare o servidor e inicie de novo **sem** `RENDA_DEMO`.
+
+**Atenção:** `RENDA_DEMO=recarregar` e `RENDA_DEMO=limpar` apagam os dados a cada início. Depois da carga, pare o servidor e inicie de novo sem `RENDA_DEMO` (mantenha `RENDA_DEMO_DATE` se quiser continuar no dia do mock). A carga vem de `backend/java/src/main/resources/demo/carga-mock.sql`, gerada por `python3 tools/demo/carga_mock.py`.
 
 ### 5. Abrir o app (Terminal 2)
 
@@ -158,7 +169,7 @@ Na primeira vez, o roteiro de ponta a ponta precisa do navegador do Playwright: 
 | `RENDA_SERVER_ADDRESS` | `127.0.0.1` | só a própria máquina; use `0.0.0.0` para outros computadores da rede |
 | `RENDA_SERVER_PORT` | `8080` | porta da API |
 | `RENDA_BOOTSTRAP_ADMIN_USER` / `RENDA_BOOTSTRAP_ADMIN_PASSWORD` | — | primeiro administrador, usado só enquanto não há nenhum usuário |
-| `RENDA_DEMO` | — | `recarregar` apaga os dados de negócio e carrega os dados de demonstração do mock ao iniciar |
+| `RENDA_DEMO` | — | ao iniciar, apaga os dados de negócio: `recarregar` carrega os dados de demonstração do mock; `limpar` deixa o banco vazio para dados reais |
 | `RENDA_DEMO_DATE` | — | data e hora de início do relógio do servidor (ex.: `2026-09-24T09:31`); o relógio anda a partir dela |
 | `RENDA_FISCAL_REVENUE_START` | `2026-09` | primeira competência com toda a receita no Renda+; antes dela o RBT12 é o informado pelo contador |
 
