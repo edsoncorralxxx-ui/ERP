@@ -109,10 +109,11 @@ insert into reference_entry (id, table_code, position, code, description, attrs,
 -- Produto (vendável), material (componente) e serviço. Produto e material são a natureza MATERIAL.
 alter table item
     add column item_type varchar(10) not null default 'MATERIAL' check (item_type in ('PRODUTO', 'MATERIAL', 'SERVICO')),
-    add column profile   jsonb       not null default '{}'::jsonb,
-    add constraint item_type_nature check ((item_type = 'SERVICO') = (nature = 'SERVICO'));
+    add column profile   jsonb       not null default '{}'::jsonb;
 
+-- Os serviços já cadastrados ganham o tipo antes da regra que liga tipo e natureza.
 update item set item_type = 'SERVICO' where nature = 'SERVICO';
+alter table item add constraint item_type_nature check ((item_type = 'SERVICO') = (nature = 'SERVICO'));
 
 create index item_type on item (item_type, status);
 
