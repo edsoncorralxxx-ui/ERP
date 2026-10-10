@@ -1,5 +1,20 @@
--- Registros de sistema que as migrações criam e a limpeza (RENDA_DEMO=limpar) repõe: o beneficiário do DAS (V13), a conta
--- Caixa (V9) e o prazo da opção por IBS e CBS fora do DAS no 1º semestre de 2027 (V18).
+-- Registros de sistema que as migrações criam e a limpeza (RENDA_DEMO=limpar) repõe: unidades de medida (V6/V19), a moeda
+-- Real (V19), o calendário padrão (V19), o beneficiário do DAS (V13), a conta Caixa (V9) e o prazo da opção por IBS e CBS
+-- fora do DAS no 1º semestre de 2027 (V18).
+insert into unit_of_measure (code, name, quantity_kind, decimals) values
+    ('UN', 'Unidade', 'QUANTIDADE', 0), ('PC', 'Peça', 'QUANTIDADE', 0), ('CJ', 'Conjunto', 'QUANTIDADE', 0),
+    ('KG', 'Quilograma', 'MASSA', 3), ('G', 'Grama', 'MASSA', 3), ('T', 'Tonelada', 'MASSA', 3), ('M', 'Metro', 'COMPRIMENTO', 3),
+    ('M2', 'Metro quadrado', 'AREA', 3), ('M3', 'Metro cúbico', 'VOLUME', 3), ('L', 'Litro', 'VOLUME', 3), ('H', 'Hora', 'TEMPO', 2)
+on conflict (code) do nothing;
+
+insert into reference_entry (id, table_code, position, code, description, attrs, created_at, created_by)
+select gen_random_uuid(), 'MOEDA', 0, 'BRL', 'Real', '{"symbol": "R$", "decimals": 2, "local": true}', now(), 'sistema'
+ where not exists (select 1 from reference_entry where table_code = 'MOEDA' and code = 'BRL');
+
+insert into work_calendar (id, name, workdays, start_time, end_time, break_start, break_end, position, created_at, created_by)
+values (gen_random_uuid(), 'Padrão — fábrica', 'SSSSSNN', '07:30', '17:18', '12:00', '13:00', 0, now(), 'sistema')
+on conflict (name) do nothing;
+
 insert into partner (id, code, legal_name, status, version, created_at, created_by)
 values ('00000000-0000-0000-0000-0000000000da', 'F' || lpad(nextval('supplier_code_seq')::text, 5, '0'), 'Receita Federal — DAS',
         'ATIVO', 1, now(), 'sistema');
