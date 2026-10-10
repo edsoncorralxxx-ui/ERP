@@ -199,6 +199,39 @@ describe('Pedido', () => {
     expect(screen.queryByRole('button', { name: 'Confirmar pedido' })).toBeNull();
   });
 
+  it('no pedido confirmado só as parcelas mudam e vão para a rota das parcelas com a versão lida', async () => {
+    const confirmado: SalesOrder = {
+      ...pedidoRascunho, status: 'CONFIRMED', version: '2', scheduledCents: '30000000', projectId: 'pj-1', projectCode: 'PJ00001', projectStage: 'PLANEJADO',
+      installments: [{ seq: 1, dueDate: '2026-10-01', amountCents: '30000000', milestone: null }],
+    };
+    const chamadas: TransportRequest[] = [];
+    setTransport(async (req) => {
+      chamadas.push(req);
+      const c = cadastros(req);
+      if (c) return c;
+      if (req.path === '/api/v1/sales-orders/o-1' && req.method === 'GET') return resposta(200, confirmado, { etag: '"2"' });
+      if (req.path === '/api/v1/sales-orders/o-1/installments' && req.method === 'PUT') {
+        return resposta(200, { ...confirmado, version: '3', installments: [{ seq: 1, dueDate: '2026-11-10', amountCents: '30000000', milestone: null }] }, { etag: '"3"' });
+      }
+      return resposta(404, { code: 'NOT_FOUND', message: 'x', details: [] });
+    });
+    const win = abrir(<SalesOrderWindow recordKey="o-1" />);
+    const user = userEvent.setup();
+    await waitFor(() => expect(screen.getByLabelText('Número')).toHaveValue('PV00001'));
+    expect(screen.getByText(/Pedido confirmado: linhas e preços não mudam/)).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: /Parcelas/ }));
+    const venc = screen.getByRole('table', { name: 'Parcelas do pedido' }).querySelector('input')!;
+    await user.clear(venc);
+    await user.type(venc, '101126');
+    await user.click(screen.getByRole('button', { name: 'Atualizar' }));
+    await waitFor(() => expect(screen.getByLabelText('Versão')).toHaveValue('3'));
+    const put = chamadas.find((c) => c.method === 'PUT')!;
+    expect(put.path).toBe('/api/v1/sales-orders/o-1/installments');
+    expect(put.headers?.['If-Match']).toBe('"2"');
+    expect(JSON.parse(put.body!)).toEqual({ installments: [{ dueDate: '2026-11-10', amountCents: '30000000', milestone: null }] });
+    expect(win.notify).toHaveBeenCalledWith({ tone: 'sucesso', text: 'Parcelas do pedido PV00001 atualizadas com sucesso' });
+  });
+
   it('Consulta vê o pedido sem botões de alteração', async () => {
     setTransport(async (req) => cadastros(req) ?? (req.path === '/api/v1/sales-orders/o-1' ? resposta(200, pedidoRascunho, { etag: '"1"' }) : resposta(404, { code: 'NOT_FOUND', message: 'x', details: [] })));
     abrir(<SalesOrderWindow recordKey="o-1" />, CONSULTA);

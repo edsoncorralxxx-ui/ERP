@@ -246,6 +246,55 @@ class ComercialApiTest extends CadastrosApiTest {
     }
 
     @Test
+    void parcelasDoPedidoConfirmadoMudamComOsTitulos() throws Exception {
+        String rascunho = campo(post("/api/v1/sales-orders", "s4-parc-0001", pedido(PARCELAS)).body(), "id");
+        HttpResponse<String> emRascunho = withVersion("PUT", "/api/v1/sales-orders/" + rascunho + "/installments", "1",
+                "{\"installments\":" + PARCELAS + "}");
+        assertThat(emRascunho.statusCode()).isEqualTo(409);
+        assertThat(emRascunho.body()).contains("altere as parcelas no próprio pedido");
+
+        String id = campo(post("/api/v1/sales-orders", "s4-parc-0002", pedido(PARCELAS)).body(), "id");
+        confirma(id, "1", "s4-parc-conf-01");
+
+        // Soma diferente do total: nada muda.
+        HttpResponse<String> soma = withVersion("PUT", "/api/v1/sales-orders/" + id + "/installments", "2", """
+                {"installments":[{"dueDate":"2026-11-10","amountCents":"100"}]}
+                """);
+        assertThat(soma.statusCode()).isEqualTo(422);
+        assertThat(soma.body()).contains("A soma das parcelas (R$ 1,00) difere do total do pedido (R$ 302.071,46)");
+
+        // Duas parcelas: a 1ª e a 2ª mudam vencimento e valor; o título da 3ª é cancelado.
+        HttpResponse<String> duas = withVersion("PUT", "/api/v1/sales-orders/" + id + "/installments", "2", """
+                {"installments":[{"dueDate":"2026-11-10","amountCents":"15000000","milestone":"Entrada"},
+                                 {"dueDate":"2027-02-10","amountCents":"15207146"}],"reason":"Cliente pediu duas parcelas"}
+                """);
+        assertThat(duas.statusCode()).as(duas.body()).isEqualTo(200);
+        assertThat(duas.body()).contains("\"status\":\"CONFIRMED\"", "\"version\":\"3\"", "\"dueDate\":\"2027-02-10\"",
+                "\"label\":\"Pedido " + campo(duas.body(), "code") + " — parcela 1/2 — Entrada\"", "\"competence\":\"2027-02\"");
+        assertThat(conta("select count(*) from financial_title where lifecycle = 'ACTIVE'")).isEqualTo(2);
+        assertThat(conta("select sum(original_cents) from financial_title where lifecycle = 'ACTIVE'")).isEqualTo(Long.parseLong(TOTAL));
+        assertThat(conta("select count(*) from financial_title where lifecycle = 'CANCELLED'")).isEqualTo(1);
+        assertThat(get("/api/v1/sales-orders/" + id + "/history").body()).contains("SALES_ORDER_RESCHEDULED", "Cliente pediu duas parcelas");
+
+        // De volta a três: o título da 3ª parcela volta a valer (a origem é a mesma), sem título novo.
+        HttpResponse<String> tres = withVersion("PUT", "/api/v1/sales-orders/" + id + "/installments", "3", "{\"installments\":" + PARCELAS + "}");
+        assertThat(tres.statusCode()).as(tres.body()).isEqualTo(200);
+        assertThat(conta("select count(*) from financial_title")).isEqualTo(3);
+        assertThat(conta("select count(*) from financial_title where lifecycle = 'ACTIVE'")).isEqualTo(3);
+        assertThat(conta("select count(*) from outbox_event where event_type = 'FinancialTitleRescheduled'")).isGreaterThanOrEqualTo(3);
+
+        // Parcela com recebimento não fica com valor abaixo do recebido; a recusa não muda nada.
+        jdbc.sql("update financial_title set received_cents = 9062144 where origin_id = :o").param("o", id + ":1").update();
+        HttpResponse<String> abaixo = withVersion("PUT", "/api/v1/sales-orders/" + id + "/installments", "4", """
+                {"installments":[{"dueDate":"2026-10-10","amountCents":"100"},{"dueDate":"2026-12-10","amountCents":"30207046"}]}
+                """);
+        assertThat(abaixo.statusCode()).isEqualTo(422);
+        assertThat(abaixo.body()).contains("INSTALLMENTS_BLOCKED_BY_EFFECTS", "recebido");
+        assertThat(conta("select count(*) from financial_title where lifecycle = 'ACTIVE'")).isEqualTo(3);
+        assertThat(get("/api/v1/sales-orders/" + id).body()).contains("\"version\":\"4\"");
+    }
+
+    @Test
     void cancelamentoDoPedidoConfirmadoCancelaTitulosEncerraProjetoEEquipamentos() throws Exception {
         String rascunho = campo(post("/api/v1/sales-orders", "s4-canc-0001", pedido(PARCELAS)).body(), "id");
         assertThat(withVersion("POST", "/api/v1/sales-orders/" + rascunho + "/cancellations", "1", "{}").body()).contains("\"field\":\"reason\"");

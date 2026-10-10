@@ -119,6 +119,96 @@ public class TitleService implements TitleIssuanceApi, TitleQueryApi {
 
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
+    public List<UUID> reschedule(ScheduleRequest r) {
+        String actor = CurrentUserHolder.actorName();
+        Instant now = clock.instant();
+        List<String> origins = new ArrayList<>(r.installments().stream().map(Installment::originId).toList());
+        origins.addAll(r.removedOriginIds());
+        Map<String, FinancialTitle> existing = repository.findByOriginForUpdate(r.originType(), origins).stream()
+                .collect(Collectors.toMap(FinancialTitle::originId, Function.identity()));
+        // Confere tudo antes de gravar qualquer coisa: ou o cronograma inteiro muda, ou nada.
+        List<String> blocked = new ArrayList<>();
+        Map<FinancialTitle, FinancialTitle> changed = new LinkedHashMap<>();
+        List<TitleCancellationGuard.Cancelling> invoicingChecks = new ArrayList<>();
+        for (String origin : r.removedOriginIds()) {
+            FinancialTitle t = existing.get(origin);
+            if (t == null || t.lifecycle() == FinancialTitle.Lifecycle.CANCELLED) continue;
+            try {
+                changed.put(t, t.cancel(r.reason(), now, actor));
+                invoicingChecks.add(new TitleCancellationGuard.Cancelling(t.id(), t.code(), t.original().cents()));
+            } catch (InvalidStateException e) {
+                blocked.add(e.getMessage());
+            }
+        }
+        for (Installment i : r.installments()) {
+            FinancialTitle t = existing.get(i.originId());
+            if (t == null) continue;
+            try {
+                FinancialTitle next = t.reschedule(i.dueDate(), i.amount(), i.label(), now, actor);
+                if (next == t) continue;
+                changed.put(t, next);
+                // Valor novo só sem nota vinculada; o guarda acerta o limite do faturado da parcela para o valor novo.
+                if (next.original().compareTo(t.original()) != 0) {
+                    invoicingChecks.add(new TitleCancellationGuard.Cancelling(t.id(), t.code(), next.original().cents()));
+                }
+            } catch (InvalidStateException e) {
+                blocked.add(e.getMessage());
+            }
+        }
+        for (TitleCancellationGuard g : invoicingChecks.isEmpty() ? List.<TitleCancellationGuard>of() : guards) {
+            try {
+                g.checkCancellable(invoicingChecks);
+            } catch (InvalidStateException e) {
+                blocked.add(e.getMessage());
+            }
+        }
+        if (!blocked.isEmpty()) throw new InvalidStateException(String.join(" ", blocked));
+        changed.forEach((before, after) -> {
+            if (after.lifecycle() == FinancialTitle.Lifecycle.CANCELLED) {
+                repository.update(after);
+                cancelled(after, r.reason(), actor);
+            } else {
+                repository.updateSchedule(after);
+                rescheduled(before, after, r.reason(), actor);
+            }
+        });
+        List<UUID> ids = new ArrayList<>();
+        for (Installment i : r.installments()) {
+            FinancialTitle t = existing.get(i.originId());
+            if (t == null) {
+                t = FinancialTitle.receivable(repository.nextReceivableCode(), r.counterpartyId(), r.originType(), i.originId(), i.label(),
+                        r.projectId(), r.category(), r.issueDate(), i.dueDate(), i.amount(), now, actor);
+                repository.insert(t);
+                created(t, actor);
+            }
+            ids.add(t.id());
+        }
+        return ids;
+    }
+
+    /** Auditoria e evento {@code FinancialTitleRescheduled} de um título com novo vencimento, valor ou rótulo. */
+    void rescheduled(FinancialTitle before, FinancialTitle after, String reason, String actor) {
+        Map<String, AuditEntry.Change> changes = new LinkedHashMap<>();
+        if (before.lifecycle() != after.lifecycle()) {
+            changes.put("status", new AuditEntry.Change(before.status().name(), after.status().name()));
+        }
+        if (!before.dueDate().equals(after.dueDate())) {
+            changes.put("dueDate", new AuditEntry.Change(before.dueDate().toString(), after.dueDate().toString()));
+        }
+        if (before.original().compareTo(after.original()) != 0) {
+            changes.put("originalCents", new AuditEntry.Change(before.original().centsAsString(), after.original().centsAsString()));
+        }
+        if (!before.originLabel().equals(after.originLabel())) {
+            changes.put("origin", new AuditEntry.Change(before.originLabel(), after.originLabel()));
+        }
+        audit.record(new AuditEntry(actor, "FINANCIAL_TITLE_RESCHEDULED", ENTITY, after.id().toString(), after.version(), reason, changes,
+                CorrelationId.current()));
+        outbox.append("FinancialTitleRescheduled", ENTITY, after.id().toString(), Map.of("titleId", after.id().toString(),
+                "dueDate", after.dueDate().toString(), "amountCents", after.original().centsAsString()), actor);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
     public List<UUID> cancelOpen(String originType, List<String> originIds, String reason) {
         String actor = CurrentUserHolder.actorName();
         Instant now = clock.instant();

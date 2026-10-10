@@ -34,6 +34,17 @@ public interface TitleIssuanceApi {
     List<UUID> issuePayables(PayableRequest request);
 
     /**
+     * Novo cronograma das parcelas de uma origem: {@code installments} é o cronograma completo (cada parcela atualiza o
+     * título da sua origem, reativa o cancelado ou cria um novo) e {@code removedOriginIds} as origens que saíram (os
+     * títulos são cancelados com {@code reason}). Recusa tudo, sem mudar nada, se um título tiver valor recebido maior que
+     * o novo valor, nota vinculada e o valor mudar, ou recebimento e precisar ser cancelado. Devolve os ids na ordem das parcelas.
+     */
+    record ScheduleRequest(String originType, UUID counterpartyId, UUID projectId, LocalDate issueDate, String category,
+                           List<Installment> installments, List<String> removedOriginIds, String reason) { }
+
+    List<UUID> reschedule(ScheduleRequest request);
+
+    /**
      * Cancela os títulos ativos das origens, com motivo. Recusa (sem cancelar nenhum) se algum título tiver valor
      * recebido — a premissa B01 (PD-003) bloqueia o cancelamento com efeitos. Devolve os ids cancelados.
      */

@@ -172,6 +172,26 @@ public final class FinancialTitle {
         return with(received, Lifecycle.CANCELLED, reason, now, actor);
     }
 
+    /**
+     * Novo vencimento, valor e rótulo da parcela de origem (alteração das parcelas do pedido confirmado). O título
+     * cancelado volta a ficar ativo; o valor não fica abaixo do já recebido; o renegociado não muda. Sem mudança, devolve
+     * o próprio título. No título a receber, a competência acompanha o vencimento.
+     */
+    public FinancialTitle reschedule(LocalDate newDue, Money amount, String label, Instant now, String actor) {
+        if (amount.currency() != original.currency() || amount.isNegative() || amount.isZero()) {
+            throw new IllegalArgumentException("Valor do título deve ser positivo, em reais: " + amount);
+        }
+        if (lifecycle == Lifecycle.RENEGOTIATED) throw new InvalidStateException("O título " + code + " foi renegociado e não muda.");
+        if (amount.compareTo(received) < 0) {
+            throw new InvalidStateException("O título " + code + " já tem " + received.toBrl() + (direction == Direction.PAYABLE ? " pago" : " recebido")
+                    + "; o valor da parcela não pode ficar abaixo disso.");
+        }
+        if (lifecycle == Lifecycle.ACTIVE && newDue.equals(dueDate) && amount.compareTo(original) == 0 && label.equals(originLabel)) return this;
+        return new FinancialTitle(id, code, direction, counterpartyId, originType, originId, label, projectId, category,
+                direction == Direction.RECEIVABLE ? YearMonth.from(newDue) : competence, issueDate, newDue, amount, received,
+                Lifecycle.ACTIVE, null, documentNumber, notes, version + 1, createdAt, createdBy, now, actor);
+    }
+
     private FinancialTitle with(Money newReceived, Lifecycle newLifecycle, String reason, Instant now, String actor) {
         return new FinancialTitle(id, code, direction, counterpartyId, originType, originId, originLabel, projectId, category,
                 competence, issueDate, dueDate, original, newReceived, newLifecycle, reason, documentNumber, notes, version + 1, createdAt, createdBy, now, actor);

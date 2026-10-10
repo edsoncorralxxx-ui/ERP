@@ -23,6 +23,9 @@ public interface FinancialTitleRepository {
 
     void update(FinancialTitle title);
 
+    /** Grava o novo cronograma do título: vencimento, competência, valor, rótulo e situação (reativa o cancelado). */
+    void updateSchedule(FinancialTitle title);
+
     Optional<Summary> findById(UUID id);
 
     /** Títulos das origens, bloqueados para alteração em ordem crescente de id (INV-ST-3). */

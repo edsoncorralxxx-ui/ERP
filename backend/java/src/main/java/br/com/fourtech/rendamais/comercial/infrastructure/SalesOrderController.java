@@ -24,8 +24,8 @@ import java.util.Locale;
 import java.util.UUID;
 
 /**
- * Pedidos e contratos (S4): rascunho com Idempotency-Key; alteração e cancelamento com If-Match; confirmação com
- * Idempotency-Key e If-Match, que devolve o pedido com o projeto, os equipamentos e os títulos gerados.
+ * Pedidos e contratos (S4): rascunho com Idempotency-Key; alteração, parcelas do confirmado e cancelamento com If-Match;
+ * confirmação com Idempotency-Key e If-Match, que devolve o pedido com o projeto, os equipamentos e os títulos gerados.
  */
 @RestController
 @RequestMapping("/api/v1/sales-orders")
@@ -94,6 +94,8 @@ class SalesOrderController {
 
     record CancelRequest(String reason) { }
 
+    record InstallmentsRequest(List<InstallmentDto> installments, String reason) { }
+
     @GetMapping
     List<OrderSummary> list(@RequestParam(value = "search", required = false) String search,
                             @RequestParam(value = "status", required = false) String status) {
@@ -123,6 +125,15 @@ class SalesOrderController {
     ResponseEntity<OrderDto> confirm(@PathVariable UUID id, @RequestHeader(value = "If-Match", required = false) String ifMatch,
                                      @RequestHeader(value = "Idempotency-Key", required = false) String key) {
         return respond(HttpStatus.OK, service.confirm(id, Versions.required(ifMatch), key));
+    }
+
+    /** Alterar parcelas do pedido confirmado; os títulos a receber acompanham. */
+    @PutMapping("/{id}/installments")
+    ResponseEntity<OrderDto> reschedule(@PathVariable UUID id, @RequestHeader(value = "If-Match", required = false) String ifMatch,
+                                        @RequestBody InstallmentsRequest body) {
+        List<SalesOrder.InstallmentData> data = body.installments() == null ? List.of() : body.installments().stream()
+                .map(i -> new SalesOrder.InstallmentData(i.dueDate(), i.amountCents(), i.milestone())).toList();
+        return respond(HttpStatus.OK, service.reschedule(id, Versions.required(ifMatch), data, body.reason()));
     }
 
     @PostMapping("/{id}/cancellations")

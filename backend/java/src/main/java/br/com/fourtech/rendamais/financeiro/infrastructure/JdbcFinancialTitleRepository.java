@@ -66,6 +66,20 @@ class JdbcFinancialTitleRepository implements FinancialTitleRepository {
     }
 
     @Override
+    public void updateSchedule(FinancialTitle t) {
+        jdbc.sql("""
+                update financial_title set origin_label = :label, competence = :competence, due_date = :due, original_cents = :cents,
+                       lifecycle = :lifecycle, cancel_reason = :reason, version = :version, updated_at = :updatedAt, updated_by = :updatedBy
+                 where id = :id
+                """)
+                .param("label", t.originLabel()).param("competence", t.competence().toString()).param("due", Date.valueOf(t.dueDate()))
+                .param("cents", t.original().cents()).param("lifecycle", t.lifecycle().name()).param("reason", t.cancelReason())
+                .param("version", t.version()).param("updatedAt", ts(t.updatedAt())).param("updatedBy", t.updatedBy())
+                .param("id", t.id())
+                .update();
+    }
+
+    @Override
     public void update(FinancialTitle t) {
         jdbc.sql("""
                 update financial_title set received_cents = :received, lifecycle = :lifecycle, cancel_reason = :reason,

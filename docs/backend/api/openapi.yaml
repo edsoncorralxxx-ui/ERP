@@ -706,6 +706,33 @@ paths:
         '412': { $ref: '#/components/responses/Erro' }
         '422': { $ref: '#/components/responses/Erro' }
 
+  /api/v1/sales-orders/{id}/installments:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    put:
+      tags: [Pedidos]
+      summary: >-
+        Altera as parcelas do pedido confirmado (sales_order.update; decisão do PO em 10/10/2026, sem aditivo). A soma precisa
+        ser o total; os títulos a receber acompanham (vencimento e valor; parcela nova cria título, a que sai é cancelada).
+        Rascunho ou cancelado: 409. Título com recebimento acima do novo valor, nota vinculada com valor diferente ou recebimento
+        na parcela que sai: 422 INSTALLMENTS_BLOCKED_BY_EFFECTS, sem mudar nada
+      parameters: [{ $ref: '#/components/parameters/IfMatch' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [installments]
+              properties:
+                installments: { type: array, items: { $ref: '#/components/schemas/Installment' } }
+                reason: { type: [string, 'null'], maxLength: 500 }
+      responses:
+        '200': { description: Pedido com as parcelas novas, headers: { ETag: { $ref: '#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SalesOrder' } } } }
+        '403': { $ref: '#/components/responses/Erro' }
+        '409': { $ref: '#/components/responses/Erro' }
+        '412': { $ref: '#/components/responses/Erro' }
+        '422': { $ref: '#/components/responses/Erro' }
+
   /api/v1/sales-orders/{id}/cancellations:
     parameters: [{ $ref: '#/components/parameters/Id' }]
     post:

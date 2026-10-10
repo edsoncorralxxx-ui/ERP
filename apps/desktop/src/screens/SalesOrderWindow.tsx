@@ -54,6 +54,7 @@ const somaParcelas = (ps: Parcela[]) => ps.reduce((t, p) => {
  * Ficha do pedido (formulário "pedidos"): cabeçalho com número, cliente, unidade, proposta de origem, contratação e
  * prazo; abas Linhas, Parcelas (com a soma conferida contra o total), Projeto e títulos (o que a confirmação gerou) e
  * Histórico. Em rascunho tudo muda; "Confirmar pedido" cria projeto, equipamentos e parcelas a receber uma única vez.
+ * No pedido confirmado, só as parcelas mudam (os títulos a receber acompanham).
  */
 export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
   const win = useWindow();
@@ -84,8 +85,12 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
   const adicao = pedido === null;
   const rascunho = !pedido || pedido.status === 'DRAFT';
   const somenteLeitura = adicao ? !can('sales_order.create') : !can('sales_order.update') || !rascunho;
+  // Pedido confirmado: cabeçalho e linhas ficam como confirmados; as parcelas continuam editáveis.
+  const parcelasDoConfirmado = pedido?.status === 'CONFIRMED' && can('sales_order.update');
+  const parcelasSomenteLeitura = somenteLeitura && !parcelasDoConfirmado;
+  const editavel = !parcelasSomenteLeitura;
   const original = useMemo(() => (pedido ? toForm(pedido) : vazio()), [pedido]);
-  const alterado = useMemo(() => !somenteLeitura && JSON.stringify(form) !== JSON.stringify(original), [form, original, somenteLeitura]);
+  const alterado = useMemo(() => editavel && JSON.stringify(form) !== JSON.stringify(original), [form, original, editavel]);
   const total = totalDasLinhas(form.lines);
   const parcelado = somaParcelas(form.installments);
 
@@ -145,12 +150,17 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
     setGravando(true);
     try {
       const body = toRequest(formRef.current);
-      const r = pedido
-        ? await api.put<SalesOrder>(`/api/v1/sales-orders/${pedido.id}`, body, etag)
-        : await api.post<SalesOrder>('/api/v1/sales-orders', body, { 'Idempotency-Key': chave.current });
+      const r = parcelasDoConfirmado && pedido
+        ? await api.put<SalesOrder>(`/api/v1/sales-orders/${pedido.id}/installments`, { installments: body.installments }, etag)
+        : pedido
+          ? await api.put<SalesOrder>(`/api/v1/sales-orders/${pedido.id}`, body, etag)
+          : await api.post<SalesOrder>('/api/v1/sales-orders', body, { 'Idempotency-Key': chave.current });
       aplicar(r.data, r.etag);
       chave.current = novaChave();
-      winRef.current.notify({ tone: 'sucesso', text: `Pedido ${r.data.code} ${pedido ? 'atualizado' : 'adicionado'} com sucesso` });
+      winRef.current.notify({
+        tone: 'sucesso',
+        text: parcelasDoConfirmado ? `Parcelas do pedido ${r.data.code} atualizadas com sucesso` : `Pedido ${r.data.code} ${pedido ? 'atualizado' : 'adicionado'} com sucesso`,
+      });
       window.dispatchEvent(new Event(PEDIDOS_ALTERADOS));
       return true;
     } catch (e) {
@@ -159,7 +169,7 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
     } finally {
       setGravando(false);
     }
-  }, [pedido, etag, falha, aplicar]);
+  }, [pedido, etag, falha, aplicar, parcelasDoConfirmado]);
 
   /**
    * Confirma com a mesma chave até receber a resposta: se a rede cair depois de o servidor confirmar, repetir devolve a
@@ -196,7 +206,7 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
     }
   };
 
-  const podeGravar = alterado && !gravando && !carregando && !somenteLeitura;
+  const podeGravar = alterado && !gravando && !carregando && editavel;
   const podeConfirmar = !!pedido && rascunho && !alterado && can('sales_order.confirm');
   const podeCancelar = !!pedido && pedido.status !== 'CANCELLED' && pedido.status !== 'COMPLETED' && !alterado && can('sales_order.cancel');
   useEffect(() => win.registerCommands({ save: podeGravar ? gravar : undefined }), [podeGravar, gravar, win]);
@@ -214,7 +224,7 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
       if (alvo[k] && (alvo[k] === 'linhas' || alvo[k] === 'parcelas' || id)) setTab(alvo[k]);
       else if (k === 'f' && podeConfirmar) setConfirmar(true);
       else if (k === 'c' && podeCancelar) setCancelar(true);
-      else if (k === 'd' && !somenteLeitura && total > 0n) setDividir(true);
+      else if (k === 'd' && !parcelasSomenteLeitura && total > 0n) setDividir(true);
       else return;
       e.preventDefault();
     } else if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT' && podeGravar) {
@@ -227,7 +237,7 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
   };
 
   const teclasParcelas = (e: KeyboardEvent<HTMLTableElement>) => {
-    if (somenteLeitura || !e.ctrlKey || (e.key !== 'Insert' && e.key !== 'Delete')) return;
+    if (parcelasSomenteLeitura || !e.ctrlKey || (e.key !== 'Insert' && e.key !== 'Delete')) return;
     e.preventDefault();
     e.stopPropagation();
     if (e.key === 'Insert') return addParcela();
@@ -342,8 +352,8 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
                 <>
                   {pedido && !rascunho && (
                     <p className="rp-janela-mdi__aviso rp-ficha__nota">
-                      <i className="rp-ico rp-ico-status-info" aria-hidden="true" /> Pedido {pedido.status === 'CANCELLED' ? 'cancelado' : 'confirmado'}: linhas, preços e parcelas não mudam
-                      {pedido.status === 'CANCELLED' ? '.' : ' (mudança só por aditivo).'}
+                      <i className="rp-ico rp-ico-status-info" aria-hidden="true" />{' '}
+                      {pedido.status === 'CANCELLED' ? 'Pedido cancelado: linhas, preços e parcelas não mudam.' : 'Pedido confirmado: linhas e preços não mudam; as parcelas mudam na aba Parcelas.'}
                     </p>
                   )}
                   <GradeLinhas linhas={form.lines} onChange={(lines) => set({ lines })} itens={itens} somenteLeitura={somenteLeitura} adicao={emAdicao}
@@ -353,7 +363,12 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
                 <div className="rp-tabela">
                   <div className="rp-tabela-acoes">
                     <span className="rp-tabela-tit">Parcelas a receber</span>
-                    {!somenteLeitura && (
+                    {parcelasDoConfirmado && (
+                      <span className="rp-ficha__nota">
+                        <i className="rp-ico rp-ico-status-info" aria-hidden="true" /> Os títulos a receber acompanham as parcelas; parcela recebida não fica abaixo do recebido e, com nota, o valor não muda.
+                      </span>
+                    )}
+                    {!parcelasSomenteLeitura && (
                       <button type="button" className="rp-btn" onClick={() => setDividir(true)} disabled={total <= 0n}>
                         <span><u>D</u>ividir o total</span>
                       </button>
@@ -375,11 +390,11 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
                           <tr key={i}>
                             <td className="rownum">{i + 1}</td>
                             <td>
-                              <CampoData id={fid(`venc-${i}`)} rotulo={`vencimento da parcela ${i + 1}`} valor={p.dueDate} somenteLeitura={somenteLeitura}
+                              <CampoData id={fid(`venc-${i}`)} rotulo={`vencimento da parcela ${i + 1}`} valor={p.dueDate} somenteLeitura={parcelasSomenteLeitura}
                                 invalido={!!erros[`installments[${i}].dueDate`]} onChange={(v) => setParcela(i, { dueDate: v })} />
                             </td>
                             <td>
-                              <CampoDinheiro className="rp-field rp-field--num" value={p.amount} maxLength={20} readOnly={somenteLeitura}
+                              <CampoDinheiro className="rp-field rp-field--num" value={p.amount} maxLength={20} readOnly={parcelasSomenteLeitura}
                                 aria-label={`Valor da parcela ${i + 1}`} aria-invalid={!!erros[`installments[${i}].amountCents`]}
                                 onChange={(e) => setParcela(i, { amount: e.target.value })}
                                 onBlur={() => {
@@ -388,16 +403,16 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
                                 }} />
                             </td>
                             <td>
-                              <input className="rp-field" value={p.milestone} maxLength={200} readOnly={somenteLeitura} placeholder="Ex.: Sinal, Embarque, Aceite"
+                              <input className="rp-field" value={p.milestone} maxLength={200} readOnly={parcelasSomenteLeitura} placeholder="Ex.: Sinal, Embarque, Aceite"
                                 aria-label={`Marco da parcela ${i + 1}`} onChange={(e) => setParcela(i, { milestone: e.target.value })} />
                             </td>
-                            <td className="rp-linha-x" role={somenteLeitura ? undefined : 'button'} tabIndex={somenteLeitura ? -1 : 0} title="Remover parcela"
-                              aria-label={`Remover parcela ${i + 1}`} onClick={() => !somenteLeitura && remParcela(i)} onKeyDown={(e) => e.key === 'Enter' && !somenteLeitura && remParcela(i)}>
-                              {somenteLeitura ? '' : '×'}
+                            <td className="rp-linha-x" role={parcelasSomenteLeitura ? undefined : 'button'} tabIndex={parcelasSomenteLeitura ? -1 : 0} title="Remover parcela"
+                              aria-label={`Remover parcela ${i + 1}`} onClick={() => !parcelasSomenteLeitura && remParcela(i)} onKeyDown={(e) => e.key === 'Enter' && !parcelasSomenteLeitura && remParcela(i)}>
+                              {parcelasSomenteLeitura ? '' : '×'}
                             </td>
                           </tr>
                         ))}
-                        {!somenteLeitura && (
+                        {!parcelasSomenteLeitura && (
                           <tr className="nova">
                             <td className="rownum">{form.installments.length + 1}</td>
                             <td colSpan={4} role="button" tabIndex={0} onClick={addParcela} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), addParcela())}>
@@ -447,13 +462,13 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
 
       <div className="rp-window-foot">
         <div className="rp-btn-row">
-          {!somenteLeitura && (
+          {editavel && (
             <button type="button" className="rp-btn rp-btn--default" disabled={!podeGravar} onClick={() => void gravar()}>
               {adicao ? 'Adicionar' : 'Atualizar'}
             </button>
           )}
-          <button type="button" className={`rp-btn${somenteLeitura ? ' rp-btn--default' : ''}`} onClick={win.requestClose}>
-            {somenteLeitura ? 'OK' : 'Cancelar'}
+          <button type="button" className={`rp-btn${editavel ? '' : ' rp-btn--default'}`} onClick={win.requestClose}>
+            {editavel ? 'Cancelar' : 'OK'}
           </button>
         </div>
         <div className="rp-btn-row">
@@ -477,7 +492,7 @@ export function SalesOrderWindow({ recordKey }: { recordKey: string }) {
             { label: 'Voltar', onClick: () => setConfirmar(false) },
           ]}>
           Confirmar o pedido {pedido.code} ({reais(pedido.totalCents)}) cria o projeto, {pedido.lines.filter((l) => l.kind === 'EQUIPAMENTO').reduce((t, l) => t + Number(l.quantity), 0)} equipamento(s)
-          e {pedido.installments.length} parcela(s) a receber. Depois disso, linhas, preços e parcelas só mudam por aditivo.
+          e {pedido.installments.length} parcela(s) a receber. Depois disso, linhas e preços não mudam; as parcelas continuam podendo ser alteradas.
           <br />
           Deseja confirmar?
         </Dialog>

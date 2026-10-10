@@ -179,7 +179,12 @@ class JdbcDocumentRepository implements DocumentRepository {
         if (limitsByTitle.isEmpty()) return out;
         // Em ordem de id, para que duas operações sobre as mesmas parcelas nunca se bloqueiem em ordem cruzada.
         for (Map.Entry<UUID, Long> e : new TreeMap<>(limitsByTitle).entrySet()) {
-            jdbc.sql("insert into document_title_invoicing (title_id, limit_cents) values (:t, :limit) on conflict do nothing")
+            // Parcela ainda sem nota acompanha o valor atual do título (as parcelas do pedido confirmado podem mudar).
+            jdbc.sql("""
+                    insert into document_title_invoicing (title_id, limit_cents) values (:t, :limit)
+                    on conflict (title_id) do update set limit_cents = excluded.limit_cents
+                     where document_title_invoicing.invoiced_cents = 0
+                    """)
                     .param("t", e.getKey()).param("limit", e.getValue()).update();
         }
         jdbc.sql("select title_id, invoiced_cents from document_title_invoicing where title_id in (:ids) order by title_id for update")

@@ -23,8 +23,8 @@ import java.util.stream.Collectors;
 
 /**
  * Pedido de venda (formulário "pedidos" do B01, agregado SalesOrder). Em rascunho, linhas e parcelas mudam livremente;
- * a confirmação acontece uma única vez (INV-SO-5), exige as invariantes INV-SO-1..3 e congela o pedido — depois disso só
- * aditivo (fora desta sprint) ou cancelamento.
+ * a confirmação acontece uma única vez (INV-SO-5), exige as invariantes INV-SO-1..3 e congela as linhas — depois disso
+ * só a alteração das parcelas ({@link #reschedule}) ou o cancelamento.
  */
 public record SalesOrder(UUID id, String code, UUID customerId, UUID unitId, String unitName, UUID proposalId,
                          Integer proposalRevision, LocalDate contractDate, LocalDate promisedDate, String notes,
@@ -137,6 +137,30 @@ public record SalesOrder(UUID id, String code, UUID customerId, UUID unitId, Str
                 createdAt, createdBy, now, actor);
     }
 
+    /**
+     * Altera as parcelas do pedido confirmado (decisão do PO em 10/10/2026: edição livre, sem aditivo). As linhas e o
+     * total continuam os da confirmação; as parcelas precisam somar exatamente o total (INV-SO-3).
+     */
+    public SalesOrder reschedule(List<InstallmentData> data, Instant now, String actor) {
+        if (status != Status.CONFIRMED) {
+            throw new InvalidStateException("O pedido " + code + " está " + label(status) + ": "
+                    + (status == Status.DRAFT ? "altere as parcelas no próprio pedido." : "as parcelas não mudam mais."));
+        }
+        List<FieldIssue> issues = new ArrayList<>();
+        List<Installment> next = installments(data, contractDate, issues);
+        if (issues.isEmpty()) {
+            long scheduled = next.stream().mapToLong(Installment::amountCents).sum();
+            if (next.isEmpty()) issues.add(new FieldIssue("installments", "Informe as parcelas."));
+            else if (scheduled != totalCents()) {
+                issues.add(new FieldIssue("installments", "A soma das parcelas (" + brl(scheduled) + ") difere do total do pedido ("
+                        + brl(totalCents()) + ") em " + brl(totalCents() - scheduled) + "."));
+            }
+        }
+        if (!issues.isEmpty()) throw new RuleViolationException("ORDER_INVALID", "Corrija as parcelas indicadas.", issues);
+        return new SalesOrder(id, code, customerId, unitId, unitName, proposalId, proposalRevision, contractDate, promisedDate, notes,
+                lines, next, status, confirmation, cancellation, version + 1, createdAt, createdBy, now, actor);
+    }
+
     public SalesOrder cancel(String reason, Instant now, String actor) {
         if (status == Status.CANCELLED) return this;
         if (status == Status.COMPLETED) throw new InvalidStateException("O pedido " + code + " já foi concluído e não é cancelado.");
@@ -216,7 +240,13 @@ public record SalesOrder(UUID id, String code, UUID customerId, UUID unitId, Str
         if (notes != null && notes.length() > 1000) issues.add(new FieldIssue("notes", "Máximo de 1000 caracteres."));
         List<SalesLine> lines = SalesLine.validate(data.lines(), items, knownItems, knownIds, issues);
 
-        List<InstallmentData> raw = data.installments() == null ? List.of() : data.installments();
+        List<Installment> installments = installments(data.installments(), contract, issues);
+        if (!issues.isEmpty()) throw new RuleViolationException("ORDER_INVALID", "Corrija os campos indicados.", issues);
+        return new Valid(contract, promised, notes, lines, installments);
+    }
+
+    private static List<Installment> installments(List<InstallmentData> data, LocalDate contract, List<FieldIssue> issues) {
+        List<InstallmentData> raw = data == null ? List.of() : data;
         if (raw.size() > MAX_INSTALLMENTS) issues.add(new FieldIssue("installments", "Máximo de " + MAX_INSTALLMENTS + " parcelas."));
         List<Installment> installments = new ArrayList<>();
         for (int i = 0; i < raw.size(); i++) {
@@ -234,7 +264,6 @@ public record SalesOrder(UUID id, String code, UUID customerId, UUID unitId, Str
             if (milestone != null && milestone.length() > 200) issues.add(new FieldIssue(f + "milestone", "Máximo de 200 caracteres."));
             if (due != null && amount > 0) installments.add(new Installment(i + 1, due, amount, milestone));
         }
-        if (!issues.isEmpty()) throw new RuleViolationException("ORDER_INVALID", "Corrija os campos indicados.", issues);
-        return new Valid(contract, promised, notes, lines, installments);
+        return installments;
     }
 }

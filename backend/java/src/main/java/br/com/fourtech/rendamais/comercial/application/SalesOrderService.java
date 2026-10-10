@@ -243,6 +243,46 @@ public class SalesOrderService {
     }
 
     /**
+     * Alterar parcelas do pedido confirmado (decisão do PO em 10/10/2026: edição livre das parcelas, sem aditivo). Numa
+     * transação: o novo cronograma precisa somar o total; os títulos a receber acompanham (vencimento e valor da parcela,
+     * novo título para a parcela nova, cancelamento da que saiu) — ou nada muda, se um título tiver recebimento acima do
+     * novo valor ou nota vinculada e o valor mudar. Pedido confirmado sem títulos (carga da planilha) muda só as parcelas.
+     */
+    @Transactional
+    public OrderView reschedule(UUID id, long expectedVersion, List<SalesOrder.InstallmentData> data, String reason) {
+        CurrentUser user = CurrentUserHolder.require(Permissions.SALES_ORDER_UPDATE);
+        SalesOrder current = lockAt(id, expectedVersion);
+        String why = reason == null || reason.isBlank() ? null : reason.strip();
+        if (why != null && why.length() > 500) {
+            throw new RuleViolationException("ORDER_INVALID", "Corrija os campos indicados.", List.of(new FieldIssue("reason", "Máximo de 500 caracteres.")));
+        }
+        SalesOrder updated = current.reschedule(data, clock.instant(), user.username());
+        List<String> before = current.installments().stream().map(i -> originId(id, i.seq())).toList();
+        if (!titleQuery.byOrigin(INSTALLMENT_ORIGIN, before).isEmpty()) {
+            int n = updated.installments().size();
+            List<TitleIssuanceApi.Installment> installments = updated.installments().stream()
+                    .map(i -> new TitleIssuanceApi.Installment(originId(id, i.seq()), i.dueDate(), Money.ofCents(i.amountCents(), Currency.BRL),
+                            "Pedido " + updated.code() + " — parcela " + i.seq() + "/" + n + (i.milestone() == null ? "" : " — " + i.milestone())))
+                    .toList();
+            List<String> removed = current.installments().stream().filter(i -> i.seq() > n).map(i -> originId(id, i.seq())).toList();
+            try {
+                titles.reschedule(new TitleIssuanceApi.ScheduleRequest(INSTALLMENT_ORIGIN, updated.customerId(),
+                        updated.confirmation().projectId(), LocalDate.now(clock.withZone(BUSINESS_ZONE)), REVENUE_CATEGORY, installments, removed,
+                        why == null ? "Parcelas do pedido " + updated.code() + " alteradas" : why));
+            } catch (InvalidStateException e) {
+                throw new RuleViolationException("INSTALLMENTS_BLOCKED_BY_EFFECTS", "As parcelas do pedido " + current.code()
+                        + " não podem mudar assim: " + e.getMessage(), List.of(new FieldIssue("installments", e.getMessage())));
+            }
+        }
+        repository.update(updated, expectedVersion);
+        Map<String, AuditEntry.Change> changes = changes(current, updated);
+        record(user, "SALES_ORDER_RESCHEDULED", updated, why, changes);
+        outbox.append("SalesOrderRescheduled", ENTITY, id.toString(), Map.of("orderId", id.toString(),
+                "installments", updated.installments().size()), user.username());
+        return view(id);
+    }
+
+    /**
      * CancelSalesOrder (docs/backend/13, §3), premissa PD-003: rascunho cancela direto; confirmado cancela os títulos
      * abertos, encerra o projeto e cancela os equipamentos — ou recusa tudo (422 CANCELLATION_BLOCKED_BY_EFFECTS) se já
      * houver recebimento ou execução. Cancelar de novo devolve o cancelamento existente.
