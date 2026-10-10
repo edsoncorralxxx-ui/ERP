@@ -11,8 +11,13 @@ O que a carga cria a partir da planilha:
 - itens (Balança Renda+, esteira, painel, unidade coletora, materiais elétricos e os serviços de montagem);
 - um pedido confirmado por cliente e unidade, com uma linha e uma parcela por lançamento, e o projeto do pedido;
 - equipamentos com número de série provisório (BR-AA-NNN, ES-, PE-, UC-) para as linhas de equipamento;
-- uma nota por lançamento até COMPETENCIA_FATURADA (número e data a informar: PL-NNNN, último dia do mês);
-- o histórico de receita do Simples por anexo (II produto, III serviço) antes do início da receita no Renda+.
+- um título a receber por parcela; até COMPETENCIA_FATURADA, recebido no Caixa no último dia do mês;
+- uma nota por lançamento até COMPETENCIA_FATURADA (número e data a informar: PL-NNNN, último dia do mês), vinculada
+  à parcela recebida;
+- o histórico de receita do Simples por anexo (II produto, III serviço) antes do início da receita no Renda+;
+- a apuração de cada competência até COMPETENCIA_FATURADA: PGDAS-D transmitido e DAS com o imposto da planilha
+  (vence no dia 20 do mês seguinte; pago no vencimento quando vence antes de HOJE). As competências com DAS pago
+  ficam encerradas; a última fica em apuração com o DAS a pagar.
 
 O que a planilha não traz fica vazio para completar no sistema: CNPJ, endereços, contatos, NCM, número das notas.
 Os identificadores são estáveis (uuid5). Uso: python3 tools/demo/carga_lancamentos.py [--verificar]
@@ -35,6 +40,13 @@ QUEM = "carga-planilha"
 COMPETENCIA_FATURADA = "2026-09"
 # Primeira competência com a receita pelas notas (RENDA_FISCAL_REVENUE_START); antes dela vale o histórico.
 INICIO_RECEITA = "2026-09"
+# Data da carga: DAS que vence antes dela já está pago.
+HOJE = "2026-10-10"
+# Registros de sistema da base (demo/base-sistema.sql): conta Caixa e beneficiário do DAS.
+CAIXA = "00000000-0000-0000-0000-00000000ca01"
+RECEITA_FEDERAL = "00000000-0000-0000-0000-0000000000da"
+ORIGEM_PARCELA = "SALES_ORDER_INSTALLMENT"
+ORIGEM_DAS = "TAX_PERIOD"
 out = []
 
 
@@ -87,6 +99,11 @@ def brl(c):
 def ultimo_dia(comp):
     y, m = int(comp[:4]), int(comp[5:])
     return f"{comp}-{calendar.monthrange(y, m)[1]:02d}"
+
+
+def mes_seguinte(comp):
+    y, m = int(comp[:4]), int(comp[5:])
+    return f"{y + 1}-01" if m == 12 else f"{y}-{m + 1:02d}"
 
 
 def meses(de, ate):
@@ -284,6 +301,7 @@ def negocios(lanc, codigo):
                                    status="ATIVO", accepted_on=None, warranty_start=None, version=1, created_at=ts(contrato, "10:30"),
                                    created_by=QUEM))
         for k, r in enumerate(rs, start=1):
+            r.update(order_id=oid, order_code=cod, seq=k, parcelas=len(rs), pid=pid, pjid=pjid, contrato=contrato)
             parcelas.append(dict(order_id=oid, seq=k, due_date=ultimo_dia(r["comp"]), amount_cents=r["valor"],
                                  milestone=f"{r['desc'][:150]} — {r['comp'][5:]}/{r['comp'][:4]}"))
         total = sum(r["valor"] for r in rs)
@@ -308,10 +326,11 @@ def negocios(lanc, codigo):
                 continue
             n_doc += 1
             did = uid("doc", n_doc)
+            r["doc_id"] = did
             servico = r["tipo"] == "SERVIÇO"
             dia = ultimo_dia(r["comp"])
             docs.append(dict(id=did, code=f"DF{n_doc:05d}", direction="SAIDA", partner_id=pid, series="NFS" if servico else "1",
-                             number=f"PL-{n_doc:04d}", issue_date=dia, competence=r["comp"], total_cents=r["valor"], linked_cents=0,
+                             number=f"PL-{n_doc:04d}", issue_date=dia, competence=r["comp"], total_cents=r["valor"], linked_cents=r["valor"],
                              notes="Nota da planilha de lançamentos: informar o número e a data de emissão reais.",
                              operation_nature="PRESTACAO_SERVICO" if servico else "VENDA_PRODUCAO", project_id=pjid, classification_rev=1,
                              status="ATIVO", cancel_reason=None, version=1, created_at=ts(dia, "16:00"), created_by=QUEM, order_id=oid,
@@ -332,6 +351,59 @@ def negocios(lanc, codigo):
                f"setval('equipment_code_seq', {len(equips)}), setval('equipment_model_code_seq', {len(MODELOS)}), "
                f"setval('business_document_code_seq', {n_doc});")
     out.append("")
+
+
+# Financeiro -------------------------------------------------------------------------------------------------------
+
+class Liquidacoes:
+    """Recebimentos e pagamentos no Caixa: liquidação, alocação e movimento de caixa."""
+
+    def __init__(self):
+        self.liq, self.aloc, self.movs = [], [], []
+        self.seq = {"RC": 0, "PG": 0}
+
+    def liquidar(self, direcao, titulo_id, parte, valor, dia, rotulo):
+        pre = "RC" if direcao == "RECEIVABLE" else "PG"
+        self.seq[pre] += 1
+        cod = f"{pre}{self.seq[pre]:05d}"
+        sid = uid("liq", cod)
+        self.liq.append(dict(id=sid, code=cod, direction=direcao, account_id=CAIXA, counterparty_id=parte, effective_date=dia, total_cents=valor,
+                             credit_cents=0, notes=rotulo, status="POSTED", version=1, created_at=ts(dia, "11:00"), created_by=QUEM))
+        self.aloc.append(dict(settlement_id=sid, title_id=titulo_id, amount_cents=valor))
+        self.movs.append(dict(id=uid("mov", cod), account_id=CAIXA, effective_date=dia, amount_cents=valor if direcao == "RECEIVABLE" else -valor,
+                              kind="SETTLEMENT", settlement_id=sid, reverses_id=None, transfer_id=None,
+                              description=("Recebimento " if direcao == "RECEIVABLE" else "Pagamento ") + cod, created_at=ts(dia, "11:00"),
+                              created_by=QUEM))
+
+
+def titulo(cod, direcao, parte, origem, origem_id, rotulo, projeto, categoria, competencia, emissao, venc, valor, recebido):
+    return dict(id=uid("titulo", cod), code=cod, direction=direcao, counterparty_id=parte, origin_type=origem, origin_id=origem_id,
+                origin_label=rotulo[:200], project_id=projeto, category=categoria, competence=competencia, issue_date=emissao, due_date=venc,
+                original_cents=valor, received_cents=recebido, lifecycle="ACTIVE", cancel_reason=None, document_number=None, notes=None,
+                version=2 if recebido else 1, created_at=ts(emissao), created_by=QUEM)
+
+
+def financeiro(lanc, liq):
+    sec(f"Contas a receber: um título por parcela; recebidas no Caixa as parcelas até {COMPETENCIA_FATURADA[5:]}/{COMPETENCIA_FATURADA[:4]}")
+    titulos, links, faturado = [], [], []
+    for n, r in enumerate(sorted(lanc, key=lambda x: (x["order_code"], x["seq"])), start=1):
+        cod = f"CR{n:05d}"
+        venc = ultimo_dia(r["comp"])
+        recebida = r["comp"] <= COMPETENCIA_FATURADA
+        rotulo = f"Pedido {r['order_code']} — parcela {r['seq']}/{r['parcelas']} — {r['desc'][:150]} — {r['comp'][5:]}/{r['comp'][:4]}"
+        t = titulo(cod, "RECEIVABLE", r["pid"], ORIGEM_PARCELA, f"{r['order_id']}:{r['seq']}", rotulo, r["pjid"], "RECEITA_VENDA", r["comp"],
+                   r["contrato"], venc, r["valor"], r["valor"] if recebida else 0)
+        titulos.append(t)
+        if recebida:
+            liq.liquidar("RECEIVABLE", t["id"], r["pid"], r["valor"], venc, f"Recebimento da parcela {r['seq']} do pedido {r['order_code']}")
+            links.append(dict(id=uid("link", cod), document_id=r["doc_id"], title_id=t["id"], amount_cents=r["valor"], status="ATIVO",
+                              removed_reason=None, removed_at=None, removed_by=None, created_at=ts(venc, "16:00"), created_by=QUEM))
+            faturado.append(dict(title_id=t["id"], limit_cents=r["valor"], invoiced_cents=r["valor"]))
+    ins("financial_title", titulos)
+    out.append("-- Notas vinculadas às parcelas recebidas (todo o recebido já faturado).")
+    ins("document_title_link", links)
+    ins("document_title_invoicing", faturado)
+    return len(titulos)
 
 
 # Fiscal -----------------------------------------------------------------------------------------------------------
@@ -357,6 +429,61 @@ def fiscal(lanc):
     ins("tax_revenue_history", hist)
 
 
+def apuracao(lanc, liq):
+    sec("Fiscal: apuração por competência — PGDAS-D transmitido e DAS com o imposto da planilha; encerradas as de DAS pago")
+    periodos, declaracoes, guias, das, fechamentos = [], [], [], [], []
+    for m in meses(min(r["comp"] for r in lanc), COMPETENCIA_FATURADA):
+        rs = [r for r in lanc if r["comp"] == m]
+        receita = sum(r["valor"] for r in rs)
+        servico = sum(r["valor"] for r in rs if r["tipo"] == "SERVIÇO")
+        imposto = sum(r["imposto"] for r in rs)
+        rotulo = f"{m[5:]}/{m[:4]}"
+        venc = f"{mes_seguinte(m)}-20"
+        transmitido = min(f"{mes_seguinte(m)}-10", HOJE)
+        pago = venc < HOJE
+        pid = uid("periodo", m)
+        periodos.append(dict(id=pid, competence=m, status="ENCERRADA" if pago else "EM_APURACAO", informed_rbt12_cents=None, informed_by=None,
+                             informed_notes=None, version=3 if pago else 2, created_at=ts(f"{m}-01"), created_by=QUEM,
+                             updated_at=ts(transmitido, "17:00"), updated_by=QUEM))
+        declaracoes.append(dict(id=uid("pgdas", m), period_id=pid, seq=1, transmitted_on=transmitido, receipt_number="A informar",
+                                declared_revenue_cents=receita, notes="PGDAS-D da planilha de lançamentos: informar o número do recibo.",
+                                created_at=ts(transmitido, "10:00"), created_by=QUEM))
+        guia_id = None
+        if imposto > 0:
+            guia_id = uid("das", m)
+            t = titulo(f"CP{len(das) + 1:05d}", "PAYABLE", RECEITA_FEDERAL, ORIGEM_DAS, f"{m}:1", f"DAS {rotulo}", None, "IMPOSTOS_SIMPLES", m,
+                       transmitido, venc, imposto, imposto if pago else 0)
+            das.append(t)
+            guias.append(dict(id=guia_id, period_id=pid, seq=1, document_number=None, amount_cents=imposto, fine_cents=0, interest_cents=0,
+                              due_date=venc, notes="DAS com o imposto da planilha de lançamentos.", simulation_id=None, title_id=t["id"],
+                              created_at=ts(transmitido, "10:30"), created_by=QUEM))
+            if pago:
+                liq.liquidar("PAYABLE", t["id"], RECEITA_FEDERAL, imposto, venc, f"Pagamento do DAS {rotulo}")
+        if pago:
+            fechamentos.append(dict(id=uid("fechamento", m), period_id=pid, action="FECHAMENTO", reason=None,
+                                    product_revenue_cents=receita - servico, service_revenue_cents=servico, simulation_id=None,
+                                    confirmation_id=guia_id, occurred_at=ts(venc, "17:00"), actor=QUEM))
+    ins("tax_period", periodos)
+    ins("tax_pgdas_declaration", declaracoes)
+    ins("financial_title", das)
+    ins("tax_das_guide", guias)
+    ins("tax_period_closure", fechamentos)
+    return len(das)
+
+
+def liquidacoes(lanc, liq, n_receber, n_pagar):
+    sec("Recebimentos e pagamentos no Caixa (conta aberta no primeiro mês da planilha)")
+    out.append(f"update bank_account set opening_on = '{min(r['comp'] for r in lanc)}-01' where id = '{CAIXA}';")
+    out.append("")
+    ins("settlement", liq.liq)
+    ins("settlement_allocation", liq.aloc)
+    ins("cash_movement", liq.movs)
+    out.append(f"select setval('receivable_code_seq', {n_receber}), setval('payable_code_seq', {n_pagar}), "
+               f"setval('settlement_code_seq', {max(liq.seq['RC'], 1)}, {str(liq.seq['RC'] > 0).lower()}), "
+               f"setval('payment_code_seq', {max(liq.seq['PG'], 1)}, {str(liq.seq['PG'] > 0).lower()});")
+    out.append("")
+
+
 def gerar():
     lanc = ler()
     out.append("-- Dados reais da planilha GESTÃO IMPOSTOS — Lançamentos Mensais (tools/demo/lancamentos-mensais.csv). Gerado por")
@@ -365,7 +492,11 @@ def gerar():
     out.append("")
     codigo = cadastros(lanc)
     negocios(lanc, codigo)
+    liq = Liquidacoes()
+    n_receber = financeiro(lanc, liq)
     fiscal(lanc)
+    n_pagar = apuracao(lanc, liq)
+    liquidacoes(lanc, liq, n_receber, n_pagar)
     return "\n".join(out) + "\n"
 
 

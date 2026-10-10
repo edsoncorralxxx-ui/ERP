@@ -106,10 +106,12 @@ Primeiro faz a mesma limpeza do `RENDA_DEMO=limpar`; depois cria, a partir de `t
 - itens: Balança Renda+ (custo de referência R$ 70.000,00), esteira transportadora, painel elétrico, unidade coletora de raízes, materiais elétricos e os serviços de montagem e instalação mecânica e elétrica;
 - 24 pedidos confirmados (um por cliente e unidade, com uma linha e uma parcela por lançamento) e os 24 projetos — aceitos até 08/2026, em instalação em 09/2026, em produção ou engenharia depois;
 - 41 equipamentos com **número de série provisório** (BR-AA-NNN balança, ES- esteira, PE- painel, UC- unidade coletora), para trocar pelo da plaqueta;
-- uma nota por lançamento até 09/2026 (número PL-NNNN e emissão no último dia do mês, para trocar pelos reais); 10/2026 em diante fica nos pedidos para faturar;
-- o histórico de receita do Simples por anexo (II produto, III serviço) de 03/2025 a 08/2026, com a alíquota efetiva e o imposto da planilha na observação de cada mês.
+- um título a receber por parcela: até 09/2026 **recebido** no Caixa no último dia do mês; de 10/2026 em diante, a receber;
+- uma nota por lançamento até 09/2026 (número PL-NNNN e emissão no último dia do mês, para trocar pelos reais), **vinculada à parcela recebida**; 10/2026 em diante fica nos pedidos para faturar;
+- o histórico de receita do Simples por anexo (II produto, III serviço) de 03/2025 a 08/2026, com a alíquota efetiva e o imposto da planilha na observação de cada mês;
+- a apuração de 03/2025 a 09/2026: PGDAS-D transmitido (recibo "A informar") e **DAS** com o imposto da planilha, vencendo no dia 20 do mês seguinte. Os DAS vencidos até 10/10/2026 entram pagos pelo Caixa e as competências ficam encerradas; o DAS de 09/2026 (vence em 20/10/2026) fica a pagar, com a competência em apuração.
 
-Ficam para completar no sistema: razão social e CNPJ dos clientes, endereços, contatos, NCM dos produtos e os números e datas reais das notas. Quando aparecer `Banco limpo e carregado com a planilha de lançamentos mensais`, pare o servidor e inicie de novo sem `RENDA_DEMO`. Para mudar a planilha, edite o CSV e rode `python3 tools/demo/carga_lancamentos.py` (ele confere as contas de cada linha: custo total, resultado e imposto).
+Ficam para completar no sistema: razão social e CNPJ dos clientes, endereços, contatos, NCM dos produtos, os números e datas reais das notas, os recibos do PGDAS-D e as contas bancárias (os recebimentos e os DAS pagos entram no Caixa; use *Transferir* para levar o saldo ao banco). Quando aparecer `Banco limpo e carregado com a planilha de lançamentos mensais`, pare o servidor e inicie de novo sem `RENDA_DEMO`. Para mudar a planilha, edite o CSV e rode `python3 tools/demo/carga_lancamentos.py` (ele confere as contas de cada linha: custo total, resultado e imposto).
 
 **Atenção:** `RENDA_DEMO=recarregar`, `RENDA_DEMO=limpar` e `RENDA_DEMO=lancamentos` apagam os dados a cada início. Depois da carga, pare o servidor e inicie de novo sem `RENDA_DEMO` (mantenha `RENDA_DEMO_DATE` se quiser continuar no dia do mock). A carga do mock vem de `backend/java/src/main/resources/demo/carga-mock.sql`, gerada por `python3 tools/demo/carga_mock.py`.
 
