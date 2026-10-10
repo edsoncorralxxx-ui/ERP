@@ -23,7 +23,9 @@ import java.util.stream.Collectors;
  * do Simples Nacional, modelos de obrigação, categorias financeiras, contas, atividades e perfil fiscal da empresa).
  * Com {@code RENDA_DEMO=limpar}, apaga os mesmos dados e não carrega o mock: só repõe os registros de sistema das
  * migrações ({@code demo/base-sistema.sql}: beneficiário do DAS, conta Caixa e prazo da opção por IBS e CBS), para começar
- * a cadastrar dados reais. Sem a variável, não faz nada. Tudo numa transação: se falhar, o banco fica como estava.
+ * a cadastrar dados reais. Com {@code RENDA_DEMO=lancamentos}, apaga e repõe como em {@code limpar} e carrega os dados
+ * reais da planilha de lançamentos mensais ({@code demo/carga-lancamentos.sql}, gerado por tools/demo/carga_lancamentos.py):
+ * clientes, itens, pedidos, projetos, equipamentos com série, notas e histórico de receita. Sem a variável, não faz nada. Tudo numa transação: se falhar, o banco fica como estava.
  */
 @Component
 class DemoDataLoader implements ApplicationRunner {
@@ -50,8 +52,9 @@ class DemoDataLoader implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         if (modo.isEmpty()) return;
-        if (!modo.equals("recarregar") && !modo.equals("limpar")) {
-            log.warn("RENDA_DEMO={} ignorado: use 'recarregar' (dados do mock) ou 'limpar' (banco vazio para dados reais)", modo);
+        if (!modo.equals("recarregar") && !modo.equals("limpar") && !modo.equals("lancamentos")) {
+            log.warn("RENDA_DEMO={} ignorado: use 'recarregar' (dados do mock), 'limpar' (banco vazio para dados reais) ou "
+                    + "'lancamentos' (dados reais da planilha de lançamentos mensais)", modo);
             return;
         }
         tx.executeWithoutResult(s -> {
@@ -66,6 +69,10 @@ class DemoDataLoader implements ApplicationRunner {
             if (modo.equals("limpar")) {
                 new ResourceDatabasePopulator(new ClassPathResource("demo/base-sistema.sql")).execute(dataSource);
                 log.info("Banco limpo para dados reais: {} tabelas apagadas; usuários, parâmetros e registros de sistema mantidos", tabelas.size());
+            } else if (modo.equals("lancamentos")) {
+                new ResourceDatabasePopulator(new ClassPathResource("demo/base-sistema.sql"),
+                        new ClassPathResource("demo/carga-lancamentos.sql")).execute(dataSource);
+                log.info("Banco limpo e carregado com a planilha de lançamentos mensais: {} tabelas apagadas", tabelas.size());
             } else {
                 new ResourceDatabasePopulator(new ClassPathResource("demo/carga-mock.sql")).execute(dataSource);
                 log.info("Carga de demonstração do mock aplicada: {} tabelas apagadas e recarregadas", tabelas.size());

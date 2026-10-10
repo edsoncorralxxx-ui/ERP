@@ -91,7 +91,27 @@ RENDA_DEMO=limpar ./mvnw spring-boot:run
 
 Ficam os usuários e senhas, os dados da empresa, as etapas do funil, as categorias financeiras, os parâmetros e modelos fiscais e as tabelas auxiliares; voltam os registros de sistema (fornecedor *Receita Federal — DAS*, conta *Caixa* e o prazo da opção por IBS e CBS). Os códigos recomeçam (C00001, F00002, PV-000001…). Quando aparecer `Banco limpo para dados reais`, pare o servidor e inicie de novo **sem** `RENDA_DEMO`.
 
-**Atenção:** `RENDA_DEMO=recarregar` e `RENDA_DEMO=limpar` apagam os dados a cada início. Depois da carga, pare o servidor e inicie de novo sem `RENDA_DEMO` (mantenha `RENDA_DEMO_DATE` se quiser continuar no dia do mock). A carga vem de `backend/java/src/main/resources/demo/carga-mock.sql`, gerada por `python3 tools/demo/carga_mock.py`.
+#### Dados reais da planilha de lançamentos mensais
+
+Para **apagar todos os dados de negócio e carregar os lançamentos reais** (planilha *GESTÃO IMPOSTOS — Lançamentos Mensais*, de 03/2025 a 12/2026), inicie o servidor uma vez com `RENDA_DEMO=lancamentos` e **sem** `RENDA_DEMO_DATE`:
+
+```bash
+cd ~/Documents/ERP/backend/java
+RENDA_DEMO=lancamentos ./mvnw spring-boot:run
+```
+
+Primeiro faz a mesma limpeza do `RENDA_DEMO=limpar`; depois cria, a partir de `tools/demo/lancamentos-mensais.csv` (a planilha corrigida, que abre no Excel):
+
+- 17 clientes (C00001…C00017); as plantas viram unidades do cliente (ex.: Amafil → Pérola 1, Pérola 2, Altônia, Terra Boa, São Lourenço);
+- itens: Balança Renda+ (custo de referência R$ 70.000,00), esteira transportadora, painel elétrico, unidade coletora de raízes, materiais elétricos e os serviços de montagem e instalação mecânica e elétrica;
+- 24 pedidos confirmados (um por cliente e unidade, com uma linha e uma parcela por lançamento) e os 24 projetos — aceitos até 08/2026, em instalação em 09/2026, em produção ou engenharia depois;
+- 41 equipamentos com **número de série provisório** (BR-AA-NNN balança, ES- esteira, PE- painel, UC- unidade coletora), para trocar pelo da plaqueta;
+- uma nota por lançamento até 09/2026 (número PL-NNNN e emissão no último dia do mês, para trocar pelos reais); 10/2026 em diante fica nos pedidos para faturar;
+- o histórico de receita do Simples por anexo (II produto, III serviço) de 03/2025 a 08/2026, com a alíquota efetiva e o imposto da planilha na observação de cada mês.
+
+Ficam para completar no sistema: razão social e CNPJ dos clientes, endereços, contatos, NCM dos produtos e os números e datas reais das notas. Quando aparecer `Banco limpo e carregado com a planilha de lançamentos mensais`, pare o servidor e inicie de novo sem `RENDA_DEMO`. Para mudar a planilha, edite o CSV e rode `python3 tools/demo/carga_lancamentos.py` (ele confere as contas de cada linha: custo total, resultado e imposto).
+
+**Atenção:** `RENDA_DEMO=recarregar`, `RENDA_DEMO=limpar` e `RENDA_DEMO=lancamentos` apagam os dados a cada início. Depois da carga, pare o servidor e inicie de novo sem `RENDA_DEMO` (mantenha `RENDA_DEMO_DATE` se quiser continuar no dia do mock). A carga do mock vem de `backend/java/src/main/resources/demo/carga-mock.sql`, gerada por `python3 tools/demo/carga_mock.py`.
 
 ### 5. Abrir o app (Terminal 2)
 
@@ -169,7 +189,7 @@ Na primeira vez, o roteiro de ponta a ponta precisa do navegador do Playwright: 
 | `RENDA_SERVER_ADDRESS` | `127.0.0.1` | só a própria máquina; use `0.0.0.0` para outros computadores da rede |
 | `RENDA_SERVER_PORT` | `8080` | porta da API |
 | `RENDA_BOOTSTRAP_ADMIN_USER` / `RENDA_BOOTSTRAP_ADMIN_PASSWORD` | — | primeiro administrador, usado só enquanto não há nenhum usuário |
-| `RENDA_DEMO` | — | ao iniciar, apaga os dados de negócio: `recarregar` carrega os dados de demonstração do mock; `limpar` deixa o banco vazio para dados reais |
+| `RENDA_DEMO` | — | ao iniciar, apaga os dados de negócio: `recarregar` carrega os dados de demonstração do mock; `limpar` deixa o banco vazio para dados reais; `lancamentos` carrega os dados reais da planilha de lançamentos mensais |
 | `RENDA_DEMO_DATE` | — | data e hora de início do relógio do servidor (ex.: `2026-09-24T09:31`); o relógio anda a partir dela |
 | `RENDA_FISCAL_REVENUE_START` | `2026-09` | primeira competência com toda a receita no Renda+; antes dela o RBT12 é o informado pelo contador |
 

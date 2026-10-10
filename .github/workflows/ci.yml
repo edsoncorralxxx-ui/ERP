@@ -19,6 +19,7 @@ jobs:
       - run: python3 tools/b01/formatar_json.py --verificar
       - run: python3 tools/b01/verificar_b01.py
       - run: python3 -m unittest discover -s tools/b01
+      - run: python3 tools/demo/carga_lancamentos.py --verificar
 
   servidor:
     name: Servidor Java (testes com PostgreSQL real)
